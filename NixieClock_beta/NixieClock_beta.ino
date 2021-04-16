@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.0.1 от 16.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.0.2 от 16.04.21
   Специльно для проекта "Часы на ГРИ v2"
   Исходник -
   Автор Radon-lab.
@@ -41,20 +41,23 @@ int main(void)  //инициализация
   LEFT_INIT;
   RIGHT_INIT;
   CONV_INIT;
+  SQW_INIT;
   DOT_INIT;
   LIGHT_INIT;
   BUZZ_INIT;
-  
+
   WireInit(); //инициализация Wire
   dataChannelInit(9600); //инициализация UART
   indiInit(); //инициализация индикаторов
-
-  DDRB = (1 << 1); //устанавливываем D9 как выход
 
   OCR1A = 130; //устанавливаем первичное значение
   TCCR1A = (1 << COM1A1 | 1 << WGM10);  //подключаем D9
   TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
+  EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
+  EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
+
+  setSQW(); //установка SQW на 1Гц
   getTime(); //запрашиваем время из RTC
 
   if (eeprom_read_byte((uint8_t*)100) != 100) { //если первый запуск, восстанавливаем из переменных
@@ -72,12 +75,7 @@ int main(void)  //инициализация
     sendTime(); //отправить время в RTC
   }
 
-  EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
-  EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
-
   WDT_enable(); //включение WDT
-
-  for (timer_millis = 2000; timer_millis && !check_keys();) data_convert(); // ждем, преобразование данных
   //----------------------------------Главная-------------------------------------------------------------
   for (;;) //главная
   {
@@ -235,6 +233,7 @@ void settings_time(void)
   boolean blink_data = 0; //мигание сигментами
 
   indiClr(); //очищаем индикаторы
+  DOT_ON;
 
   //настройки
   while (1) {
@@ -246,13 +245,13 @@ void settings_time(void)
       switch (cur_mode) {
         case 0:
         case 1:
-          if (!blink_data || cur_mode == 1) indiPrintNum(RTC_time.h, 0, 2, '0'); //вывод часов
-          if (!blink_data || cur_mode == 0) indiPrintNum(RTC_time.m, 2, 2, '0'); //вывод минут
+          if (!blink_data || cur_mode == 1) indiPrintNum(RTC_time.h, 0, 2, 0); //вывод часов
+          if (!blink_data || cur_mode == 0) indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
           break;
         case 2:
         case 3:
-          if (!blink_data || cur_mode == 3) indiPrintNum(RTC_time.DD, 0, 2, '0'); //вывод даты
-          if (!blink_data || cur_mode == 2) indiPrintNum(RTC_time.MM, 2, 2, '0'); //вывод месяца
+          if (!blink_data || cur_mode == 3) indiPrintNum(RTC_time.DD, 0, 2, 0); //вывод даты
+          if (!blink_data || cur_mode == 2) indiPrintNum(RTC_time.MM, 2, 2, 0); //вывод месяца
           break;
         case 4:
           if (!blink_data) indiPrintNum(RTC_time.YY, 0); //вывод года
@@ -297,12 +296,14 @@ void settings_time(void)
 
       case 5: //ok click
         if (cur_mode < 4) cur_mode++; else cur_mode = 0;
+        if (cur_mode != 4) DOT_ON;
+        else DOT_OFF;
         _scr = blink_data = 0; //сбрасываем флаги
         break;
 
       case 6: //ok hold
         RTC_time.s = 0;
-        eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату из памяти
+        eeprom_update_block((void*)&RTC_time, 0, sizeof(RTC_time)); //записываем дату по умолчанию в память
         sendTime(); //отправить время в RTC
         indiClr(); //очистка индикаторов
         _scr = 0; //обновляем экран
@@ -322,7 +323,7 @@ boolean changeBright(void) { // установка яркости от врем�
 //----------------------------------------------------------------------------------
 void dotFlash(void) {
   if (!timer_dot) {
-    //dot_state = !dot_state; //инвертируем точки
+    DOT_INV; //инвертируем точки
     timer_dot = DOT_TIME;
   }
 }
@@ -333,12 +334,12 @@ void main_screen(void) //главный экран
     _scr = 1; //сбрасываем флаг
     switch (_mode) {
       case 0:
-        indiPrintNum(RTC_time.h, 0, 2, '0'); //вывод часов
-        indiPrintNum(RTC_time.m, 2, 2, '0'); //вывод минут
+        indiPrintNum(RTC_time.h, 0, 2, 0); //вывод часов
+        indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
         break;
       case 2:
-        indiPrintNum(RTC_time.DD, 0, 2, '0'); //вывод даты
-        indiPrintNum(RTC_time.MM, 2, 2, '0'); //вывод месяца
+        indiPrintNum(RTC_time.DD, 0, 2, 0); //вывод даты
+        indiPrintNum(RTC_time.MM, 2, 2, 0); //вывод месяца
         break;
     }
   }
@@ -380,7 +381,7 @@ void main_screen(void) //главный экран
       break;
 
     case 6: //ok key hold
-
+      settings_time();
       _scr = 0; //обновление экрана
       break;
   }

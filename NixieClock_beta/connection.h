@@ -40,10 +40,10 @@ const byte digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска де
 const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 #endif
 
-//пин кнопки ОК D7
-#define OK_BIT   7 // D7
-#define OK_PORT  PORTD
-#define OK_PIN   PIND
+//пин кнопки ОК D8
+#define OK_BIT   0 // D8
+#define OK_PORT  PORTB
+#define OK_PIN   PINB
 
 #define OK_OUT   (BIT_READ(OK_PIN, OK_BIT))
 #define OK_SET   (BIT_SET(OK_PORT, OK_BIT))
@@ -51,9 +51,9 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 
 #define OK_INIT  OK_SET; OK_INP
 
-//пин кнопки DOWN D8
-#define LEFT_BIT   0 // D8
-#define LEFT_PORT  PORTB
+//пин кнопки DOWN D7
+#define LEFT_BIT   7 // D7
+#define LEFT_PORT  PORTD
 #define LEFT_PIN   PIND
 
 #define LEFT_OUT   (BIT_READ(LEFT_PIN, LEFT_BIT))
@@ -65,7 +65,7 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 //пин кнопки UP D12
 #define RIGHT_BIT   4 // D12
 #define RIGHT_PORT  PORTB
-#define RIGHT_PIN   PIND
+#define RIGHT_PIN   PINB
 
 #define RIGHT_OUT   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
 #define RIGHT_SET   (BIT_SET(RIGHT_PORT, RIGHT_BIT))
@@ -74,15 +74,24 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 #define RIGHT_INIT  RIGHT_SET; RIGHT_INP
 
 
+//пин SQW D2
+#define SQW_BIT   2 // D2
+#define SQW_PORT  PORTD
+
+#define SQW_SET   (BIT_SET(SQW_PORT, SQW_BIT))
+#define SQW_INP   (BIT_CLEAR((DDR_REG(SQW_PORT)), SQW_BIT))
+
+#define SQW_INIT  SQW_SET; SQW_INP
+
 //пин преобразователя D9
 #define CONV_BIT   1 // D9
 #define CONV_PORT  PORTB
 
 #define CONV_ON    (BIT_SET(CONV_PORT, CONV_BIT))
 #define CONV_OFF   (BIT_CLEAR(CONV_PORT, CONV_BIT))
-#define CONV_INP   (BIT_SET((DDR_REG(CONV_PORT)), CONV_BIT))
+#define CONV_OUT   (BIT_SET((DDR_REG(CONV_PORT)), CONV_BIT))
 
-#define CONV_INIT  CONV_OFF; CONV_INP
+#define CONV_INIT  CONV_OFF; CONV_OUT
 
 //пин точек D10
 #define DOT_BIT   2 // D10

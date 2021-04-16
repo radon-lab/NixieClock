@@ -90,14 +90,14 @@ void indiDisable(void) //выключение индикаторов
 void indiSetBright(uint8_t indi, uint8_t pwm) //установка яркости индикатора
 {
   if (pwm > 64) pwm = 64;
-  indi_dimm[indi] = pwm;
+  indi_dimm[indi] = pwm * 3;
 }
 //---------------------------------Установка общей яркости---------------------------------------
 void indiSetBright(uint8_t pwm) //установка общей яркости
 {
   if (pwm > 64) pwm = 64;
   for (byte i = 0; i < 4; i++) {
-    indi_dimm[i] = pwm;
+    indi_dimm[i] = pwm * 3;
   }
 }
 //-------------------------Очистка индикаторов----------------------------------------------------

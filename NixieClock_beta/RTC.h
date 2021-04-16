@@ -3,21 +3,21 @@
 struct time { //структура времени
   uint8_t s = 0;
   uint8_t m = 0;
-  uint8_t h = 0;
-  uint8_t DD = 0;
-  uint8_t MM = 0;
-  uint16_t YY = 0;
-  uint8_t DW = 0;
+  uint8_t h = 8;
+  uint8_t DD = 1;
+  uint8_t MM = 1;
+  uint16_t YY = 2021;
+  uint8_t DW = 5;
 } RTC_time;
 
-const uint8_t daysInMonth[] PROGMEM = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }; //дней в месяце
+const uint8_t daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }; //дней в месяце
 
 //--------------------------------------Получить день недели------------------------------------------
 uint16_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) //получить день недели
 {
   if (YY >= 2000) YY -= 2000; //если год больше 2000
   uint16_t days = DD; //записываем дату
-  for (uint8_t i = 1; i < MM; i++) days += pgm_read_byte(daysInMonth + i - 1); //записываем сколько дней прошло до текущего месяца
+  for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
   if (MM > 2 && YY % 4 == 0) days++; //если високосный год, прибавляем день
   return (days + 365 * YY + (YY + 3) / 4 - 1 + 6) % 7; //возвращаем день недели
 }
@@ -65,13 +65,28 @@ void getTime(void) //запрашиваем время из RTC
   RTC_time.MM = unpackREG(WireRead()); //получаем месяц
   RTC_time.YY = unpackREG(WireRead()) + 2000; //получаем год
 }
+//-------------------------------Настройка SQW-------------------------------------
+void setSQW(void) //настройка SQW
+{
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x0E); //устанавливаем адрес чтения
+  if (WireEndTransmission() != 0) return; //если нет ответа выходим
+  WireRequestFrom(RTC_ADDR, 1); //запрашиваем данные
+
+  uint8_t ctrlReg = WireRead() & 0xE3; //выключаем INTCON и устанавливаем частоту 1Гц
+
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x0E); //устанавливаем адрес записи
+  WireWrite(ctrlReg); //отправляем настройку SQW
+  WireEndTransmission(); //конец передачи
+}
 //-------------------------------Температура-------------------------------------
-uint16_t getTemp()
+uint16_t getTemp(void)
 {
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x11); //устанавливаем адрес чтения
   if (WireEndTransmission() != 0) return; //если нет ответа выходим
-  WireRequestFrom(0x68, 2); //запрашиваем данные
+  WireRequestFrom(RTC_ADDR, 2); //запрашиваем данные
   uint16_t temp = ((float)(WireRead() << 2 | WireRead() >> 6) * 0.25) * 100.0;
   return (temp > 8500) ? 0 : temp;
 }
