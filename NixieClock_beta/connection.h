@@ -40,9 +40,8 @@ const byte digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска де
 const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 #endif
 
-//назначаем кнопки//
-//пин кнопки ОК D3
-#define OK_BIT   3 // D3
+//пин кнопки ОК D7
+#define OK_BIT   7 // D7
 #define OK_PORT  PORTD
 #define OK_PIN   PIND
 
@@ -52,31 +51,42 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 
 #define OK_INIT  OK_SET; OK_INP
 
-//пин кнопки DOWN D7
-#define DOWN_BIT   7 // D7
-#define DOWN_PORT  PORTD
-#define DOWN_PIN   PIND
+//пин кнопки DOWN D8
+#define LEFT_BIT   0 // D8
+#define LEFT_PORT  PORTB
+#define LEFT_PIN   PIND
 
-#define DOWN_OUT   (BIT_READ(DOWN_PIN, DOWN_BIT))
-#define DOWN_SET   (BIT_SET(DOWN_PORT, DOWN_BIT))
-#define DOWN_INP   (BIT_CLEAR((DDR_REG(DOWN_PORT)), DOWN_BIT))
+#define LEFT_OUT   (BIT_READ(LEFT_PIN, LEFT_BIT))
+#define LEFT_SET   (BIT_SET(LEFT_PORT, LEFT_BIT))
+#define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
 
-#define DOWN_INIT  DOWN_SET; DOWN_INP
+#define LEFT_INIT  LEFT_SET; LEFT_INP
 
-//пин кнопки UP D4
-#define UP_BIT   4 // D4
-#define UP_PORT  PORTD
-#define UP_PIN   PIND
+//пин кнопки UP D12
+#define RIGHT_BIT   4 // D12
+#define RIGHT_PORT  PORTB
+#define RIGHT_PIN   PIND
 
-#define UP_OUT   (BIT_READ(UP_PIN, UP_BIT))
-#define UP_SET   (BIT_SET(UP_PORT, UP_BIT))
-#define UP_INP   (BIT_CLEAR((DDR_REG(UP_PORT)), UP_BIT))
+#define RIGHT_OUT   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
+#define RIGHT_SET   (BIT_SET(RIGHT_PORT, RIGHT_BIT))
+#define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 
-#define UP_INIT  UP_SET; UP_INP
+#define RIGHT_INIT  RIGHT_SET; RIGHT_INP
 
-//пин точек D5
-#define DOT_BIT   5 // D5
-#define DOT_PORT  PORTD
+
+//пин преобразователя D9
+#define CONV_BIT   1 // D9
+#define CONV_PORT  PORTB
+
+#define CONV_ON    (BIT_SET(CONV_PORT, CONV_BIT))
+#define CONV_OFF   (BIT_CLEAR(CONV_PORT, CONV_BIT))
+#define CONV_INP   (BIT_SET((DDR_REG(CONV_PORT)), CONV_BIT))
+
+#define CONV_INIT  CONV_OFF; CONV_INP
+
+//пин точек D10
+#define DOT_BIT   2 // D10
+#define DOT_PORT  PORTB
 
 #define DOT_INV   (DOT_PORT ^= (1 << DOT_BIT))
 #define DOT_ON    (BIT_SET(DOT_PORT, DOT_BIT))
@@ -85,33 +95,22 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 
 #define DOT_INIT  DOT_OFF; DOT_OUT
 
-//пин колбы D9
-#define FLASK_BIT   1 // D9
-#define FLASK_PORT  PORTB
+//пин подсветки D11
+#define LIGHT_BIT   3 // D11
+#define LIGHT_PORT  PORTB
 
-#define is_FLASK_ON   (BIT_READ(FLASK_PORT, FLASK_BIT))
-#define FLASK_ON      (BIT_SET(FLASK_PORT, FLASK_BIT))
-#define FLASK_OFF     (BIT_CLEAR(FLASK_PORT, FLASK_BIT))
-#define FLASK_OUT     (BIT_SET((DDR_REG(FLASK_PORT)), FLASK_BIT))
+#define LIGHT_ON    (BIT_SET(LIGHT_PORT, LIGHT_BIT))
+#define LIGHT_OFF   (BIT_CLEAR(LIGHT_PORT, LIGHT_BIT))
+#define LIGHT_OUT   (BIT_SET((DDR_REG(LIGHT_PORT)), LIGHT_BIT))
 
-#define FLASK_INIT  FLASK_OFF; FLASK_OUT
+#define LIGHT_INIT  LIGHT_OFF; LIGHT_OUT
 
-//пин основного питания RTC A3
-#define RTC_BIT   3 // A3
-#define RTC_PORT  PORTC
+//пин пищалки D13
+#define BUZZ_BIT   5 // D13
+#define BUZZ_PORT  PORTB
 
-#define RTC_ON    (BIT_SET(RTC_PORT, RTC_BIT))
-#define RTC_OFF   (BIT_CLEAR(RTC_PORT, RTC_BIT))
-#define RTC_OUT   (BIT_SET((DDR_REG(RTC_PORT)), RTC_BIT))
+#define BUZZ_OFF   (BIT_CLEAR(BUZZ_PORT, BUZZ_BIT))
+#define BUZZ_INV   (BUZZ_PORT ^= (1 << BUZZ_BIT))
+#define BUZZ_OUT   (BIT_SET((DDR_REG(BUZZ_PORT)), BUZZ_BIT))
 
-#define RTC_INIT  RTC_OFF; RTC_OUT
-
-//пин дополнительного питания RTC A1
-#define RTC_BAT_BIT   1 // A1
-#define RTC_BAT_PORT  PORTC
-
-#define RTC_BAT_ON    (BIT_SET(RTC_BAT_PORT, RTC_BAT_BIT))
-#define RTC_BAT_OFF   (BIT_CLEAR(RTC_BAT_PORT, RTC_BAT_BIT))
-#define RTC_BAT_OUT   (BIT_SET((DDR_REG(RTC_BAT_PORT)), RTC_BAT_BIT))
-
-#define RTC_BAT_INIT  RTC_BAT_ON; RTC_BAT_OUT
+#define BUZZ_INIT  BUZZ_OFF; BUZZ_OUT

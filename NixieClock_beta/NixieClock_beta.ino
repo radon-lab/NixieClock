@@ -37,6 +37,14 @@ int atexit(void (* /*func*/ )()) { //инициализация функций
 
 int main(void)  //инициализация
 {
+  OK_INIT;
+  LEFT_INIT;
+  RIGHT_INIT;
+  CONV_INIT;
+  DOT_INIT;
+  LIGHT_INIT;
+  BUZZ_INIT;
+  
   WireInit(); //инициализация Wire
   dataChannelInit(9600); //инициализация UART
   indiInit(); //инициализация индикаторов
@@ -47,17 +55,17 @@ int main(void)  //инициализация
   TCCR1A = (1 << COM1A1 | 1 << WGM10);  //подключаем D9
   TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
+  getTime(); //запрашиваем время из RTC
+
   if (eeprom_read_byte((uint8_t*)100) != 100) { //если первый запуск, восстанавливаем из переменных
     eeprom_update_byte((uint8_t*)100, 100); //делаем метку
-    //eeprom_update_block((void*)&timeDefault, 0, sizeof(timeDefault)); //записываем дату по умолчанию в память
+    eeprom_update_block((void*)&RTC_time, 0, sizeof(RTC_time)); //записываем дату по умолчанию в память
     //eeprom_update_byte((uint8_t*)11, _flask_mode); //записываем в память режим колбы
   }
   else {
     //eeprom_read_block((void*)&timeBright, 7, sizeof(timeBright)); //считываем время из памяти
     //_flask_mode = eeprom_read_byte((uint8_t*)11); //считываем режим колбы из памяти
   }
-
-  getTime(); //запрашиваем время из RTC
 
   if (RTC_time.YY < 21 || RTC_time.YY > 50) { //если пропадало питание
     eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату из памяти
@@ -67,7 +75,7 @@ int main(void)  //инициализация
   EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
 
-  void WDT_enable(); //включение WDT
+  WDT_enable(); //включение WDT
 
   for (timer_millis = 2000; timer_millis && !check_keys();) data_convert(); // ждем, преобразование данных
   //----------------------------------Главная-------------------------------------------------------------
@@ -159,19 +167,19 @@ uint8_t check_keys(void) //проверка кнопок
         btn_switch = 1; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!DOWN_OUT) { //если нажата кл. вниз
+      else if (!LEFT_OUT) { //если нажата левая кл.
         btn_switch = 2; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!UP_OUT) { //если нажата кл. вверх
+      else if (!RIGHT_OUT) { //если нажата правая кл.
         btn_switch = 3; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
     case 1: btn_state = OK_OUT; break; //опрашиваем клавишу ок
-    case 2: btn_state = DOWN_OUT; break; //опрашиваем клавишу вниз
-    case 3: btn_state = UP_OUT; break; //опрашиваем клавишу вверх
+    case 2: btn_state = LEFT_OUT; break; //опрашиваем левую клавишу
+    case 3: btn_state = RIGHT_OUT; break; //опрашиваем правую клавишу
   }
 
   switch (btn_state) { //переключаемся в зависимости от состояния клавиши
@@ -205,8 +213,8 @@ uint8_t check_keys(void) //проверка кнопок
       btn_set = 0; //сбрасываем признак нажатия
       switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
         case 1: return 5; //ok press, возвращаем 5
-        case 2: return 2; //down press, возвращаем 2
-        case 3: return 3; //up press, возвращаем 3
+        case 2: return 2; //left press, возвращаем 2
+        case 3: return 3; //right press, возвращаем 3
       }
       break;
 
@@ -214,8 +222,8 @@ uint8_t check_keys(void) //проверка кнопок
       btn_set = 0; //сбрасываем признак нажатия
       switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
         case 1: return 6; //ok hold, возвращаем 6
-        case 2: return 1; //down hold, возвращаем 1
-        case 3: return 4; //up hold, возвращаем 4
+        case 2: return 1; //left hold, возвращаем 1
+        case 3: return 4; //right hold, возвращаем 4
       }
       break;
   }
@@ -227,7 +235,6 @@ void settings_time(void)
   boolean blink_data = 0; //мигание сигментами
 
   indiClr(); //очищаем индикаторы
-  for (timer_millis = TIME_MSG; timer_millis && !check_keys();) data_convert(); // ждем, преобразование данных
 
   //настройки
   while (1) {
@@ -256,7 +263,7 @@ void settings_time(void)
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (check_keys()) {
-      case 1: //left click
+      case 2: //left click
         switch (cur_mode) {
           //настройка времени
           case 0: if (RTC_time.h > 0) RTC_time.h--; else RTC_time.h = 23; break; //часы
@@ -272,7 +279,7 @@ void settings_time(void)
         _scr = blink_data = 0; //сбрасываем флаги
         break;
 
-      case 2: //right click
+      case 3: //right click
         switch (cur_mode) {
           //настройка времени
           case 0: if (RTC_time.h < 23) RTC_time.h++; else RTC_time.h = 0; break; //часы
@@ -288,17 +295,16 @@ void settings_time(void)
         _scr = blink_data = 0; //сбрасываем флаги
         break;
 
-      case 3: //left hold
+      case 5: //ok click
         if (cur_mode < 4) cur_mode++; else cur_mode = 0;
         _scr = blink_data = 0; //сбрасываем флаги
         break;
 
-      case 4: //right hold
+      case 6: //ok hold
         RTC_time.s = 0;
         eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату из памяти
         sendTime(); //отправить время в RTC
         indiClr(); //очистка индикаторов
-        for (timer_millis = TIME_MSG; timer_millis && !check_keys();) data_convert(); // ждем, преобразование данных
         _scr = 0; //обновляем экран
         return;
     }
@@ -348,22 +354,32 @@ void main_screen(void) //главный экран
   }
 
   switch (check_keys()) {
-    case 1: //left key press
+    case 1: //left key hold
 
       _scr = 0; //обновление экрана
       break;
 
-    case 2: //right key press
+    case 2: //left key press
 
       _scr = 0; //обновление экрана
       break;
 
-    case 3: //left key hold
+    case 3: //right key press
 
       _scr = 0; //обновление экрана
       break;
 
     case 4: //right key hold
+
+      _scr = 0; //обновление экрана
+      break;
+
+    case 5: //ok key press
+
+      _scr = 0; //обновление экрана
+      break;
+
+    case 6: //ok key hold
 
       _scr = 0; //обновление экрана
       break;
