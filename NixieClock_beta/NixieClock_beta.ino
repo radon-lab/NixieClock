@@ -31,6 +31,41 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 uint32_t timer_millis; //таймер отсчета миллисекунд
 uint32_t timer_dot; //таймер отсчета миллисекунд для точек
 
+struct alarm1 {
+  uint8_t hh = 15;
+  uint8_t mm = 25;
+  uint8_t mode = 0;
+  uint8_t days = 3;
+} dataAlarm1;
+
+struct alarm2 {
+  uint8_t hh = 15;
+  uint8_t mm = 25;
+  uint8_t mode = 2;
+  uint8_t days = 3;
+} dataAlarm2;
+
+struct alarm3 {
+  uint8_t hh = 15;
+  uint8_t mm = 25;
+  uint8_t mode = 1;
+  uint8_t days = 3;
+} dataAlarm3;
+
+struct alarm4 {
+  uint8_t hh = 15;
+  uint8_t mm = 25;
+  uint8_t mode = 1;
+  uint8_t days = 3;
+} dataAlarm4;
+
+struct alarm5 {
+  uint8_t hh = 15;
+  uint8_t mm = 25;
+  uint8_t mode = 2;
+  uint8_t days = 3;
+} dataAlarm5;
+
 int atexit(void (* /*func*/ )()) { //инициализация функций
   return 0;
 }
@@ -70,7 +105,7 @@ int main(void)  //инициализация
     //_flask_mode = eeprom_read_byte((uint8_t*)11); //считываем режим колбы из памяти
   }
 
-  if (RTC_time.YY < 21 || RTC_time.YY > 50) { //если пропадало питание
+  if (RTC_time.YY < 2021 || RTC_time.YY > 2050) { //если пропадало питание
     eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату из памяти
     sendTime(); //отправить время в RTC
   }
@@ -80,6 +115,7 @@ int main(void)  //инициализация
   for (;;) //главная
   {
     data_convert(); //преобразование данных
+    sincData(); //синхронизация данных
     main_screen(); //главный экран
   }
   return 0; //конец
@@ -153,6 +189,105 @@ void WDT_disable(void) //выключение WDT
   WDTCSR = 0x00; //Выключаем собаку
   SREG = sregCopy; //Восстанавливаем глобальные прерывания
 }
+//-------------------------------Синхронизация данных---------------------------------------------------
+void sincData(void) //синхронизация данных
+{
+  if (availableData()) {
+    uint8_t command = readData();
+    switch (command) {
+      case 0x50: comSendTime(); break;
+      case 0x51: comGetTime(); break;
+      case 0x52: comSendAlarm(); break;
+      case 0x53: comGetAlarm(); break;
+      default:
+        sendCommand(0x00);
+        clearBuffer(); //очистить буфер приёма
+        break;
+    }
+  }
+}
+//--------------------------------------------------------------------------------------
+void comGetAlarm(void)
+{
+  uint8_t dataBuf[20];
+  uint16_t crc = 0;
+  uint16_t crcData = 0;
+
+  if (availableData() == 22) {
+    for (uint8_t c = 0; c < 20; c += 4) {
+      for (uint8_t i = c; i < c + 4; i++) {
+        dataBuf[i] = readData();
+        crcData += (uint16_t)dataBuf[i] * (i + 2);
+      }
+    }
+
+    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
+
+    if (crc == crcData) {
+      for (uint8_t i = 0; i < 4; i++) {
+        *((uint8_t*)&dataAlarm1 + i) = dataBuf[i];
+        *((uint8_t*)&dataAlarm2 + i) = dataBuf[i + 4];
+        *((uint8_t*)&dataAlarm3 + i) = dataBuf[i + 8];
+        *((uint8_t*)&dataAlarm4 + i) = dataBuf[i + 12];
+        *((uint8_t*)&dataAlarm5 + i) = dataBuf[i + 16];
+      }
+      sendCommand(0xFF);
+    }
+    else sendCommand(0x02);
+  }
+  else {
+    sendCommand(0x01);
+    clearBuffer(); //очистить буфер приёма
+  }
+}
+//--------------------------------------------------------------------------------------
+void comGetTime(void)
+{
+  uint8_t dataBuf[sizeof(RTC_time)];
+  uint16_t crc = 0;
+  uint16_t crcData = 0;
+
+  if (availableData() == sizeof(RTC_time) + 2) {
+    for (uint8_t i = 0; i < sizeof(RTC_time); i++) {
+      dataBuf[i] = readData();
+      crcData += (uint16_t)dataBuf[i] * (i + 2);
+    }
+
+    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
+
+    if (crc == crcData) {
+      for (uint8_t i = 0; i < sizeof(RTC_time); i++) *((uint8_t*)&RTC_time + i) = dataBuf[i];
+      sendCommand(0xFF);
+    }
+    else sendCommand(0x02);
+  }
+  else {
+    sendCommand(0x01);
+    clearBuffer(); //очистить буфер приёма
+  }
+}
+//--------------------------------------------------------------------------------------
+void comSendAlarm(void)
+{
+  uint8_t buf[20];
+
+  for (uint8_t i = 0; i < 4; i++) {
+    buf[i] = *((uint8_t*)&dataAlarm1 + i);
+    buf[i + 4] = *((uint8_t*)&dataAlarm2 + i);
+    buf[i + 8] = *((uint8_t*)&dataAlarm3 + i);
+    buf[i + 12] = *((uint8_t*)&dataAlarm4 + i);
+    buf[i + 16] = *((uint8_t*)&dataAlarm5 + i);
+  }
+  sendData(0x11, buf, 20);
+}
+//--------------------------------------------------------------------------------------
+void comSendTime(void)
+{
+  //  uint8_t buf[sizeof(dataTime)];
+  //
+  //  for (uint8_t i = 0; i < sizeof(dataTime); i++) buf[i] = *((uint8_t*)&dataTime + i);
+  sendData(0x10, (uint8_t*)&RTC_time, sizeof(RTC_time));
+}
 //-----------------------------Проверка кнопок----------------------------------------------------
 uint8_t check_keys(void) //проверка кнопок
 {
@@ -225,6 +360,7 @@ uint8_t check_keys(void) //проверка кнопок
       }
       break;
   }
+  return 0;
 }
 //----------------------------------------------------------------------------------
 void settings_time(void)

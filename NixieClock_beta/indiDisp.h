@@ -11,8 +11,8 @@ volatile uint8_t indi_state;
 #define RIGHT 255
 #define CENTER 254
 
-#define _INDI_ON  TCNT2 = 255; TIMSK2 |= (1 << OCIE2A | 1 << TOIE2)
-#define _INDI_OFF TIMSK2 &= ~(1 << OCIE2A | 1 << TOIE2); indi_state = 0
+#define _INDI_ON  TCNT2 = 255; TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2)
+#define _INDI_OFF TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); indi_state = 0
 
 void indiInit(void);
 void indiEnable(void);

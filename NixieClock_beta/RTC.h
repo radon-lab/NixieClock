@@ -29,9 +29,9 @@ uint8_t unpackREG(uint8_t data) //распаковка short
 //--------------------------------------Распаковка часов------------------------------------------
 uint8_t unpackHours(uint8_t data) //распаковка часов
 {
-  if (data & 0x20) return ((data & 0xF) + 20); //возвращаем результат
-  else if (data & 0x10) return ((data & 0xF) + 10);
-  else return (data & 0xF);
+  if (data & 0x20) return ((data & 0x0F) + 20); //возвращаем результат
+  else if (data & 0x10) return ((data & 0x0F) + 10);
+  else return (data & 0x0F);
 }
 //--------------------------------------Отправить время в RTC------------------------------------------
 void sendTime(void) //отправить время в RTC
@@ -41,8 +41,8 @@ void sendTime(void) //отправить время в RTC
   WireWrite(0x00); //устанавливаем адрес записи
   WireWrite((((RTC_time.s / 10) << 4) | (RTC_time.s % 10))); //отправляем секунды
   WireWrite((((RTC_time.m / 10) << 4) | (RTC_time.m % 10))); //отправляем минуты
-  if (RTC_time.h > 19) WireWrite((0x2 << 4) | (RTC_time.h % 20)); //отправляем часы
-  else if (RTC_time.h > 9) WireWrite((0x1 << 4) | (RTC_time.h % 10));
+  if (RTC_time.h > 19) WireWrite((0x02 << 4) | (RTC_time.h % 20)); //отправляем часы
+  else if (RTC_time.h > 9) WireWrite((0x01 << 4) | (RTC_time.h % 10));
   else WireWrite(RTC_time.h);
   WireWrite(day); //отправляем день недели
   WireWrite(((RTC_time.DD / 10) << 4) | (RTC_time.DD % 10)); //отправляем дату
@@ -85,7 +85,7 @@ uint16_t getTemp(void)
 {
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x11); //устанавливаем адрес чтения
-  if (WireEndTransmission() != 0) return; //если нет ответа выходим
+  if (WireEndTransmission() != 0) return 0; //если нет ответа выходим
   WireRequestFrom(RTC_ADDR, 2); //запрашиваем данные
   uint16_t temp = ((float)(WireRead() << 2 | WireRead() >> 6) * 0.25) * 100.0;
   return (temp > 8500) ? 0 : temp;

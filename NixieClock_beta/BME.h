@@ -77,7 +77,7 @@ void readCalibrat(void) //чтение калибровок датчика
   Calibration.HUM_3 = WireRead();
   Calibration.HUM_4 = (WireRead() << 4);
   uint8_t interVal = WireRead();
-  Calibration.HUM_4 |= (interVal & 0xF);
+  Calibration.HUM_4 |= (interVal & 0x0F);
   Calibration.HUM_5 = (((interVal & 0xF0) >> 4) | (WireRead() << 4));
   Calibration.HUM_6 = WireRead();
 }
