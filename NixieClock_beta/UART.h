@@ -8,10 +8,10 @@ volatile uint8_t _TRANSFER_BUFFER[TRANSFER_BUFFER_SIZE];
 volatile uint8_t _TRANSFER_BUFFER_END;
 volatile uint8_t _TRANSFER_BUFFER_START;
 
-#define _TIME_OUT 4 //таймаут приёма 4мс
+#define _TIME_OUT 2 //таймаут приёма 8мс
 
-#define _DELAY_START _delay = 0; TIMSK2 |= (0x01 << OCIE2B)
-#define _DELAY_STOP  TIMSK2 &= ~(0x01 << OCIE2B)
+#define _DELAY_START _delay = 0; OCR0B = TCNT0 - 1; TIMSK0 |= (0x01 << OCIE0B)
+#define _DELAY_STOP  TIMSK0 &= ~(0x01 << OCIE0B)
 volatile uint8_t _delay = 0;
 //----------------------------------Инициализация UART----------------------------------
 void dataChannelInit(uint32_t baudrate) //инициализация UART
@@ -21,12 +21,10 @@ void dataChannelInit(uint32_t baudrate) //инициализация UART
   UCSR0B = ((0x01 << TXEN0) | (0x01 << RXEN0) | (0x01 << RXCIE0));
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00));
 
-  OCR2B = 200;
-
   _RECEIVE_BUFFER_END = _RECEIVE_BUFFER_START = 0;
   _TRANSFER_BUFFER_END = _TRANSFER_BUFFER_START = 0;
 }
-ISR(TIMER2_COMPB_vect) {
+ISR(TIMER0_COMPB_vect) {
   switch (++_delay) {
     case _TIME_OUT: _DELAY_STOP; break;
   }
@@ -63,7 +61,7 @@ uint8_t readData() //чтение байта из буфера приёма
 //----------------------------------Доступно байт для приёма----------------------------------
 uint8_t availableData() //доступно байт для приёма
 {
-  if (_RECEIVE_BUFFER_END == _RECEIVE_BUFFER_START || (TIMSK2 & (1 << 2))) return 0; //если идет приём пакета или буфер пуст, возвращаем 0
+  if (_RECEIVE_BUFFER_END == _RECEIVE_BUFFER_START || (TIMSK0 & (1 << 2))) return 0; //если идет приём пакета или буфер пуст, возвращаем 0
   return ((uint16_t)(RECEIVE_BUFFER_SIZE + _RECEIVE_BUFFER_END - _RECEIVE_BUFFER_START) % RECEIVE_BUFFER_SIZE); //иначе возвращаем доступное количество байт
 }
 //----------------------------------Очистить буфер приёма----------------------------------

@@ -7,6 +7,7 @@ uint8_t indi_buf[4];
 uint8_t indi_dimm[4];
 uint8_t indi_null;
 volatile uint8_t indi_state;
+volatile uint8_t tick_ms; //счетчик тиков для обработки данных
 
 #define LEFT 0
 #define RIGHT 255
@@ -37,6 +38,8 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 
   PORTC = (PORTC & 0xF0) | indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
   PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор
+
+  tick_ms++; //прибавляем тик
 }
 ISR(TIMER0_COMPA_vect) {
   PORTD &= ~(0x01 << anodeMask[indi_state]); //выключаем индикатор

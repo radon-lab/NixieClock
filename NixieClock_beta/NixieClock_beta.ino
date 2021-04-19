@@ -31,6 +31,9 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 uint32_t timer_millis; //таймер отсчета миллисекунд
 uint32_t timer_dot; //таймер отсчета миллисекунд для точек
 
+uint8_t dotBrightStep;
+uint8_t dotMaxBright = DOT_BRIGHT;
+
 struct alarm1 {
   uint8_t hh = 15;
   uint8_t mm = 25;
@@ -69,7 +72,7 @@ struct alarm5 {
 int atexit(void (* /*func*/ )()) { //инициализация функций
   return 0;
 }
-
+//----------------------------------Инициализация-------------------------------------------------------------
 int main(void)  //инициализация
 {
   OK_INIT;
@@ -81,15 +84,12 @@ int main(void)  //инициализация
   LIGHT_INIT;
   BUZZ_INIT;
 
-  OCR1A = 135; //устанавливаем первичное значение
-  TCCR1A = (1 << COM1A1 | 1 << WGM10);  //подключаем D9
+  OCR1A = MIN_PWM; //устанавливаем первичное значение
+  TCCR1A = (1 << COM1B1 | 1 << COM1A1 | 1 << WGM10);  //подключаем D9
   TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
   WireInit(); //инициализация Wire
   dataChannelInit(9600); //инициализация UART
-  indiInit(); //инициализация индикаторов
-
-  indiSetBright(10);
 
   EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
@@ -112,7 +112,12 @@ int main(void)  //инициализация
     sendTime(); //отправить время в RTC
   }
 
-  WDT_enable(); //включение WDT
+  //расчёт шага яркости точки
+  dotBrightStep = ceil((float)dotMaxBright * 2 / DOT_TIME * DOT_TIMER);
+  if (!dotBrightStep) dotBrightStep = 1;
+
+  indiInit(); //инициализация индикаторов
+  indiSetBright(5);
   //----------------------------------Главная-------------------------------------------------------------
   for (;;) //главная
   {
@@ -126,11 +131,6 @@ int main(void)  //инициализация
 ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
 {
   tick_sec++; //прибавляем секунду
-}
-//-------------------------Прерывание по переполнению wdt - 17.5мс------------------------------------
-ISR(WDT_vect) //прерывание по переполнению wdt - 17.5мс
-{
-  tick_wdt++; //прибавляем тик
 }
 //----------------------------------Преобразование данных---------------------------------------------------------
 void data_convert(void) //преобразование данных
@@ -159,31 +159,19 @@ void data_convert(void) //преобразование данных
     _scr = 0; //разрешаем обновить индикаторы
   }
 
-  for (; tick_wdt > 0; tick_wdt--) { //если был тик, обрабатываем данные
+  for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
 
     switch (btn_state) { //таймер опроса кнопок
       case 0: if (btn_check) btn_tmr++; break; //считаем циклы
       case 1: if (btn_tmr > 0) btn_tmr--; break; //убираем дребезг
     }
 
-    static uint8_t lht;
-    static boolean drv;
-
-    if (timer_millis > 17) timer_millis -= 17; //если таймер больше 17мс
+    if (timer_millis > 4) timer_millis -= 4; //если таймер больше 17мс
     else if (timer_millis) timer_millis = 0; //иначе сбрасываем таймер
 
-    if (timer_dot > 17) timer_dot -= 17; //если таймер больше 17мс
+    if (timer_dot > 4) timer_dot -= 4; //если таймер больше 17мс
     else if (timer_dot) timer_dot = 0; //иначе сбрасываем таймер
   }
-}
-//-------------------------------Включение WDT----------------------------------------------------
-void WDT_enable(void) //включение WDT
-{
-  uint8_t sregCopy = SREG; //Сохраняем глобальные прерывания
-  cli(); //Запрещаем глобальные прерывания
-  WDTCSR = ((1 << WDCE) | (1 << WDE)); //Сбрасываем собаку
-  WDTCSR = 0x40; //Устанавливаем пределитель 2(режим прерываний)
-  SREG = sregCopy; //Восстанавливаем глобальные прерывания
 }
 //-------------------------------Синхронизация данных---------------------------------------------------
 void sincData(void) //синхронизация данных
@@ -441,19 +429,29 @@ void settings_time(void)
   }
 }
 //----------------------------------------------------------------------------------
-boolean changeBright(void) { // установка яркости от времени суток
-  if ((timeBright[0] > timeBright[1] && (RTC_time.h >= timeBright[0] || RTC_time.h < timeBright[1])) ||
-      (timeBright[0] < timeBright[1] && RTC_time.h >= timeBright[0] && RTC_time.h < timeBright[1])) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
+//boolean changeBright(void) { // установка яркости от времени суток
+//  if ((timeBright[0] > timeBright[1] && (RTC_time.h >= timeBright[0] || RTC_time.h < timeBright[1])) ||
+//      (timeBright[0] < timeBright[1] && RTC_time.h >= timeBright[0] && RTC_time.h < timeBright[1])) {
+//    return 0;
+//  } else {
+//    return 1;
+//  }
+//}
 //----------------------------------------------------------------------------------
 void dotFlash(void) {
+  static boolean dot_drv;
   if (!timer_dot) {
-    DOT_INV; //инвертируем точки
-    timer_dot = DOT_TIME;
+    timer_dot = DOT_TIMER;
+    switch (dot_drv) {
+      case 0: if (OCR1B < dotMaxBright) OCR1B += dotBrightStep; else dot_drv = 1; break;
+      case 1:
+        if (OCR1B > 0) OCR1B -= dotBrightStep;
+        else {
+          dot_drv = 0;
+          timer_dot = 1000 - DOT_TIME;
+        }
+        break;
+    }
   }
 }
 //-----------------------------Главный экран------------------------------------------------
