@@ -42,9 +42,21 @@ volatile uint16_t cnt_freq; //частота для генерации звук�
 uint16_t tmr_score; //частота для генерации звука пищалкой
 
 uint8_t dotBrightStep;
-uint8_t dotMaxBright = settings.dotBright[1];
+uint8_t dotMaxBright = DEFAULT_DOT_BRIGHT;
 uint8_t backlBrightStep;
-uint8_t backlMaxBright = settings.backlBright[1];
+uint8_t backlMaxBright = DEFAULT_BACKL_BRIGHT;
+
+struct mainSettings {
+  uint8_t timeBright[2] = {DEFAULT_NIGHT_START, DEFAULT_NIGHT_END};
+  uint8_t backlBright[2] = {DEFAULT_BACKL_BRIGHT_N, DEFAULT_BACKL_BRIGHT};
+  uint8_t backlMinBright = DEFAULT_BACKL_MIN_BRIGHT;
+  uint8_t backlStep = DEFAULT_BACKL_STEP;
+  uint8_t backlPause = DEFAULT_BACKL_PAUSE;
+  uint16_t backlTime = DEFAULT_BACKL_TIME;
+  uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT};
+  uint8_t dotTimer = DEFAULT_DOT_TIMER;
+  uint8_t dotTime = DEFAULT_DOT_TIME;
+} settings; 
 
 struct alarm1 {
   uint8_t hh = 15;
