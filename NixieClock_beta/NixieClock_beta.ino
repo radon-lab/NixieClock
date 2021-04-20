@@ -42,9 +42,9 @@ volatile uint16_t cnt_freq; //частота для генерации звук�
 uint16_t tmr_score; //частота для генерации звука пищалкой
 
 uint8_t dotBrightStep;
-uint8_t dotMaxBright = DOT_BRIGHT;
+uint8_t dotMaxBright = settings.dotBright[1];
 uint8_t backlBrightStep;
-uint8_t backlMaxBright = BACKL_BRIGHT;
+uint8_t backlMaxBright = settings.backlBright[1];
 
 struct alarm1 {
   uint8_t hh = 15;
@@ -123,10 +123,10 @@ int main(void)  //инициализация
   }
 
   //расчёт шага яркости точки
-  dotBrightStep = ceil((float)dotMaxBright * 2 / DOT_TIME * DOT_TIMER);
+  dotBrightStep = ceil((float)dotMaxBright * 2 / settings.dotTime * settings.dotTimer);
   if (!dotBrightStep) dotBrightStep = 1;
-  // дыхание подсветки
-  if (backlMaxBright > 0) backlBrightStep = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME;
+  //дыхание подсветки
+  if (backlMaxBright > 0) backlBrightStep = (float)settings.backlStep / backlMaxBright / 2 * settings.backlTime;
   //----------------------------------Главная-------------------------------------------------------------
   for (;;) //главная
   {
@@ -188,6 +188,7 @@ void data_convert(void) //преобразование данных
       RTC_time.s = 0;
       if (++RTC_time.m > 59) { //минуты
         RTC_time.m = 0;
+        changeBright(); //установка яркости от времени суток
         if (++RTC_time.h > 23) { //часы
           RTC_time.h = 0;
           if (++RTC_time.DW > 7) RTC_time.DW = 1;
@@ -225,102 +226,6 @@ void data_convert(void) //преобразование данных
     if (timer_backlight > 4) timer_backlight -= 4; //если таймер больше 4мс
     else if (timer_backlight) timer_backlight = 0; //иначе сбрасываем таймер
   }
-}
-//-------------------------------Синхронизация данных---------------------------------------------------
-void sincData(void) //синхронизация данных
-{
-  if (availableData()) {
-    uint8_t command = readData();
-    switch (command) {
-      case 0x50: comSendTime(); break;
-      case 0x51: comGetTime(); break;
-      case 0x52: comSendAlarm(); break;
-      case 0x53: comGetAlarm(); break;
-      default:
-        sendCommand(0x00);
-        clearBuffer(); //очистить буфер приёма
-        break;
-    }
-  }
-}
-//--------------------------------------------------------------------------------------
-void comGetAlarm(void)
-{
-  uint8_t dataBuf[20];
-  uint16_t crc = 0;
-  uint16_t crcData = 0;
-
-  if (availableData() == 22) {
-    for (uint8_t c = 0; c < 20; c += 4) {
-      for (uint8_t i = c; i < c + 4; i++) {
-        dataBuf[i] = readData();
-        crcData += (uint16_t)dataBuf[i] * (i + 2);
-      }
-    }
-
-    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
-
-    if (crc == crcData) {
-      for (uint8_t i = 0; i < 4; i++) {
-        *((uint8_t*)&dataAlarm1 + i) = dataBuf[i];
-        *((uint8_t*)&dataAlarm2 + i) = dataBuf[i + 4];
-        *((uint8_t*)&dataAlarm3 + i) = dataBuf[i + 8];
-        *((uint8_t*)&dataAlarm4 + i) = dataBuf[i + 12];
-        *((uint8_t*)&dataAlarm5 + i) = dataBuf[i + 16];
-      }
-      sendCommand(0xFF);
-    }
-    else sendCommand(0x02);
-  }
-  else {
-    sendCommand(0x01);
-    clearBuffer(); //очистить буфер приёма
-  }
-}
-//--------------------------------------------------------------------------------------
-void comGetTime(void)
-{
-  uint8_t dataBuf[sizeof(RTC_time)];
-  uint16_t crc = 0;
-  uint16_t crcData = 0;
-
-  if (availableData() == sizeof(RTC_time) + 2) {
-    for (uint8_t i = 0; i < sizeof(RTC_time); i++) {
-      dataBuf[i] = readData();
-      crcData += (uint16_t)dataBuf[i] * (i + 2);
-    }
-
-    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
-
-    if (crc == crcData) {
-      for (uint8_t i = 0; i < sizeof(RTC_time); i++) *((uint8_t*)&RTC_time + i) = dataBuf[i];
-      sendCommand(0xFF);
-    }
-    else sendCommand(0x02);
-  }
-  else {
-    sendCommand(0x01);
-    clearBuffer(); //очистить буфер приёма
-  }
-}
-//--------------------------------------------------------------------------------------
-void comSendAlarm(void)
-{
-  uint8_t buf[20];
-
-  for (uint8_t i = 0; i < 4; i++) {
-    buf[i] = *((uint8_t*)&dataAlarm1 + i);
-    buf[i + 4] = *((uint8_t*)&dataAlarm2 + i);
-    buf[i + 8] = *((uint8_t*)&dataAlarm3 + i);
-    buf[i + 12] = *((uint8_t*)&dataAlarm4 + i);
-    buf[i + 16] = *((uint8_t*)&dataAlarm5 + i);
-  }
-  sendData(0x11, buf, 20);
-}
-//--------------------------------------------------------------------------------------
-void comSendTime(void)
-{
-  sendData(0x10, (uint8_t*)&RTC_time, sizeof(RTC_time));
 }
 //-----------------------------Проверка кнопок----------------------------------------------------
 uint8_t check_keys(void) //проверка кнопок
@@ -482,43 +387,58 @@ void settings_time(void)
   }
 }
 //----------------------------------------------------------------------------------
-//boolean changeBright(void) { // установка яркости от времени суток
-//  if ((timeBright[0] > timeBright[1] && (RTC_time.h >= timeBright[0] || RTC_time.h < timeBright[1])) ||
-//      (timeBright[0] < timeBright[1] && RTC_time.h >= timeBright[0] && RTC_time.h < timeBright[1])) {
-//    return 0;
-//  } else {
-//    return 1;
-//  }
-//}
+void changeBright(void) //установка яркости от времени суток
+{
+  if ((settings.timeBright[0] > settings.timeBright[1] && (RTC_time.h >= settings.timeBright[0] || RTC_time.h < settings.timeBright[1])) ||
+      (settings.timeBright[0] < settings.timeBright[1] && RTC_time.h >= settings.timeBright[0] && RTC_time.h < settings.timeBright[1])) {
+    //расчёт шага яркости точки
+    dotMaxBright = settings.dotBright[0];
+    dotBrightStep = ceil((float)dotMaxBright * 2 / settings.dotTime * settings.dotTimer);
+    if (!dotBrightStep) dotBrightStep = 1;
+    //дыхание подсветки
+    backlMaxBright = settings.backlBright[0];
+    if (backlMaxBright > 0) backlBrightStep = (float)settings.backlStep / backlMaxBright / 2 * settings.backlTime;
+  } else {
+    //расчёт шага яркости точки
+    dotMaxBright = settings.dotBright[1];
+    dotBrightStep = ceil((float)dotMaxBright * 2 / settings.dotTime * settings.dotTimer);
+    if (!dotBrightStep) dotBrightStep = 1;
+    //дыхание подсветки
+    backlMaxBright = settings.backlBright[1];
+    if (backlMaxBright > 0) backlBrightStep = (float)settings.backlStep / backlMaxBright / 2 * settings.backlTime;
+  }
+}
 //----------------------------------------------------------------------------------
-void backlFlash(void) {
+void backlFlash(void)
+{
   static boolean backl_drv;
   if (!timer_backlight) {
     timer_backlight = backlBrightStep;
     switch (backl_drv) {
-      case 0: if (OCR2A < backlMaxBright) OCR2A += BACKL_STEP; else backl_drv = 1; break;
+      case 0: if (OCR2A < backlMaxBright) OCR2A += settings.backlStep; else backl_drv = 1; break;
       case 1:
-        if (OCR2A > BACKL_MIN_BRIGHT) OCR2A -= BACKL_STEP;
+        if (OCR2A > settings.backlMinBright) OCR2A -= settings.backlStep;
         else {
           backl_drv = 0;
-          timer_backlight = BACKL_PAUSE;
+          timer_backlight = settings.backlPause;
         }
         break;
     }
   }
 }
 //----------------------------------------------------------------------------------
-void dotFlash(void) {
+void dotFlash(void)
+{
   static boolean dot_drv;
   if (!timer_dot) {
-    timer_dot = DOT_TIMER;
+    timer_dot = settings.dotTimer;
     switch (dot_drv) {
       case 0: if (OCR1B < dotMaxBright) OCR1B += dotBrightStep; else dot_drv = 1; break;
       case 1:
         if (OCR1B > 0) OCR1B -= dotBrightStep;
         else {
           dot_drv = 0;
-          timer_dot = 1000 - DOT_TIME;
+          timer_dot = 1000 - settings.dotTime;
         }
         break;
     }
@@ -582,4 +502,100 @@ void main_screen(void) //главный экран
       _scr = 0; //обновление экрана
       break;
   }
+}
+//-------------------------------Синхронизация данных---------------------------------------------------
+void sincData(void) //синхронизация данных
+{
+  if (availableData()) {
+    uint8_t command = readData();
+    switch (command) {
+      case 0x50: comSendTime(); break;
+      case 0x51: comGetTime(); break;
+      case 0x52: comSendAlarm(); break;
+      case 0x53: comGetAlarm(); break;
+      default:
+        sendCommand(0x00);
+        clearBuffer(); //очистить буфер приёма
+        break;
+    }
+  }
+}
+//--------------------------------------------------------------------------------------
+void comGetAlarm(void)
+{
+  uint8_t dataBuf[20];
+  uint16_t crc = 0;
+  uint16_t crcData = 0;
+
+  if (availableData() == 22) {
+    for (uint8_t c = 0; c < 20; c += 4) {
+      for (uint8_t i = c; i < c + 4; i++) {
+        dataBuf[i] = readData();
+        crcData += (uint16_t)dataBuf[i] * (i + 2);
+      }
+    }
+
+    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
+
+    if (crc == crcData) {
+      for (uint8_t i = 0; i < 4; i++) {
+        *((uint8_t*)&dataAlarm1 + i) = dataBuf[i];
+        *((uint8_t*)&dataAlarm2 + i) = dataBuf[i + 4];
+        *((uint8_t*)&dataAlarm3 + i) = dataBuf[i + 8];
+        *((uint8_t*)&dataAlarm4 + i) = dataBuf[i + 12];
+        *((uint8_t*)&dataAlarm5 + i) = dataBuf[i + 16];
+      }
+      sendCommand(0xFF);
+    }
+    else sendCommand(0x02);
+  }
+  else {
+    sendCommand(0x01);
+    clearBuffer(); //очистить буфер приёма
+  }
+}
+//--------------------------------------------------------------------------------------
+void comGetTime(void)
+{
+  uint8_t dataBuf[sizeof(RTC_time)];
+  uint16_t crc = 0;
+  uint16_t crcData = 0;
+
+  if (availableData() == sizeof(RTC_time) + 2) {
+    for (uint8_t i = 0; i < sizeof(RTC_time); i++) {
+      dataBuf[i] = readData();
+      crcData += (uint16_t)dataBuf[i] * (i + 2);
+    }
+
+    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
+
+    if (crc == crcData) {
+      for (uint8_t i = 0; i < sizeof(RTC_time); i++) *((uint8_t*)&RTC_time + i) = dataBuf[i];
+      sendCommand(0xFF);
+    }
+    else sendCommand(0x02);
+  }
+  else {
+    sendCommand(0x01);
+    clearBuffer(); //очистить буфер приёма
+  }
+}
+//--------------------------------------------------------------------------------------
+void comSendAlarm(void)
+{
+  uint8_t buf[20];
+
+  for (uint8_t i = 0; i < 4; i++) {
+    buf[i] = *((uint8_t*)&dataAlarm1 + i);
+    buf[i + 4] = *((uint8_t*)&dataAlarm2 + i);
+    buf[i + 8] = *((uint8_t*)&dataAlarm3 + i);
+    buf[i + 12] = *((uint8_t*)&dataAlarm4 + i);
+    buf[i + 16] = *((uint8_t*)&dataAlarm5 + i);
+  }
+  sendData(0x11, buf, 20);
+}
+//--------------------------------------------------------------------------------------
+void comSendTime(void)
+{
+  sendData(0x10, (uint8_t*)&RTC_time, sizeof(RTC_time));
 }
