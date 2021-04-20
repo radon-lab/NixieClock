@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.0.3 от 19.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.0.4 от 20.04.21
   Специльно для проекта "Часы на ГРИ v2"
   Исходник -
   Автор Radon-lab.
@@ -18,6 +18,10 @@
 #include "RTC.h"
 #include "BME.h"
 
+uint8_t semp = 0; //переключатель мелодии
+#define MELODY_PLAY(melody) _melody_chart(melody)
+#define MELODY_STOP semp = 0
+
 //переменные обработки кнопок
 uint8_t btn_tmr; //таймер тиков обработки
 boolean btn_check; //флаг разрешения опроса кнопки
@@ -29,10 +33,18 @@ uint8_t _mode = 0; //текущий основной режим
 volatile uint8_t tick_wdt; //счетчик тиков для обработки данных
 volatile uint8_t tick_sec; //счетчик тиков от RTC
 uint32_t timer_millis; //таймер отсчета миллисекунд
+uint32_t timer_melody; //таймер отсчета миллисекунд для мелодий
 uint32_t timer_dot; //таймер отсчета миллисекунд для точек
+uint32_t timer_backlight; //таймер отсчета миллисекунд для подсветки
+
+volatile uint16_t cnt_puls; //количество циклов для работы пищалки
+volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
+uint16_t tmr_score; //частота для генерации звука пищалкой
 
 uint8_t dotBrightStep;
 uint8_t dotMaxBright = DOT_BRIGHT;
+uint8_t backlBrightStep;
+uint8_t backlMaxBright = BACKL_BRIGHT;
 
 struct alarm1 {
   uint8_t hh = 15;
@@ -81,15 +93,13 @@ int main(void)  //инициализация
   CONV_INIT;
   SQW_INIT;
   DOT_INIT;
-  LIGHT_INIT;
+  BACKL_INIT;
   BUZZ_INIT;
-
-  OCR1A = MIN_PWM; //устанавливаем первичное значение
-  TCCR1A = (1 << COM1B1 | 1 << COM1A1 | 1 << WGM10);  //подключаем D9
-  TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
   WireInit(); //инициализация Wire
   dataChannelInit(9600); //инициализация UART
+  indiInit(); //инициализация индикаторов
+  indiSetBright(5);
 
   EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
@@ -115,9 +125,8 @@ int main(void)  //инициализация
   //расчёт шага яркости точки
   dotBrightStep = ceil((float)dotMaxBright * 2 / DOT_TIME * DOT_TIMER);
   if (!dotBrightStep) dotBrightStep = 1;
-
-  indiInit(); //инициализация индикаторов
-  indiSetBright(5);
+  // дыхание подсветки
+  if (backlMaxBright > 0) backlBrightStep = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME;
   //----------------------------------Главная-------------------------------------------------------------
   for (;;) //главная
   {
@@ -127,6 +136,42 @@ int main(void)  //инициализация
   }
   return 0; //конец
 }
+//---------------------------------Прерывание сигнала для пищалки---------------------------------------
+ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалки
+{
+  if (cnt_freq > 255) cnt_freq -= 255; //считаем циклы полуволны
+  else if (cnt_freq) { //если остался хвост
+    OCR2B = cnt_freq; //устанавливаем хвост
+    cnt_freq = 0; //сбрасываем счетчик циклов полуволны
+  }
+  else { //если циклы полуволны кончились
+    OCR2B = 255; //устанавливаем COMB в начало
+    cnt_freq = tmr_score; //устанавливаем циклов полуволны
+    BUZZ_INV; //инвертируем бузер
+    if (!--cnt_puls) { //считаем циклы времени работы бузера
+      BUZZ_OFF; //если циклы кончились, выключаем бузер
+      TIMSK2 = 0; //выключаем таймер
+    }
+  }
+}
+//--------------------------------Генерация частот бузера----------------------------------
+void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
+{
+  cnt_puls = ((uint32_t)freq * (uint32_t)time) / 500; //пересчитываем частоту и время в циклы таймера
+  cnt_freq = tmr_score = (1000000 / freq); //пересчитываем частоту в циклы полуволны
+  OCR2B = 255; //устанавливаем COMB в начало
+  TIMSK2 = (0x01 << OCIE2B); //запускаем таймер
+
+}
+//---------------------------------Воспроизведение мелодии---------------------------------------
+void _melody_chart(uint8_t melody) //воспроизведение мелодии
+{
+  if (!timer_melody) { //если пришло время
+    buzz_pulse(pgm_read_word((uint16_t*)(alarm_sound[melody][0] + (6 * semp) + 0)), pgm_read_word((uint16_t*)(alarm_sound[melody][0] + (6 * semp) + 2))); //запускаем звук с задоной частотой и временем
+    timer_melody = pgm_read_word((uint16_t*)(alarm_sound[melody][0] + (6 * semp) + 4)); //устанавливаем паузу перед воспроизведением нового звука
+    if (++semp > alarm_sound[melody][1] - 1) semp = 0; //переключпем на следующий семпл
+  }
+}
 //-------------------------------Прерывание от RTC------------------------------------------------
 ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
 {
@@ -135,6 +180,8 @@ ISR(INT0_vect) //внешнее прерывание на пине INT0 - счи
 //----------------------------------Преобразование данных---------------------------------------------------------
 void data_convert(void) //преобразование данных
 {
+  backlFlash();
+
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
     //счет времени
     if (++RTC_time.s > 59) { //секунды
@@ -166,11 +213,17 @@ void data_convert(void) //преобразование данных
       case 1: if (btn_tmr > 0) btn_tmr--; break; //убираем дребезг
     }
 
-    if (timer_millis > 4) timer_millis -= 4; //если таймер больше 17мс
+    if (timer_millis > 4) timer_millis -= 4; //если таймер больше 4мс
     else if (timer_millis) timer_millis = 0; //иначе сбрасываем таймер
 
-    if (timer_dot > 4) timer_dot -= 4; //если таймер больше 17мс
+    if (timer_melody > 4) timer_melody -= 4; //если таймер больше 4мс
+    else if (timer_melody) timer_melody = 0; //иначе сбрасываем таймер
+
+    if (timer_dot > 4) timer_dot -= 4; //если таймер больше 4мс
     else if (timer_dot) timer_dot = 0; //иначе сбрасываем таймер
+
+    if (timer_backlight > 4) timer_backlight -= 4; //если таймер больше 4мс
+    else if (timer_backlight) timer_backlight = 0; //иначе сбрасываем таймер
   }
 }
 //-------------------------------Синхронизация данных---------------------------------------------------
@@ -437,6 +490,23 @@ void settings_time(void)
 //    return 1;
 //  }
 //}
+//----------------------------------------------------------------------------------
+void backlFlash(void) {
+  static boolean backl_drv;
+  if (!timer_backlight) {
+    timer_backlight = backlBrightStep;
+    switch (backl_drv) {
+      case 0: if (OCR2A < backlMaxBright) OCR2A += BACKL_STEP; else backl_drv = 1; break;
+      case 1:
+        if (OCR2A > BACKL_MIN_BRIGHT) OCR2A -= BACKL_STEP;
+        else {
+          backl_drv = 0;
+          timer_backlight = BACKL_PAUSE;
+        }
+        break;
+    }
+  }
+}
 //----------------------------------------------------------------------------------
 void dotFlash(void) {
   static boolean dot_drv;

@@ -105,14 +105,14 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 #define DOT_INIT  DOT_OFF; DOT_OUT
 
 //пин подсветки D11
-#define LIGHT_BIT   3 // D11
-#define LIGHT_PORT  PORTB
+#define BACKL_BIT   3 // D11
+#define BACKL_PORT  PORTB
 
-#define LIGHT_ON    (BIT_SET(LIGHT_PORT, LIGHT_BIT))
-#define LIGHT_OFF   (BIT_CLEAR(LIGHT_PORT, LIGHT_BIT))
-#define LIGHT_OUT   (BIT_SET((DDR_REG(LIGHT_PORT)), LIGHT_BIT))
+#define BACKL_ON    (BIT_SET(BACKL_PORT, BACKL_BIT))
+#define BACKL_OFF   (BIT_CLEAR(BACKL_PORT, BACKL_BIT))
+#define BACKL_OUT   (BIT_SET((DDR_REG(BACKL_PORT)), BACKL_BIT))
 
-#define LIGHT_INIT  LIGHT_OFF; LIGHT_OUT
+#define BACKL_INIT  BACKL_OFF; BACKL_OUT
 
 //пин пищалки D13
 #define BUZZ_BIT   5 // D13
