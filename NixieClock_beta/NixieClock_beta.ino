@@ -20,7 +20,7 @@
 
 uint8_t semp = 0; //переключатель мелодии
 #define MELODY_PLAY(melody) _melody_chart(melody)
-#define MELODY_STOP semp = 0
+#define MELODY_RESET semp = 0
 
 //переменные обработки кнопок
 uint8_t btn_tmr; //таймер тиков обработки
