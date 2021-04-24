@@ -24,20 +24,25 @@
 
 //распиновка ламп
 #if (BOARD_TYPE == 0)
-const byte digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10};   //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всешда в конце)
-const byte anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10};   //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 1)
-const byte digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10};   //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всешда в конце)
-const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10};   //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 2)
-const byte digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всешда в конце)
-const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
 #elif (BOARD_TYPE == 3)
-const byte digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всешда в конце)
-const byte anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
 #elif (BOARD_TYPE == 4)
-const byte digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска дешифратора платы in12(цифра "10" - это пустой символ, должен быть всешда в конце)
-const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска дешифратора платы in12(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #endif
 
 //пин кнопки ОК D8
@@ -97,10 +102,9 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 #define DOT_BIT   2 // D10
 #define DOT_PORT  PORTB
 
-#define DOT_INV   (DOT_PORT ^= (1 << DOT_BIT))
-#define DOT_ON    (BIT_SET(DOT_PORT, DOT_BIT))
-#define DOT_OFF   (BIT_CLEAR(DOT_PORT, DOT_BIT))
-#define DOT_OUT   (BIT_SET((DDR_REG(DOT_PORT)), DOT_BIT))
+#define DOT_ON     (BIT_SET(DOT_PORT, DOT_BIT))
+#define DOT_OFF    (BIT_CLEAR(DOT_PORT, DOT_BIT))
+#define DOT_OUT    (BIT_SET((DDR_REG(DOT_PORT)), DOT_BIT))
 
 #define DOT_INIT  DOT_OFF; DOT_OUT
 
@@ -108,9 +112,9 @@ const byte anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок 
 #define BACKL_BIT   3 // D11
 #define BACKL_PORT  PORTB
 
-#define BACKL_ON    (BIT_SET(BACKL_PORT, BACKL_BIT))
-#define BACKL_OFF   (BIT_CLEAR(BACKL_PORT, BACKL_BIT))
-#define BACKL_OUT   (BIT_SET((DDR_REG(BACKL_PORT)), BACKL_BIT))
+#define BACKL_ON   (BIT_SET(BACKL_PORT, BACKL_BIT))
+#define BACKL_OFF  (BIT_CLEAR(BACKL_PORT, BACKL_BIT))
+#define BACKL_OUT  (BIT_SET((DDR_REG(BACKL_PORT)), BACKL_BIT))
 
 #define BACKL_INIT  BACKL_OFF; BACKL_OUT
 

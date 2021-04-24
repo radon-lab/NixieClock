@@ -81,12 +81,14 @@ void setSQW(void) //настройка SQW
   WireEndTransmission(); //конец передачи
 }
 //-------------------------------Температура-------------------------------------
-uint16_t getTemp(void)
+void readTempDS(void)
 {
   WireBeginTransmission(RTC_ADDR); //начало передачи
-  WireWrite(0x11); //устанавливаем адрес чтения
-  if (WireEndTransmission() != 0) return 0; //если нет ответа выходим
-  WireRequestFrom(RTC_ADDR, 2); //запрашиваем данные
-  uint16_t temp = ((float)(WireRead() << 2 | WireRead() >> 6) * 0.25) * 100.0;
-  return (temp > 8500) ? 0 : temp;
+      WireWrite(0x11); //устанавливаем адрес чтения
+      if (WireEndTransmission() != 0) return; //если нет ответа выходим
+      WireRequestFrom(RTC_ADDR, 2); //запрашиваем данные
+      uint16_t temp = ((float)(WireRead() << 2 | WireRead() >> 6) * 0.25) * 100.0;
+      tempSens.temp = (temp > 8500) ? 0 : temp;
+      tempSens.press = 0;
+      tempSens.hum = 0;
 }

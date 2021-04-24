@@ -1,13 +1,15 @@
 #include <Arduino.h>
 
-const byte decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
-const byte decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
+const uint8_t decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
+const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
 
 uint8_t indi_buf[4];
 uint8_t indi_dimm[4];
 uint8_t indi_null;
 volatile uint8_t indi_state;
-volatile uint8_t tick_ms; //счетчик тиков для обработки данных
+
+volatile uint8_t tick_ms; //счетчик тиков миллисекунд
+volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 #define LEFT 0
 #define RIGHT 255
@@ -37,7 +39,7 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   OCR0A = indi_dimm[indi_state]; //устанавливаем яркость индикатора
 
   PORTC = (PORTC & 0xF0) | indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
-  PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор
+  PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор если не пустой символ
 
   tick_ms++; //прибавляем тик
 }
@@ -49,32 +51,33 @@ ISR(TIMER0_COMPA_vect) {
 void indiInit(void) //инициализация индикаторов
 {
   for (uint8_t dec = 0; dec < 4; dec++) {
-    if ((0x0A >> dec) & 0x01) indi_null |= (0x01 << decoderBit[dec]);
+    if ((0x0A >> dec) & 0x01) indi_null |= (0x01 << decoderBit[dec]); //находим пустой символ
   }
-  for (uint8_t i = 0; i < 4; i++) {
-    setPin(anodeMask[i], 0);
-    outPin(anodeMask[i]);
+  for (uint8_t i = 0; i < 4; i++) { //инициализируем пины
+    setPin(anodeMask[i], 0); //устанавливаем в 0
+    outPin(anodeMask[i]); //устанавливаем как выход
 
-    setPin(decoderMask[i], 1);
-    outPin(decoderMask[i]);
+    setPin(decoderMask[i], 1); //устанавливаем в 1
+    outPin(decoderMask[i]); //устанавливаем как выход
 
-    indi_dimm[i] = 120;
-    indi_buf[i] = indi_null;
+    indi_dimm[i] = 120; //устанавливаем максимальную юркость
+    indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
 
-  OCR0A = 120;
+  OCR0A = 120; //максимальная яркость
 
   TIMSK0 = 0; //отключаем прерывания Таймера0
   TCCR0A = 0; //отключаем OC0A/OC0B
   TCCR0B = (1 << CS02); //пределитель 256
 
   OCR1A = MIN_PWM; //устанавливаем первичное значение шим
+  OCR1B = 0; //выключаем точки
 
   TIMSK1 = 0; //отключаем прерывания Таймера1
   TCCR1A = (1 << COM1B1 | 1 << COM1A1 | 1 << WGM10); //подключаем D9 и D10
   TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
-  OCR2A = 0;
+  OCR2A = 0; //выключаем подсветку
 
   TIMSK2 = 0; //отключаем прерывания Таймера2
   TCCR2A = (1 << COM2A1 | 1 << WGM20 | 1 << WGM21); //подключаем D11

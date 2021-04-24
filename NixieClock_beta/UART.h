@@ -88,11 +88,11 @@ void sendCommand(uint8_t command) //отправка команды
   }
 }
 //-------------------------Отправка информации----------------------------------------------------
-void sendData(uint8_t command, uint8_t *data, uint32_t size_l) //отправка информации
+void sendData(uint8_t command, uint8_t *data, uint8_t size_l) //отправка информации
 {
   if (!_TRANSFER_BUFFER_END) { //отправляем только после опустошения буфера
     _TRANSFER_BUFFER[0] = command;
-    
+
     uint16_t crc = 0;
     for (uint8_t i = 0; i < size_l; i++) {
       crc += (uint16_t)data[i] * (i + 2); //расчет контрольной суммы(максимум 21 байт данных)
@@ -102,5 +102,32 @@ void sendData(uint8_t command, uint8_t *data, uint32_t size_l) //отправк�
 
     _TRANSFER_BUFFER_END = size_l + 3; //указываем длинну пакета
     UCSR0B |= (0x01 << UDRIE0); //разрешаем прерывание по завершению передачи
+  }
+}
+//-------------------------Получение информации----------------------------------------------------
+void getData(uint8_t *data, uint8_t size_l, uint16_t eeprom) //получение информации
+{
+  uint8_t dataBuf[size_l];
+  uint16_t crc = 0;
+  uint16_t crcData = 0;
+
+  if (availableData() == size_l + 2) {
+    for (uint8_t i = 0; i < size_l; i++) {
+      dataBuf[i] = readData();
+      crcData += (uint16_t)dataBuf[i] * (i + 2);
+    }
+
+    for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
+
+    if (crc == crcData) {
+      for (uint8_t i = 0; i < size_l; i++) *((uint8_t*)&data + i) = dataBuf[i];
+      eeprom_update_block((void*)&data, (void*)eeprom, size_l); //записываем данные в память
+      sendCommand(ANSWER_OK);
+    }
+    else sendCommand(ANSWER_CRC_ERROR);
+  }
+  else {
+    sendCommand(ANSWER_LENGTH_ERROR);
+    clearBuffer(); //очистить буфер приёма
   }
 }
