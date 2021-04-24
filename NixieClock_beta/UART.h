@@ -120,8 +120,8 @@ void getData(uint8_t *data, uint8_t size_l, uint16_t eeprom) //получени�
     for (uint8_t i = 0; i < 2; i++) *((uint8_t*)&crc + i) = readData();
 
     if (crc == crcData) {
-      for (uint8_t i = 0; i < size_l; i++) *((uint8_t*)&data + i) = dataBuf[i];
-      eeprom_update_block((void*)&data, (void*)eeprom, size_l); //записываем данные в память
+      for (uint8_t i = 0; i < size_l; i++) data[i] = dataBuf[i];
+      eeprom_update_block((void*)&dataBuf, (void*)eeprom, size_l); //записываем данные в память
       sendCommand(ANSWER_OK);
     }
     else sendCommand(ANSWER_CRC_ERROR);

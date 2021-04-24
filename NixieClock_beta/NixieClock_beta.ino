@@ -27,12 +27,13 @@ struct Settings_1 {
   uint8_t indiBright[2] = {DEFAULT_INDI_BRIGHT_N, DEFAULT_INDI_BRIGHT};
   uint8_t backlBright[2] = {DEFAULT_BACKL_BRIGHT_N, DEFAULT_BACKL_BRIGHT};
   uint8_t backlMinBright = DEFAULT_BACKL_MIN_BRIGHT;
+  uint8_t backlMode = DEFAULT_BACKL_MODE;
   uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT};
   uint16_t backlTime = DEFAULT_BACKL_TIME;
   uint8_t backlStep = DEFAULT_BACKL_STEP;
   uint8_t backlPause = DEFAULT_BACKL_PAUSE;
   uint8_t dotTimer = DEFAULT_DOT_TIMER;
-  uint8_t dotTime = DEFAULT_DOT_TIME;
+  uint16_t dotTime = DEFAULT_DOT_TIME;
 } brightSettings;
 
 struct Settings_2 {
@@ -48,7 +49,6 @@ struct Settings_2 {
   boolean glitchMode = DEFAULT_GLITCH_MODE;
   uint8_t glitchMin = DEFAULT_GLITCH_MIN;
   uint8_t glitchMax = DEFAULT_GLITCH_MAX;
-  uint8_t backlMode = DEFAULT_BACKL_MODE;
   uint8_t flipMode = DEFAULT_FLIP_ANIM;
   uint8_t burnTime = DEFAULT_BURN_TIME;
   uint8_t burnLoops = DEFAULT_BURN_LOOPS;
@@ -90,7 +90,7 @@ volatile uint16_t cnt_puls; //количество циклов для рабо�
 volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
 uint16_t tmr_score; //частота для генерации звука пищалкой
 
-#define FLIP_EFFECT_NUM 7 //количество эффектов
+#define FLIP_EFFECT_NUM 6 //количество эффектов
 uint16_t FLIP_SPEED[] = {DEFAULT_FLIP_TIME, 80, 80, 80, 80}; //скорость эффектов,(мс)
 
 uint8_t dotBrightStep;
@@ -322,7 +322,7 @@ void alarmReset(void) //сброс будильника
 //----------------------------------Преобразование данных---------------------------------------------------------
 void data_convert(void) //преобразование данных
 {
-  if (mainSettings.backlMode == 2) backlFlash();
+  if (brightSettings.backlMode == 2) backlFlash();
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
     //счет времени
@@ -576,7 +576,7 @@ void changeBright(void) //установка яркости от времени 
     dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
     if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
     backlMaxBright = brightSettings.backlBright[0]; //установка максимальной яркости подсветки
-    if (mainSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
+    if (brightSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
     if (backlMaxBright > 0) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //расчёт шага дыхания подсветки
     indiMaxBright = brightSettings.indiBright[0]; //установка максимальной яркости индикаторов
     indiSetBright(indiMaxBright); //установка общей яркости индикаторов
@@ -588,7 +588,7 @@ void changeBright(void) //установка яркости от времени 
     dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
     if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
     backlMaxBright = brightSettings.backlBright[1]; //установка максимальной яркости подсветки
-    if (mainSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
+    if (brightSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
     if (backlMaxBright > 0) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //расчёт шага дыхания подсветки
     indiMaxBright = brightSettings.indiBright[1]; //установка максимальной яркости индикаторов
     indiSetBright(indiMaxBright); //установка общей яркости индикаторов
@@ -721,20 +721,20 @@ void backlSwitch(void) //переключение подсветки
         _timer_ms[TMR_ANIM] = ANIM_TIME; //устанавливаем таймер
 
         indiClr(); //очистка индикаторов
-        indiPrintNum(mainSettings.backlMode, anim); //вывод даты
+        indiPrintNum(brightSettings.backlMode, anim); //вывод даты
         anim++;
       }
     }
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
-        if (++mainSettings.backlMode > 2) mainSettings.backlMode = 0;
-        switch (mainSettings.backlMode) {
+        if (++brightSettings.backlMode > 2) brightSettings.backlMode = 0;
+        switch (brightSettings.backlMode) {
           case 0: OCR2A = 0; break; //выключаем подсветку
           case 1: OCR2A = backlMaxBright; break; //включаем подсветку
           case 2: OCR2A = brightSettings.backlMinBright; break; //выключаем подсветку
         }
-        eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+        eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем основные настройки в память
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
         break;
@@ -1111,10 +1111,11 @@ uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой фор�
 //-------------------------------Сброс до заводских настроек---------------------------------------------------
 void mainReset(void) //сброс до заводских настроек
 {
-  indiDisable(); //выключение индикаторов
+  indiClr(); //очистка индикаторов
   eeprom_update_byte((uint8_t*)VERSION_HW, 0); //сбрасываем метку
   sendCommand(ANSWER_RESET_OK); //отправляем ответ
   for (_timer_ms[TMR_MS] = WAINT_BEFORE_REBOOT; _timer_ms[TMR_MS];) data_convert(); //ждем отправки ответа
+  indiDisable(); //выключение индикаторов
   asm volatile("jmp 0x0000"); //прыгаем в начало
 }
 //-------------------------------Синхронизация данных---------------------------------------------------
@@ -1125,11 +1126,11 @@ void sincData(void) //синхронизация данных
     switch (command) {
       case COMMAND_SEND_VERSION: sendCommand(VERSION_HW); break;
       case COMMAND_SEND_TIME: sendData(ANSWER_SEND_TIME, (uint8_t*)&RTC_time, sizeof(RTC_time)); break;
-      case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time), EEPROM_BLOCK_TIME); break;
+      case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time), EEPROM_BLOCK_TIME); changeBright(); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
       case COMMAND_GET_ALARM: getData((uint8_t*)&alarms, sizeof(alarms), EEPROM_BLOCK_ALARM); break;
       case COMMAND_SEND_SET_BRIGHT: sendData(ANSWER_SEND_SET_BRIGHT, (uint8_t*)&brightSettings, sizeof(brightSettings)); break;
-      case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings), EEPROM_BLOCK_SETTINGS_BRIGHT); break;
+      case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings), EEPROM_BLOCK_SETTINGS_BRIGHT); changeBright(); break;
       case COMMAND_SEND_SET_MAIN: sendData(ANSWER_SEND_SET_MAIN, (uint8_t*)&mainSettings, sizeof(mainSettings)); break;
       case COMMAND_GET_SET_MAIN: getData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN); break;
       case COMMAND_RESET_SETTINGS: mainReset(); break;
