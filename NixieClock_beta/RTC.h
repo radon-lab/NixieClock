@@ -13,13 +13,13 @@ struct time { //структура времени
 const uint8_t daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }; //дней в месяце
 
 //--------------------------------------Получить день недели------------------------------------------
-uint16_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) //получить день недели
+uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) //получить день недели
 {
   if (YY >= 2000) YY -= 2000; //если год больше 2000
   uint16_t days = DD; //записываем дату
   for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
   if (MM > 2 && YY % 4 == 0) days++; //если високосный год, прибавляем день
-  return (days + 365 * YY + (YY + 3) / 4 - 1 + 6) % 7; //возвращаем день недели
+  return (days + 365 * YY + (YY + 3) / 4 - 2 + 6) % 7 + 1; //возвращаем день недели
 }
 //--------------------------------------Распаковка short------------------------------------------
 uint8_t unpackREG(uint8_t data) //распаковка short
@@ -36,7 +36,7 @@ uint8_t unpackHours(uint8_t data) //распаковка часов
 //--------------------------------------Отправить время в RTC------------------------------------------
 void sendTime(void) //отправить время в RTC
 {
-  uint8_t day = getWeekDay(RTC_time.YY, RTC_time.MM, RTC_time.DD); //получаем день недели
+  RTC_time.DW = getWeekDay(RTC_time.YY, RTC_time.MM, RTC_time.DD); //получаем день недели
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x00); //устанавливаем адрес записи
   WireWrite((((RTC_time.s / 10) << 4) | (RTC_time.s % 10))); //отправляем секунды
@@ -44,7 +44,7 @@ void sendTime(void) //отправить время в RTC
   if (RTC_time.h > 19) WireWrite((0x02 << 4) | (RTC_time.h % 20)); //отправляем часы
   else if (RTC_time.h > 9) WireWrite((0x01 << 4) | (RTC_time.h % 10));
   else WireWrite(RTC_time.h);
-  WireWrite(day); //отправляем день недели
+  WireWrite(0); //пропускаем день недели
   WireWrite(((RTC_time.DD / 10) << 4) | (RTC_time.DD % 10)); //отправляем дату
   WireWrite(((RTC_time.MM / 10) << 4) | (RTC_time.MM % 10)); //отправляем месяц
   WireWrite((((RTC_time.YY - 2000) / 10) << 4) | ((RTC_time.YY - 2000) % 10)); //отправляем год
@@ -60,10 +60,11 @@ void getTime(void) //запрашиваем время из RTC
   RTC_time.s = unpackREG(WireRead()); //получаем секунды
   RTC_time.m = unpackREG(WireRead()); //получаем минуты
   RTC_time.h = unpackHours(WireRead()); //получаем часы
-  RTC_time.DW = WireRead(); //получаем день недели
+  WireRead(); //пропускаем день недели
   RTC_time.DD = unpackREG(WireRead()); //получаем дату
   RTC_time.MM = unpackREG(WireRead()); //получаем месяц
   RTC_time.YY = unpackREG(WireRead()) + 2000; //получаем год
+  RTC_time.DW = getWeekDay(RTC_time.YY, RTC_time.MM, RTC_time.DD); //получаем день недели
 }
 //-------------------------------Настройка SQW-------------------------------------
 void setSQW(void) //настройка SQW

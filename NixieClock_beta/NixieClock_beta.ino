@@ -101,11 +101,11 @@ uint8_t indiMaxBright;
 
 #define ALARMS_NUM 5 //количество будильников
 uint8_t alarms[ALARMS_NUM][4] = {
-  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
-  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
-  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
-  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
-  {15, 25, 0, 3}  //час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
+  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
+  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
+  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
+  {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
+  {15, 25, 0, 3}  //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
 };
 boolean alarmWaint = 0;
 uint8_t alarm = 0;
@@ -242,8 +242,8 @@ void checkAlarms(void) //проверка будильников
   else { //иначе проверяем будильники на совподение
     for (uint8_t alm = 0; alm < ALARMS_NUM; alm++) {
       if (alarms[alm][2]) {
-        if (RTC_time.h == alarms[alm][0] && RTC_time.m == alarms[alm][1] && (alarms[alm][3] & (0x01 << RTC_time.DW))) {
-          alarm = alm;
+        if (RTC_time.h == alarms[alm][0] && RTC_time.m == alarms[alm][1] && (alarms[alm][2] == 2 || (alarms[alm][3] & (0x01 << RTC_time.DW)))) {
+          alarm = alm + 1;
           return;
         }
       }
@@ -309,8 +309,8 @@ void alarmWarn(void) //тревога будильника
 //----------------------------------Сброс будильника---------------------------------------------------------
 void alarmReset(void) //сброс будильника
 {
-  if (alarms[alarm][2] == 1) {
-    alarms[alarm][2] = 0;
+  if (alarms[alarm - 1][2] == 2) {
+    alarms[alarm - 1][2] = 0;
     eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //записываем будильники в память
   }
   alarmWaint = 0;
@@ -559,9 +559,9 @@ void settings_time(void)
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату по умолчанию в память
         sendTime(); //отправить время в RTC
         changeBright(); //установка яркости от времени суток
+        eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату по умолчанию в память
         return;
     }
   }
@@ -636,6 +636,7 @@ void showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
   OCR1B = dotMaxBright; //включаем точки
+  _scr = 0; //обновление экрана
   switch (mainSettings.sensorSet) { //выбор датчика температуры
     case 0: readTempDS(); break; //чтение температуры с датчика DS3231
     case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
@@ -676,6 +677,7 @@ void showDate(void) //показать дату
 {
   uint8_t mode = 0; //текущий режим
   OCR1B = dotMaxBright; //включаем точки
+  _scr = 0; //обновление экрана
   for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS] && !availableData();) {
     data_convert(); //обработка данных
 
@@ -900,14 +902,14 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       }
       break;
     case 1: //перемотка по порядку числа
-      anim_buf[0] = RTC_time.h / 10;
-      anim_buf[1] = RTC_time.h % 10;
-      anim_buf[2] = RTC_time.m / 10;
-      anim_buf[3] = RTC_time.m % 10;
-      anim_buf[4] = HH / 10;
-      anim_buf[5] = HH % 10;
-      anim_buf[6] = MM / 10;
-      anim_buf[7] = MM % 10;
+      anim_buf[0] = HH / 10;
+      anim_buf[1] = HH % 10;
+      anim_buf[2] = MM / 10;
+      anim_buf[3] = MM % 10;
+      anim_buf[4] = RTC_time.h / 10;
+      anim_buf[5] = RTC_time.h % 10;
+      anim_buf[6] = RTC_time.m / 10;
+      anim_buf[7] = RTC_time.m % 10;
 
       while (1 && !availableData()) {
         data_convert(); //обработка данных
@@ -1126,13 +1128,13 @@ void sincData(void) //синхронизация данных
     switch (command) {
       case COMMAND_SEND_VERSION: sendCommand(VERSION_HW); break;
       case COMMAND_SEND_TIME: sendData(ANSWER_SEND_TIME, (uint8_t*)&RTC_time, sizeof(RTC_time)); break;
-      case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time), EEPROM_BLOCK_TIME); changeBright(); break;
+      case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time)); sendTime(); changeBright(); eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
-      case COMMAND_GET_ALARM: getData((uint8_t*)&alarms, sizeof(alarms), EEPROM_BLOCK_ALARM); break;
+      case COMMAND_GET_ALARM: getData((uint8_t*)&alarms, sizeof(alarms)); eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); break;
       case COMMAND_SEND_SET_BRIGHT: sendData(ANSWER_SEND_SET_BRIGHT, (uint8_t*)&brightSettings, sizeof(brightSettings)); break;
-      case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings), EEPROM_BLOCK_SETTINGS_BRIGHT); changeBright(); break;
+      case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings)); changeBright(); eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); break;
       case COMMAND_SEND_SET_MAIN: sendData(ANSWER_SEND_SET_MAIN, (uint8_t*)&mainSettings, sizeof(mainSettings)); break;
-      case COMMAND_GET_SET_MAIN: getData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN); break;
+      case COMMAND_GET_SET_MAIN: getData((uint8_t*)&mainSettings, sizeof(mainSettings)); eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); break;
       case COMMAND_RESET_SETTINGS: mainReset(); break;
       default:
         sendCommand(ANSWER_UNKNOWN_COMMAND);

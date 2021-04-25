@@ -105,7 +105,7 @@ void sendData(uint8_t command, uint8_t *data, uint8_t size_l) //отправка
   }
 }
 //-------------------------Получение информации----------------------------------------------------
-void getData(uint8_t *data, uint8_t size_l, uint16_t eeprom) //получение информации
+void getData(uint8_t *data, uint8_t size_l) //получение информации
 {
   uint8_t dataBuf[size_l];
   uint16_t crc = 0;
@@ -121,7 +121,6 @@ void getData(uint8_t *data, uint8_t size_l, uint16_t eeprom) //получени�
 
     if (crc == crcData) {
       for (uint8_t i = 0; i < size_l; i++) data[i] = dataBuf[i];
-      eeprom_update_block((void*)&dataBuf, (void*)eeprom, size_l); //записываем данные в память
       sendCommand(ANSWER_OK);
     }
     else sendCommand(ANSWER_CRC_ERROR);
