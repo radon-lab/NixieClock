@@ -391,17 +391,15 @@ void glitchTick(void) //имитация глюков
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_GLITCH]) { //если таймер истек
-          if (!indiState) indi_buf[glitchIndic] = indi_null; //выключаем индикатор
-          else indi_buf[glitchIndic] = indiSave; //иначе включаем индикатор
-          indiChangePwm(); //установка Linear Advance
+          if (!indiState) indiClr(glitchIndic); //выключаем индикатор
+          else indiSet(indiSave, glitchIndic); //установка индикатора
           indiState = !indiState; //меняем состояние глюка лампы
           _timer_ms[TMR_GLITCH] = random(1, 6) * 20; //перезапускаем таймер глюка
           if (!glitchCounter--) break; //выходим если закончились глюки
         }
       }
       _tmrGlitch = random(mainSettings.glitchMin, mainSettings.glitchMax); //находим рандомное время появления глюка
-      indi_buf[glitchIndic] = indiSave; //возвращаем цифру на место
-      indiChangePwm(); //установка Linear Advance
+      indiSet(indiSave, glitchIndic);
     }
   }
 }

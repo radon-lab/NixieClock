@@ -106,6 +106,12 @@ void indiClr(uint8_t indi) //очистка индикатора
   indi_buf[indi] = indi_null;
   indiChangePwm(); //установка Linear Advance
 }
+//-------------------------Установка индикатора----------------------------------------------------
+void indiSet(uint8_t buf, uint8_t indi) //установка индикатора
+{
+  indi_buf[indi] = buf;
+  indiChangePwm(); //установка Linear Advance
+}
 //---------------------------------Включение индикаторов---------------------------------------
 void indiEnable(void) //включение индикаторов
 {
