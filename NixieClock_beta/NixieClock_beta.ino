@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.4 от 24.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.1.5 от 25.04.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -382,23 +382,26 @@ void glitchTick(void) //имитация глюков
 {
   if (mainSettings.glitchMode) {
     if (!_tmrGlitch && RTC_time.s > 7 && RTC_time.s < 55) {
-      boolean indiState = 0;
-      uint8_t glitchCounter = 0;
-      uint8_t glitchMax = random(2, 6);
-      uint8_t glitchIndic = random(0, 4);
-      for (_timer_ms[TMR_GLITCH] = random(1, 6) * 20; !availableData() && !check_keys();) {
+      boolean indiState = 0; //состояние индикатора
+      uint8_t glitchCounter = random(2, 6); //максимальное количество глюков
+      uint8_t glitchIndic = random(0, 4); //номер индикатора
+      uint8_t indiSave = indi_buf[glitchIndic]; //сохраняем текущую цифру в индикаторе
+      while (!availableData() && !check_keys()) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_GLITCH]) { //если таймер истек
-          indiSetBright(indiState * indiMaxBright, glitchIndic); //устанавливаем яркость лампы
+          if (!indiState) indi_buf[glitchIndic] = indi_null; //выключаем индикатор
+          else indi_buf[glitchIndic] = indiSave; //иначе включаем индикатор
+          indiChangePwm(); //установка Linear Advance
           indiState = !indiState; //меняем состояние глюка лампы
           _timer_ms[TMR_GLITCH] = random(1, 6) * 20; //перезапускаем таймер глюка
-          if (++glitchCounter > glitchMax) break; //выходим если закончились глюки
+          if (!glitchCounter--) break; //выходим если закончились глюки
         }
       }
       _tmrGlitch = random(mainSettings.glitchMin, mainSettings.glitchMax); //находим рандомное время появления глюка
-      indiSetBright(indiMaxBright, glitchIndic); //возвращаем нормальную яркость
+      indi_buf[glitchIndic] = indiSave; //возвращаем цифру на место
+      indiChangePwm(); //установка Linear Advance
     }
   }
 }
