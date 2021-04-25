@@ -51,7 +51,7 @@ void readCalibrat(void) //чтение калибровок датчика
   WireBeginTransmission(BME_ADDR); //начало передачи
   WireWrite(0x88); //устанавливаем адрес чтения
   if (WireEndTransmission() != 0) return; //если нет ответа выходим
-  WireRequestFrom(BME_ADDR , 25); //ожидаем 25 байт
+  WireRequestFrom(BME_ADDR, 25); //ожидаем 25 байт
 
   Calibration.TEMP_1 = (WireRead() | (WireRead() << 8)); //читаем
   Calibration.TEMP_2 = (WireRead() | (WireRead() << 8));
@@ -71,7 +71,7 @@ void readCalibrat(void) //чтение калибровок датчика
   WireBeginTransmission(BME_ADDR); //начало передачи
   WireWrite(0xE1); //устанавливаем адрес чтения
   if (WireEndTransmission() != 0) return; //если нет ответа выходим
-  WireRequestFrom(BME_ADDR , 8); //ожидаем 8 байт
+  WireRequestFrom(BME_ADDR, 7); //ожидаем 7 байт
 
   Calibration.HUM_2 = (WireRead() | (WireRead() << 8)); //читаем
   Calibration.HUM_3 = WireRead();
