@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x65
+#define VERSION_FW 0x66
 
 //----------------Библиотеки----------------
 #include <avr/eeprom.h>
@@ -32,6 +32,7 @@ struct Settings_1 {
   uint16_t backlTime = DEFAULT_BACKL_TIME;
   uint8_t backlStep = DEFAULT_BACKL_STEP;
   uint8_t backlPause = DEFAULT_BACKL_PAUSE;
+  uint8_t dotMode = DEFAULT_DOT_MODE;
   uint8_t dotTimer = DEFAULT_DOT_TIMER;
   uint16_t dotTime = DEFAULT_DOT_TIME;
 } brightSettings;
@@ -322,7 +323,7 @@ void alarmReset(void) //сброс будильника
 //----------------------------------Преобразование данных---------------------------------------------------------
 void data_convert(void) //преобразование данных
 {
-  if (brightSettings.backlMode == 2) backlFlash();
+  backlFlash(); //"дыхание" подсветки
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
     //счет времени
@@ -355,7 +356,6 @@ void data_convert(void) //преобразование данных
   }
 
   for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
-
     switch (btn_state) { //таймер опроса кнопок
       case 0: if (btn_check) btn_tmr++; break; //считаем циклы
       case 1: if (btn_tmr > 0) btn_tmr--; break; //убираем дребезг
@@ -573,43 +573,55 @@ void changeBright(void) //установка яркости от времени 
       (brightSettings.timeBright[0] < brightSettings.timeBright[1] && RTC_time.h >= brightSettings.timeBright[0] && RTC_time.h < brightSettings.timeBright[1])) {
     //ночной режим
     dotMaxBright = brightSettings.dotBright[0]; //установка максимальной яркости точек
-    dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
-    if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
     backlMaxBright = brightSettings.backlBright[0]; //установка максимальной яркости подсветки
-    if (brightSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
-    if (backlMaxBright > 0) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //расчёт шага дыхания подсветки
     indiMaxBright = brightSettings.indiBright[0]; //установка максимальной яркости индикаторов
-    indiSetBright(indiMaxBright); //установка общей яркости индикаторов
     FLIP_SPEED[0] = (uint16_t)DEFAULT_FLIP_TIME * brightSettings.indiBright[1] / brightSettings.indiBright[0]; //расчёт шага яркости режима 2
   }
   else {
     //дневной режим
     dotMaxBright = brightSettings.dotBright[1]; //установка максимальной яркости точек
-    dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
-    if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
     backlMaxBright = brightSettings.backlBright[1]; //установка максимальной яркости подсветки
-    if (brightSettings.backlMode == 1) OCR2A = backlMaxBright; //если посветка статичная, устанавливаем яркость
-    if (backlMaxBright > 0) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //расчёт шага дыхания подсветки
     indiMaxBright = brightSettings.indiBright[1]; //установка максимальной яркости индикаторов
-    indiSetBright(indiMaxBright); //установка общей яркости индикаторов
     FLIP_SPEED[0] = (uint16_t)DEFAULT_FLIP_TIME; //расчёт шага яркости режима 2
   }
+  switch (brightSettings.dotMode) {
+    case 0: OCR1B = 0; break; //если точки выключены
+    case 1: OCR1B = dotMaxBright; break; //если точки статичные, устанавливаем яркость
+    case 2:
+    if (dotMaxBright) {
+      dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
+      if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
+    }
+    else OCR1B = 0; //иначе точки выключены
+      break;
+  }
+  switch (brightSettings.backlMode) {
+    case 0: OCR2A = 0; break; //если посветка выключена
+    case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
+    case 2: 
+    if (backlMaxBright) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //если подсветка динамичная, расчёт шага дыхания подсветки
+    else OCR2A = 0; //иначе посветка выключена
+    break;
+  }
+  indiSetBright(indiMaxBright); //установка общей яркости индикаторов
 }
 //----------------------------------Мигание подсветки---------------------------------
 void backlFlash(void) //мигание подсветки
 {
   static boolean backl_drv; //направление яркости
-  if (!_timer_ms[TMR_BACKL]) {
-    _timer_ms[TMR_BACKL] = backlBrightStep;
-    switch (backl_drv) {
-      case 0: if (OCR2A < backlMaxBright) OCR2A += brightSettings.backlStep; else backl_drv = 1; break;
-      case 1:
-        if (OCR2A > brightSettings.backlMinBright) OCR2A -= brightSettings.backlStep;
-        else {
-          backl_drv = 0;
-          _timer_ms[TMR_BACKL] = brightSettings.backlPause;
-        }
-        break;
+  if (brightSettings.backlMode == 2 && backlMaxBright) {
+    if (!_timer_ms[TMR_BACKL]) {
+      _timer_ms[TMR_BACKL] = backlBrightStep;
+      switch (backl_drv) {
+        case 0: if (OCR2A < backlMaxBright) OCR2A += brightSettings.backlStep; else backl_drv = 1; break;
+        case 1:
+          if (OCR2A > brightSettings.backlMinBright) OCR2A -= brightSettings.backlStep;
+          else {
+            backl_drv = 0;
+            _timer_ms[TMR_BACKL] = brightSettings.backlPause;
+          }
+          break;
+      }
     }
   }
 }
@@ -617,17 +629,19 @@ void backlFlash(void) //мигание подсветки
 void dotFlash(void) //мигание точек
 {
   static boolean dot_drv; //направление яркости
-  if (!_timer_ms[TMR_DOT]) {
-    _timer_ms[TMR_DOT] = brightSettings.dotTimer;
-    switch (dot_drv) {
-      case 0: if (OCR1B < dotMaxBright) OCR1B += dotBrightStep; else dot_drv = 1; break;
-      case 1:
-        if (OCR1B > 0) OCR1B -= dotBrightStep;
-        else {
-          dot_drv = 0;
-          _timer_ms[TMR_DOT] = 1000 - brightSettings.dotTime;
-        }
-        break;
+  if (brightSettings.dotMode == 2 && dotMaxBright) {
+    if (!_timer_ms[TMR_DOT]) {
+      _timer_ms[TMR_DOT] = brightSettings.dotTimer;
+      switch (dot_drv) {
+        case 0: if (OCR1B < dotMaxBright) OCR1B += dotBrightStep; else dot_drv = 1; break;
+        case 1:
+          if (OCR1B > 0) OCR1B -= dotBrightStep;
+          else {
+            dot_drv = 0;
+            _timer_ms[TMR_DOT] = 1000 - brightSettings.dotTime;
+          }
+          break;
+      }
     }
   }
 }
