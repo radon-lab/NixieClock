@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_HW 0x65
+#define VERSION_FW 0x65
 
 //----------------Библиотеки----------------
 #include <avr/eeprom.h>
@@ -141,8 +141,8 @@ int main(void)  //инициализация
   setSQW(); //установка SQW на 1Гц
   getTime(); //запрашиваем время из RTC
 
-  if (eeprom_read_byte((uint8_t*)VERSION_HW) != VERSION_HW) { //если первый запуск, восстанавливаем из переменных
-    eeprom_update_byte((uint8_t*)VERSION_HW, VERSION_HW); //делаем метку версии прошивки
+  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW) { //если первый запуск, восстанавливаем из переменных
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
     eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
     eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //записываем будильники в память
     eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем настройки яркости в память
@@ -1114,7 +1114,7 @@ uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой фор�
 void mainReset(void) //сброс до заводских настроек
 {
   indiClr(); //очистка индикаторов
-  eeprom_update_byte((uint8_t*)VERSION_HW, 0); //сбрасываем метку
+  eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, 0); //сбрасываем метку
   sendCommand(ANSWER_RESET_OK); //отправляем ответ
   for (_timer_ms[TMR_MS] = WAINT_BEFORE_REBOOT; _timer_ms[TMR_MS];) data_convert(); //ждем отправки ответа
   indiDisable(); //выключение индикаторов
@@ -1126,7 +1126,7 @@ void sincData(void) //синхронизация данных
   if (availableData()) {
     uint8_t command = readData();
     switch (command) {
-      case COMMAND_SEND_VERSION: sendCommand(VERSION_HW); break;
+      case COMMAND_SEND_VERSION: sendCommand(VERSION_FW); break;
       case COMMAND_SEND_TIME: sendData(ANSWER_SEND_TIME, (uint8_t*)&RTC_time, sizeof(RTC_time)); break;
       case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time)); sendTime(); changeBright(); eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
