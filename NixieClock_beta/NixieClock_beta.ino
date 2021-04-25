@@ -135,12 +135,6 @@ int main(void)  //инициализация
   dataChannelInit(BT_UART_BAUND); //инициализация UART
   indiInit(); //инициализация индикаторов
 
-  EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
-  EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
-
-  setSQW(); //установка SQW на 1Гц
-  getTime(); //запрашиваем время из RTC
-
   if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW) { //если первый запуск, восстанавливаем из переменных
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
     eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
@@ -153,6 +147,12 @@ int main(void)  //инициализация
     eeprom_read_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //считываем настройки яркости из памяти
     eeprom_read_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
   }
+
+  EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
+  EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
+
+  setSQW(); //установка SQW на 1Гц
+  getTime(); //запрашиваем время из RTC
 
   if (RTC_time.YY < 2021 || RTC_time.YY > 2050) { //если пропадало питание
     eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату и время из памяти
