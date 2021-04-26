@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x66
+#define VERSION_FW 0x67
 
 //----------------Библиотеки----------------
 #include <avr/eeprom.h>
@@ -28,10 +28,10 @@ struct Settings_1 {
   uint8_t backlBright[2] = {DEFAULT_BACKL_BRIGHT_N, DEFAULT_BACKL_BRIGHT};
   uint8_t backlMinBright = DEFAULT_BACKL_MIN_BRIGHT;
   uint8_t backlMode = DEFAULT_BACKL_MODE;
-  uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT};
   uint16_t backlTime = DEFAULT_BACKL_TIME;
   uint8_t backlStep = DEFAULT_BACKL_STEP;
   uint8_t backlPause = DEFAULT_BACKL_PAUSE;
+  uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT};
   uint8_t dotMode = DEFAULT_DOT_MODE;
   uint8_t dotTimer = DEFAULT_DOT_TIMER;
   uint16_t dotTime = DEFAULT_DOT_TIME;
@@ -39,18 +39,18 @@ struct Settings_1 {
 
 struct Settings_2 {
   uint8_t timeHour[2] = {DEFAULT_HOUR_SOUND_START, DEFAULT_HOUR_SOUND_END};
+  uint8_t flipMode = DEFAULT_FLIP_ANIM;
   boolean timeFormat = DEFAULT_TIME_FORMAT;
+  boolean knock_sound = DEFAULT_KNOCK_SOUND;
+  uint8_t sensorSet = DEFAULT_TEMP_SENSOR;
+  int8_t tempCorrect = DEFAULT_TEMP_CORRECT;
   uint8_t almMelody = DEFAULT_ALM_MELODY;
   uint8_t almTimeOutSound = DEFAULT_ALM_TIMEOUT_SOUND;
   uint8_t almTimeOut = DEFAULT_ALM_TIMEOUT;
   uint8_t almWaint = DEFAULT_ALM_WAINT;
-  boolean knock_sound = DEFAULT_KNOCK_SOUND;
-  boolean sensorSet = DEFAULT_TEMP_SENSOR;
-  int8_t tempCorrect = DEFAULT_TEMP_CORRECT;
   boolean glitchMode = DEFAULT_GLITCH_MODE;
   uint8_t glitchMin = DEFAULT_GLITCH_MIN;
   uint8_t glitchMax = DEFAULT_GLITCH_MAX;
-  uint8_t flipMode = DEFAULT_FLIP_ANIM;
   uint8_t burnTime = DEFAULT_BURN_TIME;
   uint8_t burnLoops = DEFAULT_BURN_LOOPS;
   uint8_t burnPeriod = DEFAULT_BURN_PERIOD;
@@ -589,20 +589,17 @@ void changeBright(void) //установка яркости от времени 
     case 0: OCR1B = 0; break; //если точки выключены
     case 1: OCR1B = dotMaxBright; break; //если точки статичные, устанавливаем яркость
     case 2:
-    if (dotMaxBright) {
       dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
       if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
-    }
-    else OCR1B = 0; //иначе точки выключены
       break;
   }
   switch (brightSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
     case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
-    case 2: 
-    if (backlMaxBright) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //если подсветка динамичная, расчёт шага дыхания подсветки
-    else OCR2A = 0; //иначе посветка выключена
-    break;
+    case 2:
+      if (backlMaxBright) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //если подсветка динамичная, расчёт шага дыхания подсветки
+      else OCR2A = 0; //иначе посветка выключена
+      break;
   }
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
 }
@@ -630,7 +627,7 @@ void backlFlash(void) //мигание подсветки
 void dotFlash(void) //мигание точек
 {
   static boolean dot_drv; //направление яркости
-  if (brightSettings.dotMode == 2 && dotMaxBright) {
+  if (brightSettings.dotMode == 2) {
     if (!_timer_ms[TMR_DOT]) {
       _timer_ms[TMR_DOT] = brightSettings.dotTimer;
       switch (dot_drv) {
