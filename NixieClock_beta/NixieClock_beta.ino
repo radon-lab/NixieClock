@@ -846,11 +846,11 @@ void burnIndi(void) //антиотравление индикаторов
 //----------------------------------Анимация цифр-----------------------------------
 void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
 {
-  static uint8_t mode;
+  uint8_t mode;
   _animShow = 0; //сбрасываем флаг
   switch (flipMode) {
     case 0: return;
-    case 1: if (demo) return; else if (++mode > FLIP_EFFECT_NUM) mode = 0; break;
+    case 1: if (demo) return; else mode = random(0, FLIP_EFFECT_NUM - 1); break;
     default: mode = flipMode - 2; break;
   }
 
