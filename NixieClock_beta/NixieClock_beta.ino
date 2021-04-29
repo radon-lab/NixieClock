@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.5 от 25.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.1.6 от 28.04.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -829,17 +829,22 @@ void burnIndi(void) //антиотравление индикаторов
   if (_tmrBurn >= mainSettings.burnPeriod && RTC_time.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
     for (byte indi = 0; indi < 4; indi++) {
-      indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-      indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
       for (byte loops = 0; loops < mainSettings.burnLoops; loops++) {
         for (byte digit = 0; digit < 10; digit++) {
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
-          for (_timer_ms[TMR_MS] = mainSettings.burnTime; _timer_ms[TMR_MS] && !availableData() && !check_keys();) { //ждем
+          for (_timer_ms[TMR_MS] = mainSettings.burnTime; _timer_ms[TMR_MS];) { //ждем
+            if (availableData() || check_keys()) { //если доступны данные или нажата кнопка
+              indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
+              indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+              return; //выходим
+            }
             data_convert(); //обработка данных
             dotFlash(); //мигаем точками
           }
         }
       }
+      indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
+      indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
     }
   }
 }

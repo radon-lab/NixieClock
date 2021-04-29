@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 const uint8_t decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
 
