@@ -1,6 +1,6 @@
 #define BME_ADDR 0x76 //адрес датчика
 
-#define MODE 0x03 //нормальный режим
+#define MODE 0x02 //режим замера по запросу
 #define STANDBY 0x05 //замер каждую секунду
 #define FILTER_COEF 0x04 //коэффициент фильтрации 16
 
@@ -38,7 +38,7 @@ struct temp { //структура температуры
 boolean initDev = 0; //флаг инициализации датчика
 
 //--------------------------------------Запись одного байта------------------------------------------
-void writeREG(uint8_t address , uint8_t data) //Запись одного байта
+void writeREG(uint8_t address, uint8_t data) //Запись одного байта
 {
   WireBeginTransmission(BME_ADDR); //начало передачи
   WireWrite(address); //устанавливаем адрес записи
@@ -84,6 +84,11 @@ void readTempBME(void) //чтение температуры/давления/в
     writeREG(0xF2, HUM_OVERSAMP); //устанавливаем разрешение датчика влажности
     writeREG(0xF4, ((TEMP_OVERSAMP << 5) | (PRESS_OVERSAMP << 2) | MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
     writeREG(0xF5, ((STANDBY << 5) | (FILTER_COEF << 2))); //устанавливаем частоту опроса и коэффициент фильтрации
+  }
+  writeREG(0xF4, ((TEMP_OVERSAMP << 5) | (PRESS_OVERSAMP << 2) | MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
+  while (1) { //ожидаем окончания замера
+    if (WireRequestFrom(BME_ADDR, 0xF3)) return; //запрашиваем чтение данных, если нет ответа выходим
+    if (!(WireReadEndByte() & 0x08)) break; //если замер завершён продолжаем
   }
   if (WireRequestFrom(BME_ADDR, 0xF7)) return; //запрашиваем чтение данных, если нет ответа выходим
 

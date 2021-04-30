@@ -18,7 +18,7 @@
        
 #define DEFAULT_NIGHT_START 20       //час перехода на ночную подсветку по умолчанию(BRIGHT_N)(DEFAULT_NIGHT_START = DEFAULT_NIGHT_END - только дневная подсветка)
 #define DEFAULT_NIGHT_END 8          //час перехода на дневную подсветку по умолчанию(BRIGHT)
-#define DEFAULT_INDI_BRIGHT 23       //яркость цифр дневная по умолчанию(0..30)
+#define DEFAULT_INDI_BRIGHT 25       //яркость цифр дневная по умолчанию(0..30)
 #define DEFAULT_INDI_BRIGHT_N 5      //яркость цифр ночная по умолчанию(0..30)
 
 #define DEFAULT_BACKL_BRIGHT 255     //яркость подсветки ламп дневная по умолчанию(5..255)
@@ -28,14 +28,14 @@
 #define DEFAULT_BACKL_STEP 1         //шаг яркости подсветки по умолчанию(1..255)
 #define DEFAULT_BACKL_TIME 12000     //период подсветки по умолчанию(100..12000)(мс)
 
-#define DEFAULT_DOT_BRIGHT 50       //яркость точки дневная по умолчанию(5..255)
+#define DEFAULT_DOT_BRIGHT 50        //яркость точки дневная по умолчанию(5..255)
 #define DEFAULT_DOT_BRIGHT_N 20      //яркость точки ночная по умолчанию(5..255)
 #define DEFAULT_DOT_TIMER 4          //шаг яркости точки по умолчанию(4..255)(мс)
 #define DEFAULT_DOT_TIME 250         //время мигания точки по умолчанию(100..1000)(мс)
 
-#define DEFAULT_GLITCH_MODE 1        // минимальное время между глюками по умолчанию(1 - вкл | 0 - выкл)
-#define DEFAULT_GLITCH_MIN 40        // минимальное время между глюками по умолчанию(1..240)(сек)
-#define DEFAULT_GLITCH_MAX 160       // максимальное время между глюками по умолчанию(1..240)(сек)
+#define DEFAULT_GLITCH_MODE 1        //режим глюков по умолчанию(1 - вкл | 0 - выкл)
+#define DEFAULT_GLITCH_MIN 40        //минимальное время между глюками по умолчанию(1..240)(сек)
+#define DEFAULT_GLITCH_MAX 160       //максимальное время между глюками по умолчанию(1..240)(сек)
 
 #define DEFAULT_FLIP_TIME 120        //шаг яркости эффекта номер 2 дневной по умолчанию(мс)
 

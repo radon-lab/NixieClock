@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.6 от 28.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.1.6 от 30.04.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -891,7 +891,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
     case 0: //плавное угасание и появление
       anim_buf[0] = indiMaxBright;
 
-      while (1 && !availableData()) {
+      while (!availableData() && !check_keys()) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
 
@@ -917,6 +917,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
         }
       }
+      indiSetBright(indiMaxBright); //возвращаем максимальную яркость
       break;
     case 1: //перемотка по порядку числа
       anim_buf[0] = HH / 10;
@@ -928,7 +929,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[6] = RTC_time.m / 10;
       anim_buf[7] = RTC_time.m % 10;
 
-      while (1 && !availableData()) {
+      while (!availableData() && !check_keys()) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
 
@@ -970,7 +971,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         }
       }
 
-      while (1 && !availableData()) {
+      while (!availableData() && !check_keys()) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
 
@@ -997,7 +998,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[2] = MM / 10; //минуты
       anim_buf[3] = MM % 10; //минуты
 
-      for (uint8_t i = 0; i < 4 && !availableData();) {
+      for (uint8_t i = 0; i < 4 && !availableData() && !check_keys();) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1015,7 +1016,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[1] = RTC_time.m / 10; //минуты
       anim_buf[0] = RTC_time.m % 10; //минуты
 
-      for (uint8_t i = 0; i < 4 && !availableData();) {
+      for (uint8_t i = 0; i < 4 && !availableData() && !check_keys();) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1037,7 +1038,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
 
       drvIndi = 0;
 
-      for (uint8_t i = 0; i < 4 && !availableData();) {
+      for (uint8_t i = 0; i < 4 && !availableData() && !check_keys();) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1060,7 +1061,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
 
       drvIndi = 0;
 
-      for (uint8_t i = 0; i < 4 && !availableData();) {
+      for (uint8_t i = 0; i < 4 && !availableData() && !check_keys();) {
         data_convert(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
