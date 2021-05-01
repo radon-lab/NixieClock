@@ -1150,6 +1150,8 @@ void sincData(void) //синхронизация данных
     uint8_t command = readData();
     switch (command) {
       case COMMAND_SEND_VERSION: sendCommand(VERSION_FW); break;
+      case COMMAND_RESET_SETTINGS: mainReset(); break;
+      
       case COMMAND_SEND_TIME: sendData(ANSWER_SEND_TIME, (uint8_t*)&RTC_time, sizeof(RTC_time)); break;
       case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time)); sendTime(); changeBright(); eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
@@ -1160,7 +1162,8 @@ void sincData(void) //синхронизация данных
       case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings)); changeBright(); eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); break;
       case COMMAND_SEND_SET_MAIN: sendData(ANSWER_SEND_SET_MAIN, (uint8_t*)&mainSettings, sizeof(mainSettings)); break;
       case COMMAND_GET_SET_MAIN: getData((uint8_t*)&mainSettings, sizeof(mainSettings)); eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); break;
-      case COMMAND_RESET_SETTINGS: mainReset(); break;
+
+      case COMMAND_DEMO_FLIP: sendCommand(ANSWER_OK); flipIndi(readData(), 1); break;
       default:
         sendCommand(ANSWER_UNKNOWN_COMMAND);
         clearBuffer(); //очистить буфер приёма
