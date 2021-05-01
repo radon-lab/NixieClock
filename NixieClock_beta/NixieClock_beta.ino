@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.6 от 30.04.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.1.7 от 01.05.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x67
+#define VERSION_FW 0x68
 
 //----------------Библиотеки----------------
 #include <avr/eeprom.h>
@@ -44,10 +44,6 @@ struct Settings_2 {
   boolean knock_sound = DEFAULT_KNOCK_SOUND;
   uint8_t sensorSet = DEFAULT_TEMP_SENSOR;
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT;
-  uint8_t almMelody = DEFAULT_ALM_MELODY;
-  uint8_t almTimeOutSound = DEFAULT_ALM_TIMEOUT_SOUND;
-  uint8_t almTimeOut = DEFAULT_ALM_TIMEOUT;
-  uint8_t almWaint = DEFAULT_ALM_WAINT;
   boolean glitchMode = DEFAULT_GLITCH_MODE;
   uint8_t glitchMin = DEFAULT_GLITCH_MIN;
   uint8_t glitchMax = DEFAULT_GLITCH_MAX;
@@ -108,6 +104,13 @@ uint8_t alarms[ALARMS_NUM][4] = {
   {15, 25, 0, 3}, //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
   {15, 25, 0, 3}  //час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
 };
+uint8_t alarmSettings[ALARMS_NUM][4] = {
+  {1, 15, 4, 0}, //время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения после короткого нажатия | мелодия будильника
+  {1, 15, 4, 0}, //время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения после короткого нажатия | мелодия будильника
+  {1, 15, 4, 0}, //время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения после короткого нажатия | мелодия будильника
+  {1, 15, 4, 0}, //время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения после короткого нажатия | мелодия будильника
+  {1, 15, 4, 0}  //время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения после короткого нажатия | мелодия будильника
+};
 boolean alarmWaint = 0;
 uint8_t alarm = 0;
 uint8_t minsAlarm = 0;
@@ -140,11 +143,13 @@ int main(void)  //инициализация
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
     eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
     eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //записываем будильники в память
+    eeprom_update_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //записываем будильники в память
     eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем настройки яркости в память
     eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
   }
   else {
     eeprom_read_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //считываем будильники из памяти
+    eeprom_read_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //считываем будильники из памяти
     eeprom_read_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //считываем настройки яркости из памяти
     eeprom_read_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
   }
@@ -217,21 +222,21 @@ void _melody_chart(uint8_t melody) //воспроизведение мелоди
 void checkAlarms(void) //проверка будильников
 {
   if (alarm) { //если тревога активна
-    if (++minsAlarm >= mainSettings.almTimeOut) {
+    if (++minsAlarm >= alarmSettings[alarm][1]) { 
       alarmReset(); //сброс будильника
       MELODY_RESET; //сброс позиции мелодии
       return; //выходим
     }
 
-    if (mainSettings.almWaint && alarmWaint) {
-      if (++minsAlarmWaint >= mainSettings.almWaint) {
+    if (alarmSettings[alarm][2] && alarmWaint) {
+      if (++minsAlarmWaint >= alarmSettings[alarm][2]) {
         alarmWaint = 0;
         minsAlarmWaint = 0;
       }
     }
-    else if (mainSettings.almTimeOutSound) {
-      if (++minsAlarmSound >= mainSettings.almTimeOutSound) {
-        if (mainSettings.almWaint) {
+    else if (alarmSettings[alarm][0]) {
+      if (++minsAlarmSound >= alarmSettings[alarm][0]) {
+        if (alarmSettings[alarm][2]) {
           alarmWaint = 1;
           minsAlarmSound = 0;
         }
@@ -263,7 +268,7 @@ void alarmWarn(void) //тревога будильника
         return;
       }
 
-      MELODY_PLAY(mainSettings.almMelody); //воспроизводим мелодию
+      MELODY_PLAY(alarmSettings[alarm][3]); //воспроизводим мелодию
 
       if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
         _timer_ms[TMR_MS] = ALM_BLINK_TIME; //устанавливаем таймер
@@ -285,7 +290,7 @@ void alarmWarn(void) //тревога будильника
         case LEFT_KEY_PRESS: //клик левой кнопкой
         case RIGHT_KEY_PRESS: //клик правой кнопкой
         case SET_KEY_PRESS: //клик средней кнопкой
-          if (mainSettings.almWaint) {
+          if (alarmSettings[alarm][2]) {
             alarmWaint = 1;
             minsAlarmSound = 0;
           }
@@ -1149,6 +1154,8 @@ void sincData(void) //синхронизация данных
       case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time)); sendTime(); changeBright(); eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
       case COMMAND_GET_ALARM: getData((uint8_t*)&alarms, sizeof(alarms)); eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); break;
+      case COMMAND_SEND_SET_ALARM: sendData(ANSWER_SEND_SET_ALARM, (uint8_t*)&alarmSettings, sizeof(alarmSettings)); break;
+      case COMMAND_GET_SET_ALARM: getData((uint8_t*)&alarmSettings, sizeof(alarmSettings)); eeprom_update_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); break;
       case COMMAND_SEND_SET_BRIGHT: sendData(ANSWER_SEND_SET_BRIGHT, (uint8_t*)&brightSettings, sizeof(brightSettings)); break;
       case COMMAND_GET_SET_BRIGHT: getData((uint8_t*)&brightSettings, sizeof(brightSettings)); changeBright(); eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); break;
       case COMMAND_SEND_SET_MAIN: sendData(ANSWER_SEND_SET_MAIN, (uint8_t*)&mainSettings, sizeof(mainSettings)); break;
