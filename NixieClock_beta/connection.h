@@ -46,15 +46,15 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 #endif
 
 //пин кнопки ОК D8
-#define OK_BIT   0 // D8
-#define OK_PORT  PORTB
-#define OK_PIN   PINB
+#define SET_BIT   0 // D8
+#define SET_PORT  PORTB
+#define SET_PIN   PINB
 
-#define OK_OUT   (BIT_READ(OK_PIN, OK_BIT))
-#define OK_SET   (BIT_SET(OK_PORT, OK_BIT))
-#define OK_INP   (BIT_CLEAR((DDR_REG(OK_PORT)), OK_BIT))
+#define SET_OUT   (BIT_READ(SET_PIN, SET_BIT))
+#define SET_SET   (BIT_SET(SET_PORT, SET_BIT))
+#define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
 
-#define OK_INIT  OK_SET; OK_INP
+#define SET_INIT  SET_SET; SET_INP
 
 //пин кнопки DOWN D7
 #define LEFT_BIT   7 // D7

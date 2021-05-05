@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.7 от 01.05.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.1.7 от 05.05.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -124,22 +124,22 @@ int atexit(void (* /*func*/ )()) { //инициализация функций
   return 0;
 }
 //----------------------------------Инициализация-------------------------------------------------------------
-int main(void)  //инициализация
+int main(void) //инициализация
 {
-  OK_INIT;
-  LEFT_INIT;
-  RIGHT_INIT;
-  CONV_INIT;
-  SQW_INIT;
-  DOT_INIT;
-  BACKL_INIT;
-  BUZZ_INIT;
+  SET_INIT; //инициализация средней кнопки
+  LEFT_INIT; //инициализация левой кнопки
+  RIGHT_INIT; //инициализация правой кнопки
+  CONV_INIT; //инициализация преобразователя
+  SQW_INIT; //инициализация счета секунд
+  DOT_INIT; //инициализация точки
+  BACKL_INIT; //инициализация подсветки
+  BUZZ_INIT; //инициализация бузера
 
   WireInit(); //инициализация Wire
   dataChannelInit(BT_UART_BAUND); //инициализация UART
   indiInit(); //инициализация индикаторов
 
-  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW) { //если первый запуск, восстанавливаем из переменных
+  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_OUT) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
     eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
     eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //записываем будильники в память
@@ -147,7 +147,7 @@ int main(void)  //инициализация
     eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем настройки яркости в память
     eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
   }
-  else {
+  else if (LEFT_OUT) { //если левая кнопка не зажата, загружаем настройки из памяти
     eeprom_read_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //считываем будильники из памяти
     eeprom_read_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //считываем будильники из памяти
     eeprom_read_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //считываем настройки яркости из памяти
@@ -222,7 +222,7 @@ void _melody_chart(uint8_t melody) //воспроизведение мелоди
 void checkAlarms(void) //проверка будильников
 {
   if (alarm) { //если тревога активна
-    if (++minsAlarm >= alarmSettings[alarm][1]) { 
+    if (++minsAlarm >= alarmSettings[alarm][1]) {
       alarmReset(); //сброс будильника
       MELODY_RESET; //сброс позиции мелодии
       return; //выходим
@@ -273,16 +273,17 @@ void alarmWarn(void) //тревога будильника
       if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
         _timer_ms[TMR_MS] = ALM_BLINK_TIME; //устанавливаем таймер
 
-        if (blink_data) { //если нужно отрисовать время
-          indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-          indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
-          OCR1B = dotMaxBright; //включаем точки
+        switch (blink_data) {
+          case 0:
+            indiClr(); //очистка индикаторов
+            OCR1B = 0; //выключаем точки
+            break;
+          case 1:
+            indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
+            indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+            OCR1B = dotMaxBright; //включаем точки
+            break;
         }
-        else {
-          indiClr(); //очистка индикаторов
-          OCR1B = 0; //выключаем точки
-        }
-
         blink_data = !blink_data; //мигаем временем
       }
 
@@ -294,7 +295,10 @@ void alarmWarn(void) //тревога будильника
             alarmWaint = 1;
             minsAlarmSound = 0;
           }
-          else alarmReset(); //сброс будильника
+          else {
+            buzz_pulse(ALM_OFF_SOUND_FREQ, ALM_OFF_SOUND_TIME); //звук выключения будильника
+            alarmReset(); //сброс будильника
+          }
           MELODY_RESET; //сброс позиции мелодии
           _animShow = 0; //сбросить флаг анимации
           _scr = 0; //обновление экрана
@@ -303,6 +307,7 @@ void alarmWarn(void) //тревога будильника
         case LEFT_KEY_HOLD: //удержание левой кнопки
         case RIGHT_KEY_HOLD: //удержание правой кнопки
         case SET_KEY_HOLD: //удержание средней кнопки
+          buzz_pulse(ALM_OFF_SOUND_FREQ, ALM_OFF_SOUND_TIME); //звук выключения будильника
           alarmReset(); //сброс будильника
           MELODY_RESET; //сброс позиции мелодии
           _animShow = 0; //сбросить флаг анимации
@@ -416,7 +421,7 @@ uint8_t check_keys(void) //проверка кнопок
 
   switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
     case 0:
-      if (!OK_OUT) { //если нажата кл. ок
+      if (!SET_OUT) { //если нажата кл. ок
         btn_switch = 1; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
@@ -430,7 +435,7 @@ uint8_t check_keys(void) //проверка кнопок
       }
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
-    case 1: btn_state = OK_OUT; break; //опрашиваем клавишу ок
+    case 1: btn_state = SET_OUT; break; //опрашиваем клавишу ок
     case 2: btn_state = LEFT_OUT; break; //опрашиваем левую клавишу
     case 3: btn_state = RIGHT_OUT; break; //опрашиваем правую клавишу
   }
@@ -645,6 +650,18 @@ void dotFlash(void) //мигание точек
           }
           break;
       }
+    }
+  }
+  else if (!alarmWaint) {
+    switch (brightSettings.dotMode) {
+      case 0: if (OCR1B) OCR1B = 0; break; //если точки включены, выключаем их
+      case 1: if (OCR1B != dotMaxBright) OCR1B = dotMaxBright; break; //если яркость не совпадает, устанавливаем яркость
+    }
+  }
+  else {
+    if (!_timer_ms[TMR_DOT]) {
+      _timer_ms[TMR_DOT] = ALM_BLINK_DOT;
+      OCR1B = (!OCR1B) ? dotMaxBright : 0;
     }
   }
 }
@@ -1122,7 +1139,10 @@ void main_screen(void) //главный экран
       _scr = 0; //обновление экрана
       break;
     case SET_KEY_HOLD: //удержание средней кнопки
-      if (alarmWaint) alarmReset(); //сброс будильника
+      if (alarmWaint) {
+        buzz_pulse(ALM_OFF_SOUND_FREQ, ALM_OFF_SOUND_TIME); //звук выключения будильника
+        alarmReset(); //сброс будильника
+      }
       else settings_time(); //иначе настройки времени
       _scr = 0; //обновление экрана
       break;
@@ -1151,7 +1171,7 @@ void sincData(void) //синхронизация данных
     switch (command) {
       case COMMAND_SEND_VERSION: sendCommand(VERSION_FW); break;
       case COMMAND_RESET_SETTINGS: mainReset(); break;
-      
+
       case COMMAND_SEND_TIME: sendData(ANSWER_SEND_TIME, (uint8_t*)&RTC_time, sizeof(RTC_time)); break;
       case COMMAND_GET_TIME: getData((uint8_t*)&RTC_time, sizeof(RTC_time)); sendTime(); changeBright(); eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); break;
       case COMMAND_SEND_ALARM: sendData(ANSWER_SEND_ALARM, (uint8_t*)&alarms, sizeof(alarms)); break;
