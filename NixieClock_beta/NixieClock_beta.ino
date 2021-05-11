@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.1.8 от 10.05.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.2.0 от 11.05.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x68
+#define VERSION_FW 0x69
 
 //----------------Библиотеки----------------
 #include <avr/eeprom.h>
@@ -497,8 +497,8 @@ uint8_t check_keys(void) //проверка кнопок
   }
   return 0;
 }
-//----------------------------------------------------------------------------------
-void settings_time(void)
+//----------------------------Настройки времени----------------------------------
+void settings_time(void) //настройки времени
 {
   uint8_t cur_mode = 0; //текущий режим
   uint8_t time_out = 0; //таймаут автовыхода
@@ -595,8 +595,8 @@ void settings_time(void)
     }
   }
 }
-//----------------------------------------------------------------------------------
-void settings_alarm(void)
+//-----------------------------Настроки будильника------------------------------------
+void settings_alarm(void) //настроки будильника
 {
   uint8_t cur_mode = 0; //текущий режим
   uint8_t cur_alarm = 0; //текущий будильник
@@ -682,7 +682,206 @@ void settings_alarm(void)
     }
   }
 }
-//----------------------------------------------------------------------------------
+//-----------------------------Настроки основные------------------------------------
+void settings_main(void) //настроки основные
+{
+  uint8_t cur_mode = 0; //текущий режим
+  boolean cur_indi = 0; //текущий индикатор
+  uint8_t anim = 0; //анимация переключения
+  boolean drv = 0; //направление анимации
+  boolean set = 0; //режим настройки
+  uint8_t time_out = 0; //таймаут автовыхода
+  boolean blink_data = 0; //мигание сигментами
+
+  indiClr(); //очищаем индикаторы
+  OCR1B = 0; //выключаем точки
+
+  //настройки
+  while (1) {
+    data_convert(); //обработка данных
+
+    if (!_scr) {
+      _scr = 1;
+      if (++time_out >= SETTINGS_TIMEOUT) return;
+    }
+
+    switch (set) {
+      case 0:
+        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+          _timer_ms[TMR_ANIM] = ANIM_TIME; //устанавливаем таймер
+          switch (drv) {
+            case 0: if (anim < 3) anim++; else drv = 1; break;
+            case 1: if (anim > 0) anim--; else drv = 0; break;
+          }
+          indiClr(); //очистка индикаторов
+          indiPrintNum(cur_mode + 1, anim); //вывод режима
+        }
+        break;
+      case 1:
+        if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
+          _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
+
+          indiClr(); //очистка индикаторов
+          switch (cur_mode) {
+            case 0: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break;
+            case 1: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break;
+            case 2: if (!blink_data) indiPrintNum(mainSettings.knock_sound, 3); break;
+            case 3:
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часов
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[1], 2, 2, 0); //вывод часов
+              break;
+            case 4:
+              if (!blink_data || cur_indi) indiPrintNum(brightSettings.timeBright[0], 0, 2, 0); //вывод часов
+              if (!blink_data || !cur_indi) indiPrintNum(brightSettings.timeBright[1], 2, 2, 0); //вывод часов
+              break;
+            case 5:
+              if (!blink_data || cur_indi) indiPrintNum(brightSettings.indiBright[0], 0, 2, 0); //вывод часов
+              if (!blink_data || !cur_indi) indiPrintNum(brightSettings.indiBright[1], 2, 2, 0); //вывод часов
+              break;
+            case 6:
+              if (!blink_data || cur_indi) indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод часов
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод часов
+              break;
+          }
+          blink_data = !blink_data; //мигание сигментами
+        }
+        break;
+    }
+    //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
+    switch (check_keys()) {
+      case LEFT_KEY_PRESS: //клик левой кнопкой
+        switch (set) {
+          case 0: if (cur_mode > 0) cur_mode--; else cur_mode = 6; break;
+          case 1:
+            switch (cur_mode) {
+              case 0: mainSettings.timeFormat = 0; break; //формат времени
+              case 1: mainSettings.glitchMode = 0; break; //глюки
+              case 2: mainSettings.knock_sound = 0; break; //звук кнопок
+              case 3: //время звука смены часа
+                switch (cur_indi) {
+                  case 0: if (mainSettings.timeHour[0] > 0) mainSettings.timeHour[0]--; else mainSettings.timeHour[0] = 23; break;
+                  case 1: if (mainSettings.timeHour[1] > 0) mainSettings.timeHour[1]--; else mainSettings.timeHour[1] = 23; break;
+                }
+                break;
+              case 4: //время смены подсветки
+                switch (cur_indi) {
+                  case 0: if (brightSettings.timeBright[0] > 0) brightSettings.timeBright[0]--; else brightSettings.timeBright[0] = 23; break;
+                  case 1: if (brightSettings.timeBright[1] > 0) brightSettings.timeBright[1]--; else brightSettings.timeBright[1] = 23; break;
+                }
+                break;
+              case 5: //яркость индикаторов
+                switch (cur_indi) {
+                  case 0: if (brightSettings.indiBright[0] > 0) brightSettings.indiBright[0]--; else brightSettings.indiBright[0] = 30; break;
+                  case 1: if (brightSettings.indiBright[1] > 0) brightSettings.indiBright[1]--; else brightSettings.indiBright[1] = 30; break;
+                }
+                indiSetBright(brightSettings.indiBright[cur_indi]); //установка общей яркости индикаторов
+                break;
+              case 6: //настройка сенсора температуры
+                switch (cur_indi) {
+                  case 0: if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127; break;
+                  case 1:
+                    mainSettings.sensorSet = 0;
+                    readTempDS(); //чтение температуры с датчика DS3231
+                    break;
+                }
+                break;
+            }
+            break;
+        }
+        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        break;
+
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
+        switch (set) {
+          case 0: if (cur_mode < 6) cur_mode++; else cur_mode = 0; break;
+          case 1:
+            switch (cur_mode) {
+              case 0: mainSettings.timeFormat = 1; break; //формат времени
+              case 1: mainSettings.glitchMode = 1; break; //глюки
+              case 2: mainSettings.knock_sound = 1; break; //звук кнопок
+              case 3: //время звука смены часа
+                switch (cur_indi) {
+                  case 0: if (mainSettings.timeHour[0] < 23) mainSettings.timeHour[0]++; else mainSettings.timeHour[0] = 0; break;
+                  case 1: if (mainSettings.timeHour[1] < 23) mainSettings.timeHour[1]++; else mainSettings.timeHour[1] = 0; break;
+                }
+                break;
+              case 4: //время смены подсветки
+                switch (cur_indi) {
+                  case 0: if (brightSettings.timeBright[0] < 23) brightSettings.timeBright[0]++; else brightSettings.timeBright[0] = 0; break;
+                  case 1: if (brightSettings.timeBright[1] < 23) brightSettings.timeBright[1]++; else brightSettings.timeBright[1] = 0; break;
+                }
+                break;
+              case 5: //яркость индикаторов
+                switch (cur_indi) {
+                  case 0: if (brightSettings.indiBright[0] < 30) brightSettings.indiBright[0]++; else brightSettings.indiBright[0] = 0; break;
+                  case 1: if (brightSettings.indiBright[1] < 30) brightSettings.indiBright[1]++; else brightSettings.indiBright[1] = 0; break;
+                }
+                indiSetBright(brightSettings.indiBright[cur_indi]); //установка общей яркости индикаторов
+                break;
+              case 6: //настройка сенсора температуры
+                switch (cur_indi) {
+                  case 0: if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127; break;
+                  case 1:
+                    mainSettings.sensorSet = 1;
+                    readTempBME(); //чтение температуры/давления/влажности с датчика BME
+                    break;
+                }
+                break;
+            }
+            break;
+        }
+        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        break;
+
+      case LEFT_KEY_HOLD: //удержание левой кнопки
+        if (set) {
+          cur_indi = 0;
+          if (cur_mode == 5) indiSetBright(brightSettings.indiBright[0]); //установка общей яркости индикаторов
+        }
+        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        break;
+
+      case RIGHT_KEY_HOLD: //удержание правой кнопки
+        if (set) {
+          cur_indi = 1;
+          if (cur_mode == 5) indiSetBright(brightSettings.indiBright[1]); //установка общей яркости индикаторов
+        }
+        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        break;
+
+      case SET_KEY_PRESS: //клик средней кнопкой
+        set = !set;
+        if (set) {
+          switch (cur_mode) {
+            case 5: indiSetBright(brightSettings.indiBright[0]); break; //установка общей яркости индикаторов
+            case 6:
+              switch (mainSettings.sensorSet) { //выбор датчика температуры
+                case 0: readTempDS(); break; //чтение температуры с датчика DS3231
+                case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
+              }
+              break;
+          }
+          OCR1B = dotMaxBright; //включаем точки
+        }
+        else {
+          changeBright(); //установка яркости от времени суток
+          OCR1B = 0; //выключаем точки
+        }
+        cur_indi = 0;
+        anim = 0;
+        drv = 0;
+        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        break;
+
+      case SET_KEY_HOLD: //удержание средней кнопки
+        eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем настройки яркости в память
+        eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+        changeBright(); //установка яркости от времени суток
+        return;
+    }
+  }
+}
+//---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
 {
   if ((brightSettings.timeBright[0] > brightSettings.timeBright[1] && (RTC_time.h >= brightSettings.timeBright[0] || RTC_time.h < brightSettings.timeBright[1])) ||
@@ -1180,23 +1379,24 @@ void main_screen(void) //главный экран
 
   switch (check_keys()) {
     case LEFT_KEY_HOLD: //удержание левой кнопки
-      _scr = 0; //обновление экрана
+      settings_main(); //настроки основные
+      _scr = _animShow = 0; //обновление экрана
       break;
     case LEFT_KEY_PRESS: //клик левой кнопкой
       showTemp(); //показать температуру
-      _scr = 0; //обновление экрана
+      _scr = _animShow = 0; //обновление экрана
       break;
     case RIGHT_KEY_PRESS: //клик правой кнопкой
       showDate(); //показать дату
-      _scr = 0; //обновление экрана
+      _scr = _animShow = 0; //обновление экрана
       break;
     case RIGHT_KEY_HOLD: //удержание правой кнопки
       settings_alarm();
-      _scr = 0; //обновление экрана
+      _scr = _animShow = 0; //обновление экрана
       break;
     case SET_KEY_PRESS: //клик средней кнопкой
       fastSetSwitch(); //переключение настроек
-      _scr = 0; //обновление экрана
+      _scr = _animShow = 0; //обновление экрана
       break;
     case SET_KEY_HOLD: //удержание средней кнопки
       if (alarmWaint) {
@@ -1204,7 +1404,7 @@ void main_screen(void) //главный экран
         alarmReset(); //сброс будильника
       }
       else settings_time(); //иначе настройки времени
-      _scr = 0; //обновление экрана
+      _scr = _animShow = 0; //обновление экрана
       break;
   }
 }

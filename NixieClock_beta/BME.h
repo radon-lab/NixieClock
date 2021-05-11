@@ -87,7 +87,12 @@ void readTempBME(void) //чтение температуры/давления/в
   }
   writeREG(0xF4, ((TEMP_OVERSAMP << 5) | (PRESS_OVERSAMP << 2) | MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
   while (1) { //ожидаем окончания замера
-    if (WireRequestFrom(BME_ADDR, 0xF3)) return; //запрашиваем чтение данных, если нет ответа выходим
+    if (WireRequestFrom(BME_ADDR, 0xF3)) { //запрашиваем чтение данных, если нет ответа выходим
+      tempSens.temp = 0;
+      tempSens.press = 0;
+      tempSens.hum = 0;
+      return; 
+    }
     if (!(WireReadEndByte() & 0x08)) break; //если замер завершён продолжаем
   }
   if (WireRequestFrom(BME_ADDR, 0xF7)) return; //запрашиваем чтение данных, если нет ответа выходим
