@@ -50,7 +50,7 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 #define SET_PORT  PORTB
 #define SET_PIN   PINB
 
-#define SET_OUT   (BIT_READ(SET_PIN, SET_BIT))
+#define SET_CHK   (BIT_READ(SET_PIN, SET_BIT))
 #define SET_SET   (BIT_SET(SET_PORT, SET_BIT))
 #define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
 
@@ -61,7 +61,7 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 #define LEFT_PORT  PORTD
 #define LEFT_PIN   PIND
 
-#define LEFT_OUT   (BIT_READ(LEFT_PIN, LEFT_BIT))
+#define LEFT_CHK   (BIT_READ(LEFT_PIN, LEFT_BIT))
 #define LEFT_SET   (BIT_SET(LEFT_PORT, LEFT_BIT))
 #define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
 
@@ -72,7 +72,7 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 #define RIGHT_PORT  PORTB
 #define RIGHT_PIN   PINB
 
-#define RIGHT_OUT   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
+#define RIGHT_CHK   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
 #define RIGHT_SET   (BIT_SET(RIGHT_PORT, RIGHT_BIT))
 #define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 

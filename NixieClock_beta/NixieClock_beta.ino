@@ -133,7 +133,7 @@ int main(void) //инициализация
   dataChannelInit(BT_UART_BAUND); //инициализация UART
   indiInit(); //инициализация индикаторов
 
-  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_OUT) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
+  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_CHK) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
     eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
     eeprom_update_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //записываем настройки яркости в память
@@ -142,7 +142,7 @@ int main(void) //инициализация
     eeprom_update_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //записываем будильники в память
     eeprom_update_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //записываем будильники в память
   }
-  else if (LEFT_OUT) { //если левая кнопка не зажата, загружаем настройки из памяти
+  else if (LEFT_CHK) { //если левая кнопка не зажата, загружаем настройки из памяти
     eeprom_read_block((void*)&brightSettings, (void*)EEPROM_BLOCK_SETTINGS_BRIGHT, sizeof(brightSettings)); //считываем настройки яркости из памяти
     eeprom_read_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
     eeprom_read_block((void*)&alarms, (void*)EEPROM_BLOCK_ALARM, sizeof(alarms)); //считываем будильники из памяти
@@ -431,23 +431,23 @@ uint8_t check_keys(void) //проверка кнопок
 
   switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
     case 0:
-      if (!SET_OUT) { //если нажата кл. ок
+      if (!SET_CHK) { //если нажата кл. ок
         btn_switch = 1; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!LEFT_OUT) { //если нажата левая кл.
+      else if (!LEFT_CHK) { //если нажата левая кл.
         btn_switch = 2; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!RIGHT_OUT) { //если нажата правая кл.
+      else if (!RIGHT_CHK) { //если нажата правая кл.
         btn_switch = 3; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
-    case 1: btn_state = SET_OUT; break; //опрашиваем клавишу ок
-    case 2: btn_state = LEFT_OUT; break; //опрашиваем левую клавишу
-    case 3: btn_state = RIGHT_OUT; break; //опрашиваем правую клавишу
+    case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
+    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
+    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
   }
 
   switch (btn_state) { //переключаемся в зависимости от состояния клавиши
