@@ -1,10 +1,10 @@
 const uint8_t decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
 
-uint8_t indi_buf[4];
-uint8_t indi_dimm[4];
-uint8_t indi_null;
-volatile uint8_t indi_state;
+uint8_t indi_buf[4]; //буфер индикаторов
+uint8_t indi_dimm[4]; //яркость индикаторов
+uint8_t indi_null; //пустой сивол(отключеный индикатор)
+volatile uint8_t indi_state; //текущей номер отрисовки индикатора
 
 volatile uint8_t tick_ms; //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC

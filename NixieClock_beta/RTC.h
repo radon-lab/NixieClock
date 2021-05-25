@@ -56,9 +56,9 @@ void sendTime(void) //отправить время в RTC
   WireEnd(); //конец передачи
 }
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
-void getTime(void) //запрашиваем время из RTC
+boolean getTime(void) //запрашиваем время из RTC
 {
-  if (WireRequestFrom(RTC_ADDR, 0x00)) return; //запрашиваем чтение данных, если нет ответа выходим
+  if (WireRequestFrom(RTC_ADDR, 0x00)) return 0; //запрашиваем чтение данных, если нет ответа выходим
   RTC_time.s = unpackREG(WireRead()); //получаем секунды
   RTC_time.m = unpackREG(WireRead()); //получаем минуты
   RTC_time.h = unpackHours(WireRead()); //получаем часы
@@ -67,6 +67,7 @@ void getTime(void) //запрашиваем время из RTC
   RTC_time.MM = unpackREG(WireRead()); //получаем месяц
   RTC_time.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
   RTC_time.DW = getWeekDay(RTC_time.YY, RTC_time.MM, RTC_time.DD); //получаем день недели
+  return 1;
 }
 //-------------------------------Настройка SQW-------------------------------------
 void setSQW(void) //настройка SQW
