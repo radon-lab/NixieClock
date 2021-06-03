@@ -149,6 +149,7 @@ int main(void) //инициализация
     eeprom_read_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //считываем будильники из памяти
   }
 
+#if RTC_MODUL
   if (getTime()) { //запрашиваем время из RTC
     EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
     EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
@@ -161,6 +162,7 @@ int main(void) //инициализация
     }
   }
   else buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //звук смены часа
+#endif
 
   randomSeed(RTC_time.s * (RTC_time.m + RTC_time.h) + RTC_time.DD * RTC_time.MM); //радомный сид для глюков
   _tmrGlitch = random(mainSettings.glitchMin, mainSettings.glitchMax); //находим рандомное время появления глюка
