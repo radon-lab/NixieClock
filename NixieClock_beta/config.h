@@ -29,11 +29,10 @@
 #define DEFAULT_BACKL_STEP 1         //шаг яркости подсветки по умолчанию(1..255)
 #define DEFAULT_BACKL_TIME 12000     //период подсветки по умолчанию(100..12000)(мс)
 
-#define DEFAULT_DOT_BRIGHT 50        //яркость точки дневная по умолчанию(5..255)
-#define DEFAULT_DOT_BRIGHT_N 20      //яркость точки ночная по умолчанию(5..255)
+#define DEFAULT_DOT_BRIGHT 50        //яркость точки дневная по умолчанию(5..200)
+#define DEFAULT_DOT_BRIGHT_N 20      //яркость точки ночная по умолчанию(5..200)
 #define DEFAULT_DOT_TIMER 4          //шаг яркости точки по умолчанию(4..255)(мс)
 #define DEFAULT_DOT_TIME 250         //время мигания точки по умолчанию(100..1000)(мс)
-#define DOT_ALL_TIME 1000            //полный период цикла точки(100..2000)(мс)
 
 #define DEFAULT_GLITCH_MODE 1        //режим глюков по умолчанию(1 - вкл | 0 - выкл)
 #define DEFAULT_GLITCH_MIN 40        //минимальное время между глюками по умолчанию(1..240)(сек)

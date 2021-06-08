@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки бета 0.2.1 от 25.05.21
+  Arduino IDE 1.8.13 версия прошивки бета 0.2.1 от 08.06.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -64,6 +64,7 @@ boolean btn_state; //флаг текущего состояния кнопки
 
 boolean _animShow = 0; //флаг анимации
 boolean _scr = 0; //флаг обновления экрана
+boolean _dot = 0; //флаг обновления точек
 uint8_t _mode = 0; //текущий основной режим
 
 #define TIMERS_NUM 6 //количество таймеров
@@ -91,8 +92,9 @@ uint16_t tmr_score; //частота для генерации звука пищ
 uint16_t FLIP_SPEED[] = {DEFAULT_FLIP_TIME, 80, 80, 80, 80}; //скорость эффектов(2..6)(мс)
 
 uint8_t dotBrightStep;
+uint8_t dotBrightTime;
 uint8_t dotMaxBright;
-uint8_t backlBrightStep;
+uint8_t backlBrightTime;
 uint8_t backlMaxBright;
 uint8_t indiMaxBright;
 
@@ -149,20 +151,18 @@ int main(void) //инициализация
     eeprom_read_block((void*)&alarmSettings, (void*)EEPROM_BLOCK_SETTINGS_ALARM, sizeof(alarmSettings)); //считываем будильники из памяти
   }
 
-#if RTC_MODUL
   if (getTime()) { //запрашиваем время из RTC
+#if RTC_MODUL
     EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
     EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
-
     setSQW(); //установка SQW на 1Гц
-
+#endif
     if (RTC_time.YY < 2021 || RTC_time.YY > 2050) { //если пропадало питание
       eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату и время из памяти
       sendTime(); //отправить время в RTC
     }
   }
   else buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //звук смены часа
-#endif
 
   randomSeed(RTC_time.s * (RTC_time.m + RTC_time.h) + RTC_time.DD * RTC_time.MM); //радомный сид для глюков
   _tmrGlitch = random(mainSettings.glitchMin, mainSettings.glitchMax); //находим рандомное время появления глюка
@@ -397,7 +397,7 @@ void data_convert(void) //преобразование данных
       _tmrBurn++; //прибавляем минуту к таймеру антиотравления
     }
     if (_tmrGlitch) _tmrGlitch--; //убавляем секунду от таймера глюков
-    _scr = 0; //разрешаем обновить индикаторы
+    _scr = _dot = 0; //разрешаем обновить индикаторы
   }
 }
 //------------------------------------Звук смены часа------------------------------------
@@ -918,13 +918,15 @@ void changeBright(void) //установка яркости от времени 
     case 2:
       dotBrightStep = ceil((float)dotMaxBright * 2 / brightSettings.dotTime * brightSettings.dotTimer); //расчёт шага яркости точки
       if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
+      dotBrightTime = ceil(brightSettings.dotTime / (float)dotMaxBright * 2); //расчёт шага яркости точки
+      if (!dotBrightTime) dotBrightTime = brightSettings.dotTimer; //если шаг слишком мал, устанавливаем минимум
       break;
   }
   switch (brightSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
     case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
     case 2:
-      if (backlMaxBright) backlBrightStep = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //если подсветка динамичная, расчёт шага дыхания подсветки
+      if (backlMaxBright) backlBrightTime = (float)brightSettings.backlStep / backlMaxBright / 2 * brightSettings.backlTime; //если подсветка динамичная, расчёт шага дыхания подсветки
       else OCR2A = 0; //иначе посветка выключена
       break;
   }
@@ -936,7 +938,7 @@ void backlFlash(void) //мигание подсветки
   static boolean backl_drv; //направление яркости
   if (brightSettings.backlMode == 2 && backlMaxBright) {
     if (!_timer_ms[TMR_BACKL]) {
-      _timer_ms[TMR_BACKL] = backlBrightStep;
+      _timer_ms[TMR_BACKL] = backlBrightTime;
       switch (backl_drv) {
         case 0: if (OCR2A < backlMaxBright) OCR2A += brightSettings.backlStep; else backl_drv = 1; break;
         case 1:
@@ -956,15 +958,16 @@ void dotFlash(void) //мигание точек
   static boolean dot_drv; //направление яркости
   if (!alarmWaint) {
     if (brightSettings.dotMode == 2) {
-      if (!_timer_ms[TMR_DOT]) {
-        _timer_ms[TMR_DOT] = brightSettings.dotTimer;
+      if (!_dot && !_timer_ms[TMR_DOT]) {
+        _timer_ms[TMR_DOT] = dotBrightTime;
         switch (dot_drv) {
           case 0: if (OCR1B < dotMaxBright) OCR1B += dotBrightStep; else dot_drv = 1; break;
           case 1:
-            if (OCR1B > 0) OCR1B -= dotBrightStep;
+            if (OCR1B > dotBrightStep) OCR1B -= dotBrightStep;
             else {
+              OCR1B = 0;
+              _dot = 1;
               dot_drv = 0;
-              _timer_ms[TMR_DOT] = DOT_ALL_TIME - brightSettings.dotTime;
             }
             break;
         }
