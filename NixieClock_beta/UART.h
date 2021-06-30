@@ -8,11 +8,8 @@ volatile uint8_t _TRANSFER_BUFFER[TRANSFER_BUFFER_SIZE];
 volatile uint8_t _TRANSFER_BUFFER_END;
 volatile uint8_t _TRANSFER_BUFFER_START;
 
-#define _TIME_OUT 2 //таймаут приёма 8мс
+#define _TIME_OUT 8 //таймаут приёма 8мс
 
-#define _DELAY_START _delay = 0; OCR0B = TCNT0 - 1; TIMSK0 |= (0x01 << OCIE0B)
-#define _DELAY_STOP  TIMSK0 &= ~(0x01 << OCIE0B)
-volatile uint8_t _delay = 0;
 //----------------------------------Инициализация UART----------------------------------
 void dataChannelInit(uint32_t baudrate) //инициализация UART
 {
@@ -23,11 +20,6 @@ void dataChannelInit(uint32_t baudrate) //инициализация UART
 
   _RECEIVE_BUFFER_END = _RECEIVE_BUFFER_START = 0;
   _TRANSFER_BUFFER_END = _TRANSFER_BUFFER_START = 0;
-}
-ISR(TIMER0_COMPB_vect) {
-  switch (++_delay) {
-    case _TIME_OUT: _DELAY_STOP; break;
-  }
 }
 //----------------------------------Выключение UART----------------------------------
 void dataChannelEnd() //выключение UART
@@ -46,7 +38,7 @@ ISR(USART_RX_vect) //прерывание принятого байта
   if (head != _RECEIVE_BUFFER_START) { //если буфер не переполнен
     _RECEIVE_BUFFER[_RECEIVE_BUFFER_END] = data; //записываем байт
     _RECEIVE_BUFFER_END = head; //сдвигаем конец
-    _DELAY_START; //перезапускаем таймер
+    _timer_ms[TMR_UART] = _TIME_OUT; //перезапускаем таймер
   }
 }
 //----------------------------------Чтение байта из буфера приёма----------------------------------
@@ -61,7 +53,7 @@ uint8_t readData() //чтение байта из буфера приёма
 //----------------------------------Доступно байт для приёма----------------------------------
 uint8_t availableData() //доступно байт для приёма
 {
-  if (_RECEIVE_BUFFER_END == _RECEIVE_BUFFER_START || (TIMSK0 & (1 << 2))) return 0; //если идет приём пакета или буфер пуст, возвращаем 0
+  if (_RECEIVE_BUFFER_END == _RECEIVE_BUFFER_START || _timer_ms[TMR_UART]) return 0; //если идет приём пакета или буфер пуст, возвращаем 0
   return ((uint16_t)(RECEIVE_BUFFER_SIZE + _RECEIVE_BUFFER_END - _RECEIVE_BUFFER_START) % RECEIVE_BUFFER_SIZE); //иначе возвращаем доступное количество байт
 }
 //----------------------------------Очистить буфер приёма----------------------------------

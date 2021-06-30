@@ -39,12 +39,21 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   PORTC = (PORTC & 0xF0) | indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
   PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор если не пустой символ
 
+#if USE_NEON_DOT
+  if (OCR0B) DOT_ON;
+#endif
+
   tick_ms++; //прибавляем тик
 }
 ISR(TIMER0_COMPA_vect) {
   PORTD &= ~(0x01 << anodeMask[indi_state]); //выключаем индикатор
   if (++indi_state > 3) indi_state = 0; //переходим к следующему индикатору
 }
+#if USE_NEON_DOT
+ISR(TIMER0_COMPB_vect) {
+  DOT_OFF;
+}
+#endif
 //-------------------------Инициализация индикаторов----------------------------------------------------
 void indiInit(void) //инициализация индикаторов
 {
@@ -72,7 +81,11 @@ void indiInit(void) //инициализация индикаторов
   OCR1B = 0; //выключаем точки
 
   TIMSK1 = 0; //отключаем прерывания Таймера1
+#if USE_NEON_DOT
+  TCCR1A = (1 << COM1A1 | 1 << WGM10); //подключаем D9
+#else
   TCCR1A = (1 << COM1B1 | 1 << COM1A1 | 1 << WGM10); //подключаем D9 и D10
+#endif
   TCCR1B = (1 << CS10);  //задаем частоту ШИМ на 9 и 10 выводах 31 кГц
 
   OCR2A = 0; //выключаем подсветку
