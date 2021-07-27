@@ -13,8 +13,13 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 #define RIGHT 255
 #define CENTER 254
 
+#if NEON_DOT
+#define _INDI_ON  TCNT0 = 255; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0)
+#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
+#else
 #define _INDI_ON  TCNT0 = 255; TIMSK0 |= (0x01 << OCIE0A | 0x01 << TOIE0)
 #define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
+#endif
 
 void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length = 0, char filler = ' ');
 
@@ -35,11 +40,14 @@ void outPin(uint8_t pin) {
 ISR(TIMER0_OVF_vect) //динамическая индикация
 {
   OCR0A = indi_dimm[indi_state]; //устанавливаем яркость индикатора
+#if NEON_DOT
+  OCR0B = OCR1B;
+#endif
 
   PORTC = (PORTC & 0xF0) | indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
   PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор если не пустой символ
 
-#if USE_NEON_DOT
+#if NEON_DOT
   if (OCR0B) DOT_ON;
 #endif
 
@@ -49,9 +57,10 @@ ISR(TIMER0_COMPA_vect) {
   PORTD &= ~(0x01 << anodeMask[indi_state]); //выключаем индикатор
   if (++indi_state > 3) indi_state = 0; //переходим к следующему индикатору
 }
-#if USE_NEON_DOT
-ISR(TIMER0_COMPB_vect) {
+#if NEON_DOT
+ISR(TIMER0_COMPB_vect, ISR_NAKED) {
   DOT_OFF;
+  reti();
 }
 #endif
 //-------------------------Инициализация индикаторов----------------------------------------------------
@@ -72,6 +81,7 @@ void indiInit(void) //инициализация индикаторов
   }
 
   OCR0A = 120; //максимальная яркость
+  OCR0B = 0; //выключаем точки
 
   TIMSK0 = 0; //отключаем прерывания Таймера0
   TCCR0A = 0; //отключаем OC0A/OC0B
@@ -81,7 +91,7 @@ void indiInit(void) //инициализация индикаторов
   OCR1B = 0; //выключаем точки
 
   TIMSK1 = 0; //отключаем прерывания Таймера1
-#if USE_NEON_DOT
+#if NEON_DOT
   TCCR1A = (1 << COM1A1 | 1 << WGM10); //подключаем D9
 #else
   TCCR1A = (1 << COM1B1 | 1 << COM1A1 | 1 << WGM10); //подключаем D9 и D10
