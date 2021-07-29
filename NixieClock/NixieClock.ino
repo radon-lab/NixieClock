@@ -1231,6 +1231,30 @@ void fastSetSwitch(void) //переключение быстрых настро�
 //----------------------------Антиотравление индикаторов-------------------------------
 void burnIndi(void) //антиотравление индикаторов
 {
+#if BURN_INDI_TYPE
+  if (_tmrBurn >= BURN_PERIOD && RTC_time.s >= BURN_PHASE) {
+    _tmrBurn = 0; //сбрасываем таймер
+    OCR1B = 0; //выключаем точки
+    for (byte indi = 0; indi < 4; indi++) {
+      indiClr(); //очистка индикаторов
+      for (byte loops = 0; loops < BURN_LOOPS; loops++) {
+        for (byte digit = 0; digit < 10; digit++) {
+          indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
+          for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
+            if (check_keys()) { //если нажата кнопка
+              indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
+              indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+              return; //выходим
+            }
+            data_convert(); //обработка данных
+          }
+        }
+      }
+    }
+    indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
+    indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+  }
+#else
   if (_tmrBurn >= BURN_PERIOD && RTC_time.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
     for (byte indi = 0; indi < 4; indi++) {
@@ -1252,6 +1276,7 @@ void burnIndi(void) //антиотравление индикаторов
       indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
     }
   }
+#endif
 }
 //----------------------------------Анимация цифр-----------------------------------
 void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
