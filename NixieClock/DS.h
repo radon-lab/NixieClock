@@ -80,7 +80,10 @@ void readTempDS(void)
   oneWireWrite(0xCC);
   oneWireWrite(0xBE);
 
-  tempSens.temp = ((float)(oneWireRead() | (oneWireRead() << 8)) * 0.0625) * 100;
+  uint16_t raw = (uint16_t)(oneWireRead() | (oneWireRead() << 8));
+  if (raw & 0x8000) raw = (raw ^ 0xFFFF) + 1;
+
+  tempSens.temp = (raw * 100) >> 4;
   tempSens.press = 0;
   tempSens.hum = 0;
 
