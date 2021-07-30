@@ -782,8 +782,6 @@ void settings_main(void) //настроки основные
 {
   uint8_t cur_mode = 0; //текущий режим
   boolean cur_indi = 0; //текущий индикатор
-  uint8_t anim = 0; //анимация переключения
-  boolean drv = 0; //направление анимации
   boolean set = 0; //режим настройки
   uint8_t time_out = 0; //таймаут автовыхода
   boolean blink_data = 0; //мигание сигментами
@@ -800,23 +798,15 @@ void settings_main(void) //настроки основные
       if (++time_out >= SETTINGS_TIMEOUT) return;
     }
 
-    switch (set) {
-      case 0:
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          _timer_ms[TMR_ANIM] = ANIM_TIME; //устанавливаем таймер
-          switch (drv) {
-            case 0: if (anim < 3) anim++; else drv = 1; break;
-            case 1: if (anim > 0) anim--; else drv = 0; break;
-          }
-          indiClr(); //очистка индикаторов
-          indiPrintNum(cur_mode + 1, anim); //вывод режима
-        }
-        break;
-      case 1:
-        if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
-          _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
+    if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
+      _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
 
-          indiClr(); //очистка индикаторов
+      indiClr(); //очистка индикаторов
+      switch (set) {
+        case 0:
+            indiPrintNum(cur_mode + 1, 1, 2, 0); //вывод режима
+          break;
+        case 1:
           switch (cur_mode) {
             case 0: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break;
             case 1: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break;
@@ -839,8 +829,8 @@ void settings_main(void) //настроки основные
               break;
           }
           blink_data = !blink_data; //мигание сигментами
-        }
-        break;
+          break;
+      }
     }
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (check_keys()) {
@@ -978,8 +968,6 @@ void settings_main(void) //настроки основные
           OCR1B = 0; //выключаем точки
         }
         cur_indi = 0;
-        anim = 0;
-        drv = 0;
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
