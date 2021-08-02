@@ -32,7 +32,7 @@ void readTempDHT22(void)
       if (++high > 1000) return;
     }
 
-    if (low < high) data[i >> 3] |= 1;
+    if (low < high) data[i >> 3] |= 0x01;
   }
 
   if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return;
@@ -75,7 +75,7 @@ void readTempDHT11(void)
       if (++high > 1000) return;
     }
 
-    if (low < high) data[i >> 3] |= 1;
+    if (low < high) data[i >> 3] |= 0x01;
   }
 
   if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return;

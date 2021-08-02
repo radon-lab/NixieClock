@@ -22,8 +22,8 @@ boolean oneWireReset(void)
 void oneWireWrite(uint8_t data)
 {
   SENS_OUT;
-  for (uint8_t p = 8; p; p--) {
-    if (data & 0x01) {
+  for (uint8_t i = 0; i < 8; i++) {
+    if ((data >> i) & 0x01) {
       SENS_LO;
       _delay_us(5);
       SENS_HI;
@@ -35,7 +35,6 @@ void oneWireWrite(uint8_t data)
       SENS_HI;
       _delay_us(5);
     }
-    data >>= 1;
   }
   SENS_INP;
 }
@@ -43,15 +42,14 @@ void oneWireWrite(uint8_t data)
 uint8_t oneWireRead(void)
 {
   uint8_t data = 0;
-  for (uint8_t p = 8; p; p--) {
-    data >>= 1;
+  for (uint8_t i = 0; i < 8; i++) {
     SENS_OUT;
     SENS_LO;
     _delay_us(2);
     SENS_HI;
     SENS_INP;
     _delay_us(8);
-    if (SENS_CHK) data |= 0x80;
+    if (SENS_CHK) data |= (0x80 >> i);
     _delay_us(60);
   }
   return data;

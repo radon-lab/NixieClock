@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.0 релиз от 29.07.21
+  Arduino IDE 1.8.13 версия прошивки 1.1.0 релиз от 02.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x71
+#define VERSION_FW 0x72
 
 //-----------------Таймеры------------------
 #define TIMERS_NUM 7 //количество таймеров
@@ -34,6 +34,7 @@ uint32_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисеку
 #include "RTC.h"
 #include "DHT.h"
 #include "DS.h"
+#include "WS.h"
 
 //----------------Настройки----------------
 struct Settings_1 {
@@ -108,7 +109,7 @@ uint8_t _tmrGlitch = 0;
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти количества будильников
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //первая ячейка памяти будильников
 
-#define MAX_ALARMS ((255 - (sizeof(RTC_time) + sizeof(fastSettings) + sizeof(mainSettings) + sizeof(alarms_num))) >> 3)
+#define MAX_ALARMS ((255 - (sizeof(RTC_time) + sizeof(fastSettings) + sizeof(mainSettings) + sizeof(alarms_num))) / 5)
 
 int atexit(void (* /*func*/ )()) { //инициализация функций
   return 0;
@@ -217,21 +218,21 @@ void _melody_chart(uint8_t melody) //воспроизведение мелоди
 void checkAlarms(void) //проверка будильников
 {
   if (alarm) { //если тревога активна
-    if (++minsAlarm >= alarmSettings(alarm, 1)) {
+    if (++minsAlarm >= DEFAULT_ALARM_TIMEOUT) {
       alarmReset(); //сброс будильника
       MELODY_RESET; //сброс позиции мелодии
       return; //выходим
     }
 
-    if (alarmSettings(alarm, 2) && alarmWaint) {
-      if (++minsAlarmWaint >= alarmSettings(alarm, 2)) {
+    if (DEFAULT_ALARM_WAINT && alarmWaint) {
+      if (++minsAlarmWaint >= DEFAULT_ALARM_WAINT) {
         alarmWaint = 0;
         minsAlarmWaint = 0;
       }
     }
-    else if (alarmSettings(alarm, 0)) {
-      if (++minsAlarmSound >= alarmSettings(alarm, 0)) {
-        if (alarmSettings(alarm, 2)) {
+    else if (DEFAULT_ALARM_TIMEOUT_S) {
+      if (++minsAlarmSound >= DEFAULT_ALARM_TIMEOUT_S) {
+        if (DEFAULT_ALARM_WAINT) {
           alarmWaint = 1;
           minsAlarmSound = 0;
         }
@@ -242,8 +243,8 @@ void checkAlarms(void) //проверка будильников
   }
   else { //иначе проверяем будильники на совподение
     for (uint8_t alm = 0; alm < alarms_num; alm++) {
-      if (alarms(alm, 2)) {
-        if (RTC_time.h == alarms(alm, 0) && RTC_time.m == alarms(alm, 1) && (alarms(alm, 2) == 2 || (alarms(alm, 3) & (0x01 << RTC_time.DW)))) {
+      if (alarmRead(alm, 2)) {
+        if (RTC_time.h == alarmRead(alm, 0) && RTC_time.m == alarmRead(alm, 1) && (alarmRead(alm, 2) < 3 || (alarmRead(alm, 2) == 3 && RTC_time.DW < 6) || (alarmRead(alm, 3) & (0x01 << RTC_time.DW)))) {
           alarm = alm + 1;
           return;
         }
@@ -256,6 +257,7 @@ void alarmWarn(void) //тревога будильника
 {
   if (alarm && !alarmWaint) {
     boolean blink_data = 1;
+    uint8_t soundNum = alarmRead(alarm, 4);
     while (1) {
       data_convert(); //обработка данных
       if (!alarm || alarmWaint) {
@@ -263,7 +265,7 @@ void alarmWarn(void) //тревога будильника
         return;
       }
 
-      MELODY_PLAY(alarmSettings(alarm, 3)); //воспроизводим мелодию
+      MELODY_PLAY(soundNum); //воспроизводим мелодию
 
       if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
         _timer_ms[TMR_MS] = ALM_BLINK_TIME; //устанавливаем таймер
@@ -286,7 +288,7 @@ void alarmWarn(void) //тревога будильника
         case LEFT_KEY_PRESS: //клик левой кнопкой
         case RIGHT_KEY_PRESS: //клик правой кнопкой
         case SET_KEY_PRESS: //клик средней кнопкой
-          if (alarmSettings(alarm, 2)) {
+          if (DEFAULT_ALARM_WAINT) {
             alarmWaint = 1;
             minsAlarmSound = 0;
           }
@@ -315,7 +317,7 @@ void alarmWarn(void) //тревога будильника
 //----------------------------------Сброс будильника---------------------------------------------------------
 void alarmReset(void) //сброс будильника
 {
-  if (alarms(alarm - 1, 2) == 2) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) << 3) + 2, 0);
+  if (alarmRead(alarm - 1, 2) == 1) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) * 5) + 2, 0);
   alarmWaint = 0;
   minsAlarm = 0;
   minsAlarmWaint = 0;
@@ -323,27 +325,30 @@ void alarmReset(void) //сброс будильника
   alarm = 0;
 }
 //----------------------------------Получить основные данные будильника---------------------------------------------------------
-uint8_t alarms(uint8_t num, uint8_t data) //получить основные данные будильника
+uint8_t alarmRead(uint8_t almNum, uint8_t almData) //получить основные данные будильника
 {
-  return eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (num << 3) + data);
+  return eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (almNum * 5) + almData);
 }
-//----------------------------------Получить настройку будильника---------------------------------------------------------
-uint8_t alarmSettings(uint8_t num, uint8_t data) //получить настройку будильника
+//----------------------------------Получить блок основных данных будильника---------------------------------------------------------
+void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
 {
-  return eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (num << 3) + data + 4);
+  for (uint8_t i = 0; i < 5; i++) data[i] = (almNum) ? eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i) : 0;
+}
+//----------------------------------Записать блок основных данных будильника---------------------------------------------------------
+void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
+{
+  if (!almNum) return;
+  for (uint8_t i = 0; i < 5; i++) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i, data[i]);
 }
 //---------------------Создать новый будильник---------------------------------------------------------
 void newAlarm(void) //создать новый будильник
 {
   if (alarms_num < MAX_ALARMS) {
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3), DEFAULT_ALARM_TIME_HH);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 1, DEFAULT_ALARM_TIME_MM);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 2, DEFAULT_ALARM_MODE);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 3, 0);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 4, DEFAULT_ALARM_TIMEOUT_S);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 5, DEFAULT_ALARM_TIMEOUT);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 6, DEFAULT_ALARM_WAINT);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 7, DEFAULT_ALARM_SOUND);
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), DEFAULT_ALARM_TIME_HH);
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, DEFAULT_ALARM_TIME_MM);
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, DEFAULT_ALARM_MODE);
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, 0);
+    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, DEFAULT_ALARM_SOUND);
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM, ++alarms_num); //записываем количество будильников в память
   }
 }
@@ -352,14 +357,11 @@ void delAlarm(uint8_t alarm) //удалить будильник
 {
   if (alarms_num) {
     for (uint8_t start = alarm; start < alarms_num; start++) {
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3), eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3)));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 1, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 1));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 2, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 2));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 3, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 3));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 4, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 4));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 5, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 5));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 6, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 6));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num << 3) + 7, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) << 3) + 7));
+      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5)));
+      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 1));
+      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 2));
+      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 3));
+      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 4));
     }
     eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM, --alarms_num); //записываем количество будильников в память
   }
@@ -628,89 +630,31 @@ void settings_time(void) //настройки времени
     }
   }
 }
-//-----------------------------выбор будильника------------------------------------
-void choice_alarm(void) //выбор будильника
+//-----------------------------Настройка будильников------------------------------------
+void settings_alarm(void) //настройка будильников
 {
+  uint8_t alarm[5]; //массив данных о будильнике
+  uint8_t cur_mode = 0; //текущий режим
+  uint8_t cur_day = 1; //текущий день недели
+  boolean blink_data = 0; //мигание сигментами
   uint8_t time_out = 0; //таймаут автовыхода
+
   uint8_t curAlarm = alarms_num > 0;
 
   indiClr(); //очищаем индикаторы
   OCR1B = 0; //выключаем точки
 
+  alarmReadBlock(curAlarm, alarm); //читаем блок данных
+
   while (1) {
     data_convert(); //обработка данных
 
     if (!_scr) {
       _scr = 1;
-      if (++time_out >= SETTINGS_TIMEOUT) return;
-      indiClr(); //очищаем индикаторы
-      indiPrintNum(curAlarm, 1, 2, 0); //вывод номера будильника
+      if (++time_out >= SETTINGS_TIMEOUT) return; //выходим по тайм-ауту
     }
 
-    //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
-      case LEFT_KEY_HOLD: //удержание левой кнопки
-        if (curAlarm) {
-          delAlarm(curAlarm - 1); //удалить текущий будильник
-          OCR1B = dotMaxBright; //включаем точки
-          for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
-          OCR1B = 0; //выключаем точки
-        }
-        curAlarm = (alarms_num > 0);
-        _scr = 0;
-        time_out = 0;
-        break;
-      case LEFT_KEY_PRESS: //клик левой кнопкой
-        if (curAlarm > (alarms_num > 0)) curAlarm--; else curAlarm = alarms_num;
-        _scr = 0;
-        time_out = 0;
-        break;
-      case RIGHT_KEY_PRESS: //клик правой кнопкой
-        if (curAlarm < alarms_num) curAlarm++; else curAlarm = (alarms_num > 0);
-        _scr = 0;
-        time_out = 0;
-        break;
-      case RIGHT_KEY_HOLD: //удержание правой кнопки
-        newAlarm(); //создать новый будильник
-        OCR1B = dotMaxBright; //включаем точки
-        for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
-        OCR1B = 0; //выключаем точки
-        curAlarm = alarms_num;
-        _scr = 0;
-        time_out = 0;
-        break;
-      case SET_KEY_PRESS: //клик средней кнопкой
-        if (curAlarm) settings_alarm(curAlarm - 1); //настроки будильника
-        _scr = 0;
-        time_out = 0;
-        break;
-      case SET_KEY_HOLD: //удержание средней кнопки
-        return; //выход
-    }
-  }
-}
-//-----------------------------Настроки будильника------------------------------------
-void settings_alarm(uint8_t Alarm) //настроки будильника
-{
-  uint8_t alarms[4]; //массив данных о будильнике
-  uint8_t cur_mode = 0; //текущий режим
-  uint8_t cur_day = 1; //текущий день недели
-  uint8_t time_out = 0; //таймаут автовыхода
-  boolean blink_data = 0; //мигание сигментами
-
-  indiClr(); //очищаем индикаторы
-  OCR1B = dotMaxBright; //включаем точки
-
-  for (uint8_t i = 0; i < 4; i++) alarms[i] = eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (Alarm << 3) + i);
-
-  //настройки
-  while (1) {
-    data_convert(); //обработка данных
-
-    if (!_scr) {
-      _scr = 1;
-      if (++time_out >= SETTINGS_TIMEOUT) return;
-    }
+    if (cur_mode == 6) MELODY_PLAY(alarm[4]); //воспроизводим мелодию
 
     if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
       _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
@@ -719,16 +663,22 @@ void settings_alarm(uint8_t Alarm) //настроки будильника
       switch (cur_mode) {
         case 0:
         case 1:
-          if (!blink_data || cur_mode == 1) indiPrintNum(alarms[0], 0, 2, 0); //вывод часов
-          if (!blink_data || cur_mode == 0) indiPrintNum(alarms[1], 2, 2, 0); //вывод минут
+          if (!blink_data || cur_mode == 1) indiPrintNum(curAlarm, 0, 2, 0); //вывод номера будильника
+          if ((!blink_data || cur_mode == 0) && curAlarm) indiPrintNum(alarm[2], 3); //вывод режима
           break;
         case 2:
         case 3:
+          if (!blink_data || cur_mode == 3) indiPrintNum(alarm[0], 0, 2, 0); //вывод часов
+          if (!blink_data || cur_mode == 2) indiPrintNum(alarm[1], 2, 2, 0); //вывод минут
+          break;
         case 4:
-          indiPrintNum(alarms[2], 0); //вывод режима
-          indiPrintNum(cur_day, 2); //вывод дня недели
-          indiPrintNum((alarms[3] >> cur_day) & 0x01, 3); //вывод установки
-          if (blink_data) indiClr((cur_mode == 2) ? 0 : (cur_mode - 1)); //очистка индикатора
+        case 5:
+        case 6:
+          if (alarm[2] > 3) {
+            if (!blink_data || cur_mode == 5 || cur_mode == 6) indiPrintNum(cur_day, 0); //вывод дня недели
+            if (!blink_data || cur_mode == 4 || cur_mode == 6) indiPrintNum((alarm[3] >> cur_day) & 0x01, 1); //вывод установки
+          }
+          if (!blink_data || cur_mode == 4 || cur_mode == 5) indiPrintNum(alarm[4] + 1, 2, 2, 0); //вывод номера мелодии
           break;
       }
       blink_data = !blink_data; //мигание сигментами
@@ -736,44 +686,108 @@ void settings_alarm(uint8_t Alarm) //настроки будильника
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (check_keys()) {
+      case LEFT_KEY_HOLD: //удержание левой кнопки
+        switch (cur_mode) {
+          case 0:
+            if (curAlarm) { //если есть будильники в памяти
+              delAlarm(curAlarm - 1); //удалить текущий будильник
+              OCR1B = dotMaxBright; //включаем точки
+              for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
+              OCR1B = 0; //выключаем точки
+              if (curAlarm > (alarms_num > 0)) curAlarm--; //убавляем номер текущего будильника
+              else curAlarm = (alarms_num > 0);
+              alarmReadBlock(curAlarm, alarm); //читаем блок данных
+            }
+            break;
+          default:
+            cur_mode = 2; //режим настройки времени
+            OCR1B = dotMaxBright; //включаем точки
+            break;
+        }
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
+          case 0: if (curAlarm > (alarms_num > 0)) curAlarm--; else curAlarm = alarms_num; break; //будильник
+          case 1: if (alarm[2] > 0) alarm[2]--; else alarm[2] = 4; break; //режим
+
           //настройка времени будильника
-          case 0: if (alarms[0] > 0) alarms[0]--; else alarms[0] = 23; break; //часы
-          case 1: if (alarms[1] > 0) alarms[1]--; else alarms[1] = 59; break; //минуты
+          case 2: if (alarm[0] > 0) alarm[0]--; else alarm[0] = 23; break; //часы
+          case 3: if (alarm[1] > 0) alarm[1]--; else alarm[1] = 59; break; //минуты
 
           //настройка режима будильника
-          case 2: if (alarms[2] < 2) alarms[2]++; else alarms[2] = 0; break; //режим
-          case 3: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
-          case 4: alarms[3] &= ~(0x01 << cur_day); break; //установка
+          case 4: if (cur_day > 1) cur_day--; else cur_day = 7; break; //день недели
+          case 5: alarm[3] &= ~(0x01 << cur_day); break; //установка
+          case 6: if (alarm[4] > 0) alarm[4]--; else alarm[4] = sizeof(alarm_sound) >> 2; break; //мелодия
         }
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         break;
-
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_mode) {
+          case 0: if (curAlarm < alarms_num) curAlarm++; else curAlarm = (alarms_num > 0); break; //будильник
+          case 1: if (alarm[2] < 4) alarm[2]++; else alarm[2] = 0; break; //режим
+
           //настройка времени будильника
-          case 0: if (alarms[0] < 23) alarms[0]++; else alarms[0] = 0; break; //часы
-          case 1: if (alarms[1] < 59) alarms[1]++; else alarms[1] = 0; break; //минуты
+          case 2: if (alarm[0] < 23) alarm[0]++; else alarm[0] = 0; break; //часы
+          case 3: if (alarm[1] < 59) alarm[1]++; else alarm[1] = 0; break; //минуты
 
           //настройка режима будильника
-          case 2: if (alarms[2] < 2) alarms[2]++; else alarms[2] = 0; break; //режим
-          case 3: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
-          case 4: alarms[3] |= (0x01 << cur_day); break; //установка
+          case 4: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
+          case 5: alarm[3] |= (0x01 << cur_day); break; //установка
+          case 6: if (alarm[4] < (sizeof(alarm_sound) >> 2)) alarm[4]++; else alarm[4] = 0; break; //мелодия
         }
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         break;
+      case RIGHT_KEY_HOLD: //удержание правой кнопки
+        switch (cur_mode) {
+          case 0:
+            newAlarm(); //создать новый будильник
+            OCR1B = dotMaxBright; //включаем точки
+            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
+            OCR1B = 0; //выключаем точки
+            curAlarm = alarms_num;
+            alarmReadBlock(curAlarm, alarm); //читаем блок данных
+            break;
+          case 4:
+          case 5: cur_mode = 6; break;
+          default:
+            cur_mode = (alarm[2] < 4) ? 4 : 6; //режим настройки функций
+            OCR1B = dotMaxBright; //включаем точки
+            break;
 
+        }
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
       case SET_KEY_PRESS: //клик средней кнопкой
-        if (cur_mode < 4) cur_mode++; else cur_mode = 0;
-        if (cur_mode < 2) OCR1B = dotMaxBright; //включаем точки
-        else OCR1B = 0; //выключаем точки
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        switch (cur_mode) {
+          case 0: if (curAlarm) cur_mode = 1; break; //если есть будильники в памяти, перейти к настройке режима
+          case 1: cur_mode = 0; alarmWriteBlock(curAlarm, alarm); break; //записать блок основных данных будильника
+          case 2: cur_mode = 3; break; //перейти к настройке минут
+          case 3: cur_mode = 2; break; //перейти к настройке часов
+          case 4: cur_mode = 5; break; //перейти к активации дня недели
+          case 5:
+          case 6: cur_mode = 4; break; //перейти к выбору дня недели
+            break;
+        }
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         break;
-
       case SET_KEY_HOLD: //удержание средней кнопки
-        for (uint8_t i = 0; i < 4; i++) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (Alarm << 3) + i, alarms[i]);
-        return;
+        switch (cur_mode) {
+          case 0: return; //выход
+          case 1: alarmWriteBlock(curAlarm, alarm); return; //записать блок основных данных будильника и выйти
+          default:
+            OCR1B = 0; //выключаем точки
+            cur_mode = 1; //выбор будильника
+            _scr = blink_data = 0; //сбрасываем флаги
+            _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+            break;
+        }
+        break;
     }
   }
 }
@@ -804,7 +818,7 @@ void settings_main(void) //настроки основные
       indiClr(); //очистка индикаторов
       switch (set) {
         case 0:
-            indiPrintNum(cur_mode + 1, 1, 2, 0); //вывод режима
+          indiPrintNum(cur_mode + 1, 1, 2, 0); //вывод режима
           break;
         case 1:
           switch (cur_mode) {
@@ -1514,7 +1528,7 @@ void main_screen(void) //главный экран
 
   switch (check_keys()) {
     case LEFT_KEY_HOLD: //удержание левой кнопки
-      settings_main(); //настроки основные
+      settings_time(); //иначе настройки времени
       _scr = _animShow = 0; //обновление экрана
       break;
     case LEFT_KEY_PRESS: //клик левой кнопкой
@@ -1526,7 +1540,7 @@ void main_screen(void) //главный экран
       _scr = _animShow = 0; //обновление экрана
       break;
     case RIGHT_KEY_HOLD: //удержание правой кнопки
-      choice_alarm(); //выбор будильника
+      settings_alarm(); //настройка будильников
       _scr = _animShow = 0; //обновление экрана
       break;
     case SET_KEY_PRESS: //клик средней кнопкой
@@ -1538,7 +1552,7 @@ void main_screen(void) //главный экран
         buzz_pulse(ALM_OFF_SOUND_FREQ, ALM_OFF_SOUND_TIME); //звук выключения будильника
         alarmReset(); //сброс будильника
       }
-      else settings_time(); //иначе настройки времени
+      else settings_main(); //настроки основные
       _scr = _animShow = 0; //обновление экрана
       break;
   }
