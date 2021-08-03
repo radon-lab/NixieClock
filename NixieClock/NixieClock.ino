@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.0 релиз от 02.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.1.0 релиз от 03.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -754,7 +754,7 @@ void settings_alarm(void) //настройка будильников
           case 4:
           case 5: cur_mode = 6; break;
           default:
-            cur_mode = (alarm[2] < 4) ? 4 : 6; //режим настройки функций
+            cur_mode = (alarm[2] < 4) ? 6 : 4; //режим настройки функций
             OCR1B = dotMaxBright; //включаем точки
             break;
 
@@ -770,7 +770,7 @@ void settings_alarm(void) //настройка будильников
           case 3: cur_mode = 2; break; //перейти к настройке часов
           case 4: cur_mode = 5; break; //перейти к активации дня недели
           case 5:
-          case 6: cur_mode = 4; break; //перейти к выбору дня недели
+          case 6: cur_mode = (alarm[2] < 4) ? 6 : 4; break; //перейти к выбору дня недели
             break;
         }
         _scr = blink_data = 0; //сбрасываем флаги
