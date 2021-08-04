@@ -1,3 +1,7 @@
+uint8_t ledColor[12]; //массив цветов
+uint8_t ledBright[4]; //массив яркости
+
+//---------------------------------Передача массива данных на шину-------------------------------------
 void ledWrite(uint8_t* data, uint16_t size) {
   __asm__ __volatile__ (
     "CBI %[PORT], %[PIN]  \n\t" //LOW на выход пина
@@ -15,7 +19,7 @@ void ledWrite(uint8_t* data, uint16_t size) {
     //-----------------------------------------------------------------------------------------
     "_LOOP_START_%=:      \n\t" //начало цикла отправки бита
     "SBRS r21, 7          \n\t" //если бит "7" установлен то пропускаем переход
-    "JMP _SEND_NULL_%=    \n\t" //переход к функции отправить ноль
+    "RJMP _SEND_NULL_%=   \n\t" //переход к функции отправить ноль
     //-----------------------------------------------------------------------------------------
     "SBI %[PORT], %[PIN]  \n\t" //HIGH на выход пина
     "NOP                  \n\t" //пропускаем цикл
@@ -27,7 +31,7 @@ void ledWrite(uint8_t* data, uint16_t size) {
     "NOP                  \n\t" //пропускаем цикл
     "NOP                  \n\t" //пропускаем цикл
     "CBI %[PORT], %[PIN]  \n\t" //LOW на выход пина
-    "JMP _LOOP_END_%=     \n\t" //переход в конец цикла отправки бита
+    "RJMP _LOOP_END_%=    \n\t" //переход в конец цикла отправки бита
     //-----------------------------------------------------------------------------------------
     "_SEND_NULL_%=:       \n\t" //функция отправить ноль
     "SBI %[PORT], %[PIN]  \n\t" //HIGH на выход пина
@@ -53,4 +57,52 @@ void ledWrite(uint8_t* data, uint16_t size) {
     [PORT]"I"(_SFR_IO_ADDR(BACKL_PORT)),
     [PIN]"I"(BACKL_BIT)
   );
+}
+//--------------------------------------Установка цвета в формате GRB------------------------------------------
+void setLedGRB(uint8_t led, uint8_t G, uint8_t R, uint8_t B)
+{
+  ledColor[led * 3] = G;
+  ledColor[led * 3 + 1] = R;
+  ledColor[led * 3 + 2] = B;
+  ledWrite(ledColor, sizeof(ledColor));
+}
+//--------------------------------------Установка по цветовой палитре------------------------------------------
+void setLedColor(uint8_t led, uint8_t clr)
+{
+  for (uint8_t i = 0; i < 3; i++) {
+    if ((clr >> i) & 0x01) ledColor[led * 3 + i] = ledBright[led];
+    else ledColor[led * 3 + i] = 0;
+  }
+  ledWrite(ledColor, sizeof(ledColor));
+}
+//--------------------------------------Установка по цветовой палитре------------------------------------------
+void setLedColor(uint8_t clr)
+{
+  for (uint8_t f = 0; f < 4; f++) {
+    for (uint8_t i = 0; i < 3; i++) {
+      if ((clr >> i) & 0x01) ledColor[f * 3 + i] = ledBright[f];
+      else ledColor[f * 3 + i] = 0;
+    }
+  }
+  ledWrite(ledColor, sizeof(ledColor));
+}
+//--------------------------------------Установка яркости------------------------------------------
+void setLedBright(uint8_t led, uint8_t brt)
+{
+  ledBright[led] = brt;
+  for (uint8_t i = 0; i < 3; i++) {
+    if (ledColor[led * 3 + i]) ledColor[led * 3 + i] = brt;
+  }
+  ledWrite(ledColor, sizeof(ledColor));
+}
+//--------------------------------------Установка яркости------------------------------------------
+void setLedBright(uint8_t brt)
+{
+  for (uint8_t f = 0; f < 4; f++) {
+    ledBright[f] = brt;
+    for (uint8_t i = 0; i < 3; i++) {
+      if (ledColor[f * 3 + i]) ledColor[f * 3 + i] = brt;
+    }
+  }
+  ledWrite(ledColor, sizeof(ledColor));
 }

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.0 релиз от 03.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 04.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1020,6 +1020,10 @@ void changeBright(void) //установка яркости от времени 
       if (!dotBrightTime) dotBrightTime = DOT_TIMER; //если шаг слишком мал, устанавливаем минимум
       break;
   }
+#if BACKL_WS2812B
+  setLedBright(backlMaxBright);
+  setLedColor(fastSettings.backlMode);
+#else
   switch (fastSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
     case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
@@ -1028,11 +1032,15 @@ void changeBright(void) //установка яркости от времени 
       else OCR2A = 0; //иначе посветка выключена
       break;
   }
+#endif
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
 }
 //----------------------------------Мигание подсветки---------------------------------
 void backlFlash(void) //мигание подсветки
 {
+#if BACKL_WS2812B
+
+#else
   static boolean backl_drv; //направление яркости
   if (fastSettings.backlMode == 2 && backlMaxBright) {
     if (!_timer_ms[TMR_BACKL]) {
@@ -1049,6 +1057,7 @@ void backlFlash(void) //мигание подсветки
       }
     }
   }
+#endif
 }
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
@@ -1201,12 +1210,17 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
+#if BACKL_WS2812B
+        if (++fastSettings.backlMode > 7) fastSettings.backlMode = 0;
+        setLedColor(fastSettings.backlMode);
+#else
         if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
         switch (fastSettings.backlMode) {
           case 0: OCR2A = 0; break; //выключаем подсветку
           case 1: OCR2A = backlMaxBright; break; //включаем подсветку
           case 2: OCR2A = BACKL_MIN_BRIGHT; break; //выключаем подсветку
         }
+#endif
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
         mode = 0;
