@@ -63,34 +63,60 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 #define SET_PORT  PORTB
 #define SET_PIN   PINB
 
+#ifdef HIGH_PULL
 #define SET_CHK   (BIT_READ(SET_PIN, SET_BIT))
 #define SET_SET   (BIT_SET(SET_PORT, SET_BIT))
 #define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
 
 #define SET_INIT  SET_SET; SET_INP
+#endif
+#ifdef LOW_PULL
+#define SET_CHK   (BIT_READ(SET_PIN, SET_BIT) ^ 0x01)
+#define SET_CLR   (BIT_CLEAR(SET_PORT, SET_BIT))
+#define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
+
+#define SET_INIT  SET_CLR; SET_INP
+#endif
 
 //пин кнопки DOWN D7
 #define LEFT_BIT   7 // D7
 #define LEFT_PORT  PORTD
 #define LEFT_PIN   PIND
 
+#ifdef HIGH_PULL
 #define LEFT_CHK   (BIT_READ(LEFT_PIN, LEFT_BIT))
 #define LEFT_SET   (BIT_SET(LEFT_PORT, LEFT_BIT))
 #define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
 
 #define LEFT_INIT  LEFT_SET; LEFT_INP
+#endif
+#ifdef LOW_PULL
+#define LEFT_CHK   (BIT_READ(LEFT_PIN, LEFT_BIT) ^ 0x01)
+#define LEFT_CLR   (BIT_CLEAR(LEFT_PORT, LEFT_BIT))
+#define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
+
+#define LEFT_INIT  LEFT_CLR; LEFT_INP
+#endif
 
 //пин кнопки UP D12
 #define RIGHT_BIT   4 // D12
 #define RIGHT_PORT  PORTB
 #define RIGHT_PIN   PINB
 
+#ifdef HIGH_PULL
 #define RIGHT_CHK   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
 #define RIGHT_SET   (BIT_SET(RIGHT_PORT, RIGHT_BIT))
 #define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 
 #define RIGHT_INIT  RIGHT_SET; RIGHT_INP
+#endif
+#ifdef LOW_PULL
+#define RIGHT_CHK   (BIT_READ(RIGHT_PIN, RIGHT_BIT) ^ 0x01)
+#define RIGHT_CLR   (BIT_CLEAR(RIGHT_PORT, RIGHT_BIT))
+#define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 
+#define RIGHT_INIT  RIGHT_CLR; RIGHT_INP
+#endif
 
 //пин SQW D2
 #define SQW_BIT   2 // D2
