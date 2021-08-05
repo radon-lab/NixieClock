@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 04.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 05.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -719,7 +719,7 @@ void settings_alarm(void) //настройка будильников
           //настройка режима будильника
           case 4: if (cur_day > 1) cur_day--; else cur_day = 7; break; //день недели
           case 5: alarm[3] &= ~(0x01 << cur_day); break; //установка
-          case 6: if (alarm[4] > 0) alarm[4]--; else alarm[4] = sizeof(alarm_sound) >> 2; break; //мелодия
+          case 6: if (alarm[4] > 0) alarm[4]--; else alarm[4] = (sizeof(alarm_sound) >> 2) - 1; MELODY_RESET; break; //мелодия
         }
         _scr = blink_data = 0; //сбрасываем флаги
         _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
@@ -736,7 +736,7 @@ void settings_alarm(void) //настройка будильников
           //настройка режима будильника
           case 4: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
           case 5: alarm[3] |= (0x01 << cur_day); break; //установка
-          case 6: if (alarm[4] < (sizeof(alarm_sound) >> 2)) alarm[4]++; else alarm[4] = 0; break; //мелодия
+          case 6: if (alarm[4] < ((sizeof(alarm_sound) >> 2) - 1)) alarm[4]++; else alarm[4] = 0; MELODY_RESET; break; //мелодия
         }
         _scr = blink_data = 0; //сбрасываем флаги
         _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
