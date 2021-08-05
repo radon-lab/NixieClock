@@ -712,7 +712,7 @@ void settings_alarm(void) //настройка будильников
         break;
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
-          case 0: if (curAlarm > (alarms_num > 0)) curAlarm--; else curAlarm = alarms_num; break; //будильник
+          case 0: if (curAlarm > (alarms_num > 0)) curAlarm--; else curAlarm = alarms_num; alarmReadBlock(curAlarm, alarm); break; //будильник
           case 1: if (alarm[2] > 0) alarm[2]--; else alarm[2] = 4; break; //режим
 
           //настройка времени будильника
@@ -729,7 +729,7 @@ void settings_alarm(void) //настройка будильников
         break;
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_mode) {
-          case 0: if (curAlarm < alarms_num) curAlarm++; else curAlarm = (alarms_num > 0); break; //будильник
+          case 0: if (curAlarm < alarms_num) curAlarm++; else curAlarm = (alarms_num > 0); alarmReadBlock(curAlarm, alarm); break; //будильник
           case 1: if (alarm[2] < 4) alarm[2]++; else alarm[2] = 0; break; //режим
 
           //настройка времени будильника

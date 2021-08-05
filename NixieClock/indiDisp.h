@@ -112,7 +112,7 @@ void IndiInit(void) //инициализация индикаторов
 void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
-  for (byte i = 0; i < 4; i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  for (uint8_t i = 0; i < 4; i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
   OCR1A = MIN_PWM + (float)(dimm_all >> 2) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
