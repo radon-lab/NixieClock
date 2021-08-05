@@ -57,7 +57,7 @@ struct Settings_2 {
 
 uint8_t semp = 0; //переключатель мелодии
 #define MELODY_PLAY(melody) _melody_chart(melody)
-#define MELODY_RESET semp = 0
+#define MELODY_RESET semp = 0; _timer_ms[TMR_MELODY] = 0
 
 //переменные обработки кнопок
 uint8_t btn_tmr; //таймер тиков обработки
@@ -651,7 +651,10 @@ void settings_alarm(void) //настройка будильников
 
     if (!_scr) {
       _scr = 1;
-      if (++time_out >= SETTINGS_TIMEOUT) return; //выходим по тайм-ауту
+      if (++time_out >= SETTINGS_TIMEOUT) {
+        MELODY_RESET; //сброс воспроизведения мелодии
+        return; //выходим по тайм-ауту
+      }
     }
 
     if (cur_mode == 6) MELODY_PLAY(alarm[4]); //воспроизводим мелодию
@@ -783,6 +786,7 @@ void settings_alarm(void) //настройка будильников
           default:
             OCR1B = 0; //выключаем точки
             cur_mode = 1; //выбор будильника
+            MELODY_RESET; //сброс воспроизведения мелодии
             _scr = blink_data = 0; //сбрасываем флаги
             _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
             break;
