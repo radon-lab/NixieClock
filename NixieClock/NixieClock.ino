@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 05.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 06.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -257,7 +257,7 @@ void alarmWarn(void) //тревога будильника
 {
   if (alarm && !alarmWaint) {
     boolean blink_data = 1;
-    uint8_t soundNum = alarmRead(alarm, 4);
+    uint8_t soundNum = alarmRead(alarm - 1, 4);
     while (1) {
       data_convert(); //обработка данных
       if (!alarm || alarmWaint) {
