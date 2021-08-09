@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 06.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 09.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -7,7 +7,7 @@
   Автор Radon-lab.
 */
 //--------------Версия прошивки-------------
-#define VERSION_FW 0x72
+#define VERSION_FW 0x73
 
 //-----------------Таймеры------------------
 #define TIMERS_NUM 7 //количество таймеров
@@ -22,7 +22,6 @@ uint32_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисеку
 #define TMR_GLITCH 6 //таймер глюков
 
 //----------------Библиотеки----------------
-#include <avr/eeprom.h>
 #include <util/delay.h>
 
 //---------------Конфигурации---------------
@@ -30,6 +29,7 @@ uint32_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисеку
 #include "connection.h"
 #include "indiDisp.h"
 #include "wire.h"
+#include "EEPROM.h"
 #include "BME.h"
 #include "RTC.h"
 #include "DHT.h"
@@ -46,6 +46,7 @@ struct Settings_1 {
   uint8_t sensorSet = DEFAULT_TEMP_SENSOR;
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT;
   boolean glitchMode = DEFAULT_GLITCH_MODE;
+  uint16_t timePeriod = DEFAULT_TIME_PERIOD;
 } mainSettings;
 
 struct Settings_2 {
@@ -90,8 +91,7 @@ uint8_t backlBrightTime;
 uint8_t backlMaxBright;
 uint8_t indiMaxBright;
 
-//alarms - час | минута | режим(0 - выкл, 2 - одиночный, 1 - вкл) | день недели(вс,сб,пт,чт,ср,вт,пн,null)
-//alarmsSettings - время до автоматического включения ожидания | время до полного отключения | время ожидания будильника для повторного включения | мелодия будильника
+//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника
 uint8_t alarms_num = 0; //текущее количество будильников
 
 boolean alarmWaint = 0;
@@ -104,12 +104,12 @@ uint8_t _tmrBurn = 0;
 uint8_t _tmrGlitch = 0;
 
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
-#define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC_time)) //блок памяти настроек свечения
+#define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(TimeRTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти количества будильников
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //первая ячейка памяти будильников
 
-#define MAX_ALARMS ((255 - (sizeof(RTC_time) + sizeof(fastSettings) + sizeof(mainSettings) + sizeof(alarms_num))) / 5)
+#define MAX_ALARMS ((255 - (sizeof(TimeRTC) + sizeof(fastSettings) + sizeof(mainSettings) + sizeof(alarms_num))) / 5)
 
 int atexit(void (* /*func*/ )()) { //инициализация функций
   return 0;
@@ -130,39 +130,43 @@ int main(void) //инициализация
   IndiInit(); //инициализация индикаторов
   UartDisable(); //отключение uart
 
-  if (eeprom_read_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_CHK) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
-    eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату и время в память
-    eeprom_update_block((void*)&fastSettings, (void*)EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки яркости в память
-    eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
+  if (EEPROM_ReadByte(EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_CHK) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
+    EEPROM_UpdateByte(EEPROM_BLOCK_VERSION_FW, VERSION_FW); //делаем метку версии прошивки
+    EEPROM_UpdateBlock((uint16_t)&TimeRTC, EEPROM_BLOCK_TIME, sizeof(TimeRTC)); //записываем дату и время в память
+    EEPROM_UpdateBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки яркости в память
+    EEPROM_UpdateBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
   }
   else if (LEFT_CHK) { //если левая кнопка не зажата, загружаем настройки из памяти
-    eeprom_read_block((void*)&fastSettings, (void*)EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
-    eeprom_read_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
-    alarms_num = eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
+    EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
+    EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
+    alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
   }
+
+#if USE_ONE_ALARM
+  if (!alarms_num) newAlarm(); //создать новый будильник
+#endif
 
   if (getTime()) { //запрашиваем время из RTC
 #if RTC_MODUL
-    EICRA = (1 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
-    EIMSK = (1 << INT0); //разрешаем внешнее прерывание INT0
+    EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
+    EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
     setSQW(); //установка SQW на 1Гц
 #endif
-    if (RTC_time.YY < 2021 || RTC_time.YY > 2050) { //если пропадало питание
-      eeprom_read_block((void*)&RTC_time, 0, sizeof(RTC_time)); //считываем дату и время из памяти
+    if (TimeRTC.YY < 2021 || TimeRTC.YY > 2050) { //если пропадало питание
+      EEPROM_ReadBlock((uint16_t)&TimeRTC, EEPROM_BLOCK_TIME, sizeof(TimeRTC)); //считываем дату и время из памяти
       sendTime(); //отправить время в RTC
     }
   }
   else buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //сигнал ошибки модуля часов
 
-  randomSeed(RTC_time.s * (RTC_time.m + RTC_time.h) + RTC_time.DD * RTC_time.MM); //радомный сид для глюков
+  randomSeed(TimeRTC.s * (TimeRTC.m + TimeRTC.h) + TimeRTC.DD * TimeRTC.MM); //радомный сид для глюков
   _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
   changeBright(); //установка яркости от времени суток
   //----------------------------------Главная-------------------------------------------------------------
   for (;;) //главная
   {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
     alarmWarn(); //тревога будильника
     main_screen(); //главный экран
   }
@@ -244,7 +248,7 @@ void checkAlarms(void) //проверка будильников
   else { //иначе проверяем будильники на совподение
     for (uint8_t alm = 0; alm < alarms_num; alm++) {
       if (alarmRead(alm, 2)) {
-        if (RTC_time.h == alarmRead(alm, 0) && RTC_time.m == alarmRead(alm, 1) && (alarmRead(alm, 2) < 3 || (alarmRead(alm, 2) == 3 && RTC_time.DW < 6) || (alarmRead(alm, 3) & (0x01 << RTC_time.DW)))) {
+        if (TimeRTC.h == alarmRead(alm, 0) && TimeRTC.m == alarmRead(alm, 1) && (alarmRead(alm, 2) < 3 || (alarmRead(alm, 2) == 3 && TimeRTC.DW < 6) || (alarmRead(alm, 3) & (0x01 << TimeRTC.DW)))) {
           alarm = alm + 1;
           return;
         }
@@ -259,7 +263,7 @@ void alarmWarn(void) //тревога будильника
     boolean blink_data = 1;
     uint8_t soundNum = alarmRead(alarm - 1, 4);
     while (1) {
-      data_convert(); //обработка данных
+      dataUpdate(); //обработка данных
       if (!alarm || alarmWaint) {
         _animShow = 0; //сбросить флаг анимации
         return;
@@ -276,8 +280,8 @@ void alarmWarn(void) //тревога будильника
             OCR1B = 0; //выключаем точки
             break;
           case 1:
-            indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-            indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+            indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+            indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
             OCR1B = dotMaxBright; //включаем точки
             break;
         }
@@ -317,7 +321,7 @@ void alarmWarn(void) //тревога будильника
 //----------------------------------Сброс будильника---------------------------------------------------------
 void alarmReset(void) //сброс будильника
 {
-  if (alarmRead(alarm - 1, 2) == 1) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) * 5) + 2, 0);
+  if (alarmRead(alarm - 1, 2) == 1) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) * 5) + 2, 0);
   alarmWaint = 0;
   minsAlarm = 0;
   minsAlarmWaint = 0;
@@ -327,29 +331,29 @@ void alarmReset(void) //сброс будильника
 //----------------------------------Получить основные данные будильника---------------------------------------------------------
 uint8_t alarmRead(uint8_t almNum, uint8_t almData) //получить основные данные будильника
 {
-  return eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (almNum * 5) + almData);
+  return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + (almNum * 5) + almData);
 }
 //----------------------------------Получить блок основных данных будильника---------------------------------------------------------
 void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
 {
-  for (uint8_t i = 0; i < 5; i++) data[i] = (almNum) ? eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i) : 0;
+  for (uint8_t i = 0; i < 5; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i) : 0;
 }
 //----------------------------------Записать блок основных данных будильника---------------------------------------------------------
 void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
 {
   if (!almNum) return;
-  for (uint8_t i = 0; i < 5; i++) eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i, data[i]);
+  for (uint8_t i = 0; i < 5; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i, data[i]);
 }
 //---------------------Создать новый будильник---------------------------------------------------------
 void newAlarm(void) //создать новый будильник
 {
   if (alarms_num < MAX_ALARMS) {
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), DEFAULT_ALARM_TIME_HH);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, DEFAULT_ALARM_TIME_MM);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, DEFAULT_ALARM_MODE);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, 0);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, DEFAULT_ALARM_SOUND);
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM, ++alarms_num); //записываем количество будильников в память
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), DEFAULT_ALARM_TIME_HH);
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, DEFAULT_ALARM_TIME_MM);
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, DEFAULT_ALARM_MODE);
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, 0);
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, DEFAULT_ALARM_SOUND);
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, ++alarms_num); //записываем количество будильников в память
   }
 }
 //---------------------Удалить будильник---------------------------------------------------------
@@ -357,20 +361,22 @@ void delAlarm(uint8_t alarm) //удалить будильник
 {
   if (alarms_num) {
     for (uint8_t start = alarm; start < alarms_num; start++) {
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5)));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 1));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 2));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 3));
-      eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, eeprom_read_byte((uint8_t*)EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 4));
+      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5)));
+      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 1));
+      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 2));
+      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 3));
+      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 4));
     }
-    eeprom_update_byte((uint8_t*)EEPROM_BLOCK_ALARM, --alarms_num); //записываем количество будильников в память
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, --alarms_num); //записываем количество будильников в память
   }
 }
 //----------------------------------Преобразование данных---------------------------------------------------------
-void data_convert(void) //преобразование данных
+void dataUpdate(void) //преобразование данных
 {
   static uint32_t timeNotRTC; //счетчик реального времени
+#if !BACKL_WS2812B
   backlFlash(); //"дыхание" подсветки
+#endif
 
   for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
     switch (btn_state) { //таймер опроса кнопок
@@ -379,7 +385,7 @@ void data_convert(void) //преобразование данных
     }
 
     if (!EIMSK) { //если внешние часы не обнаружены
-      timeNotRTC += TIME_PERIOD; //добавляем ко времени период таймера
+      timeNotRTC += mainSettings.timePeriod; //добавляем ко времени период таймера
       if (timeNotRTC > 1000000UL) { //если прошла секунда
         timeNotRTC -= 1000000UL; //оставляем остаток
         tick_sec++; //прибавляем секунду
@@ -394,19 +400,19 @@ void data_convert(void) //преобразование данных
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
     //счет времени
-    if (++RTC_time.s > 59) { //секунды
-      RTC_time.s = 0;
-      if (++RTC_time.m > 59) { //минуты
-        RTC_time.m = 0;
-        if (++RTC_time.h > 23) { //часы
-          RTC_time.h = 0;
-          if (++RTC_time.DW > 7) RTC_time.DW = 1;
-          if (++RTC_time.DD > pgm_read_byte(&daysInMonth[RTC_time.MM - 1]) + (RTC_time.MM == 2 && !(RTC_time.YY % 4)) ? 1 : 0) {
-            RTC_time.DD = 1;
-            if (++RTC_time.MM > 12) {
-              RTC_time.MM = 1;
-              if (++RTC_time.YY > 2050) {
-                RTC_time.YY = 2021;
+    if (++TimeRTC.s > 59) { //секунды
+      TimeRTC.s = 0;
+      if (++TimeRTC.m > 59) { //минуты
+        TimeRTC.m = 0;
+        if (++TimeRTC.h > 23) { //часы
+          TimeRTC.h = 0;
+          if (++TimeRTC.DW > 7) TimeRTC.DW = 1; //день недели
+          if (++TimeRTC.DD > pgm_read_byte(&daysInMonth[TimeRTC.MM - 1]) + (TimeRTC.MM == 2 && !(TimeRTC.YY % 4)) ? 1 : 0) { //дата
+            TimeRTC.DD = 1;
+            if (++TimeRTC.MM > 12) { //месяц
+              TimeRTC.MM = 1;
+              if (++TimeRTC.YY > 2050) { //год
+                TimeRTC.YY = 2021;
               }
             }
           }
@@ -426,8 +432,8 @@ void data_convert(void) //преобразование данных
 void hourSound(void) //звук смены часа
 {
   if (!alarm || alarmWaint) { //если будильник не работает
-    if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && RTC_time.h < mainSettings.timeHour[1] && RTC_time.h >= mainSettings.timeHour[0]) ||
-        (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (RTC_time.h < mainSettings.timeHour[1] || RTC_time.h >= mainSettings.timeHour[0]))) {
+    if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && TimeRTC.h < mainSettings.timeHour[1] && TimeRTC.h >= mainSettings.timeHour[0]) ||
+        (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (TimeRTC.h < mainSettings.timeHour[1] || TimeRTC.h >= mainSettings.timeHour[0]))) {
       buzz_pulse(HOUR_SOUND_FREQ, HOUR_SOUND_TIME); //звук смены часа
     }
   }
@@ -436,13 +442,13 @@ void hourSound(void) //звук смены часа
 void glitchTick(void) //имитация глюков
 {
   if (mainSettings.glitchMode) {
-    if (!_tmrGlitch && RTC_time.s > 7 && RTC_time.s < 55) {
+    if (!_tmrGlitch && TimeRTC.s > 7 && TimeRTC.s < 55) {
       boolean indiState = 0; //состояние индикатора
       uint8_t glitchCounter = random(2, 6); //максимальное количество глюков
       uint8_t glitchIndic = random(0, 4); //номер индикатора
       uint8_t indiSave = indi_buf[glitchIndic]; //сохраняем текущую цифру в индикаторе
       while (!check_keys()) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_GLITCH]) { //если таймер истек
@@ -544,7 +550,7 @@ void settings_time(void) //настройки времени
 
   //настройки
   while (1) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (!_scr) {
       _scr = 1;
@@ -558,16 +564,16 @@ void settings_time(void) //настройки времени
       switch (cur_mode) {
         case 0:
         case 1:
-          if (!blink_data || cur_mode == 1) indiPrintNum(RTC_time.h, 0, 2, 0); //вывод часов
-          if (!blink_data || cur_mode == 0) indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+          if (!blink_data || cur_mode == 1) indiPrintNum(TimeRTC.h, 0, 2, 0); //вывод часов
+          if (!blink_data || cur_mode == 0) indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
           break;
         case 2:
         case 3:
-          if (!blink_data || cur_mode == 3) indiPrintNum(RTC_time.DD, 0, 2, 0); //вывод даты
-          if (!blink_data || cur_mode == 2) indiPrintNum(RTC_time.MM, 2, 2, 0); //вывод месяца
+          if (!blink_data || cur_mode == 3) indiPrintNum(TimeRTC.DD, 0, 2, 0); //вывод даты
+          if (!blink_data || cur_mode == 2) indiPrintNum(TimeRTC.MM, 2, 2, 0); //вывод месяца
           break;
         case 4:
-          if (!blink_data) indiPrintNum(RTC_time.YY, 0); //вывод года
+          if (!blink_data) indiPrintNum(TimeRTC.YY, 0); //вывод года
           break;
       }
       blink_data = !blink_data; //мигание сигментами
@@ -578,19 +584,19 @@ void settings_time(void) //настройки времени
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
           //настройка времени
-          case 0: if (RTC_time.h > 0) RTC_time.h--; else RTC_time.h = 23; RTC_time.s = 0; break; //часы
-          case 1: if (RTC_time.m > 0) RTC_time.m--; else RTC_time.m = 59; RTC_time.s = 0; break; //минуты
+          case 0: if (TimeRTC.h > 0) TimeRTC.h--; else TimeRTC.h = 23; TimeRTC.s = 0; break; //часы
+          case 1: if (TimeRTC.m > 0) TimeRTC.m--; else TimeRTC.m = 59; TimeRTC.s = 0; break; //минуты
 
           //настройка даты
-          case 2: if (RTC_time.DD > 1 ) RTC_time.DD--; else RTC_time.DD = maxDays(); break; //день
+          case 2: if (TimeRTC.DD > 1 ) TimeRTC.DD--; else TimeRTC.DD = maxDays(); break; //день
           case 3: //месяц
-            if (RTC_time.MM > 1) RTC_time.MM--;
-            else RTC_time.MM = 12;
-            if (RTC_time.DD > maxDays()) RTC_time.DD = maxDays();
+            if (TimeRTC.MM > 1) TimeRTC.MM--;
+            else TimeRTC.MM = 12;
+            if (TimeRTC.DD > maxDays()) TimeRTC.DD = maxDays();
             break;
 
           //настройка года
-          case 4: if (RTC_time.YY > 2021) RTC_time.YY--; else RTC_time.YY = 2050; break; //год
+          case 4: if (TimeRTC.YY > 2021) TimeRTC.YY--; else TimeRTC.YY = 2050; break; //год
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
@@ -598,19 +604,19 @@ void settings_time(void) //настройки времени
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_mode) {
           //настройка времени
-          case 0: if (RTC_time.h < 23) RTC_time.h++; else RTC_time.h = 0; RTC_time.s = 0; break; //часы
-          case 1: if (RTC_time.m < 59) RTC_time.m++; else RTC_time.m = 0; RTC_time.s = 0; break; //минуты
+          case 0: if (TimeRTC.h < 23) TimeRTC.h++; else TimeRTC.h = 0; TimeRTC.s = 0; break; //часы
+          case 1: if (TimeRTC.m < 59) TimeRTC.m++; else TimeRTC.m = 0; TimeRTC.s = 0; break; //минуты
 
           //настройка даты
-          case 2: if (RTC_time.DD < maxDays()) RTC_time.DD++; else RTC_time.DD = 1; break; //день
+          case 2: if (TimeRTC.DD < maxDays()) TimeRTC.DD++; else TimeRTC.DD = 1; break; //день
           case 3: //месяц
-            if (RTC_time.MM < 12) RTC_time.MM++;
-            else RTC_time.MM = 1;
-            if (RTC_time.DD > maxDays()) RTC_time.DD = maxDays();
+            if (TimeRTC.MM < 12) TimeRTC.MM++;
+            else TimeRTC.MM = 1;
+            if (TimeRTC.DD > maxDays()) TimeRTC.DD = maxDays();
             break;
 
           //настройка года
-          case 4: if (RTC_time.YY < 2050) RTC_time.YY++; else RTC_time.YY = 2021; break; //год
+          case 4: if (TimeRTC.YY < 2050) TimeRTC.YY++; else TimeRTC.YY = 2021; break; //год
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
@@ -625,20 +631,158 @@ void settings_time(void) //настройки времени
       case SET_KEY_HOLD: //удержание средней кнопки
         sendTime(); //отправить время в RTC
         changeBright(); //установка яркости от времени суток
-        eeprom_update_block((void*)&RTC_time, (void*)EEPROM_BLOCK_TIME, sizeof(RTC_time)); //записываем дату по умолчанию в память
+        EEPROM_UpdateBlock((uint16_t)&TimeRTC, EEPROM_BLOCK_TIME, sizeof(TimeRTC)); //записываем дату по умолчанию в память
         return;
     }
   }
 }
-//-----------------------------Настройка будильников------------------------------------
-void settings_alarm(void) //настройка будильников
+//-----------------------------Настройка будильника------------------------------------
+void settings_singleAlarm(void) //настройка будильника
 {
   uint8_t alarm[5]; //массив данных о будильнике
   uint8_t cur_mode = 0; //текущий режим
   uint8_t cur_day = 1; //текущий день недели
   boolean blink_data = 0; //мигание сигментами
   uint8_t time_out = 0; //таймаут автовыхода
+  boolean cur_indi = 0; //текущий индикатор
 
+  indiClr(); //очищаем индикаторы
+  OCR1B = dotMaxBright; //выключаем точки
+
+  alarmReadBlock(1, alarm); //читаем блок данных
+
+  while (1) {
+    dataUpdate(); //обработка данных
+
+    if (!_scr) {
+      _scr = 1;
+      if (++time_out >= SETTINGS_TIMEOUT) {
+        MELODY_RESET; //сброс воспроизведения мелодии
+        return; //выходим по тайм-ауту
+      }
+    }
+
+    if (cur_mode == 3) MELODY_PLAY(alarm[4]); //воспроизводим мелодию
+
+    if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
+      _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
+
+      indiClr(); //очистка индикаторов
+      switch (cur_mode) {
+        case 0:
+          if (!blink_data || cur_indi) indiPrintNum(alarm[0], 0, 2, 0); //вывод часов
+          if (!blink_data || !cur_indi) indiPrintNum(alarm[1], 2, 2, 0); //вывод минут
+          break;
+        case 1:
+        case 2:
+          if (!blink_data || cur_mode == 2) indiPrintNum(alarm[2], 0); //вывод режима
+          if (alarm[2] > 3) {
+            if (!blink_data || cur_mode == 1 || cur_indi) indiPrintNum(cur_day, 2); //вывод дня недели
+            if (!blink_data || cur_mode == 1 || !cur_indi) indiPrintNum((alarm[3] >> cur_day) & 0x01, 3); //вывод установки
+          }
+          break;
+        case 3:
+          if (!blink_data) indiPrintNum(alarm[4] + 1, 3); //вывод номера мелодии
+          break;
+      }
+      blink_data = !blink_data; //мигание сигментами
+    }
+
+    //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
+    switch (check_keys()) {
+      case LEFT_KEY_HOLD: //удержание левой кнопки
+        if (cur_mode > 0) cur_mode--; else cur_mode = 3; //переключение пунктов
+
+        switch (cur_mode) {
+          case 0: OCR1B = dotMaxBright; break; //включаем точки
+          case 2: if (alarm[2] < 4) cur_mode = 1; break; //если нет дней недели
+          default: OCR1B = 0; break; //выключаем точки
+        }
+
+        MELODY_RESET; //сбрасываем мелодию
+        cur_indi = 0; //сбрасываем текущий индикатор
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
+      case LEFT_KEY_PRESS: //клик левой кнопкой
+        switch (cur_mode) {
+          //настройка времени будильника
+          case 0:
+            switch (cur_indi) {
+              case 0: if (alarm[0] > 0) alarm[0]--; else alarm[0] = 23; break; //часы
+              case 1: if (alarm[1] > 0) alarm[1]--; else alarm[1] = 59; break; //минуты
+            }
+            break;
+          //настройка режима будильника
+          case 1: if (alarm[2] > 0) alarm[2]--; else alarm[2] = 4; break; //режим
+          case 2:
+            switch (cur_indi) {
+              case 0: if (cur_day > 1) cur_day--; else cur_day = 7; break; //день недели
+              case 1: alarm[3] &= ~(0x01 << cur_day); break; //установка
+            }
+            break;
+          //настройка мелодии будильника
+          case 3: if (alarm[4] > 0) alarm[4]--; else alarm[4] = (sizeof(alarm_sound) >> 2) - 1; MELODY_RESET; break; //мелодия
+        }
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
+        switch (cur_mode) {
+          //настройка времени будильника
+          case 0:
+            switch (cur_indi) {
+              case 0: if (alarm[0] < 23) alarm[0]++; else alarm[0] = 0; break; //часы
+              case 1: if (alarm[1] < 59) alarm[1]++; else alarm[1] = 0; break; //минуты
+            }
+            break;
+          //настройка режима будильника
+          case 1: if (alarm[2] < 4) alarm[2]++; else alarm[2] = 0; break; //режим
+          case 2:
+            switch (cur_indi) {
+              case 0: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
+              case 1: alarm[3] |= (0x01 << cur_day); break; //установка
+            }
+            break;
+          //настройка мелодии будильника
+          case 3: if (alarm[4] < ((sizeof(alarm_sound) >> 2) - 1)) alarm[4]++; else alarm[4] = 0; MELODY_RESET; break; //мелодия
+        }
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
+      case RIGHT_KEY_HOLD: //удержание правой кнопки
+        if (cur_mode < 3) cur_mode++; else cur_mode = 0; //переключение пунктов
+
+        switch (cur_mode) {
+          case 0: OCR1B = dotMaxBright; break; //включаем точки
+          case 2: if (alarm[2] < 4) cur_mode = 3; break; //если нет дней недели
+          default: OCR1B = 0; break; //выключаем точки
+        }
+
+        MELODY_RESET; //сбрасываем мелодию
+        cur_indi = 0; //сбрасываем текущий индикатор
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
+      case SET_KEY_PRESS: //клик средней кнопкой
+        cur_indi = !cur_indi;
+        _scr = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        break;
+      case SET_KEY_HOLD: //удержание средней кнопки
+        alarmWriteBlock(1, alarm); //записать блок основных данных будильника и выйти
+        return;
+    }
+  }
+}
+//-----------------------------Настройка будильников------------------------------------
+void settings_multiAlarm(void) //настройка будильников
+{
+  uint8_t alarm[5]; //массив данных о будильнике
+  uint8_t cur_mode = 0; //текущий режим
+  uint8_t cur_day = 1; //текущий день недели
+  boolean blink_data = 0; //мигание сигментами
+  uint8_t time_out = 0; //таймаут автовыхода
   uint8_t curAlarm = alarms_num > 0;
 
   indiClr(); //очищаем индикаторы
@@ -647,7 +791,7 @@ void settings_alarm(void) //настройка будильников
   alarmReadBlock(curAlarm, alarm); //читаем блок данных
 
   while (1) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (!_scr) {
       _scr = 1;
@@ -695,7 +839,7 @@ void settings_alarm(void) //настройка будильников
             if (curAlarm) { //если есть будильники в памяти
               delAlarm(curAlarm - 1); //удалить текущий будильник
               OCR1B = dotMaxBright; //включаем точки
-              for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
+              for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
               OCR1B = 0; //выключаем точки
               if (curAlarm > (alarms_num > 0)) curAlarm--; //убавляем номер текущего будильника
               else curAlarm = (alarms_num > 0);
@@ -749,7 +893,7 @@ void settings_alarm(void) //настройка будильников
           case 0:
             newAlarm(); //создать новый будильник
             OCR1B = dotMaxBright; //включаем точки
-            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) data_convert(); //обработка данных
+            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
             OCR1B = 0; //выключаем точки
             curAlarm = alarms_num;
             alarmReadBlock(curAlarm, alarm); //читаем блок данных
@@ -803,13 +947,14 @@ void settings_main(void) //настроки основные
   boolean set = 0; //режим настройки
   uint8_t time_out = 0; //таймаут автовыхода
   boolean blink_data = 0; //мигание сигментами
+  int8_t aging = 0; //буфер регистра старения
 
   indiClr(); //очищаем индикаторы
   OCR1B = 0; //выключаем точки
 
   //настройки
   while (1) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (!_scr) {
       _scr = 1;
@@ -845,6 +990,12 @@ void settings_main(void) //настроки основные
               if (!blink_data || cur_indi) indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод часов
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод часов
               break;
+            case 7:
+              if (!blink_data) {
+                if (EIMSK) indiPrintNum((aging < 0) ? ((aging ^ 0xFF) + 1) : aging, (aging) ? CENTER : (aging > 0) ? RIGHT : LEFT);
+                else indiPrintNum(mainSettings.timePeriod, 0);
+              }
+              break;
           }
           blink_data = !blink_data; //мигание сигментами
           break;
@@ -854,7 +1005,7 @@ void settings_main(void) //настроки основные
     switch (check_keys()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (set) {
-          case 0: if (cur_mode > 0) cur_mode--; else cur_mode = 6; break;
+          case 0: if (cur_mode > 0) cur_mode--; else cur_mode = 7; break;
           case 1:
             switch (cur_mode) {
               case 0: mainSettings.timeFormat = 0; break; //формат времени
@@ -894,6 +1045,12 @@ void settings_main(void) //настроки основные
                     break;
                 }
                 break;
+              case 7: //коррекция хода
+                switch (EIMSK) {
+                  case 0: if (mainSettings.timePeriod > TIME_PERIOD_MIN) mainSettings.timePeriod--; else mainSettings.timePeriod = TIME_PERIOD_MAX; break;
+                  case 1: if (aging > -127) aging--; else aging = 127; break;
+                }
+                break;
             }
             break;
         }
@@ -902,7 +1059,7 @@ void settings_main(void) //настроки основные
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (set) {
-          case 0: if (cur_mode < 6) cur_mode++; else cur_mode = 0; break;
+          case 0: if (cur_mode < 7) cur_mode++; else cur_mode = 0; break;
           case 1:
             switch (cur_mode) {
               case 0: mainSettings.timeFormat = 1; break; //формат времени
@@ -942,6 +1099,12 @@ void settings_main(void) //настроки основные
                     break;
                 }
                 break;
+              case 7: //коррекция хода
+                switch (EIMSK) {
+                  case 0: if (mainSettings.timePeriod < TIME_PERIOD_MAX) mainSettings.timePeriod++; else mainSettings.timePeriod = TIME_PERIOD_MIN; break;
+                  case 1: if (aging < 127) aging++; else aging = -127; break;
+                }
+                break;
             }
             break;
         }
@@ -978,19 +1141,23 @@ void settings_main(void) //настроки основные
                 case 4: readTempDS(); break; //чтение температуры с датчика DS18B20
               }
               break;
+            case 7:
+              if (EIMSK) aging = readAgingRTC(); //чтение коррекции хода
+              break;
           }
           OCR1B = dotMaxBright; //включаем точки
         }
         else {
           changeBright(); //установка яркости от времени суток
           OCR1B = 0; //выключаем точки
+          if (EIMSK && cur_mode == 7) WriteAgingRTC(aging); //запись коррекции хода
         }
         cur_indi = 0;
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        eeprom_update_block((void*)&mainSettings, (void*)EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+        EEPROM_UpdateBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
         changeBright(); //установка яркости от времени суток
         return;
     }
@@ -999,8 +1166,8 @@ void settings_main(void) //настроки основные
 //---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
 {
-  if ((mainSettings.timeBright[0] > mainSettings.timeBright[1] && (RTC_time.h >= mainSettings.timeBright[0] || RTC_time.h < mainSettings.timeBright[1])) ||
-      (mainSettings.timeBright[0] < mainSettings.timeBright[1] && RTC_time.h >= mainSettings.timeBright[0] && RTC_time.h < mainSettings.timeBright[1])) {
+  if ((mainSettings.timeBright[0] > mainSettings.timeBright[1] && (TimeRTC.h >= mainSettings.timeBright[0] || TimeRTC.h < mainSettings.timeBright[1])) ||
+      (mainSettings.timeBright[0] < mainSettings.timeBright[1] && TimeRTC.h >= mainSettings.timeBright[0] && TimeRTC.h < mainSettings.timeBright[1])) {
     //ночной режим
     dotMaxBright = DOT_BRIGHT_N; //установка максимальной яркости точек
     backlMaxBright = BACKL_BRIGHT_N; //установка максимальной яркости подсветки
@@ -1042,9 +1209,6 @@ void changeBright(void) //установка яркости от времени 
 //----------------------------------Мигание подсветки---------------------------------
 void backlFlash(void) //мигание подсветки
 {
-#if BACKL_WS2812B
-
-#else
   static boolean backl_drv; //направление яркости
   if (fastSettings.backlMode == 2 && backlMaxBright) {
     if (!_timer_ms[TMR_BACKL]) {
@@ -1061,7 +1225,6 @@ void backlFlash(void) //мигание подсветки
       }
     }
   }
-#endif
 }
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
@@ -1112,7 +1275,7 @@ void showTemp(void) //показать температуру
     case 4: readTempDS(); break; //чтение температуры с датчика DS18B20
   }
   for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (!_scr) {
       _scr = 1; //сбрасываем флаг
@@ -1157,17 +1320,17 @@ void showDate(void) //показать дату
   OCR1B = dotMaxBright; //включаем точки
   _scr = 0; //обновление экрана
   for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (!_scr) {
       _scr = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
       switch (mode) {
         case 0:
-          indiPrintNum(RTC_time.DD, 0, 2, 0); //вывод даты
-          indiPrintNum(RTC_time.MM, 2, 2, 0); //вывод месяца
+          indiPrintNum(TimeRTC.DD, 0, 2, 0); //вывод даты
+          indiPrintNum(TimeRTC.MM, 2, 2, 0); //вывод месяца
           break;
-        case 1: indiPrintNum(RTC_time.YY, 0); break; //вывод года
+        case 1: indiPrintNum(TimeRTC.YY, 0); break; //вывод года
       }
     }
 
@@ -1196,7 +1359,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
   OCR1B = 0; //выключаем точки
   for (_timer_ms[TMR_MS] = SWITCH_TIME; _timer_ms[TMR_MS];) {
-    data_convert(); //обработка данных
+    dataUpdate(); //обработка данных
 
     if (anim < 4) {
       if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1246,13 +1409,13 @@ void fastSetSwitch(void) //переключение быстрых настро�
     }
   }
   if (mode == 1) flipIndi(fastSettings.flipMode, 1); //демонстрация анимации цифр
-  eeprom_update_block((void*)&fastSettings, (void*)EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки в память
+  EEPROM_UpdateBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки в память
 }
 //----------------------------Антиотравление индикаторов-------------------------------
 void burnIndi(void) //антиотравление индикаторов
 {
 #if BURN_INDI_TYPE
-  if (_tmrBurn >= BURN_PERIOD && RTC_time.s >= BURN_PHASE) {
+  if (_tmrBurn >= BURN_PERIOD && TimeRTC.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
     OCR1B = 0; //выключаем точки
     for (byte indi = 0; indi < 4; indi++) {
@@ -1262,20 +1425,20 @@ void burnIndi(void) //антиотравление индикаторов
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
           for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
             if (check_keys()) { //если нажата кнопка
-              indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-              indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+              indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+              indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
               return; //выходим
             }
-            data_convert(); //обработка данных
+            dataUpdate(); //обработка данных
           }
         }
       }
     }
-    indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-    indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+    indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+    indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
   }
 #else
-  if (_tmrBurn >= BURN_PERIOD && RTC_time.s >= BURN_PHASE) {
+  if (_tmrBurn >= BURN_PERIOD && TimeRTC.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
     for (byte indi = 0; indi < 4; indi++) {
       for (byte loops = 0; loops < BURN_LOOPS; loops++) {
@@ -1283,17 +1446,17 @@ void burnIndi(void) //антиотравление индикаторов
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
           for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
             if (check_keys()) { //если нажата кнопка
-              indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-              indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+              indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+              indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
               return; //выходим
             }
-            data_convert(); //обработка данных
+            dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
           }
         }
       }
-      indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-      indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+      indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+      indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
     }
   }
 #endif
@@ -1315,25 +1478,25 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
   uint8_t HH;
   uint8_t MM;
 
-  if (RTC_time.m) {
-    MM = RTC_time.m - 1;
-    HH = RTC_time.h;
+  if (TimeRTC.m) {
+    MM = TimeRTC.m - 1;
+    HH = TimeRTC.h;
   }
   else {
     MM = 59;
-    if (RTC_time.h) HH = RTC_time.h - 1;
+    if (TimeRTC.h) HH = TimeRTC.h - 1;
     else HH = 23;
   }
 
   if (!demo) {
-    if (RTC_time.h / 10 != HH / 10) flipIndi[0] = 1;
-    if (RTC_time.h % 10 != HH % 10) flipIndi[1] = 1;
-    if (RTC_time.m / 10 != MM / 10) flipIndi[2] = 1;
-    if (RTC_time.m % 10 != MM % 10) flipIndi[3] = 1;
+    if (TimeRTC.h / 10 != HH / 10) flipIndi[0] = 1;
+    if (TimeRTC.h % 10 != HH % 10) flipIndi[1] = 1;
+    if (TimeRTC.m / 10 != MM / 10) flipIndi[2] = 1;
+    if (TimeRTC.m % 10 != MM % 10) flipIndi[3] = 1;
   }
   else {
-    indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-    indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+    indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+    indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
     for (uint8_t i = 0; i < 4; i++) flipIndi[i] = 1;
   }
 
@@ -1342,7 +1505,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[0] = indiMaxBright;
 
       while (!check_keys()) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1353,8 +1516,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             }
             else {
               drvIndi = 0;
-              indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-              indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+              indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+              indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
             }
           }
           else {
@@ -1374,13 +1537,13 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[1] = HH % 10;
       anim_buf[2] = MM / 10;
       anim_buf[3] = MM % 10;
-      anim_buf[4] = RTC_time.h / 10;
-      anim_buf[5] = RTC_time.h % 10;
-      anim_buf[6] = RTC_time.m / 10;
-      anim_buf[7] = RTC_time.m % 10;
+      anim_buf[4] = TimeRTC.h / 10;
+      anim_buf[5] = TimeRTC.h % 10;
+      anim_buf[6] = TimeRTC.m / 10;
+      anim_buf[7] = TimeRTC.m % 10;
 
       while (!check_keys()) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1401,20 +1564,20 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       break;
     case 2: //перемотка по порядку катодов в лампе
       if (!demo) {
-        for (byte c = 0; c < 10; c++) {
-          if (cathodeMask[c] == RTC_time.h / 10) anim_buf[0] = c;
+        for (uint8_t c = 0; c < 10; c++) {
+          if (cathodeMask[c] == TimeRTC.h / 10) anim_buf[0] = c;
           if (cathodeMask[c] == HH / 10) anim_buf[4] = c;
-          if (cathodeMask[c] == RTC_time.h % 10) anim_buf[1] = c;
+          if (cathodeMask[c] == TimeRTC.h % 10) anim_buf[1] = c;
           if (cathodeMask[c] == HH % 10) anim_buf[5] = c;
-          if (cathodeMask[c] == RTC_time.m / 10) anim_buf[2] = c;
+          if (cathodeMask[c] == TimeRTC.m / 10) anim_buf[2] = c;
           if (cathodeMask[c] == MM / 10) anim_buf[6] = c;
-          if (cathodeMask[c] == RTC_time.m % 10) anim_buf[3] = c;
+          if (cathodeMask[c] == TimeRTC.m % 10) anim_buf[3] = c;
           if (cathodeMask[c] == MM % 10) anim_buf[7] = c;
         }
       }
       else {
         for (uint8_t i = 0; i < 4; i++) {
-          for (byte c = 0; c < 10; c++) {
+          for (uint8_t c = 0; c < 10; c++) {
             anim_buf[i] = 0;
             anim_buf[i + 4] = 9;
           }
@@ -1422,12 +1585,12 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       }
 
       while (!check_keys()) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           drvIndi = 0;
-          for (byte i = 0; i < 4; i++) {
+          for (uint8_t i = 0; i < 4; i++) {
             if (flipIndi[i]) {
               drvIndi = 1;
               if (anim_buf[i] > anim_buf[i + 4]) anim_buf[i]--;
@@ -1449,7 +1612,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[3] = MM % 10; //минуты
 
       for (uint8_t i = 0; i < 4 && !check_keys();) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           for (uint8_t b = 0; b < 4; b++) {
@@ -1461,13 +1624,13 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         }
       }
       //новое время
-      anim_buf[3] = RTC_time.h / 10; //часы
-      anim_buf[2] = RTC_time.h % 10; //часы
-      anim_buf[1] = RTC_time.m / 10; //минуты
-      anim_buf[0] = RTC_time.m % 10; //минуты
+      anim_buf[3] = TimeRTC.h / 10; //часы
+      anim_buf[2] = TimeRTC.h % 10; //часы
+      anim_buf[1] = TimeRTC.m / 10; //минуты
+      anim_buf[0] = TimeRTC.m % 10; //минуты
 
       for (uint8_t i = 0; i < 4 && !check_keys();) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           for (uint8_t b = 0; b < 4; b++) {
@@ -1489,7 +1652,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       drvIndi = 0;
 
       for (uint8_t i = 0; i < 4 && !check_keys();) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           for (uint8_t b = i + 1; b > 0; b--) {
@@ -1504,15 +1667,15 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         }
       }
       //новое время
-      anim_buf[0] = RTC_time.h / 10; //часы
-      anim_buf[1] = RTC_time.h % 10; //часы
-      anim_buf[2] = RTC_time.m / 10; //минуты
-      anim_buf[3] = RTC_time.m % 10; //минуты
+      anim_buf[0] = TimeRTC.h / 10; //часы
+      anim_buf[1] = TimeRTC.h % 10; //часы
+      anim_buf[2] = TimeRTC.m / 10; //минуты
+      anim_buf[3] = TimeRTC.m % 10; //минуты
 
       drvIndi = 0;
 
       for (uint8_t i = 0; i < 4 && !check_keys();) {
-        data_convert(); //обработка данных
+        dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           for (uint8_t b = 0; b < 4 - i; b++) {
@@ -1536,8 +1699,8 @@ void main_screen(void) //главный экран
 
   if (!_scr) {
     _scr = 1; //сбрасываем флаг
-    indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC_time.h) : RTC_time.h, 0, 2, 0); //вывод часов
-    indiPrintNum(RTC_time.m, 2, 2, 0); //вывод минут
+    indiPrintNum((mainSettings.timeFormat) ? get_12h(TimeRTC.h) : TimeRTC.h, 0, 2, 0); //вывод часов
+    indiPrintNum(TimeRTC.m, 2, 2, 0); //вывод минут
   }
 
   dotFlash(); //мигаем точками
@@ -1558,7 +1721,11 @@ void main_screen(void) //главный экран
       _scr = _animShow = 0; //обновление экрана
       break;
     case RIGHT_KEY_HOLD: //удержание правой кнопки
-      settings_alarm(); //настройка будильников
+#if USE_ONE_ALARM
+      settings_singleAlarm(); //настройка будильника
+#else
+      settings_multiAlarm(); //настройка будильников
+#endif
       _scr = _animShow = 0; //обновление экрана
       break;
     case SET_KEY_PRESS: //клик средней кнопкой
