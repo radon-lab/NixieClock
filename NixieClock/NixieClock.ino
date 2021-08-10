@@ -992,7 +992,7 @@ void settings_main(void) //настроки основные
               break;
             case 7:
               if (!blink_data) {
-                if (EIMSK) indiPrintNum((aging < 0) ? ((aging ^ 0xFF) + 1) : aging, (aging) ? CENTER : (aging > 0) ? RIGHT : LEFT);
+                if (EIMSK) indiPrintNum((aging < 0) ? (uint8_t)((aging ^ 0xFF) + 1) : (uint8_t)aging, 0, (aging > 0) ? 4 : 0);
                 else indiPrintNum(mainSettings.timePeriod, 0);
               }
               break;
@@ -1150,7 +1150,7 @@ void settings_main(void) //настроки основные
         else {
           changeBright(); //установка яркости от времени суток
           OCR1B = 0; //выключаем точки
-          if (EIMSK && cur_mode == 7) WriteAgingRTC(aging); //запись коррекции хода
+          if (EIMSK && cur_mode == 7) WriteAgingRTC((uint8_t)aging); //запись коррекции хода
         }
         cur_indi = 0;
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
