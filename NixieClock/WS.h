@@ -50,7 +50,6 @@ void ledWrite(uint8_t* data, uint16_t size) {
     "SBIW %[COUNT], 1     \n\t" //отнимаем от счетчика байт
     "BRNE _BYTE_START_%=  \n\t" //переход к загрузке нового байта
     "SEI                  \n\t" //разрешили прерывания
-    "SBI %[PORT], %[PIN]  \n\t" //HIGH на выход пина
     :
     :"x"(data),
     [COUNT]"w"(size),
