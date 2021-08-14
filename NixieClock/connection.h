@@ -45,19 +45,10 @@ const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядо
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #endif
 
-//пин сенсора температуры D1(для DS18B20 и DHT21/22)
-#define SENS_BIT   1 // D1
-#define SENS_PORT  PORTD
-#define SENS_PIN   PIND
+//пин аналоговых кнопок A7
+#define ANALOG_BTN_PIN 7 // A7
 
-#define SENS_HI   (BIT_SET(SENS_PORT, SENS_BIT))
-#define SENS_LO   (BIT_CLEAR(SENS_PORT, SENS_BIT))
-#define SENS_CHK  (BIT_READ(SENS_PIN, SENS_BIT))
-#define SENS_OUT  (BIT_SET((DDR_REG(SENS_PORT)), SENS_BIT))
-#define SENS_INP  (BIT_CLEAR((DDR_REG(SENS_PORT)), SENS_BIT))
-
-#define SENS_INIT  SENS_HI; SENS_INP
-
+#ifndef ANALOG
 //пин кнопки ОК D8
 #define SET_BIT   0 // D8
 #define SET_PORT  PORTB
@@ -117,6 +108,20 @@ const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядо
 
 #define RIGHT_INIT  RIGHT_CLR; RIGHT_INP
 #endif
+#endif
+
+//пин сенсора температуры D1(для DS18B20 и DHT21/22)
+#define SENS_BIT   1 // D1
+#define SENS_PORT  PORTD
+#define SENS_PIN   PIND
+
+#define SENS_HI   (BIT_SET(SENS_PORT, SENS_BIT))
+#define SENS_LO   (BIT_CLEAR(SENS_PORT, SENS_BIT))
+#define SENS_CHK  (BIT_READ(SENS_PIN, SENS_BIT))
+#define SENS_OUT  (BIT_SET((DDR_REG(SENS_PORT)), SENS_BIT))
+#define SENS_INP  (BIT_CLEAR((DDR_REG(SENS_PORT)), SENS_BIT))
+
+#define SENS_INIT  SENS_HI; SENS_INP
 
 //пин SQW D2
 #define SQW_BIT   2 // D2

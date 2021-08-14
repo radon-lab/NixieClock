@@ -9,10 +9,6 @@ volatile uint8_t indi_state; //текущей номер отрисовки ин
 volatile uint8_t tick_ms; //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC
 
-#define LEFT 0
-#define RIGHT 255
-#define CENTER 254
-
 #if NEON_DOT
 #define _INDI_ON  TCNT0 = 255; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0)
 #define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
@@ -196,13 +192,7 @@ void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length, char filler) //в�
     if (length > c) {
       for (f = 0; f < (length - c); f++) st[f] = (filler != ' ') ? filler : 10;
     }
-
     for (uint8_t i = 0; i < c; i++) st[i + f] = buf[c - i - 1];
-  }
-
-  switch (indi) {
-    case RIGHT: indi = 4 - (c + f); break;
-    case CENTER: indi = 4 - (c + f) / 2; break;
   }
 
   for (uint8_t cnt = 0; cnt < (c + f); cnt++) {
@@ -210,7 +200,7 @@ void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length, char filler) //в�
     for (uint8_t dec = 0; dec < 4; dec++) {
       if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderBit[dec]);
     }
-    indi_buf[indi++] = mergeBuf;
+    if (indi < 4) indi_buf[indi++] = mergeBuf;
   }
   indiChangePwm(); //установка Linear Advance
 }

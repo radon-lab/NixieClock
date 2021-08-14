@@ -58,7 +58,7 @@ void sendTime(void) //отправить время в RTC
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
 boolean getTime(void) //запрашиваем время из RTC
 {
-  if (WireRequestFrom(RTC_ADDR, 0x00)) return 0; //запрашиваем чтение данных, если нет ответа выходим
+  if (WireRequestFrom(RTC_ADDR, 0x00)) return 1; //запрашиваем чтение данных, если нет ответа выходим
   TimeRTC.s = unpackREG(WireRead()); //получаем секунды
   TimeRTC.m = unpackREG(WireRead()); //получаем минуты
   TimeRTC.h = unpackHours(WireRead()); //получаем часы
@@ -67,18 +67,19 @@ boolean getTime(void) //запрашиваем время из RTC
   TimeRTC.MM = unpackREG(WireRead()); //получаем месяц
   TimeRTC.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
   TimeRTC.DW = getWeekDay(TimeRTC.YY, TimeRTC.MM, TimeRTC.DD); //получаем день недели
-  return 1;
+  return 0;
 }
 //-------------------------------Настройка SQW-------------------------------------
-void setSQW(void) //настройка SQW
+boolean setSQW(void) //настройка SQW
 {
-  if (WireRequestFrom(RTC_ADDR, 0x0E)) return; //запрашиваем чтение данных, если нет ответа выходим
+  if (WireRequestFrom(RTC_ADDR, 0x0E)) return 1; //запрашиваем чтение данных, если нет ответа выходим
   uint8_t ctrlReg = WireReadEndByte() & 0xE3; //выключаем INTCON и устанавливаем частоту 1Гц
 
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x0E); //устанавливаем адрес записи
   WireWrite(ctrlReg); //отправляем настройку SQW
   WireEnd(); //конец передачи
+  return 0;
 }
 //-------------------------------Цтение температура-------------------------------------
 void readTempRTC(void) //чтение температуры
