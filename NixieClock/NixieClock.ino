@@ -1338,9 +1338,9 @@ void autoShowTemp(void) //автоматический показ темпера
 
           indiClr(); //очистка индикаторов
           switch (mode) {
-            case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, (drv) ? pos : (4 - pos), 3, ' '); break; //вывод температуры
-            case 1: indiPrintNum(tempSens.hum, (drv) ? pos : (4 - pos), 3, ' '); break; //вывод влажности
-            case 2: indiPrintNum(tempSens.press, (drv) ? pos : (4 - pos), 4, ' '); break; //вывод давления
+            case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); break; //вывод температуры
+            case 1: indiPrintNum(tempSens.hum, pos, 3, ' '); break; //вывод влажности
+            case 2: indiPrintNum(tempSens.press, pos, 4, ' '); break; //вывод давления
           }
           if (!drv) {
             if (pos > 0) pos--;
