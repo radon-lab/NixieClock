@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 14.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 16.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1331,8 +1331,9 @@ void autoShowTemp(void) //автоматический показ темпера
         case 2: if (!tempSens.press) return; break; //выходим
       }
 
-      while (!check_keys()) { //анимация перехода
+      while (1) { //анимация перехода
         dataUpdate(); //обработка данных
+        if (check_keys()) return; //возврат если нажата кнопка
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           _timer_ms[TMR_ANIM] = AUTO_TEMP_ANIM_TIME; //устанавливаем таймер
 

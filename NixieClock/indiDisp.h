@@ -17,7 +17,7 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 #define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
 #endif
 
-void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length = 0, char filler = ' ');
+void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' ');
 
 void setPin(uint8_t pin, boolean x) {
   if (pin < 8) BIT_WRITE(PORTD, pin, x);
@@ -166,7 +166,7 @@ void indiSetBright(uint8_t pwm) //установка общей яркости
   indiChangePwm(); //установка Linear Advance
 }
 //-------------------------Вывод чисел----------------------------------------------------
-void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length, char filler) //вывод чисел
+void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вывод чисел
 {
   uint8_t buf[4];
   uint8_t st[4];
@@ -200,7 +200,8 @@ void indiPrintNum(uint16_t num, uint8_t indi, uint8_t length, char filler) //в�
     for (uint8_t dec = 0; dec < 4; dec++) {
       if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderBit[dec]);
     }
-    if (indi < 4) indi_buf[indi++] = mergeBuf;
+    if (indi < 0) indi++;
+    else if (indi < 4) indi_buf[indi++] = mergeBuf;
   }
   indiChangePwm(); //установка Linear Advance
 }
