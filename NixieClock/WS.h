@@ -43,19 +43,53 @@ void ledWrite(uint8_t* data, uint16_t size) {
     [PIN]"I"(BACKL_BIT)
   );
 }
-//--------------------------------------Установка цвета в формате GRB------------------------------------------
-void setLedGRB(uint8_t led, uint8_t G, uint8_t R, uint8_t B)
+//--------------------------------------Установка цвета в формате HV------------------------------------------
+void setLedHV(uint8_t led, uint8_t color)
 {
-  ledColor[led * 3] = G;
-  ledColor[led * 3 + 1] = R;
-  ledColor[led * 3 + 2] = B;
+  uint8_t pallet = (float)((color % 85) * ((float)ledBright[led] / 85.0));
+  switch (color / 85) {
+    case 0:
+      ledColor[led * 3 + 1] = ledBright[led] - pallet;
+      ledColor[led * 3] = pallet;
+      break;
+    case 1:
+      ledColor[led * 3] = ledBright[led] - pallet;
+      ledColor[led * 3 + 2] = pallet;
+      break;
+    case 2:
+      ledColor[led * 3 + 2] = ledBright[led] - pallet;
+      ledColor[led * 3 + 1] = pallet;
+      break;
+  }
+  ledWrite(ledColor, sizeof(ledColor));
+}
+//--------------------------------------Установка цвета в формате HV------------------------------------------
+void setLedHV(uint8_t color)
+{
+  for (uint8_t f = 0; f < 4; f++) {
+    uint8_t pallet = (float)((color % 85) * ((float)ledBright[f] / 85.0));
+    switch (color / 85) {
+      case 0:
+        ledColor[f * 3 + 1] = ledBright[f] - pallet;
+        ledColor[f * 3] = pallet;
+        break;
+      case 1:
+        ledColor[f * 3] = ledBright[f] - pallet;
+        ledColor[f * 3 + 2] = pallet;
+        break;
+      case 2:
+        ledColor[f * 3 + 2] = ledBright[f] - pallet;
+        ledColor[f * 3 + 1] = pallet;
+        break;
+    }
+  }
   ledWrite(ledColor, sizeof(ledColor));
 }
 //--------------------------------------Установка по цветовой палитре------------------------------------------
 void setLedColor(uint8_t led, uint8_t clr)
 {
   for (uint8_t i = 0; i < 3; i++) {
-    if ((clr >> i) & 0x01) ledColor[led * 3 + i] = ledBright[led];
+    if (((clr & 0x7F) >> i) & 0x01) ledColor[led * 3 + i] = ledBright[led];
     else ledColor[led * 3 + i] = 0;
   }
   ledWrite(ledColor, sizeof(ledColor));
@@ -65,7 +99,7 @@ void setLedColor(uint8_t clr)
 {
   for (uint8_t f = 0; f < 4; f++) {
     for (uint8_t i = 0; i < 3; i++) {
-      if ((clr >> i) & 0x01) ledColor[f * 3 + i] = ledBright[f];
+      if (((clr & 0x7F) >> i) & 0x01) ledColor[f * 3 + i] = ledBright[f];
       else ledColor[f * 3 + i] = 0;
     }
   }
@@ -75,19 +109,9 @@ void setLedColor(uint8_t clr)
 void setLedBright(uint8_t led, uint8_t brt)
 {
   ledBright[led] = brt;
-  for (uint8_t i = 0; i < 3; i++) {
-    if (ledColor[led * 3 + i]) ledColor[led * 3 + i] = brt;
-  }
-  ledWrite(ledColor, sizeof(ledColor));
 }
 //--------------------------------------Установка яркости------------------------------------------
 void setLedBright(uint8_t brt)
 {
-  for (uint8_t f = 0; f < 4; f++) {
-    ledBright[f] = brt;
-    for (uint8_t i = 0; i < 3; i++) {
-      if (ledColor[f * 3 + i]) ledColor[f * 3 + i] = brt;
-    }
-  }
-  ledWrite(ledColor, sizeof(ledColor));
+  for (uint8_t f = 0; f < 4; f++) ledBright[f] = brt;
 }

@@ -172,6 +172,9 @@ int main(void) //инициализация
     alarmWarn(); //тревога будильника
     dotFlash(); //мигаем точками
     mainScreen(); //главный экран
+#if BACKL_WS2812B
+    backlEffect(); //анимация подсветки
+#endif
   }
   return 0; //конец
 }
@@ -1230,8 +1233,8 @@ void changeBright(void) //установка яркости от времени 
       break;
   }
 #if BACKL_WS2812B
-  setLedBright(backlMaxBright);
-  setLedColor(fastSettings.backlMode);
+  setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+  if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode); //отправляем статичный цвет
 #else
   switch (fastSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
@@ -1243,6 +1246,45 @@ void changeBright(void) //установка яркости от времени 
   }
 #endif
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
+}
+//----------------------------------Анимация подсветки---------------------------------
+void backlEffect(void) //анимация подсветки
+{
+  if (!_timer_ms[TMR_BACKL]) {
+    switch (fastSettings.backlMode & 0x7F) {
+      default: { //дыхание подсветки
+          static boolean backl_drv; //направление яркости
+          if (fastSettings.backlMode & 0x80 && backlMaxBright) {
+            _timer_ms[TMR_BACKL] = backlBrightTime;
+            switch (backl_drv) {
+              case 0: if (ledBright[0] < backlMaxBright) ledBright[0] += BACKL_STEP; else backl_drv = 1; break;
+              case 1:
+                if (ledBright[0] > BACKL_MIN_BRIGHT) ledBright[0] -= BACKL_STEP;
+                else {
+                  backl_drv = 0;
+                  _timer_ms[TMR_BACKL] = BACKL_PAUSE;
+                  break;
+                }
+                setLedColor(fastSettings.backlMode);
+            }
+          }
+        }
+        break;
+      case 8: { //плавная смена
+          static uint8_t colorStep; //номер цвета
+          setLedHV(colorStep++); //установили цвет
+          _timer_ms[TMR_BACKL] = BACKL_MODE_8_TIME;
+        }
+        break;
+      case 9: { //радуга
+          static uint8_t colorStep;
+          colorStep += BACKL_MODE_9_STEP;
+          for (uint8_t f = 0; f < 4; f++) setLedHV(f, colorStep + (f * BACKL_MODE_9_STEP));
+          _timer_ms[TMR_BACKL] = BACKL_MODE_9_TIME;
+        }
+        break;
+    }
+  }
 }
 //----------------------------------Мигание подсветки---------------------------------
 void backlFlash(void) //мигание подсветки
@@ -1462,6 +1504,9 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
   for (_timer_ms[TMR_MS] = SWITCH_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
+#if BACKL_WS2812B
+    backlEffect(); //анимация подсветки
+#endif
 
     if (anim < 4) {
       if (!_timer_ms[TMR_ANIM]) { //если таймер истек
@@ -1469,7 +1514,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
         indiClr(); //очистка индикаторов
         switch (mode) {
-          case 0: indiPrintNum(fastSettings.backlMode, anim); break; //вывод режима подсветки
+          case 0: indiPrintNum(fastSettings.backlMode & 0x7F, anim); break; //вывод режима подсветки
           case 1: indiPrintNum(fastSettings.flipMode, anim); break; //вывод режима анимации
           case 2: indiPrintNum(fastSettings.dotMode, anim); break; //вывод режима точек
         }
@@ -1480,8 +1525,8 @@ void fastSetSwitch(void) //переключение быстрых настро�
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
 #if BACKL_WS2812B
-        if (++fastSettings.backlMode > 7) fastSettings.backlMode = 0;
-        setLedColor(fastSettings.backlMode);
+        if (++fastSettings.backlMode > 9) fastSettings.backlMode = 0;
+        if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode);
 #else
         if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
         switch (fastSettings.backlMode) {
@@ -1494,7 +1539,14 @@ void fastSetSwitch(void) //переключение быстрых настро�
         anim = 0;
         mode = 0;
         break;
-
+#if BACKL_WS2812B
+      case SET_KEY_HOLD: //удержание средней кнопки
+        setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+        if (fastSettings.backlMode & 0x80) fastSettings.backlMode &= 0x7F; else fastSettings.backlMode |= 0x80;
+        setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+        _timer_ms[TMR_MS] = SWITCH_TIME;
+        break;
+#endif
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (++fastSettings.flipMode > FLIP_EFFECT_NUM) fastSettings.flipMode = 0;
         _timer_ms[TMR_MS] = SWITCH_TIME;
@@ -1832,22 +1884,22 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
                 i++; //прибавляем цикл
                 break; //вывод часов
             }
-             c++; //прибавляем цикл
+            c++; //прибавляем цикл
             _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
         }
       }
       break;
-      case 7: //испарение
+    case 7: //испарение
       //новое время
       anim_buf[0] = TimeRTC.h / 10; //часы
       anim_buf[1] = TimeRTC.h % 10; //часы
       anim_buf[2] = TimeRTC.m / 10; //минуты
       anim_buf[3] = TimeRTC.m % 10; //минуты
-      
-        for (uint8_t c = 0; c < 2; c++) {
+
+      for (uint8_t c = 0; c < 2; c++) {
         drvIndi = random(0, 4);
-          for (uint8_t i = 0; i < 4;) {
+        for (uint8_t i = 0; i < 4;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
           if (check_keys()) return; //возврат если нажата кнопка
@@ -1863,7 +1915,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
               case 0: indiClr(drvIndi); break; //очистка индикатора
               case 1: indiPrintNum(anim_buf[drvIndi], drvIndi); break; //вывод часов
             }
-             i++; //прибавляем цикл
+            i++; //прибавляем цикл
             _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
         }
