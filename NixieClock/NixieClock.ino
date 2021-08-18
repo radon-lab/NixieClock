@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 16.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.3.0 релиз от 18.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -81,8 +81,8 @@ volatile uint16_t cnt_puls; //количество циклов для рабо�
 volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
 uint16_t tmr_score; //частота для генерации звука пищалкой
 
-#define FLIP_EFFECT_NUM 6 //количество эффектов
-uint16_t FLIP_SPEED[] = {FLIP_MODE_2_TIME, FLIP_MODE_3_TIME, FLIP_MODE_4_TIME, FLIP_MODE_5_TIME, FLIP_MODE_6_TIME}; //скорость эффектов
+#define FLIP_EFFECT_NUM 9 //количество эффектов
+uint16_t FLIP_SPEED[] = {FLIP_MODE_2_TIME, FLIP_MODE_3_TIME, FLIP_MODE_4_TIME, FLIP_MODE_5_TIME, FLIP_MODE_6_TIME, FLIP_MODE_7_TIME, FLIP_MODE_8_TIME, FLIP_MODE_9_TIME}; //скорость эффектов
 
 uint8_t dotBrightStep; //шаг мигания точек
 uint8_t dotBrightTime; //период шага мигания точек
@@ -140,7 +140,7 @@ int main(void) //инициализация
 
   WireInit(); //инициализация Wire
   IndiInit(); //инициализация индикаторов
-  
+
   uartDisable(); //отключение uart
 
   if (EEPROM_ReadByte(EEPROM_BLOCK_VERSION_FW) != VERSION_FW || !SET_CHK) { //если первый запуск или зажата средняя кнопка, восстанавливаем из переменных
@@ -224,16 +224,16 @@ boolean testRTC(void) //проверка модуля часов реально�
 {
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
-  
+
   if (setSQW()) return 1; //установка SQW на 1Гц
   for (_timer_ms[TMR_MS] = TEST_SQW_TIME; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
   if (getTime()) return 1; //считываем время из RTC
-  
+
   if (TimeRTC.YY < 2021 || TimeRTC.YY > 2050) { //если пропадало питание
     EEPROM_ReadBlock((uint16_t)&TimeRTC, EEPROM_BLOCK_TIME, sizeof(TimeRTC)); //считываем дату и время из памяти
     sendTime(); //отправить время в RTC
   }
-  
+
   if (EIFR & (0x01 << INTF0)) EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
   else return 1; //иначе выдаем ошибку
   return 0; //возвращаем статус "ок"
@@ -1196,6 +1196,7 @@ void settings_main(void) //настроки основные
       case SET_KEY_HOLD: //удержание средней кнопки
         EEPROM_UpdateBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
         changeBright(); //установка яркости от времени суток
+        _tmrTemp = 0; //сбрасываем таймер показа температуры
         return;
     }
   }
@@ -1574,9 +1575,9 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
     default: mode = flipMode - 2; break;
   }
 
-  uint8_t drvIndi = 1;
-  uint8_t flipIndi[4] = {0, 0, 0, 0};
+  boolean flipIndi[4] = {0, 0, 0, 0};
   uint8_t anim_buf[8];
+  uint8_t drvIndi = 1;
   uint8_t HH;
   uint8_t MM;
 
@@ -1635,10 +1636,12 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       indiSetBright(indiMaxBright); //возвращаем максимальную яркость
       break;
     case 1: //перемотка по порядку числа
+      //старое время
       anim_buf[0] = HH / 10;
       anim_buf[1] = HH % 10;
       anim_buf[2] = MM / 10;
       anim_buf[3] = MM % 10;
+      //новое время
       anim_buf[4] = TimeRTC.h / 10;
       anim_buf[5] = TimeRTC.h % 10;
       anim_buf[6] = TimeRTC.m / 10;
@@ -1708,41 +1711,26 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       break;
     case 3: //поезд
       //старое время
-      anim_buf[0] = HH / 10; //часы
-      anim_buf[1] = HH % 10; //часы
-      anim_buf[2] = MM / 10; //минуты
-      anim_buf[3] = MM % 10; //минуты
-
-      for (uint8_t i = 0; i < 4;) {
-        dataUpdate(); //обработка данных
-        dotFlash(); //мигаем точками
-        if (check_keys()) return; //возврат если нажата кнопка
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          for (uint8_t b = 0; b < 4; b++) {
-            if (b >= i) indiPrintNum(anim_buf[b - i], b); //вывод часов
-            else indiClr(b); //очистка индикатора
-          }
-          i++; //прибавляем цикл
-          _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
-        }
-      }
+      anim_buf[0] = HH; //часы
+      anim_buf[1] = MM; //минуты
       //новое время
-      anim_buf[3] = TimeRTC.h / 10; //часы
-      anim_buf[2] = TimeRTC.h % 10; //часы
-      anim_buf[1] = TimeRTC.m / 10; //минуты
-      anim_buf[0] = TimeRTC.m % 10; //минуты
+      anim_buf[2] = TimeRTC.h; //часы
+      anim_buf[3] = TimeRTC.m; //минуты
 
-      for (uint8_t i = 0; i < 4;) {
-        dataUpdate(); //обработка данных
-        dotFlash(); //мигаем точками
-        if (check_keys()) return; //возврат если нажата кнопка
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          for (uint8_t b = 0; b < 4; b++) {
-            if (b <= i) indiPrintNum(anim_buf[i - b], b); //вывод часов
-            else indiClr(b); //очистка индикатора
+      for (uint8_t c = 0; c < 2; c++) {
+        for (uint8_t i = 0; i < 4;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+          if (check_keys()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            indiClr(); //очистка индикатора
+            switch (c) {
+              case 0: indiPrintNum(anim_buf[0] * 100 + anim_buf[1], i + 1); break; //вывод часов
+              case 1: indiPrintNum(anim_buf[2] * 100 + anim_buf[3], -3 + i); break; //вывод часов
+            }
+            i++; //прибавляем цикл
+            _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
-          i++; //прибавляем цикл
-          _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
         }
       }
       break;
@@ -1752,47 +1740,132 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       anim_buf[2] = HH % 10; //часы
       anim_buf[1] = MM / 10; //минуты
       anim_buf[0] = MM % 10; //минуты
+      //новое время
+      anim_buf[4] = TimeRTC.h / 10; //часы
+      anim_buf[5] = TimeRTC.h % 10; //часы
+      anim_buf[6] = TimeRTC.m / 10; //минуты
+      anim_buf[7] = TimeRTC.m % 10; //минуты
 
       drvIndi = 0;
 
-      for (uint8_t i = 0; i < 4;) {
-        dataUpdate(); //обработка данных
-        dotFlash(); //мигаем точками
-        if (check_keys()) return; //возврат если нажата кнопка
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          for (uint8_t b = i + 1; b > 0; b--) {
-            if (b - 1 == i - drvIndi) indiPrintNum(anim_buf[i], 4 - b); //вывод часов
-            else indiClr(4 - b); //очистка индикатора
+      for (uint8_t c = 0; c < 2; c++) {
+        for (uint8_t i = 0; i < 4;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+          if (check_keys()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            switch (c) {
+              case 0:
+                for (uint8_t b = i + 1; b > 0; b--) {
+                  if (b - 1 == i - drvIndi) indiPrintNum(anim_buf[i], 4 - b); //вывод часов
+                  else indiClr(4 - b); //очистка индикатора
+                }
+                if (drvIndi++ >= i) {
+                  drvIndi = 0; //сбрасываем позицию индикатора
+                  i++; //прибавляем цикл
+                }
+                break;
+              case 1:
+                for (uint8_t b = 0; b < 4 - i; b++) {
+                  if (b == drvIndi) indiPrintNum(anim_buf[7 - i], b); //вывод часов
+                  else indiClr(b); //очистка индикатора
+                }
+                if (drvIndi++ >= 3 - i) {
+                  drvIndi = 0; //сбрасываем позицию индикатора
+                  i++; //прибавляем цикл
+                }
+                break;
+            }
+            _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
-          if (drvIndi++ >= i) {
-            drvIndi = 0; //сбрасываем позицию индикатора
-            i++; //прибавляем цикл
-          }
-          _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
         }
       }
+      break;
+    case 5: //волна
+      //новое время
+      anim_buf[3] = TimeRTC.h / 10; //часы
+      anim_buf[2] = TimeRTC.h % 10; //часы
+      anim_buf[1] = TimeRTC.m / 10; //минуты
+      anim_buf[0] = TimeRTC.m % 10; //минуты
+
+      for (uint8_t c = 0; c < 2; c++) {
+        for (uint8_t i = 0; i < 4;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+          if (check_keys()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            switch (c) {
+              case 0: indiClr(3 - i); break; //очистка индикатора
+              case 1: indiPrintNum(anim_buf[i], 3 - i); break; //вывод часов
+            }
+            i++; //прибавляем цикл
+            _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
+          }
+        }
+      }
+      break;
+    case 6: //блики
       //новое время
       anim_buf[0] = TimeRTC.h / 10; //часы
       anim_buf[1] = TimeRTC.h % 10; //часы
       anim_buf[2] = TimeRTC.m / 10; //минуты
       anim_buf[3] = TimeRTC.m % 10; //минуты
 
-      drvIndi = 0;
-
       for (uint8_t i = 0; i < 4;) {
-        dataUpdate(); //обработка данных
-        dotFlash(); //мигаем точками
-        if (check_keys()) return; //возврат если нажата кнопка
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          for (uint8_t b = 0; b < 4 - i; b++) {
-            if (b == drvIndi) indiPrintNum(anim_buf[3 - i], b); //вывод часов
-            else indiClr(b); //очистка индикатора
+        drvIndi = random(0, 4);
+        for (uint8_t c = 0; c < 2;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+          if (check_keys()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            for (uint8_t b = 0; b < i; b++) {
+              while (anim_buf[4 + b] == drvIndi) {
+                drvIndi = random(0, 4);
+                b = 0;
+              }
+            }
+            anim_buf[4 + i] = drvIndi;
+            switch (c) {
+              case 0: indiClr(drvIndi); break; //очистка индикатора
+              case 1:
+                indiPrintNum(anim_buf[drvIndi], drvIndi);
+                i++; //прибавляем цикл
+                break; //вывод часов
+            }
+             c++; //прибавляем цикл
+            _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
-          if (drvIndi++ >= 3 - i) {
-            drvIndi = 0; //сбрасываем позицию индикатора
-            i++; //прибавляем цикл
+        }
+      }
+      break;
+      case 7: //испарение
+      //новое время
+      anim_buf[0] = TimeRTC.h / 10; //часы
+      anim_buf[1] = TimeRTC.h % 10; //часы
+      anim_buf[2] = TimeRTC.m / 10; //минуты
+      anim_buf[3] = TimeRTC.m % 10; //минуты
+      
+        for (uint8_t c = 0; c < 2; c++) {
+        drvIndi = random(0, 4);
+          for (uint8_t i = 0; i < 4;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+          if (check_keys()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            for (uint8_t b = 0; b < i; b++) {
+              while (anim_buf[4 + b] == drvIndi) {
+                drvIndi = random(0, 4);
+                b = 0;
+              }
+            }
+            anim_buf[4 + i] = drvIndi;
+            switch (c) {
+              case 0: indiClr(drvIndi); break; //очистка индикатора
+              case 1: indiPrintNum(anim_buf[drvIndi], drvIndi); break; //вывод часов
+            }
+             i++; //прибавляем цикл
+            _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
           }
-          _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер
         }
       }
       break;
