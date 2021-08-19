@@ -44,7 +44,7 @@ void ledWrite(uint8_t* data, uint16_t size) {
   );
 }
 //--------------------------------------Установка цвета в формате HV------------------------------------------
-void setLedHV(uint8_t led, uint8_t color)
+void setLedHue(uint8_t led, uint8_t color)
 {
   uint8_t pallet = (float)((color % 85) * ((float)ledBright[led] / 85.0));
   switch (color / 85) {
@@ -64,7 +64,7 @@ void setLedHV(uint8_t led, uint8_t color)
   ledWrite(ledColor, sizeof(ledColor));
 }
 //--------------------------------------Установка цвета в формате HV------------------------------------------
-void setLedHV(uint8_t color)
+void setLedHue(uint8_t color)
 {
   for (uint8_t f = 0; f < 4; f++) {
     uint8_t pallet = (float)((color % 85) * ((float)ledBright[f] / 85.0));
