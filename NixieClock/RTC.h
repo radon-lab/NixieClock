@@ -8,7 +8,7 @@ struct time { //структура времени
   uint8_t MM = 1;
   uint16_t YY = 2021;
   uint8_t DW = 5;
-} TimeRTC;
+} timeRTC;
 
 const uint8_t daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }; //дней в месяце
 
@@ -24,7 +24,7 @@ uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) //получить де�
 //-------------------------------Максимальное количество дней--------------------------------------------------
 uint8_t maxDays(void) //максимальное количество дней
 {
-  return ((TimeRTC.MM == 2 && !(TimeRTC.YY % 4)) ? 1 : 0) + daysInMonth[TimeRTC.MM - 1]; //возвращаем количество дней в месяце
+  return ((timeRTC.MM == 2 && !(timeRTC.YY % 4)) ? 1 : 0) + daysInMonth[timeRTC.MM - 1]; //возвращаем количество дней в месяце
 }
 //--------------------------------------Распаковка short------------------------------------------
 uint8_t unpackREG(uint8_t data) //распаковка short
@@ -41,32 +41,32 @@ uint8_t unpackHours(uint8_t data) //распаковка часов
 //--------------------------------------Отправить время в RTC------------------------------------------
 void sendTime(void) //отправить время в RTC
 {
-  TimeRTC.DW = getWeekDay(TimeRTC.YY, TimeRTC.MM, TimeRTC.DD); //получаем день недели
+  timeRTC.DW = getWeekDay(timeRTC.YY, timeRTC.MM, timeRTC.DD); //получаем день недели
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x00); //устанавливаем адрес записи
-  WireWrite((((TimeRTC.s / 10) << 4) | (TimeRTC.s % 10))); //отправляем секунды
-  WireWrite((((TimeRTC.m / 10) << 4) | (TimeRTC.m % 10))); //отправляем минуты
-  if (TimeRTC.h > 19) WireWrite((0x02 << 4) | (TimeRTC.h % 20)); //отправляем часы
-  else if (TimeRTC.h > 9) WireWrite((0x01 << 4) | (TimeRTC.h % 10));
-  else WireWrite(TimeRTC.h);
+  WireWrite((((timeRTC.s / 10) << 4) | (timeRTC.s % 10))); //отправляем секунды
+  WireWrite((((timeRTC.m / 10) << 4) | (timeRTC.m % 10))); //отправляем минуты
+  if (timeRTC.h > 19) WireWrite((0x02 << 4) | (timeRTC.h % 20)); //отправляем часы
+  else if (timeRTC.h > 9) WireWrite((0x01 << 4) | (timeRTC.h % 10));
+  else WireWrite(timeRTC.h);
   WireWrite(0); //пропускаем день недели
-  WireWrite(((TimeRTC.DD / 10) << 4) | (TimeRTC.DD % 10)); //отправляем дату
-  WireWrite(((TimeRTC.MM / 10) << 4) | (TimeRTC.MM % 10)); //отправляем месяц
-  WireWrite((((TimeRTC.YY - 2000) / 10) << 4) | ((TimeRTC.YY - 2000) % 10)); //отправляем год
+  WireWrite(((timeRTC.DD / 10) << 4) | (timeRTC.DD % 10)); //отправляем дату
+  WireWrite(((timeRTC.MM / 10) << 4) | (timeRTC.MM % 10)); //отправляем месяц
+  WireWrite((((timeRTC.YY - 2000) / 10) << 4) | ((timeRTC.YY - 2000) % 10)); //отправляем год
   WireEnd(); //конец передачи
 }
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
 boolean getTime(void) //запрашиваем время из RTC
 {
   if (WireRequestFrom(RTC_ADDR, 0x00)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  TimeRTC.s = unpackREG(WireRead()); //получаем секунды
-  TimeRTC.m = unpackREG(WireRead()); //получаем минуты
-  TimeRTC.h = unpackHours(WireRead()); //получаем часы
+  timeRTC.s = unpackREG(WireRead()); //получаем секунды
+  timeRTC.m = unpackREG(WireRead()); //получаем минуты
+  timeRTC.h = unpackHours(WireRead()); //получаем часы
   WireRead(); //пропускаем день недели
-  TimeRTC.DD = unpackREG(WireRead()); //получаем дату
-  TimeRTC.MM = unpackREG(WireRead()); //получаем месяц
-  TimeRTC.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
-  TimeRTC.DW = getWeekDay(TimeRTC.YY, TimeRTC.MM, TimeRTC.DD); //получаем день недели
+  timeRTC.DD = unpackREG(WireRead()); //получаем дату
+  timeRTC.MM = unpackREG(WireRead()); //получаем месяц
+  timeRTC.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
+  timeRTC.DW = getWeekDay(timeRTC.YY, timeRTC.MM, timeRTC.DD); //получаем день недели
   return 0;
 }
 //-------------------------------Настройка SQW-------------------------------------
