@@ -1251,25 +1251,28 @@ void backlEffect(void) //анимация подсветки
 {
   if (!_timer_ms[TMR_BACKL]) { //если время пришло
     switch (fastSettings.backlMode & 0x7F) {
+      case 0: return; //подсветка выключена
       default: { //дыхание подсветки
           static boolean backl_drv; //направление яркости
+          static uint8_t backlBright; //яркость
           static uint8_t colorStep; //номер цвета
-          if (fastSettings.backlMode & 0x80 && backlMaxBright) {
+          if (backlMaxBright && (fastSettings.backlMode & 0x80 || (fastSettings.backlMode & 0x7F) == 8)) {
             _timer_ms[TMR_BACKL] = backlBrightTime; //установили таймер
             switch (backl_drv) {
-              case 0: if (ledBright[0] < backlMaxBright) ledBright[0] += BACKL_STEP; else backl_drv = 1; break;
+              case 0: if (backlBright < backlMaxBright) backlBright += BACKL_STEP; else backl_drv = 1; break;
               case 1:
-                if (ledBright[0] > BACKL_MIN_BRIGHT) ledBright[0] -= BACKL_STEP;
+                if (backlBright > BACKL_MIN_BRIGHT) backlBright -= BACKL_STEP;
                 else {
                   backl_drv = 0;
                   if (colorStep < 6) colorStep++; else colorStep = 0;
                   _timer_ms[TMR_BACKL] = BACKL_PAUSE; //установили таймер
                   return; //выходим
                 }
+                break;
             }
-            break;
+            setLedBright(backlBright);
+            setLedColor((fastSettings.backlMode > 7) ? (colorStep + 1) : fastSettings.backlMode); //отправили цвет
           }
-          setLedColor((fastSettings.backlMode > 7) ? (colorStep + 1) : fastSettings.backlMode); //отправили цвет
         }
         break;
       case 9: { //плавная смена
@@ -1529,8 +1532,8 @@ void fastSetSwitch(void) //переключение быстрых настро�
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
 #if BACKL_WS2812B
-        if (fastSettings.backlMode & 0x7F < 11) fastSettings.backlMode++; else fastSettings.backlMode = 0;
-        if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode);
+        if ((fastSettings.backlMode & 0x7F) < 11) fastSettings.backlMode++; else fastSettings.backlMode &= 0x80;
+        if ((fastSettings.backlMode & 0x7F) < 8) setLedColor(fastSettings.backlMode);
 #else
         if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
         switch (fastSettings.backlMode) {
