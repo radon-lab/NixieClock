@@ -240,15 +240,15 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
   uint16_t CRC = 0;
 
   for (uint8_t i = 0; i < sizeof(timeRTC); i++) {
-    CRC += *((uint8_t*)(&timeRTC) + i);
+    CRC += *((uint8_t*)(&timeRTC) + i) * (i + 1);
   }
   for (uint8_t i = 0; i < sizeof(mainSettings); i++) {
-    CRC += *((uint8_t*)(&mainSettings) + i);
+    CRC += *((uint8_t*)(&mainSettings) + i) * (i + 1);
   }
   for (uint8_t i = 0; i < sizeof(fastSettings); i++) {
-    CRC += *((uint8_t*)(&fastSettings) + i);
+    CRC += *((uint8_t*)(&fastSettings) + i) * (i + 1);
   }
-  CRC *= sizeof(mainSettings) + sizeof(fastSettings) + sizeof(timeRTC);
+  CRC += sizeof(mainSettings) + sizeof(fastSettings) + sizeof(timeRTC);
   
   uint16_t CRC_EEPROM = 0;
   EEPROM_ReadBlock((uint16_t)&CRC_EEPROM, EEPROM_BLOCK_CRC, sizeof(CRC_EEPROM));
