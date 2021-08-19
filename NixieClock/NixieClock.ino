@@ -1275,7 +1275,7 @@ void backlEffect(void) //анимация подсветки
           static boolean backl_drv; //направление яркости
           static uint8_t backlBright; //яркость
           static uint8_t colorStep; //номер цвета
-          if (backlMaxBright && (fastSettings.backlMode & 0x80 || (fastSettings.backlMode & 0x7F) == 8)) {
+          if (backlMaxBright && fastSettings.backlMode > 7) {
             _timer_ms[TMR_BACKL] = backlBrightTime; //установили таймер
             switch (backl_drv) {
               case 0: if (backlBright < backlMaxBright) backlBright += BACKL_STEP; else backl_drv = 1; break;
@@ -1289,8 +1289,8 @@ void backlEffect(void) //анимация подсветки
                 }
                 break;
             }
-            setLedBright(backlBright);
-            setLedColor((fastSettings.backlMode > 7) ? (colorStep + 1) : fastSettings.backlMode); //отправили цвет
+            setLedBright(backlBright); //установили яркость
+            setLedColor(((fastSettings.backlMode & 0x7F) == 8) ? (colorStep + 1) : fastSettings.backlMode); //отправили цвет
           }
         }
         break;
