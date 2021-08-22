@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.1 релиз от 19.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.3.1 релиз от 22.08.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1253,6 +1253,7 @@ void changeBright(void) //установка яркости от времени 
 #if BACKL_WS2812B
   setLedBright(backlMaxBright); //устанавливаем максимальную яркость
   if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+  if (backlMaxBright) backlBrightTime = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
 #else
   switch (fastSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
@@ -1268,14 +1269,14 @@ void changeBright(void) //установка яркости от времени 
 //----------------------------------Анимация подсветки---------------------------------
 void backlEffect(void) //анимация подсветки
 {
-  if (!_timer_ms[TMR_BACKL]) { //если время пришло
+  if (backlMaxBright && !_timer_ms[TMR_BACKL]) { //если время пришло
     switch (fastSettings.backlMode & 0x7F) {
       case 0: return; //подсветка выключена
       default: { //дыхание подсветки
           static boolean backl_drv; //направление яркости
           static uint8_t backlBright; //яркость
           static uint8_t colorStep; //номер цвета
-          if (backlMaxBright && fastSettings.backlMode > 7) {
+          if (fastSettings.backlMode > 7) {
             _timer_ms[TMR_BACKL] = backlBrightTime; //установили таймер
             switch (backl_drv) {
               case 0: if (backlBright < backlMaxBright) backlBright += BACKL_STEP; else backl_drv = 1; break;

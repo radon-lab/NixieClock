@@ -23,7 +23,6 @@
 #define FLIP_MODE_8_TIME 200    //скорость шага эффекта номер 8(100..300)(мс)
 #define FLIP_MODE_9_TIME 200    //скорость шага эффекта номер 9(100..300)(мс)
 
-
 #define DEFAULT_NIGHT_START 20  //час перехода на ночную подсветку по умолчанию(BRIGHT_N)(NIGHT_START = NIGHT_END - только дневная подсветка)
 #define DEFAULT_NIGHT_END 8     //час перехода на дневную подсветку по умолчанию(BRIGHT)
 #define DEFAULT_INDI_BRIGHT 25  //яркость цифр дневная по умолчанию(0..30)
