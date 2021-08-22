@@ -238,6 +238,7 @@ boolean testRTC(void) //проверка модуля часов реально�
 boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
 {
   uint16_t CRC = 0;
+  uint16_t CRC_EEPROM = 0;
 
   for (uint8_t i = 0; i < sizeof(timeRTC); i++) {
     CRC += *((uint8_t*)(&timeRTC) + i) * (i + 1);
@@ -249,10 +250,9 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
     CRC += *((uint8_t*)(&fastSettings) + i) * (i + 1);
   }
   CRC += sizeof(mainSettings) + sizeof(fastSettings) + sizeof(timeRTC);
-  
-  uint16_t CRC_EEPROM = 0;
+
   EEPROM_ReadBlock((uint16_t)&CRC_EEPROM, EEPROM_BLOCK_CRC, sizeof(CRC_EEPROM));
-  
+
   if (CRC_EEPROM == CRC) return 0;
   else EEPROM_UpdateBlock((uint16_t)&CRC, EEPROM_BLOCK_CRC, sizeof(CRC));
   return 1;
