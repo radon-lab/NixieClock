@@ -3,45 +3,52 @@
 //  PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13) PINB
 //    PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5) PINC
 
-
 #define DDR_REG(portx)  (*(&portx-1))
 #define BIT_READ(value, bit) (((value) >> (bit)) & 0x01)
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
-//оптопары(только порты D2-D7)
-#define ANODE_1 3 //D3
-#define ANODE_2 4 //D4
-#define ANODE_3 5 //D5
-#define ANODE_4 6 //D6
+//оптопары(аноды ламп)
+#define ANODE_1_BIT 3 //D3
+#define ANODE_1_PORT PORTD
+
+#define ANODE_2_BIT 4 //D4
+#define ANODE_2_PORT PORTD
+
+#define ANODE_3_BIT 5 //D5
+#define ANODE_3_PORT PORTD
+
+#define ANODE_4_BIT 6 //D6
+#define ANODE_4_PORT PORTD
+
+#define ANODE_5_BIT 7 //D7
+#define ANODE_5_PORT PORTD
+
+#define ANODE_6_BIT 0 //D8
+#define ANODE_6_PORT PORTB
 
 //дешифратор(только порты A0-A5)
-#define DECODER_1 A0 //A0
-#define DECODER_2 A1 //A1
-#define DECODER_3 A2 //A2
-#define DECODER_4 A3 //A3
+#define DECODER_1 0 //A0
+#define DECODER_2 1 //A1
+#define DECODER_3 2 //A2
+#define DECODER_4 3 //A3
 
 //распиновка ламп
 #if (BOARD_TYPE == 0)
 const uint8_t digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10};   //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 1)
 const uint8_t digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10};   //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 2)
 const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
 #elif (BOARD_TYPE == 3)
 const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t anodeMask[] = {ANODE_1, ANODE_2, ANODE_3, ANODE_4}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
 #elif (BOARD_TYPE == 4)
 const uint8_t digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска дешифратора платы in12(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t anodeMask[] = {ANODE_4, ANODE_3, ANODE_2, ANODE_1}; //порядок и номера пинов анодов индикатора(0, 1, 2, 3)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #endif
 

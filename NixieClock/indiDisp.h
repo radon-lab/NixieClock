@@ -1,47 +1,47 @@
+#if LAMP_REVERS
+#if LAMP_NUM < 6
+volatile uint8_t* anodePort[] = {&ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT}; //таблица портов анодов ламп
+const uint8_t anodeBit[] = {0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT}; //таблица бит анодов ламп
+#else
+volatile uint8_t* anodePort[] = {&ANODE_6_PORT, &ANODE_5_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT}; //таблица портов анодов ламп
+const uint8_t anodeBit[] = {0x01 << ANODE_6_BIT, 0x01 << ANODE_5_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT}; //таблица бит анодов ламп
+#endif
+#else
+volatile uint8_t* anodePort[] = {&ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
+const uint8_t anodeBit[] = {0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_5_BIT, 0x01 << ANODE_6_BIT}; //таблица бит анодов ламп
+#endif
+
 const uint8_t decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
 
-uint8_t indi_buf[4]; //буфер индикаторов
-uint8_t indi_dimm[4]; //яркость индикаторов
+uint8_t indi_buf[LAMP_NUM]; //буфер индикаторов
+uint8_t indi_dimm[LAMP_NUM]; //яркость индикаторов
 uint8_t indi_null; //пустой сивол(отключеный индикатор)
-volatile uint8_t indi_state; //текущей номер отрисовки индикатора
+volatile uint8_t indiState; //текущей номер отрисовки индикатора
 
 volatile uint8_t tick_ms; //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 #if NEON_DOT
 #define _INDI_ON  TCNT0 = 255; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0)
-#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
+#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A | 0x01 << TOIE0); indiState = 0
 #else
 #define _INDI_ON  TCNT0 = 255; TIMSK0 |= (0x01 << OCIE0A | 0x01 << TOIE0)
-#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0A | 0x01 << TOIE0); indi_state = 0
+#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0A | 0x01 << TOIE0); indiState = 0
 #endif
 
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' ');
 
-void setPin(uint8_t pin, boolean x) {
-  if (pin < 8) BIT_WRITE(PORTD, pin, x);
-  else if (pin < 14) BIT_WRITE(PORTB, (pin - 8), x);
-  else if (pin < 20) BIT_WRITE(PORTC, (pin - 14), x);
-  else return;
-}
-void outPin(uint8_t pin) {
-  if (pin < 8) BIT_SET(DDRD, pin);
-  else if (pin < 14) BIT_SET(DDRB, (pin - 8));
-  else if (pin < 20) BIT_SET(DDRC, (pin - 14));
-  else return;
-}
-
 //---------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_OVF_vect) //динамическая индикация
 {
-  OCR0A = indi_dimm[indi_state]; //устанавливаем яркость индикатора
+  OCR0A = indi_dimm[indiState]; //устанавливаем яркость индикатора
 #if NEON_DOT
   OCR0B = OCR1B;
 #endif
 
-  PORTC = (PORTC & 0xF0) | indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
-  PORTD |= (indi_buf[indi_state] != indi_null) ? (0x01 << anodeMask[indi_state]) : 0x00; //включаем индикатор если не пустой символ
+  PORTC = (PORTC & 0xF0) | indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
+  *anodePort[indiState] |= (indi_buf[indiState] != indi_null) ? anodeBit[indiState] : 0x00; //включаем индикатор если не пустой символ
 
 #if NEON_DOT
   if (OCR0B) DOT_ON;
@@ -50,8 +50,8 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   tick_ms++; //прибавляем тик
 }
 ISR(TIMER0_COMPA_vect) {
-  PORTD &= ~(0x01 << anodeMask[indi_state]); //выключаем индикатор
-  if (++indi_state > 3) indi_state = 0; //переходим к следующему индикатору
+  *anodePort[indiState] &= ~anodeBit[indiState]; //выключаем индикатор
+  if (++indiState > (LAMP_NUM - 1)) indiState = 0; //переходим к следующему индикатору
 }
 #if NEON_DOT
 ISR(TIMER0_COMPB_vect, ISR_NAKED) {
@@ -66,11 +66,12 @@ void IndiInit(void) //инициализация индикаторов
     if ((0x0A >> dec) & 0x01) indi_null |= (0x01 << decoderBit[dec]); //находим пустой символ
   }
   for (uint8_t i = 0; i < 4; i++) { //инициализируем пины
-    setPin(anodeMask[i], 0); //устанавливаем в 0
-    outPin(anodeMask[i]); //устанавливаем как выход
-
-    setPin(decoderMask[i], 1); //устанавливаем в 1
-    outPin(decoderMask[i]); //устанавливаем как выход
+    PORTC |= (0x01 << decoderMask[i]); //устанавливаем высокий уровень катода
+    DDRC |= (0x01 << decoderMask[i]); //устанавливаем катод как выход
+  }
+  for (uint8_t i = 0; i < LAMP_NUM; i++) { //инициализируем пины
+    *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
+    *(anodePort[i] - 1) |= anodeBit[i]; //устанавливаем анод как выход
 
     indi_dimm[i] = 120; //устанавливаем максимальную юркость
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
@@ -112,13 +113,13 @@ void IndiInit(void) //инициализация индикаторов
 void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
-  for (uint8_t i = 0; i < 4; i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = MIN_PWM + (float)(dimm_all >> 2) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
+  for (uint8_t i = 0; i < LAMP_NUM; i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  OCR1A = MIN_PWM + (float)(dimm_all / LAMP_NUM) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
 void indiClr(void) //очистка индикаторов
 {
-  for (uint8_t cnt = 0; cnt < 4; cnt++) indi_buf[cnt] = indi_null;
+  for (uint8_t cnt = 0; cnt < LAMP_NUM; cnt++) indi_buf[cnt] = indi_null;
   indiChangePwm(); //установка Linear Advance
 }
 //-------------------------Очистка индикатора----------------------------------------------------
@@ -144,10 +145,8 @@ void indiEnable(void) //включение индикаторов
 void indiDisable(void) //выключение индикаторов
 {
   _INDI_OFF; //отключаем генерацию
-  for (uint8_t i = 0; i < 4; i++) {
-    setPin(anodeMask[i], 0); //сбрасываем аноды
-    setPin(decoderMask[i], 1); //сбрасываем катоды
-  }
+  for (uint8_t i = 0; i < LAMP_NUM; i++) *anodePort[i] &= ~anodeBit[i]; //сбрасываем аноды
+  for (uint8_t i = 0; i < 4; i++) PORTC |= (0x01 << decoderMask[i]); //сбрасываем катоды
   TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
   CONV_OFF; //выключаем пин преобразователя
 }
@@ -162,14 +161,14 @@ void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркост�
 void indiSetBright(uint8_t pwm) //установка общей яркости
 {
   if (pwm > 30) pwm = 30;
-  for (byte i = 0; i < 4; i++) indi_dimm[i] = pwm << 2;
+  for (byte i = 0; i < LAMP_NUM; i++) indi_dimm[i] = pwm << 2;
   indiChangePwm(); //установка Linear Advance
 }
 //-------------------------Вывод чисел----------------------------------------------------
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вывод чисел
 {
-  uint8_t buf[4];
-  uint8_t st[4];
+  uint8_t buf[LAMP_NUM];
+  uint8_t st[LAMP_NUM];
   uint8_t c = 0, f = 0;
 
   if (!num) {
@@ -201,7 +200,7 @@ void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вы
       if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderBit[dec]);
     }
     if (indi < 0) indi++;
-    else if (indi < 4) indi_buf[indi++] = mergeBuf;
+    else if (indi < LAMP_NUM) indi_buf[indi++] = mergeBuf;
   }
   indiChangePwm(); //установка Linear Advance
 }
