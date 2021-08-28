@@ -22,12 +22,6 @@
 #define ANODE_4_BIT 6 //D6
 #define ANODE_4_PORT PORTD
 
-#define ANODE_5_BIT 7 //D7
-#define ANODE_5_PORT PORTD
-
-#define ANODE_6_BIT 0 //D8
-#define ANODE_6_PORT PORTB
-
 //дешифратор(только порты A0-A5)
 #define DECODER_1 0 //A0
 #define DECODER_2 1 //A1
