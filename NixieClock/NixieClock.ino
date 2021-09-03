@@ -53,7 +53,6 @@ struct Settings_2 {
   uint8_t dotMode = DEFAULT_DOT_MODE; //режим точек
 } fastSettings;
 
-
 uint8_t semp = 0; //переключатель семплов мелодии
 #define MELODY_PLAY(melody) _melody_chart(melody) //воспроизведение мелодии
 #define MELODY_RESET semp = 0; _timer_ms[TMR_MELODY] = 0 //сброс мелодии
