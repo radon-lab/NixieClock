@@ -32,7 +32,7 @@
 #define DOT_BIT   2 // D10
 #define DOT_PORT  PORTB
 
-//дешифратор(только порты A0-A5)
+//дешифратор(только порты A0-A3)
 #define DECODER_1 0 //A0
 #define DECODER_2 1 //A1
 #define DECODER_3 2 //A2

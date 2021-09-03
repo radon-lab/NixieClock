@@ -1,17 +1,22 @@
+#define _INDI_ON  TCNT0 = 150; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
+#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
+
+#define ANODE_OFF 0x00 //выключенный анод
+
 //тип плат часов
 #if (BOARD_TYPE == 0)
 volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, 0x00, 0x00}; //таблица бит анодов ламп
+const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
 const uint8_t digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10};   //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 1)
 volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, 0x00, 0x00}; //таблица бит анодов ламп
+const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
 const uint8_t digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10};   //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #elif (BOARD_TYPE == 2)
 volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, 0x00, 0x00}; //таблица бит анодов ламп
+const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
 const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
 #elif (BOARD_TYPE == 3)
@@ -21,13 +26,12 @@ const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вв�
 const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
 #elif (BOARD_TYPE == 4)
 volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, 0x00, 0x00}; //таблица бит анодов ламп
+const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
 const uint8_t digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска дешифратора платы in12(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
 #endif
 
-const uint8_t decoderBit[] = {3, 1, 0, 2}; //порядок битов дешефратора(3, 1, 0, 2)
-const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок и номера пинов дешефратора(0, 1, 2, 3)
+const uint8_t decoderMask[] = {DECODER_4, DECODER_2, DECODER_1, DECODER_3}; //порядок пинов дешефратора(0, 1, 2, 3)
 
 uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
@@ -37,9 +41,6 @@ volatile uint8_t indiState; //текущей номер отрисовки ин�
 volatile uint8_t tick_ms; //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC
 
-#define _INDI_ON  TCNT0 = 150; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A)
-#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0
-
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' ');
 
 //---------------------------------Динамическая индикация---------------------------------------
@@ -48,7 +49,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
 
   PORTC = (PORTC & 0xF0) | indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
-  *anodePort[indiState] |= (indi_buf[indiState] != indi_null && indiState < (LAMP_NUM + 1)) ? anodeBit[indiState] : 0x00; //включаем индикатор если не пустой символ
+  *anodePort[indiState] |= (indi_buf[indiState] != indi_null && indiState < (LAMP_NUM + 1)) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 
   tick_ms++; //прибавляем тик
 }
@@ -63,7 +64,7 @@ void IndiInit(void) //инициализация индикаторов
     PORTC |= (0x01 << decoderMask[i]); //устанавливаем высокий уровень катода
     DDRC |= (0x01 << decoderMask[i]); //устанавливаем катод как выход
 
-    if ((0x0A >> i) & 0x01) indi_null |= (0x01 << decoderBit[i]); //находим пустой символ
+    if ((0x0A >> i) & 0x01) indi_null |= (0x01 << decoderMask[i]); //находим пустой символ
   }
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем пины
     *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
@@ -212,7 +213,7 @@ void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вы
   for (uint8_t cnt = 0; cnt < (c + f); cnt++) {
     uint8_t mergeBuf = 0;
     for (uint8_t dec = 0; dec < 4; dec++) {
-      if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderBit[dec]);
+      if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]);
     }
     if (indi < 0) indi++;
     else if (indi < LAMP_NUM) indi_buf[1 + indi++] = mergeBuf;
