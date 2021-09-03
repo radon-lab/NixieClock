@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.1 релиз от 28.08.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.2 релиз от 03.09.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -59,7 +59,7 @@ uint8_t semp = 0; //переключатель семплов мелодии
 #define MELODY_RESET semp = 0; _timer_ms[TMR_MELODY] = 0 //сброс мелодии
 
 //переменные обработки кнопок
-uint8_t btn_tmr; //таймер тиков обработки
+uint16_t btn_tmr; //таймер тиков обработки кнопок
 boolean btn_check; //флаг разрешения опроса кнопки
 boolean btn_state; //флаг текущего состояния кнопки
 
@@ -131,7 +131,6 @@ int main(void) //инициализация
 
   CONV_INIT; //инициализация преобразователя
   SQW_INIT; //инициализация счета секунд
-  DOT_INIT; //инициализация точки
   BACKL_INIT; //инициализация подсветки
   BUZZ_INIT; //инициализация бузера
 
@@ -157,6 +156,8 @@ int main(void) //инициализация
 #endif
 
   if (testRTC()) buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+
+  if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы
 
   randomSeed(timeRTC.s * (timeRTC.m + timeRTC.h) + timeRTC.DD * timeRTC.MM); //радомный сид для глюков
   _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
@@ -214,6 +215,35 @@ void uartDisable(void) //отключение uart
 {
   UCSR0B = 0; //выключаем UART
   PRR |= (0x01 << PRUSART0); //выключаем питание UART
+}
+//------------------------------------Проверка системы-------------------------------------------------
+void testLamp(void) //проверка системы
+{
+#if BACKL_WS2812B
+  setLedBright(BACKL_BRIGHT); //устанавливаем максимальную яркость
+#else
+  OCR2A = BACKL_BRIGHT; //если посветка статичная, устанавливаем яркость
+#endif
+  dotSetBright(DOT_BRIGHT); //установка яркости точек
+  while (1) {
+    for (byte indi = 0; indi < LAMP_NUM; indi++) {
+      indiClr(); //очистка индикаторов
+      for (byte digit = 0; digit < 10; digit++) {
+        indiPrintNum(digit, indi); //отрисовываем цифру
+#if BACKL_WS2812B
+        setLedColor(indi, (digit < 7) ? (digit + 1) : (digit - 6)); //отправляем статичный цвет
+#endif
+        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+          dataUpdate(); //обработка данных
+          MELODY_PLAY(0); //воспроизводим мелодию
+          if (check_keys()) return; //возврат если нажата кнопка
+        }
+      }
+#if BACKL_WS2812B
+      setLedColor(indi, 0); //очищаем светодиод
+#endif
+    }
+  }
 }
 //------------------------Проверка модуля часов реального времени--------------------------------------
 boolean testRTC(void) //проверка модуля часов реального времени
@@ -334,12 +364,13 @@ void alarmWarn(void) //тревога будильника
         switch (blink_data) {
           case 0:
             indiClr(); //очистка индикаторов
-            OCR1B = 0; //выключаем точки
+            dotSetBright(0); //выключаем точки
             break;
           case 1:
             indiPrintNum((mainSettings.timeFormat) ? get_12h(timeRTC.h) : timeRTC.h, 0, 2, 0); //вывод часов
             indiPrintNum(timeRTC.m, 2, 2, 0); //вывод минут
-            OCR1B = dotMaxBright; //включаем точки
+            indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+            dotSetBright(dotMaxBright); //включаем точки
             break;
         }
         blink_data = !blink_data; //мигаем временем
@@ -440,7 +471,7 @@ void dataUpdate(void) //преобразование данных
   for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
     switch (btn_state) { //таймер опроса кнопок
       case 0: if (btn_check) btn_tmr++; break; //считаем циклы
-      case 1: if (btn_tmr > 0) btn_tmr--; break; //убираем дребезг
+      case 1: if (btn_tmr) btn_tmr--; break; //убираем дребезг
     }
 
     if (!EIMSK) { //если внешние часы не обнаружены
@@ -452,7 +483,7 @@ void dataUpdate(void) //преобразование данных
     }
 
     for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
-      if (_timer_ms[tm] > 4) _timer_ms[tm] -= 4; //если таймер больше 4мс
+      if (_timer_ms[tm] > 2) _timer_ms[tm] -= 2; //если таймер больше 4мс
       else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
     }
   }
@@ -502,9 +533,9 @@ void glitchTick(void) //имитация глюков
   if (mainSettings.glitchMode) {
     if (!_tmrGlitch-- && timeRTC.s > 7 && timeRTC.s < 55) {
       boolean indiState = 0; //состояние индикатора
-      uint8_t glitchCounter = random(2, 6); //максимальное количество глюков
-      uint8_t glitchIndic = random(0, 4); //номер индикатора
-      uint8_t indiSave = indi_buf[glitchIndic]; //сохраняем текущую цифру в индикаторе
+      uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
+      uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
+      uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
       while (!check_keys()) {
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
@@ -611,7 +642,7 @@ void settings_time(void) //настройки времени
   boolean blink_data = 0; //мигание сигментами
 
   indiClr(); //очищаем индикаторы
-  OCR1B = dotMaxBright; //включаем точки
+  dotSetBright(dotMaxBright); //включаем точки
 
   //настройки
   while (1) {
@@ -626,6 +657,7 @@ void settings_time(void) //настройки времени
       _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
 
       indiClr(); //очистка индикаторов
+      indiPrintNum(cur_mode + 1, 5); //режим
       switch (cur_mode) {
         case 0:
         case 1:
@@ -688,8 +720,8 @@ void settings_time(void) //настройки времени
 
       case SET_KEY_PRESS: //клик средней кнопкой
         if (cur_mode < 4) cur_mode++; else cur_mode = 0;
-        if (cur_mode != 4) OCR1B = dotMaxBright; //включаем точки
-        else OCR1B = 0; //выключаем точки
+        if (cur_mode != 4) dotSetBright(dotMaxBright); //включаем точки
+        else dotSetBright(0); //выключаем точки
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
@@ -712,7 +744,7 @@ void settings_singleAlarm(void) //настройка будильника
   boolean cur_indi = 0; //текущий индикатор
 
   indiClr(); //очищаем индикаторы
-  OCR1B = dotMaxBright; //выключаем точки
+  dotSetBright(dotMaxBright); //выключаем точки
 
   alarmReset(); //сброс будильника
   alarmReadBlock(1, alarm); //читаем блок данных
@@ -734,6 +766,7 @@ void settings_singleAlarm(void) //настройка будильника
       _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
 
       indiClr(); //очистка индикаторов
+      indiPrintNum(cur_mode + 1, 5); //режим
       switch (cur_mode) {
         case 0:
           if (!blink_data || cur_indi) indiPrintNum(alarm[0], 0, 2, 0); //вывод часов
@@ -760,9 +793,9 @@ void settings_singleAlarm(void) //настройка будильника
         if (cur_mode > 0) cur_mode--; else cur_mode = 3; //переключение пунктов
 
         switch (cur_mode) {
-          case 0: OCR1B = dotMaxBright; break; //включаем точки
+          case 0: dotSetBright(dotMaxBright); break; //включаем точки
           case 2: if (alarm[2] < 4) cur_mode = 1; break; //если нет дней недели
-          default: OCR1B = 0; break; //выключаем точки
+          default: dotSetBright(0); break; //выключаем точки
         }
 
         MELODY_RESET; //сбрасываем мелодию
@@ -820,9 +853,9 @@ void settings_singleAlarm(void) //настройка будильника
         if (cur_mode < 3) cur_mode++; else cur_mode = 0; //переключение пунктов
 
         switch (cur_mode) {
-          case 0: OCR1B = dotMaxBright; break; //включаем точки
+          case 0: dotSetBright(dotMaxBright); break; //включаем точки
           case 2: if (alarm[2] < 4) cur_mode = 3; break; //если нет дней недели
-          default: OCR1B = 0; break; //выключаем точки
+          default: dotSetBright(0); break; //выключаем точки
         }
 
         MELODY_RESET; //сбрасываем мелодию
@@ -852,7 +885,7 @@ void settings_multiAlarm(void) //настройка будильников
   uint8_t curAlarm = alarms_num > 0;
 
   indiClr(); //очищаем индикаторы
-  OCR1B = 0; //выключаем точки
+  dotSetBright(0); //выключаем точки
 
   alarmReset(); //сброс будильника
   alarmReadBlock(curAlarm, alarm); //читаем блок данных
@@ -874,6 +907,7 @@ void settings_multiAlarm(void) //настройка будильников
       _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
 
       indiClr(); //очистка индикаторов
+      indiPrintNum(cur_mode + 1, 5); //режим
       switch (cur_mode) {
         case 0:
         case 1:
@@ -905,9 +939,9 @@ void settings_multiAlarm(void) //настройка будильников
           case 0:
             if (curAlarm) { //если есть будильники в памяти
               delAlarm(curAlarm - 1); //удалить текущий будильник
-              OCR1B = dotMaxBright; //включаем точки
+              dotSetBright(dotMaxBright); //включаем точки
               for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-              OCR1B = 0; //выключаем точки
+              dotSetBright(0); //выключаем точки
               if (curAlarm > (alarms_num > 0)) curAlarm--; //убавляем номер текущего будильника
               else curAlarm = (alarms_num > 0);
               alarmReadBlock(curAlarm, alarm); //читаем блок данных
@@ -915,7 +949,7 @@ void settings_multiAlarm(void) //настройка будильников
             break;
           default:
             cur_mode = 2; //режим настройки времени
-            OCR1B = dotMaxBright; //включаем точки
+            dotSetBright(dotMaxBright); //включаем точки
             break;
         }
         blink_data = 0; //сбрасываем флаги
@@ -959,9 +993,9 @@ void settings_multiAlarm(void) //настройка будильников
         switch (cur_mode) {
           case 0:
             newAlarm(); //создать новый будильник
-            OCR1B = dotMaxBright; //включаем точки
+            dotSetBright(dotMaxBright); //включаем точки
             for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-            OCR1B = 0; //выключаем точки
+            dotSetBright(0); //выключаем точки
             curAlarm = alarms_num;
             alarmReadBlock(curAlarm, alarm); //читаем блок данных
             break;
@@ -969,7 +1003,7 @@ void settings_multiAlarm(void) //настройка будильников
           case 5: cur_mode = 6; break;
           default:
             cur_mode = (alarm[2] < 4) ? 6 : 4; //режим настройки функций
-            OCR1B = dotMaxBright; //включаем точки
+            dotSetBright(dotMaxBright); //включаем точки
             break;
 
         }
@@ -995,7 +1029,7 @@ void settings_multiAlarm(void) //настройка будильников
           case 0: return; //выход
           case 1: alarmWriteBlock(curAlarm, alarm); return; //записать блок основных данных будильника и выйти
           default:
-            OCR1B = 0; //выключаем точки
+            dotSetBright(0); //выключаем точки
             cur_mode = 1; //выбор будильника
             MELODY_RESET; //сброс воспроизведения мелодии
             blink_data = 0; //сбрасываем флаги
@@ -1017,7 +1051,7 @@ void settings_main(void) //настроки основные
   int8_t aging = 0; //буфер регистра старения
 
   indiClr(); //очищаем индикаторы
-  OCR1B = 0; //выключаем точки
+  dotSetBright(0); //выключаем точки
 
   //настройки
   while (1) {
@@ -1034,9 +1068,10 @@ void settings_main(void) //настроки основные
       indiClr(); //очистка индикаторов
       switch (set) {
         case 0:
-          indiPrintNum(cur_mode + 1, 1, 2, 0); //вывод режима
+          indiPrintNum(cur_mode + 1, (LAMP_NUM / 2 - 1), 2, 0); //вывод режима
           break;
         case 1:
+          indiPrintNum(cur_mode + 1, 5); //режим
           switch (cur_mode) {
             case 0: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break;
             case 1: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break;
@@ -1203,11 +1238,11 @@ void settings_main(void) //настроки основные
               if (EIMSK) aging = readAgingRTC(); //чтение коррекции хода
               break;
           }
-          OCR1B = dotMaxBright; //включаем точки
+          dotSetBright(dotMaxBright); //включаем точки
         }
         else {
           changeBright(); //установка яркости от времени суток
-          OCR1B = 0; //выключаем точки
+          dotSetBright(0); //выключаем точки
           if (EIMSK && cur_mode == 8) WriteAgingRTC((uint8_t)aging); //запись коррекции хода
         }
         cur_indi = 0;
@@ -1241,8 +1276,8 @@ void changeBright(void) //установка яркости от времени 
     FLIP_SPEED[0] = (uint16_t)FLIP_MODE_2_TIME; //расчёт шага яркости режима 2
   }
   switch (fastSettings.dotMode) {
-    case 0: OCR1B = 0; break; //если точки выключены
-    case 1: OCR1B = dotMaxBright; break; //если точки статичные, устанавливаем яркость
+    case 0: dotSetBright(0); break; //если точки выключены
+    case 1: dotSetBright(dotMaxBright); break; //если точки статичные, устанавливаем яркость
     case 2:
       dotBrightStep = ceil((float)dotMaxBright * 2 / DOT_TIME * DOT_TIMER); //расчёт шага яркости точки
       if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
@@ -1304,12 +1339,12 @@ void backlEffect(void) //анимация подсветки
       case 10: { //радуга
           static uint8_t colorStep; //номер цвета
           colorStep += BACKL_MODE_10_STEP; //прибавили шаг
-          for (uint8_t f = 0; f < 4; f++) setLedHue(f, colorStep + (f * BACKL_MODE_10_STEP)); //установили цвет
+          for (uint8_t f = 0; f < LAMP_NUM; f++) setLedHue(f, colorStep + (f * BACKL_MODE_10_STEP)); //установили цвет
           _timer_ms[TMR_BACKL] = BACKL_MODE_10_TIME; //установили таймер
         }
         break;
       case 11: { //рандомный цвет
-          setLedHue(random(0, 4), random(0, 256)); //установили цвет
+          setLedHue(random(0, LAMP_NUM), random(0, 256)); //установили цвет
           _timer_ms[TMR_BACKL] = BACKL_MODE_11_TIME; //установили таймер
         }
         break;
@@ -1342,8 +1377,8 @@ void dotFlash(void) //мигание точек
   static boolean dot_drv; //направление яркости
   if (!alarmWaint) {
     switch (fastSettings.dotMode) {
-      case 0: if (OCR1B) OCR1B = 0; break; //если точки включены, выключаем их
-      case 1: if (OCR1B != dotMaxBright) OCR1B = dotMaxBright; break; //если яркость не совпадает, устанавливаем яркость
+      case 0: if (OCR1B) dotSetBright(0); break; //если точки включены, выключаем их
+      case 1: if (OCR1B != dotMaxBright) dotSetBright(dotMaxBright); break; //если яркость не совпадает, устанавливаем яркость
       case 2:
         if (!_dot && !_timer_ms[TMR_DOT]) {
           _timer_ms[TMR_DOT] = dotBrightTime;
@@ -1358,6 +1393,7 @@ void dotFlash(void) //мигание точек
               }
               break;
           }
+          dotSetBright(OCR1B); //установка яркости точек
         }
         break;
     }
@@ -1365,7 +1401,7 @@ void dotFlash(void) //мигание точек
   else {
     if (!_timer_ms[TMR_DOT]) {
       _timer_ms[TMR_DOT] = ALM_BLINK_DOT;
-      OCR1B = (!OCR1B) ? dotMaxBright : 0;
+      dotSetBright((!OCR1B) ? dotMaxBright : 0); //установка яркости точек
     }
   }
 }
@@ -1389,7 +1425,7 @@ void autoShowTemp(void) //автоматический показ темпера
     uint8_t pos = 4; //текущее положение анимации
     boolean drv = 0; //направление анимации
 
-    OCR1B = dotMaxBright; //включаем точки
+    dotSetBright(dotMaxBright); //включаем точки
     updateTemp(); //обновить показания температуры
 
     for (uint8_t mode = 0; mode < 3; mode++) {
@@ -1397,9 +1433,9 @@ void autoShowTemp(void) //автоматический показ темпера
         case 1:
           if (!tempSens.hum) {
             if (!tempSens.press) return; //выходим
-            else mode = 2;
+            else mode = 2; //отображаем давление
           }
-          OCR1B = 0; //выключаем точки
+          dotSetBright(0); //выключаем точки
           break;
         case 2: if (!tempSens.press) return; break; //выходим
       }
@@ -1413,7 +1449,7 @@ void autoShowTemp(void) //автоматический показ темпера
           indiClr(); //очистка индикаторов
           switch (mode) {
             case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); break; //вывод температуры
-            case 1: indiPrintNum(tempSens.hum, pos, 3, ' '); break; //вывод влажности
+            case 1: indiPrintNum(tempSens.hum, pos, 4, ' '); break; //вывод влажности
             case 2: indiPrintNum(tempSens.press, pos, 4, ' '); break; //вывод давления
           }
           if (!drv) {
@@ -1424,7 +1460,7 @@ void autoShowTemp(void) //автоматический показ темпера
             }
           }
           else {
-            if (pos < 4) pos++;
+            if (pos < LAMP_NUM) pos++;
             else {
               drv = 0;
               break;
@@ -1441,7 +1477,7 @@ void showTemp(void) //показать температуру
   uint8_t mode = 0; //текущий режим
 
   _sec = 0; //обновление экрана
-  OCR1B = dotMaxBright; //включаем точки
+  dotSetBright(dotMaxBright); //включаем точки
 
   updateTemp(); //обновить показания температуры
 
@@ -1451,9 +1487,10 @@ void showTemp(void) //показать температуру
     if (!_sec) {
       _sec = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
+      indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
         case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3, ' '); break;
-        case 1: indiPrintNum(tempSens.hum, 1, 3, ' '); break;
+        case 1: indiPrintNum(tempSens.hum, 1, 4, ' '); break;
         case 2: indiPrintNum(tempSens.press, 0, 4, ' '); break;
       }
     }
@@ -1467,13 +1504,13 @@ void showTemp(void) //показать температуру
               if (!tempSens.press) mode = 0;
               else {
                 mode = 2;
-                OCR1B = 0;
+                dotSetBright(0); //выключаем точки
               }
             }
-            else OCR1B = 0; break;
+            else dotSetBright(0); break; //выключаем точки
           case 2: if (!tempSens.press) mode = 0; break;
         }
-        if (!mode) OCR1B = dotMaxBright; //включаем точки
+        if (!mode) dotSetBright(dotMaxBright); //включаем точки
         _timer_ms[TMR_MS] = SHOW_TIME;
         _sec = 0; //обновление экрана
         break;
@@ -1490,7 +1527,7 @@ void showDate(void) //показать дату
   uint8_t mode = 0; //текущий режим
 
   _sec = 0; //обновление экрана
-  OCR1B = dotMaxBright; //включаем точки
+  dotSetBright(dotMaxBright); //включаем точки
 
   for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
@@ -1498,6 +1535,7 @@ void showDate(void) //показать дату
     if (!_sec) {
       _sec = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
+      indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
         case 0:
           indiPrintNum(timeRTC.DD, 0, 2, 0); //вывод даты
@@ -1511,8 +1549,8 @@ void showDate(void) //показать дату
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (++mode > 1) mode = 0;
         switch (mode) {
-          case 0: OCR1B = dotMaxBright; break; //включаем точки
-          case 1: OCR1B = 0; break; //выключаем точки
+          case 0: dotSetBright(dotMaxBright); break; //включаем точки
+          case 1: dotSetBright(0); break; //выключаем точки
         }
         _timer_ms[TMR_MS] = SHOW_TIME;
         _sec = 0; //обновление экрана
@@ -1530,7 +1568,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
   uint8_t anim = 0; //анимация переключения
   uint8_t mode = 0; //режим быстрой настройки
 
-  OCR1B = 0; //выключаем точки
+  dotSetBright(0); //выключаем точки
 
   for (_timer_ms[TMR_MS] = SWITCH_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
@@ -1540,6 +1578,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
         _timer_ms[TMR_ANIM] = ANIM_TIME; //устанавливаем таймер
 
         indiClr(); //очистка индикаторов
+        indiPrintNum(mode + 1, 5); //режим
         switch (mode) {
           case 0: indiPrintNum(fastSettings.backlMode & 0x7F, anim); break; //вывод режима подсветки
           case 1: indiPrintNum(fastSettings.flipMode, anim); break; //вывод режима анимации
@@ -1551,41 +1590,46 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
+        if (mode != 0) mode = 0; //демострация текущего режима работы
+        else {
 #if BACKL_WS2812B
-        if ((fastSettings.backlMode & 0x7F) < 11) fastSettings.backlMode++; else fastSettings.backlMode &= 0x80;
-        if ((fastSettings.backlMode & 0x7F) < 8) setLedColor(fastSettings.backlMode);
+          if ((fastSettings.backlMode & 0x7F) < 11) fastSettings.backlMode++; else fastSettings.backlMode &= 0x80;
+          if ((fastSettings.backlMode & 0x7F) < 8) setLedColor(fastSettings.backlMode);
 #else
-        if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
-        switch (fastSettings.backlMode) {
-          case 0: OCR2A = 0; break; //выключаем подсветку
-          case 1: OCR2A = backlMaxBright; break; //включаем подсветку
-          case 2: OCR2A = BACKL_MIN_BRIGHT; break; //выключаем подсветку
-        }
+          if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
+          switch (fastSettings.backlMode) {
+            case 0: OCR2A = 0; break; //выключаем подсветку
+            case 1: OCR2A = backlMaxBright; break; //включаем подсветку
+            case 2: OCR2A = BACKL_MIN_BRIGHT; break; //выключаем подсветку
+          }
 #endif
+        }
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
-        mode = 0;
         break;
 #if BACKL_WS2812B
       case SET_KEY_HOLD: //удержание средней кнопки
-        setLedBright(backlMaxBright); //устанавливаем максимальную яркость
-        if (fastSettings.backlMode & 0x80) fastSettings.backlMode &= 0x7F; else fastSettings.backlMode |= 0x80;
-        setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+        if (mode != 0) mode = 0; //демострация текущего режима работы
+        else {
+          setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+          if (fastSettings.backlMode & 0x80) fastSettings.backlMode &= 0x7F; else fastSettings.backlMode |= 0x80;
+          setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+        }
         _timer_ms[TMR_MS] = SWITCH_TIME;
         break;
 #endif
       case RIGHT_KEY_PRESS: //клик правой кнопкой
-        if (++fastSettings.flipMode > FLIP_EFFECT_NUM) fastSettings.flipMode = 0;
+        if (mode != 1) mode = 1; //демострация текущего режима работы
+        else if (++fastSettings.flipMode > FLIP_EFFECT_NUM) fastSettings.flipMode = 0;
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
-        mode = 1;
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
-        if (++fastSettings.dotMode > 2) fastSettings.dotMode = 0;
+        if (mode != 2) mode = 2; //демострация текущего режима работы
+        else if (++fastSettings.dotMode > 2) fastSettings.dotMode = 0;
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
-        mode = 2;
         break;
     }
   }
@@ -1598,8 +1642,8 @@ void burnIndi(void) //антиотравление индикаторов
 #if BURN_INDI_TYPE
   if (_tmrBurn >= BURN_PERIOD && timeRTC.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
-    OCR1B = 0; //выключаем точки
-    for (byte indi = 0; indi < 4; indi++) {
+    dotSetBright(0); //выключаем точки
+    for (byte indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
       for (byte loops = 0; loops < BURN_LOOPS; loops++) {
         for (byte digit = 0; digit < 10; digit++) {
@@ -1621,7 +1665,7 @@ void burnIndi(void) //антиотравление индикаторов
 #else
   if (_tmrBurn >= BURN_PERIOD && timeRTC.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
-    for (byte indi = 0; indi < 4; indi++) {
+    for (byte indi = 0; indi < LAMP_NUM; indi++) {
       for (byte loops = 0; loops < BURN_LOOPS; loops++) {
         for (byte digit = 0; digit < 10; digit++) {
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
@@ -1638,6 +1682,7 @@ void burnIndi(void) //антиотравление индикаторов
       }
       indiPrintNum((mainSettings.timeFormat) ? get_12h(timeRTC.h) : timeRTC.h, 0, 2, 0); //вывод часов
       indiPrintNum(timeRTC.m, 2, 2, 0); //вывод минут
+      indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
     }
   }
 #endif
@@ -1655,7 +1700,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
   }
 
   boolean flipIndi[4] = {0, 0, 0, 0};
-  uint8_t anim_buf[8];
+  uint8_t anim_buf[12];
   uint8_t drvIndi = 1;
   uint8_t HH;
   uint8_t MM;
@@ -1689,6 +1734,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       while (!check_keys()) {
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
+        indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           if (drvIndi) {
@@ -1729,6 +1775,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       while (!check_keys()) {
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
+        indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           drvIndi = 0;
@@ -1771,6 +1818,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
       while (!check_keys()) {
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
+        indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
 
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           drvIndi = 0;
@@ -1800,6 +1848,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         for (uint8_t i = 0; i < 4;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
+          indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+
           if (check_keys()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
             indiClr(); //очистка индикатора
@@ -1831,6 +1881,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         for (uint8_t i = 0; i < 4;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
+          indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+
           if (check_keys()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
             switch (c) {
@@ -1871,6 +1923,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         for (uint8_t i = 0; i < 4;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
+          indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+
           if (check_keys()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
             switch (c) {
@@ -1895,6 +1949,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         for (uint8_t c = 0; c < 2;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
+          indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+
           if (check_keys()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
             for (uint8_t b = 0; b < i; b++) {
@@ -1929,6 +1985,8 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         for (uint8_t i = 0; i < 4;) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
+          indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
+
           if (check_keys()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
             for (uint8_t b = 0; b < i; b++) {
@@ -1964,6 +2022,7 @@ void mainScreen(void) //главный экран
 
     indiPrintNum((mainSettings.timeFormat) ? get_12h(timeRTC.h) : timeRTC.h, 0, 2, 0); //вывод часов
     indiPrintNum(timeRTC.m, 2, 2, 0); //вывод минут
+    indiPrintNum(timeRTC.s, 4, 2, 0); //вывод секунд
   }
 
   switch (check_keys()) {

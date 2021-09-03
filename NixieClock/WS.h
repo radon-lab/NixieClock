@@ -1,5 +1,5 @@
-uint8_t ledColor[12]; //массив цветов
-uint8_t ledBright[4]; //массив яркости
+uint8_t ledColor[LAMP_NUM * 3]; //массив цветов
+uint8_t ledBright[LAMP_NUM]; //массив яркости
 
 //---------------------------------Передача массива данных на шину-------------------------------------
 void ledWrite(uint8_t* data, uint16_t size) {
@@ -66,7 +66,7 @@ void setLedHue(uint8_t led, uint8_t color)
 //--------------------------------------Установка цвета в формате HV------------------------------------------
 void setLedHue(uint8_t color)
 {
-  for (uint8_t f = 0; f < 4; f++) {
+  for (uint8_t f = 0; f < LAMP_NUM; f++) {
     uint8_t pallet = (float)((color % 85) * ((float)ledBright[f] / 85.0));
     switch (color / 85) {
       case 0:
@@ -97,7 +97,7 @@ void setLedColor(uint8_t led, uint8_t clr)
 //--------------------------------------Установка по цветовой палитре------------------------------------------
 void setLedColor(uint8_t clr)
 {
-  for (uint8_t f = 0; f < 4; f++) {
+  for (uint8_t f = 0; f < LAMP_NUM; f++) {
     for (uint8_t i = 0; i < 3; i++) {
       if (((clr & 0x7F) >> i) & 0x01) ledColor[f * 3 + i] = ledBright[f];
       else ledColor[f * 3 + i] = 0;
@@ -113,5 +113,5 @@ void setLedBright(uint8_t led, uint8_t brt)
 //--------------------------------------Установка яркости------------------------------------------
 void setLedBright(uint8_t brt)
 {
-  for (uint8_t f = 0; f < 4; f++) ledBright[f] = brt;
+  for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = brt;
 }
