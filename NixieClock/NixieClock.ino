@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.2 релиз от 03.09.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.2 релиз от 04.09.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1421,7 +1421,7 @@ void autoShowTemp(void) //автоматический показ темпера
   if (mainSettings.autoTempTime && _tmrTemp++ >= mainSettings.autoTempTime && timeRTC.s > 7 && timeRTC.s < 55) {
     _tmrTemp = 0; //сбрасываем таймер
 
-    uint8_t pos = 4; //текущее положение анимации
+    uint8_t pos = LAMP_NUM; //текущее положение анимации
     boolean drv = 0; //направление анимации
 
     dotSetBright(dotMaxBright); //включаем точки
@@ -1489,7 +1489,7 @@ void showTemp(void) //показать температуру
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
         case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3, ' '); break;
-        case 1: indiPrintNum(tempSens.hum, 1, 4, ' '); break;
+        case 1: indiPrintNum(tempSens.hum, 0, 4, ' '); break;
         case 2: indiPrintNum(tempSens.press, 0, 4, ' '); break;
       }
     }
