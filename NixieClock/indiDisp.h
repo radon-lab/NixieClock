@@ -183,7 +183,7 @@ void dotSetBright(uint8_t pwm) //установка яркости точек
 //-------------------------Вывод чисел----------------------------------------------------
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вывод чисел
 {
-  uint8_t buf[6];
+  uint8_t buf[6]; 
   uint8_t st[6];
   uint8_t c = 0, f = 0;
 

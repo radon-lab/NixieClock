@@ -41,20 +41,19 @@
 //пин аналоговых кнопок A7
 #define ANALOG_BTN_PIN 7 // A7
 
-#ifndef ANALOG
+#if !BTN_TYPE
 //пин кнопки ОК D8
 #define SET_BIT   0 // D8
 #define SET_PORT  PORTB
 #define SET_PIN   PINB
 
-#ifdef HIGH_PULL
+#if BTN_PULL
 #define SET_CHK   (BIT_READ(SET_PIN, SET_BIT))
 #define SET_SET   (BIT_SET(SET_PORT, SET_BIT))
 #define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
 
 #define SET_INIT  SET_SET; SET_INP
-#endif
-#ifdef LOW_PULL
+#else
 #define SET_CHK   (BIT_READ(SET_PIN, SET_BIT) ^ 0x01)
 #define SET_CLR   (BIT_CLEAR(SET_PORT, SET_BIT))
 #define SET_INP   (BIT_CLEAR((DDR_REG(SET_PORT)), SET_BIT))
@@ -67,14 +66,13 @@
 #define LEFT_PORT  PORTD
 #define LEFT_PIN   PIND
 
-#ifdef HIGH_PULL
+#if BTN_PULL
 #define LEFT_CHK   (BIT_READ(LEFT_PIN, LEFT_BIT))
 #define LEFT_SET   (BIT_SET(LEFT_PORT, LEFT_BIT))
 #define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
 
 #define LEFT_INIT  LEFT_SET; LEFT_INP
-#endif
-#ifdef LOW_PULL
+#else
 #define LEFT_CHK   (BIT_READ(LEFT_PIN, LEFT_BIT) ^ 0x01)
 #define LEFT_CLR   (BIT_CLEAR(LEFT_PORT, LEFT_BIT))
 #define LEFT_INP   (BIT_CLEAR((DDR_REG(LEFT_PORT)), LEFT_BIT))
@@ -87,20 +85,38 @@
 #define RIGHT_PORT  PORTB
 #define RIGHT_PIN   PINB
 
-#ifdef HIGH_PULL
+#if BTN_PULL
 #define RIGHT_CHK   (BIT_READ(RIGHT_PIN, RIGHT_BIT))
 #define RIGHT_SET   (BIT_SET(RIGHT_PORT, RIGHT_BIT))
 #define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 
 #define RIGHT_INIT  RIGHT_SET; RIGHT_INP
-#endif
-#ifdef LOW_PULL
+#else
 #define RIGHT_CHK   (BIT_READ(RIGHT_PIN, RIGHT_BIT) ^ 0x01)
 #define RIGHT_CLR   (BIT_CLEAR(RIGHT_PORT, RIGHT_BIT))
 #define RIGHT_INP   (BIT_CLEAR((DDR_REG(RIGHT_PORT)), RIGHT_BIT))
 
 #define RIGHT_INIT  RIGHT_CLR; RIGHT_INP
 #endif
+#endif
+
+//пин доп кнопки D0
+#define ADD_BIT   0 // D0
+#define ADD_PORT  PORTD
+#define ADD_PIN   PIND
+
+#if BTN_PULL
+#define ADD_CHK   (BIT_READ(ADD_PIN, ADD_BIT))
+#define ADD_SET   (BIT_SET(ADD_PORT, ADD_BIT))
+#define ADD_INP   (BIT_CLEAR((DDR_REG(ADD_PORT)), ADD_BIT))
+
+#define ADD_INIT  ADD_SET; ADD_INP
+#else
+#define ADD_CHK   (BIT_READ(ADD_PIN, ADD_BIT) ^ 0x01)
+#define ADD_CLR   (BIT_CLEAR(ADD_PORT, ADD_BIT))
+#define ADD_INP   (BIT_CLEAR((DDR_REG(ADD_PORT)), ADD_BIT))
+
+#define ADD_INIT  ADD_CLR; ADD_INP
 #endif
 
 //пин сенсора температуры D1(для DS18B20 и DHT21/22)
