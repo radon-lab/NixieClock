@@ -20,15 +20,15 @@ const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_
 const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
 #elif (BOARD_TYPE == 3)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_5_BIT, 0x01 << ANODE_6_BIT}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
-#elif (BOARD_TYPE == 4)
 volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, ANODE_OFF, ANODE_OFF}; //таблица портов анодов ламп
 const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
 const uint8_t digitMask[] = {9, 8, 0, 5, 2, 7, 3, 6, 4, 1, 10};   //маска дешифратора платы in12(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
+#elif (BOARD_TYPE == 4)
+volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
+const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_5_BIT, 0x01 << ANODE_6_BIT}; //таблица бит анодов ламп
+const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
 #endif
 
 const uint8_t decoderMask[] = {DECODER_4, DECODER_2, DECODER_1, DECODER_3}; //порядок пинов дешефратора(0, 1, 2, 3)
@@ -110,7 +110,7 @@ void IndiInit(void) //инициализация индикаторов
 void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
-  for (uint8_t i = (1 - NEON_DOT); i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  for (uint8_t i = !NEON_DOT; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
   OCR1A = MIN_PWM + (float)(dimm_all / (LAMP_NUM + NEON_DOT)) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
@@ -128,13 +128,13 @@ void indiClr(uint8_t indi) //очистка индикатора
 //-------------------------Установка индикатора----------------------------------------------------
 void indiSet(uint8_t buf, uint8_t indi) //установка индикатора
 {
-  indi_buf[indi + 1] = buf;
+  indi_buf[indi + 1] = buf; //устанавливаем в ячейку буфера
   indiChangePwm(); //установка Linear Advance
 }
 //-------------------------Получить состояние индикатора----------------------------------------------------
 uint8_t indiGet(uint8_t indi) //получить состояние индикатора
 {
-  return indi_buf[indi + 1];
+  return indi_buf[indi + 1]; //возвращаем содержимое ячейки буфера
 }
 //---------------------------------Включение индикаторов---------------------------------------
 void indiEnable(void) //включение индикаторов
