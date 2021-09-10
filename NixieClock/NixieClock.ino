@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.3 релиз от 09.09.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.3 релиз от 10.09.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -117,9 +117,6 @@ uint8_t _tmrGlitch = 0; //таймер активации глюков
 #define RIGHT_CHK checkKeyADC(BTN_RIGHT_MIN, BTN_RIGHT_MAX) //чтение правой аналоговой кнопки
 #endif
 
-int atexit(void (* /*func*/ )()) { //инициализация функций
-  return 0;
-}
 //----------------------------------Инициализация----------------------------------
 int main(void) //инициализация
 {
@@ -1982,7 +1979,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             indiClr(); //очистка индикатора
             switch (c) {
               case 0: indiPrintNum(anim_buf[0] * 100 + anim_buf[1], i + 1); break; //вывод часов
-              case 1: indiPrintNum(anim_buf[2] * 100 + anim_buf[3], -3 + i); break; //вывод часов
+              case 1: indiPrintNum(anim_buf[2] * 100 + anim_buf[3], -2 + i); break; //вывод часов
             }
             i++; //прибавляем цикл
             _timer_ms[TMR_ANIM] = FLIP_SPEED[mode]; //устанавливаем таймер

@@ -49,7 +49,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
 
   PORTC = (PORTC & 0xF0) | indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
-  *anodePort[indiState] |= (indi_buf[indiState] != indi_null && indiState < (LAMP_NUM + 1)) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
+  *anodePort[indiState] |= (indi_buf[indiState] != indi_null) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 
   tick_ms++; //прибавляем тик
 }
