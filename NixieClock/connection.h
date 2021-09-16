@@ -105,7 +105,7 @@
 #define ADD_PORT  PORTD
 #define ADD_PIN   PIND
 
-#if BTN_PULL
+#if BTN_ADD_PULL
 #define ADD_CHK   (BIT_READ(ADD_PIN, ADD_BIT))
 #define ADD_SET   (BIT_SET(ADD_PORT, ADD_BIT))
 #define ADD_INP   (BIT_CLEAR((DDR_REG(ADD_PORT)), ADD_BIT))
