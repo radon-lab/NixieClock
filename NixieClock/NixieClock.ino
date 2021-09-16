@@ -1717,17 +1717,12 @@ void timerStopwatch(void) //таймер-секундомер
         else if (mode) {
           while (check_keys()) { //ждем
             dataUpdate(); //обработка данных
+            MELODY_PLAY(0); //воспроизводим мелодию
             if (!_timer_ms[TMR_ANIM]) {
               _timer_ms[TMR_ANIM] = TIMER_BLINK_TIME;
               switch (blink_data) {
-                case 0:
-                  indiClr(); //очистка индикаторов
-                  dotSetBright(0); //выключаем точки
-                  break;
-                case 1:
-                  indiPrintNum(0, 5, 6, 0); //вывод нулей
-                  dotSetBright(dotMaxBright); //включаем точки
-                  break;
+                case 0: indiClr(); dotSetBright(0); break; //очищаем индикаторы и выключаем точки
+                case 1: indiPrintNum(0, 5, 6, 0); dotSetBright(dotMaxBright); break; //выводим нули и включаем точки
               }
               blink_data = !blink_data; //мигаем временем
             }
