@@ -1695,10 +1695,11 @@ void timerStopwatch(void) //таймер-секундомер
       indiClr(); //очистка индикаторов
 
       if (tmrActive) cntMillis = 0; //сбрасываем счетчик миллисекунд
-      else indiPrintNum(mode + 1, 5); //вывод режима
+      else if (!cntSec) indiPrintNum(mode + 1, 5); //вывод режима
 
       indiPrintNum((cntSec < 3600) ? ((cntSec / 60) % 60) : (cntSec / 3600), 0, 2, 0); //вывод минут/часов
       indiPrintNum((cntSec < 3600) ? (cntSec % 60) : ((cntSec / 60) % 60), 2, 2, 0); //вывод секунд/минут
+      indiPrintNum((cntSec < 3600) ? ((mode) ? (100 - cntMillis / 10) : (cntMillis / 10)) : (cntSec % 60), 4, 2, 0); //вывод милиекунд/секунд
 
       if (tmrActive) {
         switch (mode) {
@@ -1710,9 +1711,9 @@ void timerStopwatch(void) //таймер-секундомер
 
     if (!_timer_ms[TMR_MS]) {
       _timer_ms[TMR_MS] = 10;
-      if (tmrActive) {
+      if (tmrActive && cntSec < 3600) {
         cntMillis += msTmr;
-        if (cntSec) indiPrintNum((tmrTime < 3600) ? ((mode) ? (100 - cntMillis / 10) : (cntMillis / 10)) : (tmrTime % 60), 4, 2, 0); //вывод милиекунд/секунд
+        if (cntSec) indiPrintNum((mode) ? (100 - cntMillis / 10) : (cntMillis / 10), 4, 2, 0); //вывод милиекунд
         else if (mode) {
           while (check_keys()) { //ждем
             dataUpdate(); //обработка данных
