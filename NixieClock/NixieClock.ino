@@ -1751,16 +1751,22 @@ void timerStopwatch(void) //таймер-секундомер
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (mode && !tmrActive && !cntSec) {
-          if ((tmrTime + 60) < 64800) tmrTime += 60; else tmrTime -= (tmrTime % 3600); //устанавливаем минуты таймера
+          if ((tmrTime + 60) < 64800) tmrTime += 60; else tmrTime -= tmrTime % 3600; //устанавливаем минуты таймера
           _sec = 0; //обновление экрана
         }
+        break;
+      case RIGHT_KEY_HOLD: //удержание правой кнопки
+        tmrTime -= tmrTime % 3600; //устанавливаем минуты таймера
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
         if (mode && !tmrActive && !cntSec) {
-          if ((tmrTime + 3600) < 64800) tmrTime += 3600; else tmrTime = 0; //устанавливаем часы таймера
+          if ((tmrTime + 3600) < 64800) tmrTime += 3600; else tmrTime = tmrTime % 3600; //устанавливаем часы таймера
           _sec = 0; //обновление экрана
         }
+        break;
+      case LEFT_KEY_HOLD: //удержание левой кнопки
+        tmrTime = tmrTime % 3600; //устанавливаем часы таймера
         break;
 
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
