@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.3 релиз от 16.09.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.3 релиз от 21.09.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1694,12 +1694,14 @@ void timerStopwatch(void) //таймер-секундомер
       _sec = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
 
-      if (tmrActive) cntMillis = 0; //сбрасываем счетчик миллисекунд
+      if (tmrActive) {
+        cntMillis = 0; //сбрасываем счетчик миллисекунд
+        indiPrintNum((cntSec < 3600) ? ((mode) ? (100 - cntMillis / 10) : (cntMillis / 10)) : (cntSec % 60), 4, 2, 0); //вывод милиекунд/секунд
+      }
       else if (!cntSec) indiPrintNum(mode + 1, 5); //вывод режима
 
       indiPrintNum((cntSec < 3600) ? ((cntSec / 60) % 60) : (cntSec / 3600), 0, 2, 0); //вывод минут/часов
       indiPrintNum((cntSec < 3600) ? (cntSec % 60) : ((cntSec / 60) % 60), 2, 2, 0); //вывод секунд/минут
-      indiPrintNum((cntSec < 3600) ? ((mode) ? (100 - cntMillis / 10) : (cntMillis / 10)) : (cntSec % 60), 4, 2, 0); //вывод милиекунд/секунд
 
       if (tmrActive) {
         switch (mode) {
@@ -1752,21 +1754,25 @@ void timerStopwatch(void) //таймер-секундомер
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (mode && !tmrActive && !cntSec) {
           if ((tmrTime + 60) < 64800) tmrTime += 60; else tmrTime -= tmrTime % 3600; //устанавливаем минуты таймера
+          cntSec = tmrTime; //выводим новое значение таймера
           _sec = 0; //обновление экрана
         }
         break;
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         tmrTime -= tmrTime % 3600; //устанавливаем минуты таймера
+        cntSec = tmrTime; //выводим новое значение таймера
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
         if (mode && !tmrActive && !cntSec) {
           if ((tmrTime + 3600) < 64800) tmrTime += 3600; else tmrTime = tmrTime % 3600; //устанавливаем часы таймера
+          cntSec = tmrTime; //выводим новое значение таймера
           _sec = 0; //обновление экрана
         }
         break;
       case LEFT_KEY_HOLD: //удержание левой кнопки
         tmrTime = tmrTime % 3600; //устанавливаем часы таймера
+        cntSec = tmrTime; //выводим новое значение таймера
         break;
 
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
