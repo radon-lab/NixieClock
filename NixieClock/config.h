@@ -88,6 +88,8 @@
 #define ALM_OFF_SOUND_FREQ 2000      //частота звука подтверждения отключения будильника(10..10000)(Гц)
 #define ALM_OFF_SOUND_TIME 1000      //длительность звука подтверждения отключения будильника(10..2000)(мс)
 
+#define SOUND_PATTERN(ptr) {(uint16_t)&ptr, sizeof(ptr) / 6} //маска для массива мелодий
+
 const uint16_t _sound_1[][3] PROGMEM = { //массив семплов 1-й мелодии будильника || семпл - частота(10..10000)(Hz) | длительность звука(4..10000)(ms) | длительность семпла(4..10000)(ms)
   {2000, 500, 1000}
 };
@@ -110,11 +112,12 @@ const uint16_t _sound_4[][3] PROGMEM = { //массив семплов 4-й ме
   {440, 200, 200}, {466, 900, 900}, {311, 300, 300}, {369, 700, 700},
   {311, 500, 500}, {466, 200, 200}, {392, 1500, 2500}
 };
+
 const uint16_t alarm_sound[][2] = {  //массив мелодий будильника
-  {(uint16_t)&_sound_1, sizeof(_sound_1) / 6},
-  {(uint16_t)&_sound_2, sizeof(_sound_2) / 6},
-  {(uint16_t)&_sound_3, sizeof(_sound_3) / 6},
-  {(uint16_t)&_sound_4, sizeof(_sound_4) / 6}
+  SOUND_PATTERN(_sound_1),
+  SOUND_PATTERN(_sound_2),
+  SOUND_PATTERN(_sound_3),
+  SOUND_PATTERN(_sound_4)
 };
 
 #define RTC_ERROR_SOUND_FREQ 2000    //частота звука ошибки связи с модулем часов(10..10000)(Гц)
