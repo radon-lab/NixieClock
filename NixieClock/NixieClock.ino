@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.3 релиз от 28.09.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.4 релиз от 29.09.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -100,7 +100,7 @@ uint8_t _tmrGlitch; //таймер активации глюков
 
 uint8_t timerMode; //режим таймера/секундомера
 uint16_t timerCnt; //счетчик таймера/секундомера
-uint16_t timerTime = 60; //время таймера сек
+uint16_t timerTime = TIMER_TIME; //время таймера сек
 
 volatile uint16_t cnt_puls; //количество циклов для работы пищалки
 volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
@@ -1708,6 +1708,49 @@ void timerWarn(void) //тревога таймера
     timerCnt = timerTime; //сбрасываем таймер
   }
 }
+//----------------------------Настройки таймера----------------------------------
+void timerSettings(void) //настройки таймера
+{
+  uint8_t mode = 0; //текущий режим
+  while (1) {
+    dataUpdate(); //обработка данных
+
+    if (!_sec) {
+      _sec = 1; //сбрасываем флаг
+      indiPrintNum(2, 5); //вывод режима
+
+      indiPrintNum(timerCnt / 60, 0, 2, 0); //вывод минут
+      indiPrintNum(timerCnt % 60, 2, 2, 0); //вывод секунд
+    }
+
+    switch (check_keys()) {
+      case SET_KEY_PRESS: //клик средней кнопкой
+        mode = !mode; //переключаем режим
+        break;
+
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
+        switch (mode) {
+          case 0: if (timerCnt / 60 < 99) timerCnt += 60; else timerCnt -= 5940; break; //сбрасываем секундомер
+          case 1: if (timerCnt % 60 < 59) timerCnt++; else timerCnt -= 59; break; //сбрасываем таймер
+        }
+        _sec = 0; //обновление экрана
+        break;
+
+      case LEFT_KEY_PRESS: //клик левой кнопкой
+        switch (mode) {
+          case 0: if (timerCnt / 60 > 0) timerCnt -= 60; else timerCnt += 5940; break; //сбрасываем секундомер
+          case 1: if (timerCnt % 60 > 0) timerCnt--; else timerCnt += 59; break; //сбрасываем таймер
+        }
+        _sec = 0; //обновление экрана
+        break;
+
+      case ADD_KEY_HOLD: //удержание дополнительной кнопки
+      case SET_KEY_HOLD: //удержание средней кнопки
+       if (!timerCnt) timerCnt = TIMER_TIME;
+        return; //выходим
+    }
+  }
+}
 //--------------------------------Таймер-секундомер----------------------------------------
 void timerStopwatch(void) //таймер-секундомер
 {
@@ -1757,48 +1800,31 @@ void timerStopwatch(void) //таймер-секундомер
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
-        mode = !mode; //переключаем режим
-        timerMode = 0; //деактивируем таймер
-        switch (mode) {
-          case 0: timerCnt = 0; break; //сбрасываем секундомер
-          case 1: timerCnt = timerTime; break; //сбрасываем таймер
-        }
-        _sec = 0; //обновление экрана
+        timerSettings(); //настройки таймера
         time_out = 0; //сбрасываем таймер автовыхода
+        _sec = 0; //обновление экрана
         break;
 
+      case SET_KEY_HOLD: //удержание средней кнопки
+        if (timerMode == 1) timerMode |= 0x80; //приостановка секундомера
+        return; //выходим
+
       case RIGHT_KEY_PRESS: //клик правой кнопкой
-        if (mode && !timerMode) {
-          if ((timerTime + 60) < 64800) timerTime += 60; else timerTime -= timerTime % 3600; //устанавливаем минуты таймера
-          timerCnt = timerTime; //выводим новое значение таймера
-          _sec = 0; //обновление экрана
-          time_out = 0; //сбрасываем таймер автовыхода
-        }
-        break;
       case RIGHT_KEY_HOLD: //удержание правой кнопки
-        if (mode && !timerMode) {
-          timerTime -= timerTime % 3600; //устанавливаем минуты таймера
-          timerCnt = timerTime; //выводим новое значение таймера
-          _sec = 0; //обновление экрана
-          time_out = 0; //сбрасываем таймер автовыхода
-        }
+        mode = 1; //переключаем режим
+        timerMode = 0; //деактивируем таймер
+        timerCnt = timerTime; //сбрасываем таймер
+        time_out = 0; //сбрасываем таймер автовыхода
+        _sec = 0; //обновление экрана
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
-        if (mode && !timerMode) {
-          if ((timerTime + 3600) < 64800) timerTime += 3600; else timerTime = timerTime % 3600; //устанавливаем часы таймера
-          timerCnt = timerTime; //выводим новое значение таймера
-          _sec = 0; //обновление экрана
-          time_out = 0; //сбрасываем таймер автовыхода
-        }
-        break;
       case LEFT_KEY_HOLD: //удержание левой кнопки
-        if (mode && !timerMode) {
-          timerTime = timerTime % 3600; //устанавливаем часы таймера
-          timerCnt = timerTime; //выводим новое значение таймера
-          _sec = 0; //обновление экрана
-          time_out = 0; //сбрасываем таймер автовыхода
-        }
+        mode = 0; //переключаем режим
+        timerMode = 0; //деактивируем таймер
+        timerCnt = 0; //сбрасываем секундомер
+        time_out = 0; //сбрасываем таймер автовыхода
+        _sec = 0; //обновление экрана
         break;
 
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
@@ -1807,8 +1833,8 @@ void timerStopwatch(void) //таймер-секундомер
           timerMode = mode + 1;
         }
         else timerMode ^= 0x80; //приостановка таймера/секундомера
-        _sec = 0; //обновление экрана
         time_out = 0; //сбрасываем таймер автовыхода
+        _sec = 0; //обновление экрана
         break;
 
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
@@ -1817,13 +1843,9 @@ void timerStopwatch(void) //таймер-секундомер
           case 0: timerCnt = 0; break; //сбрасываем секундомер
           case 1: timerCnt = timerTime; break; //сбрасываем таймер
         }
-        _sec = 0; //обновление экрана
         time_out = 0; //сбрасываем таймер автовыхода
+        _sec = 0; //обновление экрана
         break;
-
-      case SET_KEY_HOLD: //удержание средней кнопки
-        if (timerMode == 1) timerMode |= 0x80; //приостановка секундомера
-        return; //выходим
     }
   }
 }
