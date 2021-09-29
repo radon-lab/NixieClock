@@ -1711,42 +1711,50 @@ void timerWarn(void) //тревога таймера
 //----------------------------Настройки таймера----------------------------------
 void timerSettings(void) //настройки таймера
 {
-  uint8_t mode = 0; //текущий режим
+  boolean mode = 0; //текущий режим
+  boolean blink_data = 0; //флаг мигания индикаторами
+
+  dotSetBright(0); //выключаем точки
   while (1) {
     dataUpdate(); //обработка данных
 
-    if (!_sec) {
-      _sec = 1; //сбрасываем флаг
+    if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
+      _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
+
+      indiClr(); //очистка индикаторов
       indiPrintNum(2, 5); //вывод режима
 
-      indiPrintNum(timerCnt / 60, 0, 2, 0); //вывод минут
-      indiPrintNum(timerCnt % 60, 2, 2, 0); //вывод секунд
+      if (!blink_data || mode) indiPrintNum(timerTime / 60, 0, 2, 0); //вывод минут
+      if (!blink_data || !mode) indiPrintNum(timerTime % 60, 2, 2, 0); //вывод секунд
+      blink_data = !blink_data;
     }
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
         mode = !mode; //переключаем режим
+        _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (mode) {
-          case 0: if (timerCnt / 60 < 99) timerCnt += 60; else timerCnt -= 5940; break; //сбрасываем секундомер
-          case 1: if (timerCnt % 60 < 59) timerCnt++; else timerCnt -= 59; break; //сбрасываем таймер
+          case 0: if (timerTime / 60 < 99) timerTime += 60; else timerTime -= 5940; break; //сбрасываем секундомер
+          case 1: if (timerTime % 60 < 59) timerTime++; else timerTime -= 59; break; //сбрасываем таймер
         }
-        _sec = 0; //обновление экрана
+        _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (mode) {
-          case 0: if (timerCnt / 60 > 0) timerCnt -= 60; else timerCnt += 5940; break; //сбрасываем секундомер
-          case 1: if (timerCnt % 60 > 0) timerCnt--; else timerCnt += 59; break; //сбрасываем таймер
+          case 0: if (timerTime / 60 > 0) timerTime -= 60; else timerTime += 5940; break; //сбрасываем секундомер
+          case 1: if (timerTime % 60 > 0) timerTime--; else timerTime += 59; break; //сбрасываем таймер
         }
-        _sec = 0; //обновление экрана
+        _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
         break;
 
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
       case SET_KEY_HOLD: //удержание средней кнопки
-       if (!timerCnt) timerCnt = TIMER_TIME;
+        if (!timerTime) timerTime = TIMER_TIME; //устанавливаем значение по умолчанию
+        timerCnt = timerTime; //сбрасываем таймер
         return; //выходим
     }
   }
@@ -1767,7 +1775,11 @@ void timerStopwatch(void) //таймер-секундомер
   while (1) {
     dataUpdate(); //обработка данных
     timerWarn(); //тревога таймера
+#if LAMP_NUM > 4
+    dotFlashMode((!timerCnt) ? 0 : ((timerMode > 2 || !timerMode ) ? 1 : 3)); //мигание точек по умолчанию
+#else
     dotFlashMode((!timerMode) ? 0 : ((timerMode > 2) ? 1 : 3)); //мигание точек по умолчанию
+#endif
 
     if (!_sec) {
       _sec = 1; //сбрасываем флаг
@@ -1800,9 +1812,11 @@ void timerStopwatch(void) //таймер-секундомер
 
     switch (check_keys()) {
       case SET_KEY_PRESS: //клик средней кнопкой
-        timerSettings(); //настройки таймера
-        time_out = 0; //сбрасываем таймер автовыхода
-        _sec = 0; //обновление экрана
+        if (mode && !timerMode) {
+          timerSettings(); //настройки таймера
+          time_out = 0; //сбрасываем таймер автовыхода
+          _sec = 0; //обновление экрана
+        }
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
