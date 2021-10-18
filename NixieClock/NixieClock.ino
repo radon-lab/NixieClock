@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.4 релиз от 29.09.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.4 релиз от 18.10.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1312,17 +1312,14 @@ void changeBright(void) //установка яркости от времени 
 #if BACKL_WS2812B
   setLedBright(backlMaxBright); //устанавливаем максимальную яркость
   if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode); //отправляем статичный цвет
-  if (backlMaxBright) backlBrightTime = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
 #else
   switch (fastSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
     case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
-    case 2:
-      if (backlMaxBright) backlBrightTime = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
-      else OCR2A = 0; //иначе посветка выключена
-      break;
+    case 2: if (!backlMaxBright) OCR2A = 0; break; //иначе посветка выключена
   }
 #endif
+  if (backlMaxBright) backlBrightTime = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
 }
 //----------------------------------Анимация подсветки---------------------------------

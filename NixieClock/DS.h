@@ -49,7 +49,7 @@ uint8_t oneWireRead(void)
     SENS_HI;
     SENS_INP;
     _delay_us(8);
-    if (SENS_CHK) data |= (0x80 >> i);
+    if (SENS_CHK) data |= (0x01 << i);
     _delay_us(60);
   }
   return data;
