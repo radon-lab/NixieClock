@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.4 релиз от 18.10.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.4 релиз от 29.10.21
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1312,6 +1312,7 @@ void changeBright(void) //установка яркости от времени 
 #if BACKL_WS2812B
   setLedBright(backlMaxBright); //устанавливаем максимальную яркость
   if (fastSettings.backlMode < 8) setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+  if (!backlMaxBright) setLedColor(0); //выключили подсветку
 #else
   switch (fastSettings.backlMode) {
     case 0: OCR2A = 0; break; //если посветка выключена
