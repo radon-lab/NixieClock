@@ -1,7 +1,14 @@
-#define _INDI_ON  TCNT0 = 150; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
+#define _INDI_ON  TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
 #define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
 #define ANODE_OFF 0x00 //выключенный анод
+
+#define FREQ_TICK (uint8_t)(1000 / (float)(FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
+#define LIGHT_STEP (uint8_t)((FREQ_TICK - 30) / 30) //расчет шага яркости
+
+#define DEFAULT_TIME_PERIOD (uint16_t)(1000 / (float)(FREQ_ADG * LAMP_NUM) / 0.016) //период тика таймера счета времени(мкс)
+#define TIME_PERIOD_MIN (uint16_t)((DEFAULT_TIME_PERIOD / 100) - 400) //минимальный период тика таймера счета времени(мкс)
+#define TIME_PERIOD_MAX (uint16_t)((DEFAULT_TIME_PERIOD / 100) + 400) //максимальный период тика таймера счета времени(мкс)
 
 //тип плат часов
 #if (BOARD_TYPE == 0)
@@ -55,7 +62,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 }
 ISR(TIMER0_COMPB_vect) {
   *anodePort[indiState] &= ~anodeBit[indiState]; //выключаем индикатор
-  if (++indiState > 6) indiState = 0; //переходим к следующему индикатору
+  if (++indiState > LAMP_NUM) indiState = 0; //переходим к следующему индикатору
 }
 //-------------------------Инициализация индикаторов----------------------------------------------------
 void IndiInit(void) //инициализация индикаторов
@@ -74,7 +81,7 @@ void IndiInit(void) //инициализация индикаторов
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
 
-  OCR0A = 150; //максимальная частота
+  OCR0A = FREQ_TICK; //максимальная частота
   OCR0B = 120; //максимальная яркость
 
   TIMSK0 = 0; //отключаем прерывания Таймера0
@@ -158,14 +165,14 @@ void indiDisable(void) //выключение индикаторов
 void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркости индикатора
 {
   if (pwm > 30) pwm = 30;
-  indi_dimm[indi + 1] = pwm << 2;
+  indi_dimm[indi + 1] = pwm * LIGHT_STEP;
   indiChangePwm(); //установка Linear Advance
 }
 //---------------------------------Установка общей яркости---------------------------------------
 void indiSetBright(uint8_t pwm) //установка общей яркости
 {
   if (pwm > 30) pwm = 30;
-  for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm << 2;
+  for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm * LIGHT_STEP;
   indiChangePwm(); //установка Linear Advance
 }
 //---------------------------------Установка яркости точек---------------------------------------
@@ -183,40 +190,40 @@ void dotSetBright(uint8_t pwm) //установка яркости точек
 //-------------------------Вывод чисел----------------------------------------------------
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length, char filler) //вывод чисел
 {
-  uint8_t buf[6]; 
-  uint8_t st[6];
-  uint8_t c = 0, f = 0;
+  uint8_t buf[LAMP_NUM]; //временный буфер
+  uint8_t st[LAMP_NUM]; //основной буфер
+  uint8_t c = 0, f = 0; //счетчики
 
-  if (!num) {
-    if (length) {
-      for (c = 1; f < (length - 1); f++) st[f] = (filler != ' ') ? filler : 10;
-      st[f] = 0;
+  if (!num) { //если ноль
+    if (length) { //если указана длинна строки
+      for (c = 1; f < (length - 1); f++) st[f] = (filler != ' ') ? filler : 10; //заполняем символами заполнителями
+      st[f] = 0; //устанавливаем ноль
     }
     else {
-      st[0] = 0;
-      c = 1;
+      st[0] = 0; //устанавливаем ноль
+      c = 1; //прибавляем счетчик
     }
   }
   else {
-    while (num > 0) {
-      buf[c] = num % 10;
-      num = (num - (num % 10)) / 10;
-      c++;
+    while (num > 0) { //если есть число
+      buf[c] = num % 10; //забираем младший разряд в буфер
+      num = (num - (num % 10)) / 10; //отнимаем младший разряд от числа
+      c++; //прибавляем счетчик
     }
 
-    if (length > c) {
-      for (f = 0; f < (length - c); f++) st[f] = (filler != ' ') ? filler : 10;
+    if (length > c) { //если осталось место для символов заполнителей
+      for (f = 0; f < (length - c); f++) st[f] = (filler != ' ') ? filler : 10; //заполняем символами заполнителями
     }
-    for (uint8_t i = 0; i < c; i++) st[i + f] = buf[c - i - 1];
+    for (uint8_t i = 0; i < c; i++) st[i + f] = buf[c - i - 1]; //переписываем в основной буфер
   }
 
-  for (uint8_t cnt = 0; cnt < (c + f); cnt++) {
-    uint8_t mergeBuf = 0;
-    for (uint8_t dec = 0; dec < 4; dec++) {
-      if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]);
+  for (uint8_t cnt = 0; cnt < (c + f); cnt++) { //расшивровка символов
+    uint8_t mergeBuf = 0; //временный буфер дешефратора
+    for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
+      if ((digitMask[st[cnt]] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
     }
-    if (indi < 0) indi++;
-    else if (indi < LAMP_NUM) indi_buf[1 + indi++] = mergeBuf;
+    if (indi < 0) indi++; //если число за гранью поля индикаторов
+    else if (indi < LAMP_NUM) indi_buf[1 + indi++] = mergeBuf; //если число в поле индикатора то устанавливаем его
   }
   indiChangePwm(); //установка Linear Advance
 }
