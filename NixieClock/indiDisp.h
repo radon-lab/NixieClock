@@ -6,9 +6,9 @@
 #define FREQ_TICK (uint8_t)(1000 / (float)(FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
 #define LIGHT_STEP (uint8_t)((FREQ_TICK - 30) / 30) //расчет шага яркости
 
-#define DEFAULT_TIME_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера счета времени(мкс)
-#define TIME_PERIOD_MIN (uint16_t)(DEFAULT_TIME_PERIOD - (DEFAULT_TIME_PERIOD % 100) - 400) //минимальный период тика таймера счета времени(мкс)
-#define TIME_PERIOD_MAX (uint16_t)(DEFAULT_TIME_PERIOD - (DEFAULT_TIME_PERIOD % 100) + 400) //максимальный период тика таймера счета времени(мкс)
+#define TIME_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера счета времени
+#define TIME_PERIOD_MIN (uint16_t)(TIME_PERIOD - (TIME_PERIOD % 100) - 400) //минимальный период тика таймера счета времени
+#define TIME_PERIOD_MAX (uint16_t)(TIME_PERIOD - (TIME_PERIOD % 100) + 400) //максимальный период тика таймера счета времени
 
 //тип плат часов
 #if (BOARD_TYPE == 0)

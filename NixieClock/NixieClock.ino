@@ -44,7 +44,7 @@ struct Settings_1 {
   uint8_t sensorSet = DEFAULT_TEMP_SENSOR; //сенсор температуры
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
-  uint16_t timePeriod = DEFAULT_TIME_PERIOD; //коррекция хода внутреннего осцилятора
+  uint16_t timePeriod = TIME_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
 } mainSettings;
 
