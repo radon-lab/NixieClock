@@ -472,6 +472,7 @@ void delAlarm(uint8_t alarm) //удалить будильник
 void dataUpdate(void) //обработка данных
 {
   static uint32_t timeNotRTC; //счетчик реального времени
+  static uint16_t timerCorrect;
 #if BACKL_WS2812B
   backlEffect(); //анимация подсветки
 #else
@@ -492,10 +493,13 @@ void dataUpdate(void) //обработка данных
       }
     }
 
+    timerCorrect += mainSettings.timePeriod % 1000;
+    uint16_t msDec = (mainSettings.timePeriod / 1000) + (timerCorrect / 1000);
     for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
-      if (_timer_ms[tm] > 2) _timer_ms[tm] -= 2; //если таймер больше 2мс
+      if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше 2мс
       else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
     }
+    if (timerCorrect >= 1000) timerCorrect -= 1000;
   }
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
