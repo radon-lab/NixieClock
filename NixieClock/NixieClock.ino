@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.5 релиз от 07.11.21
+  Arduino IDE 1.8.13 версия прошивки 1.4.6 релиз от 01.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -17,7 +17,7 @@ enum {
   TMR_GLITCH, //таймер глюков
   TIMERS_NUM //количество таймеров
 };
-uint32_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисекунд
+uint16_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисекунд
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -44,7 +44,7 @@ struct Settings_1 {
   uint8_t sensorSet = DEFAULT_TEMP_SENSOR; //сенсор температуры
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
-  uint16_t timePeriod = TIME_PERIOD; //коррекция хода внутреннего осцилятора
+  uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
 } mainSettings;
 
@@ -114,9 +114,13 @@ uint8_t semp; //переключатель семплов мелодии
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(timeRTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти количества будильников
-#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //первая ячейка памяти будильников
+#define EEPROM_BLOCK_CRC (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //блок памяти контрольной суммы настроек
+#define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC + 1) //блок памяти контрольной суммы времени
+#define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_TIME + 1) //блок памяти контрольной суммы основных настроек
+#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы быстрых настроек
+#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_FAST + 1) //первая ячейка памяти будильников
 
-#define MAX_ALARMS ((EEPROM_BLOCK_CRC - (sizeof(timeRTC) + sizeof(fastSettings) + sizeof(mainSettings) + sizeof(alarms_num) + EEPROM_BLOCK_NULL)) / 5) //максимальное количество будильников
+#define MAX_ALARMS ((1023 - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
 
 #if BTN_TYPE
 #define SET_CHK checkKeyADC(BTN_SET_MIN, BTN_SET_MAX) //чтение средней аналоговой кнопки
@@ -141,20 +145,20 @@ int main(void) //инициализация
   BACKL_INIT; //инициализация подсветки
   BUZZ_INIT; //инициализация бузера
 
-  WireInit(); //инициализация Wire
-  IndiInit(); //инициализация индикаторов
-
   uartDisable(); //отключение uart
 
   if (checkSettingsCRC() || !SET_CHK) { //если контрольная сумма не совпала или зажата средняя кнопка, восстанавливаем из переменных
-    EEPROM_UpdateBlock((uint16_t)&timeRTC, EEPROM_BLOCK_TIME, sizeof(timeRTC)); //записываем дату и время в память
-    EEPROM_UpdateBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки яркости в память
-    EEPROM_UpdateBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+    updateData((uint8_t*)&timeRTC, sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
+    updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
+    updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
     EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
   }
-  else if (LEFT_CHK) { //если левая кнопка не зажата, загружаем настройки из памяти
-    EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
-    EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
+  else if (!LEFT_CHK) { //иначе загружаем настройки из памяти
+    if (checkData(sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) updateData((uint8_t*)&timeRTC, sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
+    if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
+    else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
+    if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
+    else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
     alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
   }
 
@@ -162,8 +166,10 @@ int main(void) //инициализация
   initAlarm(); //инициализация будильника
 #endif
 
-  if (testRTC()) buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+  WireInit(); //инициализация шины Wire
+  IndiInit(); //инициализация индикаторов
 
+  if (testRTC()) buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //сигнал ошибки модуля часов
   if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы
 
   randomSeed(timeRTC.s * (timeRTC.m + timeRTC.h) + timeRTC.DD * timeRTC.MM); //радомный сид для глюков
@@ -257,36 +263,68 @@ void testLamp(void) //проверка системы
 //------------------------Проверка модуля часов реального времени--------------------------------------
 boolean testRTC(void) //проверка модуля часов реального времени
 {
+  if (disble32K()) return 1; //отключение вывода 32K
+  if (setSQW()) return 1; //установка SQW на 1Гц
+
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
 
-  if (setSQW()) return 1; //установка SQW на 1Гц
-  for (_timer_ms[TMR_MS] = TEST_SQW_TIME; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-  if (getTime()) return 1; //считываем время из RTC
+  for (_timer_ms[TMR_MS] = TEST_SQW_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) { //ждем сигнала от SQW
+    for (; tick_ms; tick_ms--) { //если был тик, обрабатываем данные
+      if (_timer_ms[TMR_MS] > MS_PERIOD) _timer_ms[TMR_MS] -= MS_PERIOD; //если таймер больше периода
+      else if (_timer_ms[TMR_MS]) _timer_ms[TMR_MS] = 0; //иначе сбрасываем таймер
+    }
+  }
 
-  if (timeRTC.YY < 2021 || timeRTC.YY > 2050) { //если пропадало питание
+  if (getTime()) return 1; //считываем время из RTC
+  if (getOSF()) { //если пропадало питание
     EEPROM_ReadBlock((uint16_t)&timeRTC, EEPROM_BLOCK_TIME, sizeof(timeRTC)); //считываем дату и время из памяти
     sendTime(); //отправить время в RTC
   }
 
-  if (EIFR & (0x01 << INTF0)) EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
+  if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
+    EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
+    EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
+  }
   else return 1; //иначе выдаем ошибку
+
   return 0; //возвращаем статус "ок"
+}
+//------------------------Проверка данных в памяти--------------------------------------------------
+boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
+{
+  uint8_t crc = 0;
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
+  if (crc != EEPROM_ReadByte(cellCRC)) return 1;
+  return 0;
+}
+//------------------------Обновление данных в памяти--------------------------------------------------
+void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
+{
+  uint8_t crc = 0;
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
+  EEPROM_UpdateBlock((uint16_t)str, cell, size);
+  EEPROM_UpdateByte(cellCRC, crc);
+}
+//------------------------Сверка контрольной суммы--------------------------------------------------
+void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
+{
+  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
+    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
+    data >>= 0x01; //сдвигаем буфер
+  }
 }
 //------------------------Проверка контрольной суммы настроек-----------------------------------------
 boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
 {
-  uint16_t CRC = 0;
-  uint16_t CRC_EEPROM = 0;
+  uint8_t CRC = 0;
 
-  for (uint8_t i = 0; i < sizeof(timeRTC); i++) CRC += (*((uint8_t*)(&timeRTC) + i) + 1) * (i + 1);
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) CRC += (*((uint8_t*)(&mainSettings) + i) + 1) * (i + 1);
-  for (uint8_t i = 0; i < sizeof(fastSettings); i++) CRC += (*((uint8_t*)(&fastSettings) + i) + 1) * (i + 1);
+  for (uint8_t i = 0; i < sizeof(timeRTC); i++) checkCRC(&CRC, *((uint8_t*)(&timeRTC) + i));
+  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)(&mainSettings) + i));
+  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)(&fastSettings) + i));
 
-  EEPROM_ReadBlock((uint16_t)&CRC_EEPROM, EEPROM_BLOCK_CRC, sizeof(CRC_EEPROM));
-
-  if (CRC_EEPROM == CRC) return 0;
-  else EEPROM_UpdateBlock((uint16_t)&CRC, EEPROM_BLOCK_CRC, sizeof(CRC));
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC) == CRC) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC, CRC);
   return 1;
 }
 //--------------------------------Генерация частот бузера-----------------------------------------------
@@ -472,7 +510,7 @@ void delAlarm(uint8_t alarm) //удалить будильник
 void dataUpdate(void) //обработка данных
 {
   static uint32_t timeNotRTC; //счетчик реального времени
-  static uint16_t timerCorrect;
+  static uint16_t timerCorrect; //остаток для коррекции времени
 #if BACKL_WS2812B
   backlEffect(); //анимация подсветки
 #else
@@ -493,13 +531,13 @@ void dataUpdate(void) //обработка данных
       }
     }
 
-    timerCorrect += mainSettings.timePeriod % 1000;
-    uint16_t msDec = (mainSettings.timePeriod / 1000) + (timerCorrect / 1000);
+    timerCorrect += mainSettings.timePeriod % 1000; //остаток для коррекции
+    uint16_t msDec = (mainSettings.timePeriod + timerCorrect) / 1000; //находим целые мс
     for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
-      if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше 2мс
+      if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше периода
       else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
     }
-    if (timerCorrect >= 1000) timerCorrect -= 1000;
+    if (timerCorrect >= 1000) timerCorrect -= 1000; //если коррекция больше либо равна 1 мс
   }
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
@@ -753,7 +791,7 @@ void settings_time(void) //настройки времени
       case SET_KEY_HOLD: //удержание средней кнопки
         sendTime(); //отправить время в RTC
         changeBright(); //установка яркости от времени суток
-        EEPROM_UpdateBlock((uint16_t)&timeRTC, EEPROM_BLOCK_TIME, sizeof(timeRTC)); //записываем дату по умолчанию в память
+        updateData((uint8_t*)&timeRTC, sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
         return;
     }
   }
@@ -1177,7 +1215,7 @@ void settings_main(void) //настроки основные
                 break;
               case 8: //коррекция хода
                 switch (EIMSK) {
-                  case 0: if (mainSettings.timePeriod > TIME_PERIOD_MIN) mainSettings.timePeriod--; else mainSettings.timePeriod = TIME_PERIOD_MAX; break;
+                  case 0: if (mainSettings.timePeriod > US_PERIOD_MIN) mainSettings.timePeriod--; else mainSettings.timePeriod = US_PERIOD_MAX; break;
                   case 1: if (aging > -127) aging--; else aging = 127; break;
                 }
                 break;
@@ -1228,7 +1266,7 @@ void settings_main(void) //настроки основные
                 break;
               case 8: //коррекция хода
                 switch (EIMSK) {
-                  case 0: if (mainSettings.timePeriod < TIME_PERIOD_MAX) mainSettings.timePeriod++; else mainSettings.timePeriod = TIME_PERIOD_MIN; break;
+                  case 0: if (mainSettings.timePeriod < US_PERIOD_MAX) mainSettings.timePeriod++; else mainSettings.timePeriod = US_PERIOD_MIN; break;
                   case 1: if (aging < 127) aging++; else aging = -127; break;
                 }
                 break;
@@ -1278,7 +1316,7 @@ void settings_main(void) //настроки основные
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        EEPROM_UpdateBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //записываем основные настройки в память
+        updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
         changeBright(); //установка яркости от времени суток
         _tmrTemp = 0; //сбрасываем таймер показа температуры
         return;
@@ -1307,10 +1345,10 @@ void changeBright(void) //установка яркости от времени 
     case 0: dotSetBright(0); break; //если точки выключены
     case 1: dotSetBright(dotMaxBright); break; //если точки статичные, устанавливаем яркость
     case 2:
-      dotBrightStep = ceil((float)dotMaxBright * 2 / DOT_TIME * DOT_TIMER); //расчёт шага яркости точки
+      dotBrightStep = ceil((float)(dotMaxBright * 2.00) / DOT_TIME * DOT_TIMER); //расчёт шага яркости точки
       if (!dotBrightStep) dotBrightStep = 1; //если шаг слишком мал, устанавливаем минимум
-      dotBrightTime = ceil(DOT_TIME / (float)dotMaxBright * 2); //расчёт шага яркости точки
-      if (!dotBrightTime) dotBrightTime = DOT_TIMER; //если шаг слишком мал, устанавливаем минимум
+      dotBrightTime = ceil(DOT_TIME / (float)(dotMaxBright * 2.00)); //расчёт шага яркости точки
+      if (dotBrightTime < DOT_TIMER) dotBrightTime = DOT_TIMER; //если шаг слишком мал, устанавливаем минимум
       break;
   }
 #if BACKL_WS2812B
@@ -1352,7 +1390,7 @@ void backlEffect(void) //анимация подсветки
                 break;
             }
             setLedBright(backlBright); //установили яркость
-            setLedColor(((fastSettings.backlMode & 0x7F) == 8) ? (colorStep + 1) : fastSettings.backlMode); //отправили цвет
+            setLedColor(((fastSettings.backlMode & 0x7F) == 8) ? (colorStep + 1) : (fastSettings.backlMode & 0x7F)); //отправили цвет
           }
         }
         break;
@@ -1413,8 +1451,8 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
           case 1:
             if (OCR1B > dotBrightStep) OCR1B -= dotBrightStep;
             else {
-              OCR1B = 0;
               _dot = 1;
+              OCR1B = 0;
               dot_drv = 0;
             }
             break;
@@ -1640,11 +1678,11 @@ void fastSetSwitch(void) //переключение быстрых настро�
         if (mode != 0) mode = 0; //демострация текущего режима работы
         else {
 #if BACKL_WS2812B
-          if ((fastSettings.backlMode & 0x7F) < 11) fastSettings.backlMode++; else fastSettings.backlMode &= 0x80;
-          if ((fastSettings.backlMode & 0x7F) < 8) setLedColor(fastSettings.backlMode);
           setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+          if ((fastSettings.backlMode & 0x7F) < 11) fastSettings.backlMode++; else fastSettings.backlMode &= 0x80; //переключили режим подсветки
+          if ((fastSettings.backlMode & 0x7F) < 8) setLedColor((fastSettings.backlMode & 0x7F)); //отправляем статичный цвет
 #else
-          if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0;
+          if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0; //переключили режим подсветки
           switch (fastSettings.backlMode) {
             case 0: OCR2A = 0; break; //выключаем подсветку
             case 1: OCR2A = backlMaxBright; break; //включаем подсветку
@@ -1659,9 +1697,14 @@ void fastSetSwitch(void) //переключение быстрых настро�
       case SET_KEY_HOLD: //удержание средней кнопки
         if (mode != 0) mode = 0; //демострация текущего режима работы
         else {
-          setLedBright(backlMaxBright); //устанавливаем максимальную яркость
-          if (fastSettings.backlMode & 0x80) fastSettings.backlMode &= 0x7F; else fastSettings.backlMode |= 0x80;
-          setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+          if (fastSettings.backlMode & 0x80) { //если режим дыхания включен
+            fastSettings.backlMode &= 0x7F; //выключили режим дыхания
+            if (fastSettings.backlMode < 8) { //если выбран статичный режим
+              setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+              setLedColor(fastSettings.backlMode); //отправляем статичный цвет
+            }
+          }
+          else fastSettings.backlMode |= 0x80; //иначе включили режим дыхания
         }
         _timer_ms[TMR_MS] = SWITCH_TIME;
         break;
@@ -1682,7 +1725,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
     }
   }
   if (mode == 1) flipIndi(fastSettings.flipMode, 1); //демонстрация анимации цифр
-  EEPROM_UpdateBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //записываем настройки в память
+  updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
 }
 //--------------------------------Тревога таймера----------------------------------------
 void timerWarn(void) //тревога таймера

@@ -6,9 +6,11 @@
 #define FREQ_TICK (uint8_t)(1000 / (float)(FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
 #define LIGHT_STEP (uint8_t)((FREQ_TICK - 30) / 30) //расчет шага яркости
 
-#define TIME_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера счета времени
-#define TIME_PERIOD_MIN (uint16_t)(TIME_PERIOD - (TIME_PERIOD % 100) - 400) //минимальный период тика таймера счета времени
-#define TIME_PERIOD_MAX (uint16_t)(TIME_PERIOD - (TIME_PERIOD % 100) + 400) //максимальный период тика таймера счета времени
+#define US_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера в мкс
+#define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
+#define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
+
+#define MS_PERIOD (US_PERIOD / 1000) //период тика таймера в целых мс
 
 //тип плат часов
 #if (BOARD_TYPE == 0)
@@ -117,8 +119,8 @@ void IndiInit(void) //инициализация индикаторов
 void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
-  for (uint8_t i = !NEON_DOT; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = MIN_PWM + (float)(dimm_all / (LAMP_NUM + NEON_DOT)) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
+  for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  OCR1A = MIN_PWM + (float)(dimm_all / LAMP_NUM) * ((float)(MAX_PWM - MIN_PWM) / 120.0);
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
 void indiClr(void) //очистка индикаторов
@@ -184,7 +186,7 @@ void dotSetBright(uint8_t pwm) //установка яркости точек
   indi_dimm[0] = pwm; //устанавливаем яркость точек
   if (pwm) indi_buf[0] = 0; //разрешаем включать точки
   else indi_buf[0] = indi_null; //запрещаем включать точки
-  indiChangePwm(); //установка Linear Advance
+  //indiChangePwm(); //установка Linear Advance
 #endif
 }
 //-------------------------Вывод чисел----------------------------------------------------

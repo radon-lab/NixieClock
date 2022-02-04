@@ -69,7 +69,23 @@ boolean getTime(void) //запрашиваем время из RTC
   timeRTC.DW = getWeekDay(timeRTC.YY, timeRTC.MM, timeRTC.DD); //получаем день недели
   return 0;
 }
-//-------------------------------Настройка SQW-------------------------------------
+//--------------------------------Проверка флага OSF--------------------------------------
+boolean getOSF(void) //проверка флага OSF
+{
+  if (WireRequestFrom(RTC_ADDR, 0x0F)) return 1; //запрашиваем чтение данных, если нет ответа выходим
+  uint8_t ctrlReg = WireReadEndByte(); //прочитали регистр статуса
+  
+  if (ctrlReg & 0x80) { //проверяем установлен ли флаг OSF
+    ctrlReg &= 0x7F; //очистили флаг OSF
+    WireBeginTransmission(RTC_ADDR); //начало передачи
+    WireWrite(0x0F); //устанавливаем адрес записи
+    WireWrite(ctrlReg); //отправляем настройку OSF
+    WireEnd(); //конец передачи
+    return 1;
+  }
+  return 0;
+}
+//-----------------------------------Настройка SQW-----------------------------------------
 boolean setSQW(void) //настройка SQW
 {
   if (WireRequestFrom(RTC_ADDR, 0x0E)) return 1; //запрашиваем чтение данных, если нет ответа выходим
@@ -81,7 +97,19 @@ boolean setSQW(void) //настройка SQW
   WireEnd(); //конец передачи
   return 0;
 }
-//-------------------------------Цтение температура-------------------------------------
+//-------------------------------Отключение вывода 32K-------------------------------------
+boolean disble32K(void) //отключение вывода 32K
+{
+  if (WireRequestFrom(RTC_ADDR, 0x0F)) return 1; //запрашиваем чтение данных, если нет ответа выходим
+  uint8_t ctrlReg = WireReadEndByte() & 0xF7; //выключаем 32K
+
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x0F); //устанавливаем адрес записи
+  WireWrite(ctrlReg); //отправляем настройку SQW
+  WireEnd(); //конец передачи
+  return 0;
+}
+//-------------------------------Чтение температуры-------------------------------------
 void readTempRTC(void) //чтение температуры
 {
   if (WireRequestFrom(RTC_ADDR, 0x11)) return; //запрашиваем чтение данных, если нет ответа выходим
