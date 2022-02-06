@@ -1357,9 +1357,9 @@ void changeBright(void) //установка яркости от времени 
   if (!backlMaxBright) setLedColor(0); //выключили подсветку
 #else
   switch (fastSettings.backlMode) {
-    case 0: OCR2A = 0; break; //если посветка выключена
-    case 1: OCR2A = backlMaxBright; break; //если посветка статичная, устанавливаем яркость
-    case 2: if (!backlMaxBright) OCR2A = 0; break; //иначе посветка выключена
+    case 0: backlSetBright(0); break; //если посветка выключена
+    case 1: backlSetBright(backlMaxBright); break; //если посветка статичная, устанавливаем яркость
+    case 2: if (!backlMaxBright) backlSetBright(0); break; //иначе посветка выключена
   }
 #endif
   if (backlMaxBright) backlBrightTime = (float)BACKL_STEP / backlMaxBright / 2 * BACKL_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
@@ -1423,9 +1423,9 @@ void backlFlash(void) //мигание подсветки
     if (!_timer_ms[TMR_BACKL]) {
       _timer_ms[TMR_BACKL] = backlBrightTime;
       switch (backl_drv) {
-        case 0: if (OCR2A < backlMaxBright) OCR2A += BACKL_STEP; else backl_drv = 1; break;
+        case 0: if (OCR2A < backlMaxBright) backlSetBright(OCR2A + BACKL_STEP); else backl_drv = 1; break;
         case 1:
-          if (OCR2A > BACKL_MIN_BRIGHT) OCR2A -= BACKL_STEP;
+          if (OCR2A > BACKL_MIN_BRIGHT) backlSetBright(OCR2A - BACKL_STEP);
           else {
             backl_drv = 0;
             _timer_ms[TMR_BACKL] = BACKL_PAUSE;
@@ -1684,9 +1684,9 @@ void fastSetSwitch(void) //переключение быстрых настро�
 #else
           if (++fastSettings.backlMode > 2) fastSettings.backlMode = 0; //переключили режим подсветки
           switch (fastSettings.backlMode) {
-            case 0: OCR2A = 0; break; //выключаем подсветку
-            case 1: OCR2A = backlMaxBright; break; //включаем подсветку
-            case 2: OCR2A = BACKL_MIN_BRIGHT; break; //выключаем подсветку
+            case 0: backlSetBright(0); break; //выключаем подсветку
+            case 1: backlSetBright(backlMaxBright); break; //включаем подсветку
+            case 2: backlSetBright(backlMaxBright ? BACKL_MIN_BRIGHT : 0); break; //выключаем подсветку
           }
 #endif
         }
