@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.6 релиз от 01.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.4.7 релиз от 06.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -114,6 +114,7 @@ uint8_t semp; //переключатель семплов мелодии
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(timeRTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти количества будильников
+
 #define EEPROM_BLOCK_CRC (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //блок памяти контрольной суммы настроек
 #define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC + 1) //блок памяти контрольной суммы времени
 #define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_TIME + 1) //блок памяти контрольной суммы основных настроек
@@ -153,7 +154,7 @@ int main(void) //инициализация
     updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
     EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
   }
-  else if (!LEFT_CHK) { //иначе загружаем настройки из памяти
+  else if (LEFT_CHK) { //иначе загружаем настройки из памяти
     if (checkData(sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) updateData((uint8_t*)&timeRTC, sizeof(timeRTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
     if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
     else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
@@ -206,7 +207,7 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
     BUZZ_INV; //инвертируем бузер
     if (!--cnt_puls) { //считаем циклы времени работы бузера
       BUZZ_OFF; //если циклы кончились, выключаем бузер
-      TIMSK2 = 0; //выключаем таймер
+      TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
     }
   }
 }
@@ -319,9 +320,9 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
 {
   uint8_t CRC = 0;
 
-  for (uint8_t i = 0; i < sizeof(timeRTC); i++) checkCRC(&CRC, *((uint8_t*)(&timeRTC) + i));
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)(&mainSettings) + i));
-  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)(&fastSettings) + i));
+  for (uint8_t i = 0; i < sizeof(timeRTC); i++) checkCRC(&CRC, *((uint8_t*)&timeRTC + i));
+  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
+  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
 
   if (EEPROM_ReadByte(EEPROM_BLOCK_CRC) == CRC) return 0;
   else EEPROM_UpdateByte(EEPROM_BLOCK_CRC, CRC);
@@ -333,7 +334,7 @@ void buzz_pulse(uint16_t freq, uint16_t time) //генерация частот�
   cnt_puls = ((uint32_t)freq * (uint32_t)time) / 500; //пересчитываем частоту и время в циклы таймера
   cnt_freq = tmr_score = (1000000 / freq); //пересчитываем частоту в циклы полуволны
   OCR2B = 255; //устанавливаем COMB в начало
-  TIMSK2 = (0x01 << OCIE2B); //запускаем таймер
+  TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
 }
 //---------------------------------Воспроизведение мелодии-----------------------------------------------
 void _melody_chart(uint8_t melody) //воспроизведение мелодии
