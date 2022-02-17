@@ -89,7 +89,7 @@ boolean getOSF(void) //проверка флага OSF
 boolean setSQW(void) //настройка SQW
 {
   if (WireRequestFrom(RTC_ADDR, 0x0E)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  uint8_t ctrlReg = WireReadEndByte() & 0xE3; //выключаем INTCON и устанавливаем частоту 1Гц
+  uint8_t ctrlReg = WireReadEndByte() & 0xA3; //выключаем INTCON и устанавливаем частоту 1Гц
 
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x0E); //устанавливаем адрес записи
