@@ -1223,8 +1223,8 @@ void settings_main(void) //настроки основные
                 break;
               case SET_BACKL_BRIGHT: //яркость подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.backlBright[0] > 0) mainSettings.backlBright[0] -= 10; else mainSettings.backlBright[0] = 200; break;
-                  case 1: if (mainSettings.backlBright[1] > 10) mainSettings.backlBright[1] -= 10; else mainSettings.backlBright[1] = 200; break;
+                  case 0: if (mainSettings.backlBright[0] > 0) mainSettings.backlBright[0] -= 10; else mainSettings.backlBright[0] = 250; break;
+                  case 1: if (mainSettings.backlBright[1] > 10) mainSettings.backlBright[1] -= 10; else mainSettings.backlBright[1] = 250; break;
                 }
 #if BACKL_WS2812B
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
@@ -1286,8 +1286,8 @@ void settings_main(void) //настроки основные
                 break;
               case SET_BACKL_BRIGHT: //яркость подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.backlBright[0] < 200) mainSettings.backlBright[0] += 10; else mainSettings.backlBright[0] = 0; break;
-                  case 1: if (mainSettings.backlBright[1] < 200) mainSettings.backlBright[1] += 10; else mainSettings.backlBright[1] = 10; break;
+                  case 0: if (mainSettings.backlBright[0] < 250) mainSettings.backlBright[0] += 10; else mainSettings.backlBright[0] = 0; break;
+                  case 1: if (mainSettings.backlBright[1] < 250) mainSettings.backlBright[1] += 10; else mainSettings.backlBright[1] = 10; break;
                 }
 #if BACKL_WS2812B
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
@@ -1465,7 +1465,7 @@ void backlEffect(void) //анимация подсветки
           switch (backl_drv) {
             case 0: if (incLedBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 1; break;
             case 1:
-              if (decLedBright(BACKL_MODE_2_STEP, backlMaxBright)) {
+              if (decLedBright(BACKL_MODE_2_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) {
                 backl_drv = 0;
                 if (fastSettings.backlMode == 3) color_steps += BACKL_MODE_3_COLOR;
                 else color_steps = fastSettings.backlColor; //иначе статичный цвет
@@ -1485,7 +1485,7 @@ void backlEffect(void) //анимация подсветки
           static uint8_t color_steps; //номер цвета
           _timer_ms[TMR_BACKL] = BACKL_MODE_4_TIME; //установили таймер
           if (backl_steps) { //если есть шаги затухания
-            decLedsBright(backl_pos - 1, BACKL_MODE_4_BRIGHT); //уменьшаем яркость
+            decLedsBright(backl_pos - 1, BACKL_MODE_4_STEP); //уменьшаем яркость
             if (fastSettings.backlMode == 5) color_steps += BACKL_MODE_5_COLOR; //плавно меняем цвет
             else color_steps = fastSettings.backlColor; //иначе статичный цвет
             backl_steps--; //уменьшаем шаги затухания
@@ -1496,7 +1496,7 @@ void backlEffect(void) //анимация подсветки
               case 1: if (backl_pos < LAMP_NUM + 1) backl_pos++; else backl_drv = 0; break; //едем вправо
             }
             setLedBright(backl_pos - 1, backlMaxBright); //установили яркость
-            backl_steps = BACKL_MODE_4_STEPS; //установили шаги затухания
+            backl_steps = BACKL_MODE_4_FADING; //установили шаги затухания
           }
           setLedHue(color_steps); //отправили цвет
         }
@@ -1511,7 +1511,7 @@ void backlEffect(void) //анимация подсветки
             if (incLedBright(backl_num, BACKL_MODE_6_STEP, backlMaxBright)) backl_drv &= ~(0x01 << backl_num); //прибавили шаг яркости
           }
           else { //иначе светодиод в режиме затухания
-            if (decLedBright(backl_num, BACKL_MODE_6_STEP, BACKL_MODE_6_MIN_BRIGHT)) backl_drv |= (0x01 << backl_num); //иначе убавляем яркость
+            if (decLedBright(backl_num, BACKL_MODE_6_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) backl_drv |= (0x01 << backl_num); //иначе убавляем яркость
           }
           if (fastSettings.backlMode == 7) color_steps += BACKL_MODE_7_COLOR; //плавно меняем цвет
           else color_steps = fastSettings.backlColor; //иначе статичный цвет
@@ -1549,9 +1549,9 @@ void backlFlash(void) //мигание подсветки
       switch (backl_drv) {
         case 0: if (backlIncBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 1; break;
         case 1:
-          if (backlDecBright(BACKL_MODE_2_STEP, BACKL_MODE_2_MIN_BRIGHT)) {
-            backl_drv = 0;
+          if (backlDecBright(BACKL_MODE_2_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) {
             _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE;
+            backl_drv = 0;
           }
           break;
       }
@@ -1806,7 +1806,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
               case 2:
-                setLedBright(BACKL_MODE_2_MIN_BRIGHT); //устанавливаем минимальную яркость
+                setLedBright(BACKL_MIN_BRIGHT); //устанавливаем минимальную яркость
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
               case 4:
@@ -1814,7 +1814,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
               case 6:
-                setLedBright(BACKL_MODE_6_MIN_BRIGHT); //устанавливаем минимальную яркость
+                setLedBright(BACKL_MIN_BRIGHT); //устанавливаем минимальную яркость
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
               case 8:
@@ -1831,7 +1831,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
           switch (fastSettings.backlMode) {
             case 0: backlSetBright(0); break; //выключаем подсветку
             case 1: backlSetBright(backlMaxBright); break; //включаем подсветку
-            case 2: backlSetBright(backlMaxBright ? BACKL_MODE_2_MIN_BRIGHT : 0); break; //выключаем подсветку
+            case 2: backlSetBright(backlMaxBright ? BACKL_MIN_BRIGHT : 0); break; //выключаем подсветку
           }
 #endif
         }
