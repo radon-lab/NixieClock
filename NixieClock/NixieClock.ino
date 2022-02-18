@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.8 релиз от 16.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.4.8 релиз от 17.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -267,10 +267,7 @@ void testLamp(void) //проверка системы
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
           dataUpdate(); //обработка данных
           MELODY_PLAY(0); //воспроизводим мелодию
-          if (check_keys()) {
-            fastSettings.backlMode &= 0x7F; //запретили эффекты подсветки
-            return; //возврат если нажата кнопка
-          }
+          if (check_keys()) return; //возврат если нажата кнопка
         }
       }
 #if BACKL_WS2812B
@@ -1383,7 +1380,6 @@ void settings_main(void) //настроки основные
           dotSetBright(dotMaxBright); //включаем точки
         }
         else {
-          fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
           if (EIMSK && cur_mode == SET_TIME_CORRECT) WriteAgingRTC((uint8_t)aging); //запись коррекции хода
@@ -1394,7 +1390,6 @@ void settings_main(void) //настроки основные
 
       case SET_KEY_HOLD: //удержание средней кнопки
         updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
-        fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
         changeBright(); //установка яркости от времени суток
         _tmrTemp = 0; //сбрасываем таймер показа температуры
         return;
@@ -1427,9 +1422,11 @@ void changeBright(void) //установка яркости от времени 
       if (dotBrightTime < DOT_TIMER) dotBrightTime = DOT_TIMER; //если шаг слишком мал, устанавливаем минимум
       break;
   }
+  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
 #if BACKL_WS2812B
   if (backlMaxBright) {
     switch (fastSettings.backlMode) {
+      case 0: clrLeds(); break; //выключили светодиоды
       case 1:
         setLedBright(backlMaxBright); //устанавливаем максимальную яркость
         setLedHue(fastSettings.backlColor); //отправляем статичный цвет
