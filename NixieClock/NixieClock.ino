@@ -25,6 +25,7 @@ struct temp {
   uint16_t press = 0; //давление
   uint8_t hum = 0; //влажность
 } sens;
+void dataUpdate(void);
 
 //----------------Библиотеки----------------
 #include <util/delay.h>

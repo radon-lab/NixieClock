@@ -83,7 +83,7 @@ void readTempDS(void)
   if (_timer_ms[TMR_SENS]) return;
 
   requestTemp(); //запрашиваем температуру
-  for (_timer_ms[TMR_SENS] = 100; _timer_ms[TMR_SENS];) ; //ждем
+  for (_timer_ms[TMR_SENS] = 100; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
 
   _timer_ms[TMR_SENS] = 1000;
 
