@@ -1662,8 +1662,8 @@ void autoShowTemp(void) //автоматический показ темпера
     uint8_t pos = LAMP_NUM; //текущее положение анимации
     boolean drv = 0; //направление анимации
 
-    dotSetBright(dotMaxBright); //включаем точки
     updateTemp(); //обновить показания температуры
+    dotSetBright(dotMaxBright); //включаем точки
 
     for (uint8_t mode = 0; mode < 3; mode++) {
       switch (mode) {
@@ -1714,9 +1714,9 @@ void showTemp(void) //показать температуру
   uint8_t mode = 0; //текущий режим
 
   _sec = 0; //обновление экрана
-  dotSetBright(dotMaxBright); //включаем точки
 
   updateTemp(); //обновить показания температуры
+  dotSetBright(dotMaxBright); //включаем точки
 
   for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
