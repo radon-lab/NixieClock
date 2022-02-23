@@ -114,9 +114,9 @@ void readTempRTC(void) //чтение температуры
 {
   if (WireRequestFrom(RTC_ADDR, 0x11)) return; //запрашиваем чтение данных, если нет ответа выходим
   uint16_t temp = ((float)(WireRead() << 2 | WireReadEndByte() >> 6) * 0.25) * 100.0;
-  tempSens.temp = (temp > 8500) ? 0 : temp;
-  tempSens.press = 0;
-  tempSens.hum = 0;
+  sens.temp = (temp > 8500) ? 0 : temp;
+  sens.press = 0;
+  sens.hum = 0;
 }
 //-------------------------------Чтение коррекции хода-------------------------------------
 uint8_t readAgingRTC(void) //чтение коррекции хода

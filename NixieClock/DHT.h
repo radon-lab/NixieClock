@@ -5,10 +5,12 @@ void readTempDHT22(void)
 {
   if (!initDHT) {
     initDHT = 1;
-    SENS_INIT;
+    SENS_INIT; //инициализируем датчик
     _delay_ms(2);
   }
+
   if (_timer_ms[TMR_SENS]) return;
+  _timer_ms[TMR_SENS] = 2000;
 
   SENS_OUT;
   SENS_LO; //сигнал начала чтения
@@ -35,23 +37,26 @@ void readTempDHT22(void)
     if (low < high) data[i >> 3] |= 0x01;
   }
 
-  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return;
+  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
+    readTempRTC(); //читаем температуру DS3231
+    return; //выходим
+  }
 
-  tempSens.temp = (((uint16_t)(data[2] & 0x7F)) << 8 | data[3]) * 10;
-  tempSens.press = 0;
-  tempSens.hum = (((uint16_t)data[0]) << 8 | data[1]) / 10;
-
-  _timer_ms[TMR_SENS] = 2000;
+  sens.temp = (((uint16_t)(data[2] & 0x7F)) << 8 | data[3]) * 10;
+  sens.press = 0;
+  sens.hum = (((uint16_t)data[0]) << 8 | data[1]) / 10;
 }
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT11(void)
 {
   if (!initDHT) {
     initDHT = 1;
-    SENS_INIT;
+    SENS_INIT; //инициализируем датчик
     _delay_ms(2);
   }
+
   if (_timer_ms[TMR_SENS]) return;
+  _timer_ms[TMR_SENS] = 2000;
 
   SENS_OUT;
   SENS_LO; //сигнал начала чтения
@@ -78,11 +83,12 @@ void readTempDHT11(void)
     if (low < high) data[i >> 3] |= 0x01;
   }
 
-  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return;
+  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
+    readTempRTC(); //читаем температуру DS3231
+    return; //выходим
+  }
 
-  tempSens.temp = (((uint16_t)data[2] * 10) + data[3]) * 10;
-  tempSens.press = 0;
-  tempSens.hum = data[0];
-
-  _timer_ms[TMR_SENS] = 2000;
+  sens.temp = (((uint16_t)data[2] * 10) + data[3]) * 10;
+  sens.press = 0;
+  sens.hum = data[0];
 }

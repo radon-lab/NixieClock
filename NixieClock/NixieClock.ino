@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.9 релиз от 21.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.4.9 релиз от 23.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -19,6 +19,13 @@ enum {
 };
 uint16_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисекунд
 
+//----------------Температура--------------
+struct temp {
+  uint16_t temp = 0; //температура
+  uint16_t press = 0; //давление
+  uint8_t hum = 0; //влажность
+} sens;
+
 //----------------Библиотеки----------------
 #include <util/delay.h>
 
@@ -28,8 +35,8 @@ uint16_t _timer_ms[TIMERS_NUM]; //таймер отсчета миллисеку
 #include "indiDisp.h"
 #include "wire.h"
 #include "EEPROM.h"
-#include "BME.h"
 #include "RTC.h"
+#include "BME.h"
 #include "DHT.h"
 #include "DS.h"
 #include "WS.h"
@@ -1207,7 +1214,7 @@ void settings_main(void) //настроки основные
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[1] / 10, 2, 2, 0); //вывод часов
               break;
             case SET_TEMP_SENS:
-              if (!blink_data || cur_indi) indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод часов
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод часов
               break;
             case SET_AUTO_TEMP:
@@ -1661,13 +1668,13 @@ void autoShowTemp(void) //автоматический показ темпера
     for (uint8_t mode = 0; mode < 3; mode++) {
       switch (mode) {
         case 1:
-          if (!tempSens.hum) {
-            if (!tempSens.press) return; //выходим
+          if (!sens.hum) {
+            if (!sens.press) return; //выходим
             else mode = 2; //отображаем давление
           }
           dotSetBright(0); //выключаем точки
           break;
-        case 2: if (!tempSens.press) return; break; //выходим
+        case 2: if (!sens.press) return; break; //выходим
       }
 
       while (1) { //анимация перехода
@@ -1678,9 +1685,9 @@ void autoShowTemp(void) //автоматический показ темпера
 
           indiClr(); //очистка индикаторов
           switch (mode) {
-            case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); break; //вывод температуры
-            case 1: indiPrintNum(tempSens.hum, pos, 4, ' '); break; //вывод влажности
-            case 2: indiPrintNum(tempSens.press, pos, 4, ' '); break; //вывод давления
+            case 0: indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); break; //вывод температуры
+            case 1: indiPrintNum(sens.hum, pos, 4, ' '); break; //вывод влажности
+            case 2: indiPrintNum(sens.press, pos, 4, ' '); break; //вывод давления
           }
           if (!drv) {
             if (pos > 0) pos--;
@@ -1719,9 +1726,9 @@ void showTemp(void) //показать температуру
       indiClr(); //очистка индикаторов
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
-        case 0: indiPrintNum(tempSens.temp / 10 + mainSettings.tempCorrect, 0, 3, ' '); break;
-        case 1: indiPrintNum(tempSens.hum, 0, 4, ' '); break;
-        case 2: indiPrintNum(tempSens.press, 0, 4, ' '); break;
+        case 0: indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3, ' '); break;
+        case 1: indiPrintNum(sens.hum, 0, 4, ' '); break;
+        case 2: indiPrintNum(sens.press, 0, 4, ' '); break;
       }
     }
 
@@ -1730,15 +1737,15 @@ void showTemp(void) //показать температуру
         if (++mode > 2) mode = 0;
         switch (mode) {
           case 1:
-            if (!tempSens.hum) {
-              if (!tempSens.press) mode = 0;
+            if (!sens.hum) {
+              if (!sens.press) mode = 0;
               else {
                 mode = 2;
                 dotSetBright(0); //выключаем точки
               }
             }
             else dotSetBright(0); break; //выключаем точки
-          case 2: if (!tempSens.press) mode = 0; break;
+          case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) dotSetBright(dotMaxBright); //включаем точки
         _timer_ms[TMR_MS] = SHOW_TIME;

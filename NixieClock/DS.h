@@ -61,30 +61,45 @@ void requestTemp(void)
   oneWireWrite(0xCC);
   oneWireWrite(0x44);
 }
+//-----------------------------------Установка разрешения датчика-----------------------------------
+void setResolution(void)
+{
+  if (oneWireReset()) return;
+  oneWireWrite(0xCC);
+  oneWireWrite(0x4E);
+  oneWireWrite(0xFF);
+  oneWireWrite(0x00);
+  oneWireWrite(0x1F);
+}
 //--------------------------------------Чтение температуры------------------------------------------
 void readTempDS(void)
 {
   if (!initDS) {
     initDS = 1;
-    SENS_INIT;
-    requestTemp();
-    readTempRTC();
-    _timer_ms[TMR_SENS] = 1000;
-    return;
+    SENS_INIT; //инициализируем датчик
+    setResolution(); //устанавливаем разрешение датчика
   }
+
   if (_timer_ms[TMR_SENS]) return;
-  if (oneWireReset()) return;
+
+  requestTemp(); //запрашиваем температуру
+  for (_timer_ms[TMR_SENS] = 100; _timer_ms[TMR_SENS];) ; //ждем
+
+  _timer_ms[TMR_SENS] = 1000;
+
+  if (oneWireReset()) {
+    readTempRTC(); //читаем температуру DS3231
+    return; //выходим
+  }
 
   oneWireWrite(0xCC);
   oneWireWrite(0xBE);
 
   uint16_t raw = (uint16_t)(oneWireRead() | (oneWireRead() << 8));
-  if (raw & 0x8000) raw = (raw ^ 0xFFFF) + 1;
+  if (raw & 0x8000) raw = 0; //если значение ниже нуля
 
-  tempSens.temp = (raw * 100) >> 4;
-  tempSens.press = 0;
-  tempSens.hum = 0;
-
-  requestTemp();
-  _timer_ms[TMR_SENS] = 1000;
+  sens.temp = (raw * 100) >> 1;
+  sens.temp -= sens.temp % 50;
+  sens.press = 0;
+  sens.hum = 0;
 }
