@@ -1,4 +1,5 @@
 boolean initDS = 0; //флаг инициализации датчика
+boolean typeDS = 1; //тип датчика температуры
 
 //-----------------------------------Сигнал сброса шины--------------------------------------------
 boolean oneWireReset(void)
@@ -71,13 +72,24 @@ void setResolution(void)
   oneWireWrite(0x00);
   oneWireWrite(0x1F);
 }
+//-------------------------------------Чтение семейства датчика-------------------------------------
+boolean readSensCode(void)
+{
+  if (oneWireReset()) return 1;
+  oneWireWrite(0xCC);
+  return (oneWireRead() != 0x10);
+}
 //--------------------------------------Чтение температуры------------------------------------------
 void readTempDS(void)
 {
   if (!initDS) {
     initDS = 1;
     SENS_INIT; //инициализируем датчик
-    setResolution(); //устанавливаем разрешение датчика
+    if (readSensCode()) {
+      setResolution(); //устанавливаем разрешение датчика
+      typeDS = 1; //датчик DS18B20
+    }
+    else typeDS = 0; //датчик DS18S20
   }
 
   if (_timer_ms[TMR_SENS]) return;
@@ -95,11 +107,13 @@ void readTempDS(void)
   oneWireWrite(0xCC);
   oneWireWrite(0xBE);
 
-  uint16_t raw = (uint16_t)(oneWireRead() | (oneWireRead() << 8));
-  if (raw & 0x8000) raw = 0; //если значение ниже нуля
+  uint16_t raw = oneWireRead() | ((uint16_t)oneWireRead() << 8); //читаем сырое значение
+  if (raw & 0x8000) raw = 0;
 
-  sens.temp = (raw * 100) >> 1;
-  sens.temp -= sens.temp % 50;
+  switch (typeDS) {
+    case 0: sens.temp = raw * 50; break; //переводим в температуру для DS18S20
+    case 1: sens.temp = (raw * 100) >> 4; break; //переводим в температуру для DS18B20
+  }
   sens.press = 0;
   sens.hum = 0;
 }

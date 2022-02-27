@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.4.9 релиз от 23.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.0 релиз от 26.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -25,7 +25,7 @@ struct temp {
   uint16_t press = 0; //давление
   uint8_t hum = 0; //влажность
 } sens;
-void dataUpdate(void);
+void dataUpdate(void); //процедура обработки данных
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -121,8 +121,8 @@ enum {
   BACKL_PULS_COLOR,          //дыхание со сменой цвета при затухании
   BACKL_RUNNING_FIRE,        //бегущий огонь
   BACKL_RUNNING_FIRE_COLOR,  //бегущий огонь со сменой цвета
-  BACKL_NORTH_LIGHTS,        //северное сияние
-  BACKL_NORTH_LIGHTS_COLOR,  //северное сияние со сменой цвета
+  BACKL_WAVE,                //волна
+  BACKL_WAVE_COLOR,          //волна со сменой цвета
   BACKL_SMOOTH_COLOR_CHANGE, //плавная смена цвета
   BACKL_RAINBOW,             //радуга
   BACKL_CONFETTI,            //конфетти
@@ -1492,7 +1492,7 @@ void changeBright(void) //установка яркости от времени 
 //----------------------------------Анимация подсветки---------------------------------
 void backlEffect(void) //анимация подсветки
 {
-  static uint8_t backl_drv; //направление огня
+  static boolean backl_drv; //направление огня
   static uint8_t backl_pos; //положение огня
   static uint8_t backl_steps; //шаги затухания
   static uint8_t color_steps; //номер цвета
@@ -1505,17 +1505,17 @@ void backlEffect(void) //анимация подсветки
       case BACKL_PULS:
       case BACKL_PULS_COLOR: { //дыхание подсветки
           _timer_ms[TMR_BACKL] = backlBrightTime; //установили таймер
-          switch (backl_drv) {
-            case 0: if (incLedBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 1; break; //прибавили шаг яркости
-            case 1:
-              if (decLedBright(BACKL_MODE_2_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //уменьшаем яркость
-                backl_drv = 0;
-                if (fastSettings.backlMode == BACKL_PULS_COLOR) color_steps += BACKL_MODE_3_COLOR; //плавно меняем цвет
-                else color_steps = fastSettings.backlColor; //иначе статичный цвет
-                _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE; //установили таймер
-                return; //выходим
-              }
-              break;
+          if (backl_drv) { //если светодиоды в режиме разгорания
+            if (incLedBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 0; //прибавили шаг яркости
+          }
+          else { //иначе светодиоды в режиме затухания
+            if (decLedBright(BACKL_MODE_2_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //уменьшаем яркость
+              backl_drv = 1;
+              if (fastSettings.backlMode == BACKL_PULS_COLOR) color_steps += BACKL_MODE_3_COLOR; //плавно меняем цвет
+              else color_steps = fastSettings.backlColor; //иначе статичный цвет
+              _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE; //установили таймер
+              return; //выходим
+            }
           }
           setLedHue(color_steps); //отправили цвет
         }
@@ -1529,10 +1529,12 @@ void backlEffect(void) //анимация подсветки
             else color_steps = fastSettings.backlColor; //иначе статичный цвет
             backl_steps--; //уменьшаем шаги затухания
           }
-          else {
-            switch (backl_drv) {
-              case 0: if (backl_pos > 0) backl_pos--; else backl_drv = 1; break; //едем влево
-              case 1: if (backl_pos < LAMP_NUM + 1) backl_pos++; else backl_drv = 0; break; //едем вправо
+          else { //иначе двигаем голову
+            if (backl_drv) { //если направление вправо
+              if (backl_pos < LAMP_NUM + 1) backl_pos++; else backl_drv = 0; //едем вправо
+            }
+            else { //иначе напрвление влево
+              if (backl_pos > 0) backl_pos--; else backl_drv = 1; //едем влево
             }
             setLedBright(backl_pos - 1, backlMaxBright); //установили яркость
             backl_steps = BACKL_MODE_4_FADING; //установили шаги затухания
@@ -1540,17 +1542,28 @@ void backlEffect(void) //анимация подсветки
           setLedHue(color_steps); //отправили цвет
         }
         break;
-      case BACKL_NORTH_LIGHTS:
-      case BACKL_NORTH_LIGHTS_COLOR: { //северное сияние
+      case BACKL_WAVE:
+      case BACKL_WAVE_COLOR: { //волна
           _timer_ms[TMR_BACKL] = BACKL_MODE_6_TIME; //установили таймер
-          uint8_t backl_num = random(0, LAMP_NUM); //выбираем случайный индикатор
-          if (backl_drv & (0x01 << backl_num)) { //если светодиод в режиме разгорания
-            if (incLedBright(backl_num, BACKL_MODE_6_STEP, backlMaxBright)) backl_drv &= ~(0x01 << backl_num); //прибавили шаг яркости
+          if (backl_drv) {
+            if (incLedBright(backl_pos, BACKL_MODE_6_STEP, backlMaxBright)) { //прибавили шаг яркости
+              if (backl_pos < (LAMP_NUM - 1)) backl_pos++; //сменили позицию
+              else {
+                backl_pos = 0; //сбросили позицию
+                backl_drv = 0; //перешли в затухание
+              }
+            }
           }
-          else { //иначе светодиод в режиме затухания
-            if (decLedBright(backl_num, BACKL_MODE_6_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) backl_drv |= (0x01 << backl_num); //иначе убавляем яркость
+          else {
+            if (decLedBright(backl_pos, BACKL_MODE_6_STEP, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //иначе убавляем яркость
+              if (backl_pos < (LAMP_NUM - 1)) backl_pos++; //сменили позицию
+              else {
+                backl_pos = 0; //сбросили позицию
+                backl_drv = 1; //перешли в разгорание
+              }
+            }
           }
-          if (fastSettings.backlMode == BACKL_NORTH_LIGHTS_COLOR) color_steps += BACKL_MODE_7_COLOR; //плавно меняем цвет
+          if (fastSettings.backlMode == BACKL_WAVE_COLOR) color_steps += BACKL_MODE_7_COLOR; //плавно меняем цвет
           else color_steps = fastSettings.backlColor; //иначе статичный цвет
           setLedHue(color_steps); //отправили цвет
         }
@@ -1832,8 +1845,8 @@ void fastSetSwitch(void) //переключение быстрых настро�
         if (mode != FAST_BACKL_MODE) mode = FAST_BACKL_MODE; //демострация текущего режима работы
         else {
 #if BACKL_WS2812B
-          if (fastSettings.backlMode < (BACKL_EFFECT_NUM - 1)) {
-            switch (++fastSettings.backlMode) {
+          if (++fastSettings.backlMode < BACKL_EFFECT_NUM) {
+            switch (fastSettings.backlMode) {
               case BACKL_STATIC:
                 setLedBright(backlMaxBright); //устанавливаем максимальную яркость
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
@@ -1846,7 +1859,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
                 setLedBright(0); //устанавливаем минимальную яркость
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
-              case BACKL_NORTH_LIGHTS:
+              case BACKL_WAVE:
                 setLedBright(BACKL_MIN_BRIGHT); //устанавливаем минимальную яркость
                 setLedHue(fastSettings.backlColor); //отправляем статичный цвет
                 break;
@@ -1873,7 +1886,16 @@ void fastSetSwitch(void) //переключение быстрых настро�
         break;
 #if BACKL_WS2812B
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (!mode) mode = FAST_BACKL_COLOR;
+        if (!mode) {
+          switch (fastSettings.backlMode) {
+            case BACKL_STATIC:
+            case BACKL_PULS:
+            case BACKL_RUNNING_FIRE:
+            case BACKL_WAVE:
+              mode = FAST_BACKL_COLOR;
+              break;
+          }
+        }
         _timer_ms[TMR_MS] = SWITCH_TIME;
         anim = 0;
         break;
@@ -1881,14 +1903,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (mode == FAST_BACKL_COLOR) {
           if (fastSettings.backlColor < 250) fastSettings.backlColor += 10; else fastSettings.backlColor = 0;
-          switch (fastSettings.backlMode) {
-            case BACKL_STATIC:
-            case BACKL_PULS:
-            case BACKL_RUNNING_FIRE:
-            case BACKL_NORTH_LIGHTS:
-              setLedHue(fastSettings.backlColor); //отправляем статичный цвет
-              break;
-          }
+          setLedHue(fastSettings.backlColor); //отправляем статичный цвет
         }
         else if (mode != FAST_FLIP_MODE) mode = FAST_FLIP_MODE; //демострация текущего режима работы
         else if (++fastSettings.flipMode > (FLIP_EFFECT_NUM + 1)) fastSettings.flipMode = 0;
@@ -1899,14 +1914,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
       case LEFT_KEY_PRESS: //клик левой кнопкой
         if (mode == FAST_BACKL_COLOR) {
           if (fastSettings.backlColor > 0) fastSettings.backlColor -= 10; else fastSettings.backlColor = 250;
-          switch (fastSettings.backlMode) {
-            case BACKL_STATIC:
-            case BACKL_PULS:
-            case BACKL_RUNNING_FIRE:
-            case BACKL_NORTH_LIGHTS:
-              setLedHue(fastSettings.backlColor); //отправляем статичный цвет
-              break;
-          }
+          setLedHue(fastSettings.backlColor); //отправляем статичный цвет
         }
         else if (mode != FAST_DOT_MODE) mode = FAST_DOT_MODE; //демострация текущего режима работы
         else if (++fastSettings.dotMode > DOT_PULS) fastSettings.dotMode = 0;

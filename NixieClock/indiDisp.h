@@ -43,7 +43,7 @@ const uint8_t digitMask[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 10};   //тут вв�
 const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой порядок катодов
 #endif
 
-const uint8_t decoderMask[] = {DECODER_4, DECODER_2, DECODER_1, DECODER_3}; //порядок пинов дешефратора(0, 1, 2, 3)
+const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
 
 uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов

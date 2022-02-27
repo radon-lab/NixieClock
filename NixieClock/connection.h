@@ -1,7 +1,7 @@
 //Соединения периферии с портами МК
-//    PORTD (2 - D2 | 3 - D3 | 4 - D4 | 5 - D5 | 6 - D6 | 7 - D7)
-//  PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13)
-//    PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
+//    PORTD (0 - D0 | 1 - D1 | 2 - D2 | 3 - D3 | 4 - D4 | 5 - D5 | 6 - D6 | 7 - D7)
+//           PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13)
+//             PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
 
 #define DDR_REG(portx)  (*(&portx - 1))
 #define PIN_REG(portx)  (*(&portx - 2))
@@ -34,10 +34,10 @@
 #define DOT_PORT  PORTB
 
 //дешифратор(только порты A0-A3)
-#define DECODER_1 0 //A0
+#define DECODER_1 3 //A3
 #define DECODER_2 1 //A1
-#define DECODER_3 2 //A2
-#define DECODER_4 3 //A3
+#define DECODER_3 0 //A0
+#define DECODER_4 2 //A2
 
 //пин аналоговых кнопок A7
 #define ANALOG_BTN_PIN 7 // A7
