@@ -98,7 +98,7 @@ boolean setSQW(void) //настройка SQW
   return 0;
 }
 //-------------------------------Отключение вывода 32K-------------------------------------
-boolean disble32K(void) //отключение вывода 32K
+boolean disable32K(void) //отключение вывода 32K
 {
   if (WireRequestFrom(RTC_ADDR, 0x0F)) return 1; //запрашиваем чтение данных, если нет ответа выходим
   uint8_t ctrlReg = WireReadEndByte() & 0xF7; //выключаем 32K

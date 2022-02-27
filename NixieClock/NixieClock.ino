@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.0 релиз от 26.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.1 релиз от 27.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -207,8 +207,13 @@ int main(void) //инициализация
   RIGHT_INIT; //инициализация правой кнопки
 #endif
 
+#if !BTN_ADD_DISABLE
   ADD_INIT; //инициализация дополнительной кнопки
+#endif
+
+#if !GEN_DISABLE
   CONV_INIT; //инициализация преобразователя
+#endif
   SQW_INIT; //инициализация счета секунд
   BACKL_INIT; //инициализация подсветки
   BUZZ_INIT; //инициализация бузера
@@ -219,7 +224,9 @@ int main(void) //инициализация
     updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
     updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
     updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
+#if ALARM_TYPE
     EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
+#endif
   }
   else if (LEFT_CHK) { //иначе загружаем настройки из памяти
     if (checkData(sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
@@ -227,10 +234,12 @@ int main(void) //инициализация
     else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
     if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
+#if ALARM_TYPE
     alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
+#endif
   }
 
-#if USE_ONE_ALARM
+#if ALARM_TYPE == 1
   initAlarm(); //инициализация будильника
 #endif
 
@@ -332,7 +341,7 @@ void testLamp(void) //проверка системы
 //------------------------Проверка модуля часов реального времени--------------------------------------
 boolean testRTC(void) //проверка модуля часов реального времени
 {
-  if (disble32K()) return 1; //отключение вывода 32K
+  if (disable32K()) return 1; //отключение вывода 32K
   if (setSQW()) return 1; //установка SQW на 1Гц
 
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
@@ -633,7 +642,9 @@ void dataUpdate(void) //обработка данных
       }
       _tmrBurn++; //прибавляем минуту к таймеру антиотравления
       _animShow = 1; //показать анимацию переключения цифр
+#if ALARM_TYPE
       alarmDataUpdate(); //проверка будильников
+#endif
     }
     switch (timerMode) {
       case 1: if (timerCnt != 65535) timerCnt++; break;
@@ -704,16 +715,20 @@ uint8_t check_keys(void) //проверка кнопок
         btn_switch = 3; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
+#if !BTN_ADD_DISABLE
       else if (!ADD_CHK) { //если нажата дополнительная кл.
         btn_switch = 4; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
+#endif
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
     case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
     case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
     case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
+#if !BTN_ADD_DISABLE
     case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную клавишу
+#endif
   }
 
   switch (btn_state) { //переключаемся в зависимости от состояния клавиши
@@ -726,7 +741,9 @@ uint8_t check_keys(void) //проверка кнопок
             case 1: return SET_KEY_HOLD; //возвращаем удержание средней кнопки
             case 2: return LEFT_KEY_HOLD; //возвращаем удержание левой кнопки
             case 3: return RIGHT_KEY_HOLD; //возвращаем удержание правой кнопки
+#if !BTN_ADD_DISABLE
             case 4: return ADD_KEY_HOLD; //возвращаем удержание дополнительной кнопки
+#endif
           }
         }
       }
@@ -741,7 +758,9 @@ uint8_t check_keys(void) //проверка кнопок
           case 1: return SET_KEY_PRESS; //возвращаем клик средней кнопкой
           case 2: return LEFT_KEY_PRESS; //возвращаем клик левой кнопкой
           case 3: return RIGHT_KEY_PRESS; //возвращаем клик правой кнопкой
+#if !BTN_ADD_DISABLE
           case 4: return ADD_KEY_PRESS; //возвращаем клик дополнительной кнопкой
+#endif
         }
       }
       else if (!btn_tmr) {
@@ -1340,7 +1359,11 @@ void settings_main(void) //настроки основные
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127; break;
                   case 1:
+#if !SENS_PORT_DISABLE
                     if (mainSettings.sensorSet < 4) mainSettings.sensorSet++;
+#else
+                    if (mainSettings.sensorSet < 1) mainSettings.sensorSet++;
+#endif
                     updateTemp(); //обновить показания температуры
                     break;
                 }
@@ -1662,9 +1685,11 @@ void updateTemp(void) //обновить показания температур
   switch (mainSettings.sensorSet) { //выбор датчика температуры
     case 0: readTempRTC(); break; //чтение температуры с датчика DS3231
     case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
+#if !SENS_PORT_DISABLE
     case 2: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
     case 3: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
     case 4: readTempDS(); break; //чтение температуры с датчика DS18B20
+#endif
   }
 }
 //--------------------------------Автоматический показ температуры----------------------------------------
@@ -2589,14 +2614,16 @@ void mainScreen(void) //главный экран
       showDate(); //показать дату
       _sec = _animShow = 0; //обновление экрана
       break;
+#if ALARM_TYPE
     case RIGHT_KEY_HOLD: //удержание правой кнопки
-#if USE_ONE_ALARM
+#if ALARM_TYPE == 1
       settings_singleAlarm(); //настройка будильника
 #else
       settings_multiAlarm(); //настройка будильников
 #endif
       _sec = _animShow = 0; //обновление экрана
       break;
+#endif
     case SET_KEY_PRESS: //клик средней кнопкой
       fastSetSwitch(); //переключение настроек
       _sec = _animShow = 0; //обновление экрана
@@ -2609,10 +2636,12 @@ void mainScreen(void) //главный экран
       else settings_main(); //настроки основные
       _sec = _animShow = 0; //обновление экрана
       break;
+#if !BTN_ADD_DISABLE
     case ADD_KEY_PRESS: //клик дополнительной кнопкой
       timerStopwatch(); //таймер-секундомер
       _sec = _animShow = 0; //обновление экрана
       break;
+#endif
   }
 }
 //-------------------------------Получить 12-ти часовой формат---------------------------------------------------
