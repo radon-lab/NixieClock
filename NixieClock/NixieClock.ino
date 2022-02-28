@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.1 релиз от 27.02.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.1 релиз от 28.02.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -144,8 +144,11 @@ boolean _dot; //флаг обновления точек
 uint8_t dotBrightStep; //шаг мигания точек
 uint8_t dotBrightTime; //период шага мигания точек
 uint8_t dotMaxBright; //максимальная яркость точек
-uint8_t backlBrightTime; //период шага "дыхания" подсветки
+
+uint16_t backlPulsBrightTime; //период шага "дыхания" подсветки
+uint16_t backlWaveBrightTime; //период шага "волна" подсветки
 uint8_t backlMaxBright; //максимальная яркость подсветки
+
 uint8_t indiMaxBright; //максимальная яркость индикаторов
 
 //alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника
@@ -252,13 +255,19 @@ int main(void) //инициализация
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
   changeBright(); //установка яркости от времени суток
+#if ALARM_TYPE
   checkAlarms(); //проверка будильников
+#endif
   //----------------------------------Главная----------------------------------
   for (;;) //главная
   {
     dataUpdate(); //обработка данных
+#if !BTN_ADD_DISABLE
     timerWarn(); //тревога таймера
+#endif
+#if ALARM_TYPE
     alarmWarn(); //тревога будильника
+#endif
     dotFlash(); //мигаем точками
     mainScreen(); //главный экран
   }
@@ -646,10 +655,12 @@ void dataUpdate(void) //обработка данных
       alarmDataUpdate(); //проверка будильников
 #endif
     }
+#if !BTN_ADD_DISABLE
     switch (timerMode) {
       case 1: if (timerCnt != 65535) timerCnt++; break;
       case 2: if (timerCnt) timerCnt--; break;
     }
+#endif
     _sec = _dot = 0; //очищаем флаги секунды и точек
   }
 }
@@ -1509,7 +1520,10 @@ void changeBright(void) //установка яркости от времени 
     case BACKL_PULS: if (!backlMaxBright) backlSetBright(0); break; //иначе посветка выключена
   }
 #endif
-  if (backlMaxBright) backlBrightTime = (float)BACKL_MODE_2_STEP / backlMaxBright / 2 * BACKL_MODE_2_TIME; //если подсветка динамичная, расчёт шага дыхания подсветки
+  if (backlMaxBright) {
+    backlPulsBrightTime = (float)BACKL_MODE_2_STEP / (backlMaxBright > BACKL_MIN_BRIGHT) ? (backlMaxBright - BACKL_MIN_BRIGHT) : backlMaxBright / 2 * BACKL_MODE_2_TIME; //расчёт шага подсветки дыхания
+    backlWaveBrightTime = (float)BACKL_MODE_6_STEP / (backlMaxBright > BACKL_MIN_BRIGHT) ? (backlMaxBright - BACKL_MIN_BRIGHT) : backlMaxBright / (2 * LAMP_NUM) * BACKL_MODE_6_TIME; //расчёт шага подсветки волна
+  }
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
 }
 //----------------------------------Анимация подсветки---------------------------------
@@ -1527,7 +1541,7 @@ void backlEffect(void) //анимация подсветки
         return; //выходим
       case BACKL_PULS:
       case BACKL_PULS_COLOR: { //дыхание подсветки
-          _timer_ms[TMR_BACKL] = backlBrightTime; //установили таймер
+          _timer_ms[TMR_BACKL] = backlPulsBrightTime; //установили таймер
           if (backl_drv) { //если светодиоды в режиме разгорания
             if (incLedBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 0; //прибавили шаг яркости
           }
@@ -1567,7 +1581,7 @@ void backlEffect(void) //анимация подсветки
         break;
       case BACKL_WAVE:
       case BACKL_WAVE_COLOR: { //волна
-          _timer_ms[TMR_BACKL] = BACKL_MODE_6_TIME; //установили таймер
+          _timer_ms[TMR_BACKL] = backlWaveBrightTime; //установили таймер
           if (backl_drv) {
             if (incLedBright(backl_pos, BACKL_MODE_6_STEP, backlMaxBright)) { //прибавили шаг яркости
               if (backl_pos < (LAMP_NUM - 1)) backl_pos++; //сменили позицию
@@ -1617,7 +1631,7 @@ void backlFlash(void) //мигание подсветки
 
   if (fastSettings.backlMode == BACKL_PULS && backlMaxBright) {
     if (!_timer_ms[TMR_BACKL]) {
-      _timer_ms[TMR_BACKL] = backlBrightTime;
+      _timer_ms[TMR_BACKL] = backlPulsBrightTime;
       switch (backl_drv) {
         case 0: if (backlIncBright(BACKL_MODE_2_STEP, backlMaxBright)) backl_drv = 1; break;
         case 1:
@@ -1683,7 +1697,7 @@ void dotFlash(void) //мигание точек
 void updateTemp(void) //обновить показания температуры
 {
   switch (mainSettings.sensorSet) { //выбор датчика температуры
-    case 0: readTempRTC(); break; //чтение температуры с датчика DS3231
+    default: readTempRTC(); break; //чтение температуры с датчика DS3231
     case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
 #if !SENS_PORT_DISABLE
     case 2: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
