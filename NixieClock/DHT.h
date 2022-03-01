@@ -56,12 +56,11 @@ void readTempDHT11(void)
   }
 
   if (_timer_ms[TMR_SENS]) return;
-  _timer_ms[TMR_SENS] = 2000;
 
   SENS_OUT;
   SENS_LO; //сигнал начала чтения
 
-  _delay_ms(20);
+  for (_timer_ms[TMR_SENS] = 25; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
   SENS_HI; //посылаем сигнал сброса
   SENS_INP; //переходим в режим чтения
   _delay_us(200);
@@ -82,7 +81,9 @@ void readTempDHT11(void)
 
     if (low < high) data[i >> 3] |= 0x01;
   }
-
+  
+  _timer_ms[TMR_SENS] = 2000;
+  
   if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
     readTempRTC(); //читаем температуру DS3231
     return; //выходим

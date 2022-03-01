@@ -39,6 +39,9 @@
 #define DECODER_3 0 //A0
 #define DECODER_4 2 //A2
 
+//пин обратной связи A6
+#define ANALOG_DET_PIN 6 // A6
+
 //пин аналоговых кнопок A7
 #define ANALOG_BTN_PIN 7 // A7
 
