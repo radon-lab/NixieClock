@@ -296,6 +296,7 @@ int main(void) //инициализация
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
+  _sec = 0; //обновление экрана
   changeBright(); //установка яркости от времени суток
 #if ALARM_TYPE
   checkAlarms(); //проверка будильников
@@ -314,6 +315,74 @@ int main(void) //инициализация
     mainScreen(); //главный экран
   }
   return 0; //конец
+}
+//---------------------------------------Прерывание от RTC----------------------------------------------
+ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
+{
+  tick_sec++; //прибавляем секунду
+}
+//---------------------------------Прерывание сигнала для пищалки---------------------------------------
+ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалки
+{
+  if (cnt_freq > 255) cnt_freq -= 255; //считаем циклы полуволны
+  else if (cnt_freq) { //если остался хвост
+    OCR2B = cnt_freq; //устанавливаем хвост
+    cnt_freq = 0; //сбрасываем счетчик циклов полуволны
+  }
+  else { //если циклы полуволны кончились
+    OCR2B = 255; //устанавливаем COMB в начало
+    cnt_freq = tmr_score; //устанавливаем циклов полуволны
+    BUZZ_INV; //инвертируем бузер
+    if (!--cnt_puls) { //считаем циклы времени работы бузера
+      BUZZ_OFF; //если циклы кончились, выключаем бузер
+      TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
+    }
+  }
+}
+//-----------------------------Инициализация будильника------------------------------------------------
+void initAlarm(void) //инициализация будильника
+{
+  if (!alarms_num) newAlarm(); //создать новый будильник
+  else if (alarms_num > 1) { //если будильников в памяти больше одного
+    alarms_num = 1; //оставляем один будильник
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем будильник в память
+  }
+}
+//----------------------------------Отключение uart----------------------------------------------------
+void uartDisable(void) //отключение uart
+{
+  UCSR0B = 0; //выключаем UART
+  PRR |= (0x01 << PRUSART0); //выключаем питание UART
+}
+//------------------------------------Проверка системы-------------------------------------------------
+void testLamp(void) //проверка системы
+{
+#if BACKL_WS2812B
+  setLedBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
+#else
+  backlSetBright(DEFAULT_BACKL_BRIGHT); //если посветка статичная, устанавливаем яркость
+#endif
+  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+  dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
+  while (1) {
+    for (byte indi = 0; indi < LAMP_NUM; indi++) {
+      indiClr(); //очистка индикаторов
+      for (byte digit = 0; digit < 10; digit++) {
+        indiPrintNum(digit, indi); //отрисовываем цифру
+#if BACKL_WS2812B
+        setLedHue(indi, digit * 25); //отправляем статичный цвет
+#endif
+        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+          dataUpdate(); //обработка данных
+          MELODY_PLAY(0); //воспроизводим мелодию
+          if (check_keys()) return; //возврат если нажата кнопка
+        }
+      }
+#if BACKL_WS2812B
+      clrLed(indi); //очищаем светодиод
+#endif
+    }
+  }
 }
 //-----------------------------Проверка пароля------------------------------------
 boolean check_pass(void) //проверка пароля
@@ -441,6 +510,7 @@ void settings_debug(void) //отладка
             }
             break;
         }
+        _sec = 0; //обновление экрана
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
@@ -465,6 +535,7 @@ void settings_debug(void) //отладка
             }
             break;
         }
+        _sec = 0; //обновление экрана
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
@@ -502,79 +573,12 @@ void settings_debug(void) //отладка
               break;
           }
         }
+        _sec = 0; //обновление экрана
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
         updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
         return;
-    }
-  }
-}
-//---------------------------------------Прерывание от RTC----------------------------------------------
-ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
-{
-  tick_sec++; //прибавляем секунду
-}
-//---------------------------------Прерывание сигнала для пищалки---------------------------------------
-ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалки
-{
-  if (cnt_freq > 255) cnt_freq -= 255; //считаем циклы полуволны
-  else if (cnt_freq) { //если остался хвост
-    OCR2B = cnt_freq; //устанавливаем хвост
-    cnt_freq = 0; //сбрасываем счетчик циклов полуволны
-  }
-  else { //если циклы полуволны кончились
-    OCR2B = 255; //устанавливаем COMB в начало
-    cnt_freq = tmr_score; //устанавливаем циклов полуволны
-    BUZZ_INV; //инвертируем бузер
-    if (!--cnt_puls) { //считаем циклы времени работы бузера
-      BUZZ_OFF; //если циклы кончились, выключаем бузер
-      TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
-    }
-  }
-}
-//-----------------------------Инициализация будильника------------------------------------------------
-void initAlarm(void) //инициализация будильника
-{
-  if (!alarms_num) newAlarm(); //создать новый будильник
-  else if (alarms_num > 1) { //если будильников в памяти больше одного
-    alarms_num = 1; //оставляем один будильник
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем будильник в память
-  }
-}
-//----------------------------------Отключение uart----------------------------------------------------
-void uartDisable(void) //отключение uart
-{
-  UCSR0B = 0; //выключаем UART
-  PRR |= (0x01 << PRUSART0); //выключаем питание UART
-}
-//------------------------------------Проверка системы-------------------------------------------------
-void testLamp(void) //проверка системы
-{
-#if BACKL_WS2812B
-  setLedBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
-#else
-  backlSetBright(DEFAULT_BACKL_BRIGHT); //если посветка статичная, устанавливаем яркость
-#endif
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
-  dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
-  while (1) {
-    for (byte indi = 0; indi < LAMP_NUM; indi++) {
-      indiClr(); //очистка индикаторов
-      for (byte digit = 0; digit < 10; digit++) {
-        indiPrintNum(digit, indi); //отрисовываем цифру
-#if BACKL_WS2812B
-        setLedHue(indi, digit * 25); //отправляем статичный цвет
-#endif
-        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
-          dataUpdate(); //обработка данных
-          MELODY_PLAY(0); //воспроизводим мелодию
-          if (check_keys()) return; //возврат если нажата кнопка
-        }
-      }
-#if BACKL_WS2812B
-      clrLed(indi); //очищаем светодиод
-#endif
     }
   }
 }
