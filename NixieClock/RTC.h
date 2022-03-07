@@ -125,7 +125,7 @@ uint8_t readAgingRTC(void) //чтение коррекции хода
   return WireRead();
 }
 //-------------------------------Запись коррекции хода-------------------------------------
-void WriteAgingRTC(uint8_t data) //запись коррекции хода
+void writeAgingRTC(uint8_t data) //запись коррекции хода
 {
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x10); //устанавливаем адрес записи
