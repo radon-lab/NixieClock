@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.3 релиз от 07.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.4 релиз от 10.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -107,8 +107,8 @@ enum {
 
 enum {
   DEB_TIME_CORRECT, //корректировка хода времени
-  DEB_MIN_PWM,      //минимальное значение шим
-  DEB_MAX_PWM,      //максимальное значение шим
+  DEB_DEFAULT_MIN_PWM,      //минимальное значение шим
+  DEB_DEFAULT_MAX_PWM,      //максимальное значение шим
 #if !GEN_DISABLE && GEN_FEEDBACK
   DEB_HV_ADC,       //значение ацп преобразователя
 #endif
@@ -339,15 +339,6 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
     }
   }
 }
-//-----------------------------Инициализация будильника------------------------------------------------
-void initAlarm(void) //инициализация будильника
-{
-  if (!alarms_num) newAlarm(); //создать новый будильник
-  else if (alarms_num > 1) { //если будильников в памяти больше одного
-    alarms_num = 1; //оставляем один будильник
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем будильник в память
-  }
-}
 //----------------------------------Отключение uart----------------------------------------------------
 void uartDisable(void) //отключение uart
 {
@@ -477,8 +468,8 @@ void settings_debug(void) //отладка
               if (EIMSK) indiPrintNum((aging < 0) ? (uint8_t) - aging : (uint8_t)aging, 0, (aging > 0) ? 4 : 0);
               else indiPrintNum(debugSettings.timePeriod, 0);
               break;
-            case DEB_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break;
-            case DEB_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break;
+            case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break;
+            case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break;
 #if !GEN_DISABLE && GEN_FEEDBACK
             case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break;
 #endif
@@ -499,8 +490,8 @@ void settings_debug(void) //отладка
                   case 1: if (aging > -127) aging--; else aging = 127; break;
                 }
                 break;
-              case DEB_MIN_PWM: if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; break; //минимальное значение шим
-              case DEB_MAX_PWM: if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; break; //максимальное значение шим
+              case DEB_DEFAULT_MIN_PWM: if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; break; //минимальное значение шим
+              case DEB_DEFAULT_MAX_PWM: if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; break; //максимальное значение шим
 #if !GEN_DISABLE && GEN_FEEDBACK
               case DEB_HV_ADC:
                 if (debugSettings.hvCorrect > -25) debugSettings.hvCorrect--; //значение ацп преобразователя
@@ -524,8 +515,8 @@ void settings_debug(void) //отладка
                   case 1: if (aging < 127) aging++; else aging = -127; break;
                 }
                 break;
-              case DEB_MIN_PWM: if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; break; //минимальное значение шим
-              case DEB_MAX_PWM: if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; break; //максимальное значение шим
+              case DEB_DEFAULT_MIN_PWM: if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; break; //минимальное значение шим
+              case DEB_DEFAULT_MAX_PWM: if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; break; //максимальное значение шим
 #if !GEN_DISABLE && GEN_FEEDBACK
               case DEB_HV_ADC:
                 if (debugSettings.hvCorrect < 25) debugSettings.hvCorrect++; //значение ацп преобразователя
@@ -546,15 +537,15 @@ void settings_debug(void) //отладка
             case DEB_TIME_CORRECT:
               if (EIMSK) aging = readAgingRTC(); //чтение коррекции хода
               break;
-            case DEB_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
-            case DEB_MAX_PWM: indiSetBright(30); break; //максимальное значение шим
+            case DEB_DEFAULT_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
+            case DEB_DEFAULT_MAX_PWM: indiSetBright(30); break; //максимальное значение шим
             case DEB_RESET:
               set = 0; //сбросили на начальный уровень меню
               cur_mode = 0; //перешли на первый пункт меню
               if (check_pass()) { //подтверждение паролем
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-                debugSettings.min_pwm = MIN_PWM; //минимальное значение шим
-                debugSettings.max_pwm = MAX_PWM; //максимальное значение шим
+                debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
+                debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
 #if !GEN_DISABLE && GEN_FEEDBACK
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
@@ -677,7 +668,16 @@ void _melody_chart(uint8_t melody) //воспроизведение мелоди
     if (++semp > alarm_sound[melody][1] - 1) semp = 0; //переключпем на следующий семпл
   }
 }
-//----------------------------------Проверка будильников----------------------------------------------------
+//---------------------------------Инициализация будильника-----------------------------------------------
+void initAlarm(void) //инициализация будильника
+{
+  if (!alarms_num) newAlarm(); //создать новый будильник
+  else if (alarms_num > 1) { //если будильников в памяти больше одного
+    alarms_num = 1; //оставляем один будильник
+    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем будильник в память
+  }
+}
+//-----------------------------------Проверка будильников-------------------------------------------------
 void checkAlarms(void) //проверка будильников
 {
   alarmEnabled = 0; //сбрасываем флаг включенного будильника
@@ -691,7 +691,7 @@ void checkAlarms(void) //проверка будильников
     }
   }
 }
-//----------------------------Обновление данных будильников--------------------------------------------------
+//-------------------------------Обновление данных будильников---------------------------------------------
 void alarmDataUpdate(void) //обновление данных будильников
 {
   if (alarm) { //если тревога активна
@@ -937,32 +937,6 @@ void hourSound(void) //звук смены часа
     if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && RTC.h < mainSettings.timeHour[1] && RTC.h >= mainSettings.timeHour[0]) ||
         (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (RTC.h < mainSettings.timeHour[1] || RTC.h >= mainSettings.timeHour[0]))) {
       buzz_pulse(HOUR_SOUND_FREQ, HOUR_SOUND_TIME); //звук смены часа
-    }
-  }
-}
-//------------------------------------Имитация глюков------------------------------------
-void glitchMode(void) //имитация глюков
-{
-  if (mainSettings.glitchMode) { //если глюки включены
-    if (!_tmrGlitch-- && RTC.s > 7 && RTC.s < 55) { //если пришло время
-      boolean indiState = 0; //состояние индикатора
-      uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
-      uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
-      uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
-      while (!check_keys()) {
-        dataUpdate(); //обработка данных
-        dotFlash(); //мигаем точками
-
-        if (!_timer_ms[TMR_GLITCH]) { //если таймер истек
-          if (!indiState) indiClr(glitchIndic); //выключаем индикатор
-          else indiSet(indiSave, glitchIndic); //установка индикатора
-          indiState = !indiState; //меняем состояние глюка лампы
-          _timer_ms[TMR_GLITCH] = random(1, 6) * 20; //перезапускаем таймер глюка
-          if (!glitchCounter--) break; //выходим если закончились глюки
-        }
-      }
-      _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
-      indiSet(indiSave, glitchIndic); //восстанавливаем состояние индикатора
     }
   }
 }
@@ -2461,10 +2435,36 @@ void timerStopwatch(void) //таймер-секундомер
     }
   }
 }
+//------------------------------------Имитация глюков------------------------------------
+void glitchMode(void) //имитация глюков
+{
+  if (mainSettings.glitchMode) { //если глюки включены
+    if (!_tmrGlitch-- && RTC.s > 7 && RTC.s < 55) { //если пришло время
+      boolean indiState = 0; //состояние индикатора
+      uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
+      uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
+      uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
+      while (!check_keys()) {
+        dataUpdate(); //обработка данных
+        dotFlash(); //мигаем точками
+
+        if (!_timer_ms[TMR_GLITCH]) { //если таймер истек
+          if (!indiState) indiClr(glitchIndic); //выключаем индикатор
+          else indiSet(indiSave, glitchIndic); //установка индикатора
+          indiState = !indiState; //меняем состояние глюка лампы
+          _timer_ms[TMR_GLITCH] = random(1, 6) * 20; //перезапускаем таймер глюка
+          if (!glitchCounter--) break; //выходим если закончились глюки
+        }
+      }
+      _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
+      indiSet(indiSave, glitchIndic); //восстанавливаем состояние индикатора
+    }
+  }
+}
 //----------------------------Антиотравление индикаторов-------------------------------
 void burnIndi(void) //антиотравление индикаторов
 {
-#if BURN_INDI_TYPE
+#if INDI_BURN_TYPE
   if (_tmrBurn >= BURN_PERIOD && RTC.s >= BURN_PHASE) {
     _tmrBurn = 0; //сбрасываем таймер
     dotSetBright(0); //выключаем точки

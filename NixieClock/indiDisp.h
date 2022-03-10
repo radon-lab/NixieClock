@@ -4,7 +4,7 @@
 #define ANODE_OFF 0x00 //выключенный анод
 
 #define DEAD_TIME 30 //период тишины для закрытия оптопар
-#define FREQ_TICK (uint8_t)(1000 / (float)(FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
+#define FREQ_TICK (uint8_t)(1000 / (float)(INDI_FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
 #define LIGHT_STEP (uint8_t)((FREQ_TICK - DEAD_TIME) / 30) //расчет шага яркости
 
 #define US_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера в мкс
@@ -14,7 +14,7 @@
 #define MS_PERIOD (US_PERIOD / 1000) //период тика таймера в целых мс
 
 #define R_COEF(low, high) (((float)low + (float)high) / (float)low) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint8_t)(256.0 / (float)vcc * ((float)HV_VCC / (float)R_COEF(HV_R_LOW, HV_R_HIGH)))
+#define HV_ADC(vcc) (uint8_t)(256.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH)))
 
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 
@@ -48,8 +48,8 @@ const uint8_t cathodeMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};     //свой п�
 
 struct Settings {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-  uint8_t min_pwm = MIN_PWM; //минимальный шим
-  uint8_t max_pwm = MAX_PWM; //максимальный шим
+  uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
+  uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
   int8_t hvCorrect = 0; //коррекция напряжения
 } debugSettings;
 
@@ -126,7 +126,7 @@ void IndiInit(void) //инициализация индикаторов
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #if !GEN_DISABLE
-  OCR1A = debugSettings.min_pwm; //устанавливаем первичное значение шим
+  OCR1A = constrain(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #endif
   TCCR1A |= (0x01 << WGM10); //режим коррекция фазы шим
@@ -151,7 +151,7 @@ void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
   for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = debugSettings.min_pwm + (float)(dimm_all / LAMP_NUM) * ((float)(debugSettings.max_pwm - debugSettings.min_pwm) / 120.0);
+  OCR1A = constrain(debugSettings.min_pwm + (float)(dimm_all / LAMP_NUM) * ((float)(debugSettings.max_pwm - debugSettings.min_pwm) / 120.0), 100, 200);
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
 void indiClr(void) //очистка индикаторов

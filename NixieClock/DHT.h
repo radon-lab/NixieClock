@@ -1,5 +1,23 @@
 boolean initDHT = 0; //флаг инициализации датчика
 
+//-------------------------------------------Сигнал сброса шины----------------------------------------------
+boolean wireReset(uint8_t time)
+{
+  SENS_OUT;
+  SENS_LO;
+  for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
+  SENS_INP;
+  SENS_HI;
+  _delay_us(2);
+  for (uint8_t c = 80; c; c--) {
+    if (!SENS_CHK) {
+      for (uint8_t i = 200; !SENS_CHK && i; i--) _delay_us(1);
+      return 0;
+    }
+    _delay_us(1);
+  }
+  return 1;
+}
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT22(void)
 {
@@ -12,13 +30,10 @@ void readTempDHT22(void)
   if (_timer_ms[TMR_SENS]) return;
   _timer_ms[TMR_SENS] = 2000;
 
-  SENS_OUT;
-  SENS_LO; //сигнал начала чтения
-
-  _delay_us(1100);
-  SENS_HI; //посылаем сигнал сброса
-  SENS_INP; //переходим в режим чтения
-  _delay_us(200);
+  if (wireReset(4)) { //посылаем сигнал сброса
+    readTempRTC(); //читаем температуру DS3231
+    return; //выходим
+  }
 
   uint8_t data[5];
 
@@ -57,13 +72,10 @@ void readTempDHT11(void)
 
   if (_timer_ms[TMR_SENS]) return;
 
-  SENS_OUT;
-  SENS_LO; //сигнал начала чтения
-
-  for (_timer_ms[TMR_SENS] = 25; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
-  SENS_HI; //посылаем сигнал сброса
-  SENS_INP; //переходим в режим чтения
-  _delay_us(200);
+  if (wireReset(25)) { //посылаем сигнал сброса
+    readTempRTC(); //читаем температуру DS3231
+    return; //выходим
+  }
 
   uint8_t data[5];
 
@@ -81,9 +93,9 @@ void readTempDHT11(void)
 
     if (low < high) data[i >> 3] |= 0x01;
   }
-  
+
   _timer_ms[TMR_SENS] = 2000;
-  
+
   if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
     readTempRTC(); //читаем температуру DS3231
     return; //выходим
