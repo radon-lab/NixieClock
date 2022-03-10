@@ -11,7 +11,8 @@ boolean wireReset(uint8_t time)
   _delay_us(2);
   for (uint8_t c = 80; c; c--) {
     if (!SENS_CHK) {
-      for (uint8_t i = 200; !SENS_CHK && i; i--) _delay_us(1);
+      for (uint8_t i = 150; !SENS_CHK && i; i--) _delay_us(1);
+      for (uint8_t i = 150; SENS_CHK && i; i--) _delay_us(1);
       return 0;
     }
     _delay_us(1);
