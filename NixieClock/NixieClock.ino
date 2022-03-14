@@ -895,8 +895,10 @@ void dataUpdate(void) //обработка данных
     timerCorrect += debugSettings.timePeriod % 1000; //остаток для коррекции
     uint16_t msDec = (debugSettings.timePeriod + timerCorrect) / 1000; //находим целые мс
     for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
-      if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше периода
-      else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
+      if (_timer_ms[tm]) { //если таймер активен
+        if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше периода
+        else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
+      }
     }
     if (timerCorrect >= 1000) timerCorrect -= 1000; //если коррекция больше либо равна 1 мс
   }
@@ -1850,19 +1852,6 @@ void backlEffect(void) //анимация подсветки
   static uint8_t color_steps; //номер цвета
 
   if (backlMaxBright) { //если подсветка не выключена
-    if (!_timer_ms[TMR_COLOR]) { //если время пришло
-      _timer_ms[TMR_COLOR] = BACKL_MODE_8_TIME; //установили таймер
-      switch (fastSettings.backlMode) {
-        case BACKL_RUNNING_FIRE_COLOR:
-        case BACKL_WAVE_COLOR:
-        case BACKL_SMOOTH_COLOR_CHANGE: { //плавная смена цвета
-            color_steps += BACKL_MODE_8_COLOR;
-            setLedHue(color_steps); //установили цвет
-            showLeds(); //отрисовка светодиодов
-          }
-          break;
-      }
-    }
     if (!_timer_ms[TMR_BACKL]) { //если время пришло
       switch (fastSettings.backlMode) {
         case BACKL_OFF: //подсветка выключена
@@ -1877,11 +1866,10 @@ void backlEffect(void) //анимация подсветки
             else { //иначе светодиоды в режиме затухания
               if (decLedBright(backl.mode_2_step, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //уменьшаем яркость
                 backl_drv = 1;
-                if (fastSettings.backlMode == BACKL_PULS_COLOR) color_steps += BACKL_MODE_3_COLOR; //плавно меняем цвет
+                if (fastSettings.backlMode == BACKL_PULS_COLOR) color_steps += BACKL_MODE_3_COLOR; //меняем цвет
                 else color_steps = fastSettings.backlColor; //иначе статичный цвет
-                setLedHue(color_steps); //отправили цвет
+                setLedHue(color_steps); //установили цвет
                 _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE; //установили таймер
-                return; //выходим
               }
             }
           }
@@ -1937,18 +1925,31 @@ void backlEffect(void) //анимация подсветки
           }
           break;
         case BACKL_RAINBOW: { //радуга
+            _timer_ms[TMR_BACKL] = BACKL_MODE_9_TIME; //установили таймер
             color_steps += BACKL_MODE_9_STEP; //прибавили шаг
             for (uint8_t f = 0; f < LAMP_NUM; f++) setLedHue(f, color_steps + (f * BACKL_MODE_9_STEP)); //установили цвет
-            _timer_ms[TMR_BACKL] = BACKL_MODE_9_TIME; //установили таймер
           }
           break;
         case BACKL_CONFETTI: { //рандомный цвет
-            setLedHue(random(0, LAMP_NUM), random(0, 256)); //установили цвет
             _timer_ms[TMR_BACKL] = BACKL_MODE_10_TIME; //установили таймер
+            setLedHue(random(0, LAMP_NUM), random(0, 256)); //установили цвет
           }
           break;
       }
       showLeds(); //отрисовка светодиодов
+    }
+    if (!_timer_ms[TMR_COLOR]) { //если время пришло
+      switch (fastSettings.backlMode) {
+        case BACKL_RUNNING_FIRE_COLOR:
+        case BACKL_WAVE_COLOR:
+        case BACKL_SMOOTH_COLOR_CHANGE: { //плавная смена цвета
+            _timer_ms[TMR_COLOR] = BACKL_MODE_8_TIME; //установили таймер
+            color_steps += BACKL_MODE_8_COLOR;
+            setLedHue(color_steps); //установили цвет
+            showLeds(); //отрисовка светодиодов
+          }
+          break;
+      }
     }
   }
 }

@@ -240,7 +240,7 @@ void backlSetBright(uint8_t pwm) //установка яркости подсв�
 //-----------------------------------Уменьшение яркости------------------------------------------
 boolean backlDecBright(uint8_t _step, uint8_t _min)
 {
-  if ((int16_t)(OCR2A - _step) > _min) backlSetBright(OCR2A - _step);
+  if (((int16_t)OCR2A - _step) > _min) backlSetBright(OCR2A - _step);
   else {
     backlSetBright(_min);
     return 1;
@@ -250,7 +250,7 @@ boolean backlDecBright(uint8_t _step, uint8_t _min)
 //-----------------------------------Увеличение яркости------------------------------------------
 boolean backlIncBright(uint8_t _step, uint8_t _max)
 {
-  if ((uint16_t)(OCR2A + _step) < _max) backlSetBright(OCR2A + _step);
+  if (((uint16_t)OCR2A + _step) < _max) backlSetBright(OCR2A + _step);
   else {
     backlSetBright(_max);
     return 1;
@@ -271,7 +271,7 @@ void dotSetBright(uint8_t pwm) //установка яркости точек
 //--------------------------------Уменьшение яркости точек----------------------------------------
 boolean dotDecBright(uint8_t _step, uint8_t _min)
 {
-  if ((int16_t)(OCR1B - _step) > _min) dotSetBright(OCR1B - _step);
+  if (((int16_t)OCR1B - _step) > _min) dotSetBright(OCR1B - _step);
   else {
     dotSetBright(_min);
     return 1;
@@ -281,7 +281,7 @@ boolean dotDecBright(uint8_t _step, uint8_t _min)
 //--------------------------------Увеличение яркости точек----------------------------------------
 boolean dotIncBright(uint8_t _step, uint8_t _max)
 {
-  if ((uint16_t)(OCR1B + _step) < _max) dotSetBright(OCR1B + _step);
+  if (((uint16_t)OCR1B + _step) < _max) dotSetBright(OCR1B + _step);
   else {
     dotSetBright(_max);
     return 1;
