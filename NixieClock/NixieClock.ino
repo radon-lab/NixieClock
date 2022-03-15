@@ -32,8 +32,9 @@ void dataUpdate(void); //процедура обработки данных
 #include <util/delay.h>
 
 //---------------Конфигурации---------------
-#include "config.h"
+#include "userConfig.h"
 #include "connection.h"
+#include "config.h"
 #include "indiDisp.h"
 #include "wire.h"
 #include "EEPROM.h"

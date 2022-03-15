@@ -50,6 +50,8 @@
 #define DECODE_PORT(pin) ((pin < 8) ? PORTD : PORTB)
 #define DECODE_BIT(pin) ((pin < 8) ? pin : (pin - 8))
 
+#define ANODE_OFF 0x00 //выключенный анод
+
 //оптопары(аноды ламп)
 #define ANODE_1_BIT DECODE_BIT(ANODE_1_PIN) //(ЧЧ)
 #define ANODE_1_PORT DECODE_PORT(ANODE_1_PIN)
