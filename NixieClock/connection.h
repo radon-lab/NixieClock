@@ -1,7 +1,44 @@
+//Соединения периферии с пинами МК
+
+//Дешифратор ламп
+#define DECODER_1 3 //пин дешефратора X1(0..3)(pin A)
+#define DECODER_2 1 //пин дешефратора X2(0..3)(pin A)
+#define DECODER_3 0 //пин дешефратора X4(0..3)(pin A)
+#define DECODER_4 2 //пин дешефратора X8(0..3)(pin A)
+
+//Аноды ламп
+#define ANODE_1_PIN 3  //пин анода 1(ЧЧ)(0..13)(pin D)
+#define ANODE_2_PIN 4  //пин анода 2(ЧЧ)(0..13)(pin D)
+#define ANODE_3_PIN 5  //пин анода 3(ММ)(0..13)(pin D)
+#define ANODE_4_PIN 6  //пин анода 4(ММ)(0..13)(pin D)
+#define ANODE_5_PIN 7  //пин анода 5(СС)(0..13)(pin D)
+#define ANODE_6_PIN 8  //пин анода 6(СС)(0..13)(pin D)
+
+//Цифровые кнопки
+#define SET_PIN   8  //пин кнопки ОК(0..13)(pin D)
+#define LEFT_PIN  7  //пин левой кнопки(0..13)(pin D)
+#define RIGHT_PIN 12 //пин правой кнопки(0..13)(pin D)
+#define ADD_PIN   0  //пин доплнительной кнопки(0..13)(pin D)
+
+//Основная периферия
+#define SENS_PIN  1  //пин сенсора температуры(для DS18B20 и DHT21/22)(0..13)(pin D)
+#define CONV_PIN  9  //пин преобразователя(0..13)(pin D)
+#define SQW_PIN   2  //пин SQW(0..13)(pin D)
+#define DOT_PIN   10 //пин секундных точек(0..13)(pin D)
+#define BACKL_PIN 11 //пин подсветки(0..13)(pin D)
+#define BUZZ_PIN  13 //пин пищалки(0..13)(pin D)
+
+//Обратная связь
+#define ANALOG_DET_PIN 6 //пин обратной связи A6(6..7)(pin A)
+
+//Аналоговые кнопки
+#define ANALOG_BTN_PIN 7 //пин аналоговых кнопок A7(6..7)(pin A)
+
+
 //Соединения периферии с портами МК
 //    PORTD (0 - D0 | 1 - D1 | 2 - D2 | 3 - D3 | 4 - D4 | 5 - D5 | 6 - D6 | 7 - D7)
-//           PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13)
-//             PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
+//    PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13)
+//    PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
 
 #define DDR_REG(portx)  (*(&portx - 1))
 #define PIN_REG(portx)  (*(&portx - 2))
@@ -10,45 +47,36 @@
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
+#define DECODE_PORT(pin) ((pin < 8) ? PORTD : PORTB)
+#define DECODE_BIT(pin) ((pin < 8) ? pin : (pin - 8))
+
 //оптопары(аноды ламп)
-#define ANODE_1_BIT 3 // D3(ЧЧ)
-#define ANODE_1_PORT PORTD
+#define ANODE_1_BIT DECODE_BIT(ANODE_1_PIN) //(ЧЧ)
+#define ANODE_1_PORT DECODE_PORT(ANODE_1_PIN)
 
-#define ANODE_2_BIT 4 // D4(ЧЧ)
-#define ANODE_2_PORT PORTD
+#define ANODE_2_BIT DECODE_BIT(ANODE_2_PIN) //(ЧЧ)
+#define ANODE_2_PORT DECODE_PORT(ANODE_2_PIN)
 
-#define ANODE_3_BIT 5 // D5(ММ)
-#define ANODE_3_PORT PORTD
+#define ANODE_3_BIT DECODE_BIT(ANODE_3_PIN) //(ММ)
+#define ANODE_3_PORT DECODE_PORT(ANODE_3_PIN)
 
-#define ANODE_4_BIT 6 // D6(ММ)
-#define ANODE_4_PORT PORTD
+#define ANODE_4_BIT DECODE_BIT(ANODE_4_PIN) //(ММ)
+#define ANODE_4_PORT DECODE_PORT(ANODE_4_PIN)
 
-#define ANODE_5_BIT 7 // D7(СС)
-#define ANODE_5_PORT PORTD
+#define ANODE_5_BIT DECODE_BIT(ANODE_5_PIN) //(СС)
+#define ANODE_5_PORT DECODE_PORT(ANODE_5_PIN)
 
-#define ANODE_6_BIT 0 // D8(СС)
-#define ANODE_6_PORT PORTB
+#define ANODE_6_BIT DECODE_BIT(ANODE_6_PIN) //(СС)
+#define ANODE_6_PORT DECODE_PORT(ANODE_6_PIN)
 
-//пин точек D10
-#define DOT_BIT   2 // D10
-#define DOT_PORT  PORTB
-
-//дешифратор(только порты A0-A3)
-#define DECODER_1 3 //A3
-#define DECODER_2 1 //A1
-#define DECODER_3 0 //A0
-#define DECODER_4 2 //A2
-
-//пин обратной связи A6
-#define ANALOG_DET_PIN 6 // A6
-
-//пин аналоговых кнопок A7
-#define ANALOG_BTN_PIN 7 // A7
+//пин точек
+#define DOT_BIT   DECODE_BIT(DOT_PIN)
+#define DOT_PORT  DECODE_PORT(DOT_PIN)
 
 #if !BTN_TYPE
-//пин кнопки ОК D8
-#define SET_BIT   0 // D8
-#define SET_PORT  PORTB
+//пин кнопки ОК
+#define SET_BIT   DECODE_BIT(SET_PIN)
+#define SET_PORT  DECODE_PORT(SET_PIN)
 
 #if BTN_PULL
 #define SET_CHK   (BIT_READ(PIN_REG(SET_PORT), SET_BIT))
@@ -64,9 +92,9 @@
 #define SET_INIT  SET_CLR; SET_INP
 #endif
 
-//пин кнопки DOWN D7
-#define LEFT_BIT   7 // D7
-#define LEFT_PORT  PORTD
+//пин кнопки DOWN
+#define LEFT_BIT   DECODE_BIT(LEFT_PIN)
+#define LEFT_PORT  DECODE_PORT(LEFT_PIN)
 
 #if BTN_PULL
 #define LEFT_CHK   (BIT_READ(PIN_REG(LEFT_PORT), LEFT_BIT))
@@ -82,9 +110,9 @@
 #define LEFT_INIT  LEFT_CLR; LEFT_INP
 #endif
 
-//пин кнопки UP D12
-#define RIGHT_BIT   4 // D12
-#define RIGHT_PORT  PORTB
+//пин кнопки UP
+#define RIGHT_BIT   DECODE_BIT(RIGHT_PIN)
+#define RIGHT_PORT  DECODE_PORT(RIGHT_PIN)
 
 #if BTN_PULL
 #define RIGHT_CHK   (BIT_READ(PIN_REG(RIGHT_PORT), RIGHT_BIT))
@@ -101,9 +129,9 @@
 #endif
 #endif
 
-//пин доп кнопки D0
-#define ADD_BIT   0 // D0
-#define ADD_PORT  PORTD
+//пин дополнительной кнопки
+#define ADD_BIT   DECODE_BIT(ADD_PIN)
+#define ADD_PORT  DECODE_PORT(ADD_PIN)
 
 #if BTN_ADD_PULL
 #define ADD_CHK   (BIT_READ(PIN_REG(ADD_PORT), ADD_BIT))
@@ -119,9 +147,9 @@
 #define ADD_INIT  ADD_CLR; ADD_INP
 #endif
 
-//пин сенсора температуры D1(для DS18B20 и DHT21/22)
-#define SENS_BIT   1 // D1
-#define SENS_PORT  PORTD
+//пин сенсора температуры(для DS18B20 и DHT21/22)
+#define SENS_BIT   DECODE_BIT(SENS_PIN)
+#define SENS_PORT  DECODE_PORT(SENS_PIN)
 
 #define SENS_HI   (BIT_SET(SENS_PORT, SENS_BIT))
 #define SENS_LO   (BIT_CLEAR(SENS_PORT, SENS_BIT))
@@ -131,18 +159,18 @@
 
 #define SENS_INIT  SENS_HI; SENS_INP
 
-//пин SQW D2
-#define SQW_BIT   2 // D2
-#define SQW_PORT  PORTD
+//пин синхронизации SQW
+#define SQW_BIT   DECODE_BIT(SQW_PIN)
+#define SQW_PORT  DECODE_PORT(SQW_PIN)
 
 #define SQW_SET   (BIT_SET(SQW_PORT, SQW_BIT))
 #define SQW_INP   (BIT_CLEAR(DDR_REG(SQW_PORT), SQW_BIT))
 
 #define SQW_INIT  SQW_SET; SQW_INP
 
-//пин преобразователя D9
-#define CONV_BIT   1 // D9
-#define CONV_PORT  PORTB
+//пин преобразователя
+#define CONV_BIT   DECODE_BIT(CONV_PIN)
+#define CONV_PORT  DECODE_PORT(CONV_PIN)
 
 #define CONV_ON    (BIT_SET(CONV_PORT, CONV_BIT))
 #define CONV_OFF   (BIT_CLEAR(CONV_PORT, CONV_BIT))
@@ -150,9 +178,9 @@
 
 #define CONV_INIT  CONV_OFF; CONV_OUT
 
-//пин подсветки D11
-#define BACKL_BIT   3 // D11
-#define BACKL_PORT  PORTB
+//пин подсветки
+#define BACKL_BIT   DECODE_BIT(BACKL_PIN)
+#define BACKL_PORT  DECODE_PORT(BACKL_PIN)
 
 #define BACKL_SET   (BIT_SET(BACKL_PORT, BACKL_BIT))
 #define BACKL_CLEAR (BIT_CLEAR(BACKL_PORT, BACKL_BIT))
@@ -160,9 +188,9 @@
 
 #define BACKL_INIT  BACKL_CLEAR; BACKL_OUT
 
-//пин пищалки D13
-#define BUZZ_BIT   5 // D13
-#define BUZZ_PORT  PORTB
+//пин пищалки
+#define BUZZ_BIT   DECODE_BIT(BUZZ_PIN)
+#define BUZZ_PORT  DECODE_PORT(BUZZ_PIN)
 
 #define BUZZ_OFF   (BIT_CLEAR(BUZZ_PORT, BUZZ_BIT))
 #define BUZZ_INV   (BUZZ_PORT ^= (1 << BUZZ_BIT))
