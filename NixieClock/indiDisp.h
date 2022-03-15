@@ -12,7 +12,7 @@
 #define MS_PERIOD (US_PERIOD / 1000) //период тика таймера в целых мс
 
 #define R_COEF(low, high) (((float)low + (float)high) / (float)low) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint8_t)(256.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH)))
+#define HV_ADC(vcc) (uint8_t)(256.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
 
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 
@@ -35,7 +35,7 @@ volatile uint8_t indiState; //текущей номер отрисовки ин�
 volatile uint8_t tick_ms; //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC
 
-void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' ');
+void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
 
 //---------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_COMPA_vect) //динамическая индикация

@@ -52,7 +52,7 @@
 
 #define ANODE_OFF 0x00 //выключенный анод
 
-//оптопары(аноды ламп)
+//Оптопары(аноды ламп)
 #define ANODE_1_BIT DECODE_BIT(ANODE_1_PIN) //(ЧЧ)
 #define ANODE_1_PORT DECODE_PORT(ANODE_1_PIN)
 
@@ -71,12 +71,12 @@
 #define ANODE_6_BIT DECODE_BIT(ANODE_6_PIN) //(СС)
 #define ANODE_6_PORT DECODE_PORT(ANODE_6_PIN)
 
-//пин точек
+//Пин точек
 #define DOT_BIT   DECODE_BIT(DOT_PIN)
 #define DOT_PORT  DECODE_PORT(DOT_PIN)
 
 #if !BTN_TYPE
-//пин кнопки ОК
+//Пин кнопки ОК
 #define SET_BIT   DECODE_BIT(SET_PIN)
 #define SET_PORT  DECODE_PORT(SET_PIN)
 
@@ -94,7 +94,7 @@
 #define SET_INIT  SET_CLR; SET_INP
 #endif
 
-//пин кнопки DOWN
+//Пин кнопки DOWN
 #define LEFT_BIT   DECODE_BIT(LEFT_PIN)
 #define LEFT_PORT  DECODE_PORT(LEFT_PIN)
 
@@ -112,7 +112,7 @@
 #define LEFT_INIT  LEFT_CLR; LEFT_INP
 #endif
 
-//пин кнопки UP
+//Пин кнопки UP
 #define RIGHT_BIT   DECODE_BIT(RIGHT_PIN)
 #define RIGHT_PORT  DECODE_PORT(RIGHT_PIN)
 
@@ -131,7 +131,7 @@
 #endif
 #endif
 
-//пин дополнительной кнопки
+//Пин дополнительной кнопки
 #define ADD_BIT   DECODE_BIT(ADD_PIN)
 #define ADD_PORT  DECODE_PORT(ADD_PIN)
 
@@ -149,7 +149,7 @@
 #define ADD_INIT  ADD_CLR; ADD_INP
 #endif
 
-//пин сенсора температуры(для DS18B20 и DHT21/22)
+//Пин сенсора температуры(для DS18B20 и DHT21/22)
 #define SENS_BIT   DECODE_BIT(SENS_PIN)
 #define SENS_PORT  DECODE_PORT(SENS_PIN)
 
@@ -161,7 +161,7 @@
 
 #define SENS_INIT  SENS_HI; SENS_INP
 
-//пин синхронизации SQW
+//Пин синхронизации SQW
 #define SQW_BIT   DECODE_BIT(SQW_PIN)
 #define SQW_PORT  DECODE_PORT(SQW_PIN)
 
@@ -170,7 +170,7 @@
 
 #define SQW_INIT  SQW_SET; SQW_INP
 
-//пин преобразователя
+//Пин преобразователя
 #define CONV_BIT   DECODE_BIT(CONV_PIN)
 #define CONV_PORT  DECODE_PORT(CONV_PIN)
 
@@ -180,7 +180,7 @@
 
 #define CONV_INIT  CONV_OFF; CONV_OUT
 
-//пин подсветки
+//Пин подсветки
 #define BACKL_BIT   DECODE_BIT(BACKL_PIN)
 #define BACKL_PORT  DECODE_PORT(BACKL_PIN)
 
@@ -190,7 +190,7 @@
 
 #define BACKL_INIT  BACKL_CLEAR; BACKL_OUT
 
-//пин пищалки
+//Пин пищалки
 #define BUZZ_BIT   DECODE_BIT(BUZZ_PIN)
 #define BUZZ_PORT  DECODE_PORT(BUZZ_PIN)
 

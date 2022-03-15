@@ -93,7 +93,7 @@ uint8_t backlMinBright; //минимальная яркость подсветк
 
 uint8_t dotBrightStep; //шаг мигания точек
 uint8_t dotBrightTime; //период шага мигания точек
-uint8_t dotMaxBright; //максимальная яркость точек
+uint8_t dotMaxBright;  //максимальная яркость точек
 
 uint8_t indiMaxBright; //максимальная яркость индикаторов
 
