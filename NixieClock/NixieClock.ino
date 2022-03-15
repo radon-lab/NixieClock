@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.6 релиз от 15.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.7 релиз от 15.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -214,6 +214,14 @@ uint8_t semp; //переключатель семплов мелодии
 #define GET_ADC(vcc, coef) (int16_t)((256.0 / (float)vcc) * ((float)vcc / (float)coef)) //рассчет значения ацп кнопок
 uint16_t vcc_adc; //напряжение питания
 
+#define VCC_ERROR 0x01 //ошибка напряжения питания
+#define SQW_ERROR 0x02 //ошибка сигнала SQW
+#define DS3231_ERROR 0x04 //ошибка связи с модулем DS3231
+#define LOST_POWER_ERROR 0x08 //ошибка пропадания питания с модуля DS3231
+#define MEMORY_ERROR 0x10 //ошибка памяти еепром
+#define SET_ERROR(err) (_error_reg |= err)
+uint8_t _error_reg; //регистр ошибок
+
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
@@ -258,9 +266,7 @@ int main(void) //инициализация
 
   uartDisable(); //отключение uart
 
-#if BTN_TYPE || GEN_FEEDBACK
   checkVCC(); //чтение напряжения питания
-#endif
 #if BTN_TYPE
   updateKeysADC(); //обновление пределов аналоговых кнопок
   checkKeyADC(); //чтение аналоговой кнопки
@@ -275,17 +281,29 @@ int main(void) //инициализация
 #endif
   }
   else { //иначе загружаем настройки из памяти
-    if (checkData(sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
-    if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
-    else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем настройки яркости из памяти
-    if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
+    if (checkData(sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) { //проверяем дату и время в памяти
+      updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
+      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    }
+    if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) { //проверяем быстрые настройки
+      updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем быстрые настройки в память
+      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    }
+    else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем быстрые настройки из памяти
+    if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) { //проверяем основные настройки
+      updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
+      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
 #if ALARM_TYPE
     alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
 #endif
   }
 
-  if (checkDebugSettingsCRC() || checkData(sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG)) updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
+  if (checkDebugSettingsCRC() || checkData(sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG)) { //проверяем настройки отладки
+    updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
+    SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+  }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
 #if !GEN_DISABLE && GEN_FEEDBACK
@@ -299,12 +317,16 @@ int main(void) //инициализация
   WireInit(); //инициализация шины Wire
   IndiInit(); //инициализация индикаторов
 
-  if (testRTC()) buzz_pulse(RTC_ERROR_SOUND_FREQ, RTC_ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+
+  testRTC(); //проверка модуля часов
   if (!LEFT_CHK && check_pass()) settings_debug(); //если правая кнопка зажата запускаем отладку
   if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы
+  checkErrors(); //проверка на наличие ошибок
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   _tmrGlitch = random(GLITCH_MIN, GLITCH_MAX); //находим рандомное время появления глюка
+  _animShow = 0; //сбрасываем флаг анимации цифр
   _sec = 0; //обновление экрана
   changeBright(); //установка яркости от времени суток
 #if ALARM_TYPE
@@ -360,7 +382,6 @@ void testLamp(void) //проверка системы
 #if !BACKL_WS2812B
   backlSetBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
   dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
   while (1) {
     for (byte indi = 0; indi < LAMP_NUM; indi++) {
@@ -396,7 +417,6 @@ boolean check_pass(void) //проверка пароля
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
 
   while (1) {
     dataUpdate(); //обработка данных
@@ -458,7 +478,6 @@ void settings_debug(void) //отладка
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
 
   //настройки
   while (1) {
@@ -585,10 +604,10 @@ void settings_debug(void) //отладка
   }
 }
 //------------------------Проверка модуля часов реального времени--------------------------------------
-boolean testRTC(void) //проверка модуля часов реального времени
+void testRTC(void) //проверка модуля часов реального времени
 {
-  if (disable32K()) return 1; //отключение вывода 32K
-  if (setSQW()) return 1; //установка SQW на 1Гц
+  if (disable32K()) SET_ERROR(DS3231_ERROR); //отключение вывода 32K
+  if (setSQW()) SET_ERROR(DS3231_ERROR); //установка SQW на 1Гц
 
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
@@ -600,19 +619,29 @@ boolean testRTC(void) //проверка модуля часов реально�
     }
   }
 
-  if (getTime()) return 1; //считываем время из RTC
+  if (getTime()) SET_ERROR(DS3231_ERROR); //считываем время из RTC
   if (getOSF()) { //если пропадало питание
     EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
     sendTime(); //отправить время в RTC
+    SET_ERROR(LOST_POWER_ERROR); //установили ошибку пропадания питания
   }
 
   if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
     EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
     EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
   }
-  else return 1; //иначе выдаем ошибку
-
-  return 0; //возвращаем статус "ок"
+  else SET_ERROR(SQW_ERROR); //иначе выдаем ошибку
+}
+//----------------------------Проверка ошибок------------------------------------------------------
+void checkErrors(void) //проверка ошибок
+{
+  for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+    if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
+      buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+      indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
+      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+    }
+  }
 }
 //------------------------Проверка данных в памяти--------------------------------------------------
 boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
@@ -988,6 +1017,8 @@ void checkVCC(void) //чтение напряжения питания
   }
   vcc_adc = temp / 10; //получаем напряжение питания
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
+
+  if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
 }
 //-----------------------Чтение аналоговой кнопки-----------------------------------------------
 void checkKeyADC(void) //чтение аналоговой кнопки
