@@ -357,16 +357,17 @@ void uartDisable(void) //отключение uart
 //------------------------------------Проверка системы-------------------------------------------------
 void testLamp(void) //проверка системы
 {
-#if BACKL_WS2812B
-  setLedBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
-#else
-  backlSetBright(DEFAULT_BACKL_BRIGHT); //если посветка статичная, устанавливаем яркость
+#if !BACKL_WS2812B
+  backlSetBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
   fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
   dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
   while (1) {
     for (byte indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
+#if BACKL_WS2812B
+      setLedBright(indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
+#endif
       for (byte digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_WS2812B
@@ -380,7 +381,7 @@ void testLamp(void) //проверка системы
         }
       }
 #if BACKL_WS2812B
-      clrLed(indi); //очищаем светодиод
+      setLedBright(indi, 0); //выключаем светодиод
 #endif
     }
   }
@@ -1815,14 +1816,15 @@ void changeBright(void) //установка яркости от времени 
       case BACKL_STATIC:
         setLedBright(backlMaxBright); //устанавливаем максимальную яркость
         setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
+        showLeds(); //отрисовка светодиодов
         break;
       case BACKL_SMOOTH_COLOR_CHANGE:
       case BACKL_RAINBOW:
       case BACKL_CONFETTI:
         setLedBright(backlMaxBright); //устанавливаем максимальную яркость
+        showLeds(); //отрисовка светодиодов
         break;
     }
-    showLeds(); //отрисовка светодиодов
   }
   else clrLeds(); //выключили светодиоды
 #else
@@ -1835,7 +1837,7 @@ void changeBright(void) //установка яркости от времени 
   if (backlMaxBright) {
     backlMinBright = (backlMaxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
     uint8_t backlNowBright = (backlMaxBright > BACKL_MIN_BRIGHT) ? (backlMaxBright - BACKL_MIN_BRIGHT) : backlMaxBright;
-    
+
     backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
     backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
