@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.5 релиз от 14.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.5 релиз от 15.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -88,6 +88,13 @@ struct Settings_4 {
   uint8_t mode_6_step; //шаг эффекта номер 6
 } backl;
 uint8_t backlMaxBright; //максимальная яркость подсветки
+uint8_t backlMinBright; //минимальная яркость подсветки
+
+uint8_t dotBrightStep; //шаг мигания точек
+uint8_t dotBrightTime; //период шага мигания точек
+uint8_t dotMaxBright; //максимальная яркость точек
+
+uint8_t indiMaxBright; //максимальная яркость индикаторов
 
 enum {
   KEY_NULL,        //кнопка не нажата
@@ -116,14 +123,14 @@ enum {
 };
 
 enum {
-  DEB_TIME_CORRECT, //корректировка хода времени
-  DEB_DEFAULT_MIN_PWM,      //минимальное значение шим
-  DEB_DEFAULT_MAX_PWM,      //максимальное значение шим
+  DEB_TIME_CORRECT,    //корректировка хода времени
+  DEB_DEFAULT_MIN_PWM, //минимальное значение шим
+  DEB_DEFAULT_MAX_PWM, //максимальное значение шим
 #if !GEN_DISABLE && GEN_FEEDBACK
-  DEB_HV_ADC,       //значение ацп преобразователя
+  DEB_HV_ADC,          //значение ацп преобразователя
 #endif
-  DEB_RESET,        //максимальное значение шим
-  DEB_MAX_ITEMS     //максимум пунктов меню
+  DEB_RESET,           //максимальное значение шим
+  DEB_MAX_ITEMS        //максимум пунктов меню
 };
 
 enum {
@@ -173,12 +180,6 @@ boolean _animShow; //флаг анимации
 boolean _sec; //флаг обновления секунды
 boolean _dot; //флаг обновления точек
 
-uint8_t dotBrightStep; //шаг мигания точек
-uint8_t dotBrightTime; //период шага мигания точек
-uint8_t dotMaxBright; //максимальная яркость точек
-
-uint8_t indiMaxBright; //максимальная яркость индикаторов
-
 //alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника
 uint8_t alarms_num; //текущее количество будильников
 
@@ -210,7 +211,7 @@ uint8_t semp; //переключатель семплов мелодии
 
 #define GET_VCC(ref, adc) (float)((ref * 1024.0) / (float)adc) //расчет напряжения питания
 #define GET_ADC(vcc, coef) (int16_t)((256.0 / (float)vcc) * ((float)vcc / (float)coef)) //рассчет значения ацп кнопок
-uint16_t vcc_adc;
+uint16_t vcc_adc; //напряжение питания
 
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
@@ -1831,14 +1832,17 @@ void changeBright(void) //установка яркости от времени 
   }
 #endif
   if (backlMaxBright) {
-    backl.mode_2_time = setBrightTime(((backlMaxBright > BACKL_MIN_BRIGHT) ? (uint16_t)(backlMaxBright - BACKL_MIN_BRIGHT) : (uint16_t)backlMaxBright) * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
-    backl.mode_2_step = setBrightStep(((backlMaxBright > BACKL_MIN_BRIGHT) ? (uint16_t)(backlMaxBright - BACKL_MIN_BRIGHT) : (uint16_t)backlMaxBright) * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+    backlMinBright = (backlMaxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
+    uint8_t backlNowBright = (backlMaxBright > BACKL_MIN_BRIGHT) ? (backlMaxBright - BACKL_MIN_BRIGHT) : backlMaxBright;
+    
+    backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+    backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_WS2812B
     backl.mode_4_step = ceil((float)backlMaxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
     if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал, устанавливаем минимум
-    backl.mode_6_time = setBrightTime(((backlMaxBright > BACKL_MIN_BRIGHT) ? (uint16_t)(backlMaxBright - BACKL_MIN_BRIGHT) : (uint16_t)backlMaxBright) * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
-    backl.mode_6_step = setBrightStep(((backlMaxBright > BACKL_MIN_BRIGHT) ? (uint16_t)(backlMaxBright - BACKL_MIN_BRIGHT) : (uint16_t)backlMaxBright) * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+    backl.mode_6_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+    backl.mode_6_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
 #endif
   }
   indiSetBright(indiMaxBright); //установка общей яркости индикаторов
@@ -1864,7 +1868,7 @@ void backlEffect(void) //анимация подсветки
               if (incLedBright(backl.mode_2_step, backlMaxBright)) backl_drv = 0; //прибавили шаг яркости
             }
             else { //иначе светодиоды в режиме затухания
-              if (decLedBright(backl.mode_2_step, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //уменьшаем яркость
+              if (decLedBright(backl.mode_2_step, backlMinBright)) { //уменьшаем яркость
                 backl_drv = 1;
                 if (fastSettings.backlMode == BACKL_PULS_COLOR) color_steps += BACKL_MODE_3_COLOR; //меняем цвет
                 else color_steps = fastSettings.backlColor; //иначе статичный цвет
@@ -1910,7 +1914,7 @@ void backlEffect(void) //анимация подсветки
               }
             }
             else {
-              if (decLedBright(backl_pos, backl.mode_6_step, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) { //иначе убавляем яркость
+              if (decLedBright(backl_pos, backl.mode_6_step, backlMinBright)) { //иначе убавляем яркость
                 if (backl_pos < (LAMP_NUM - 1)) backl_pos++; //сменили позицию
                 else {
                   backl_pos = 0; //сбросили позицию
@@ -1964,7 +1968,7 @@ void backlFlash(void) //мигание подсветки
       switch (backl_drv) {
         case 0: if (backlIncBright(backl.mode_2_step, backlMaxBright)) backl_drv = 1; break;
         case 1:
-          if (backlDecBright(backl.mode_2_step, (backlMaxBright > BACKL_MIN_BRIGHT) ? BACKL_MIN_BRIGHT : 0)) {
+          if (backlDecBright(backl.mode_2_step, backlMinBright)) {
             _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE;
             backl_drv = 0;
           }
