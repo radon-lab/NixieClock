@@ -3069,7 +3069,7 @@ void tickSecs(void) //анимация секунд
     time_anim[2] = RTC.s % 10; //новые секунды
     time_anim[3] = RTC.s / 10; //новые секунды
     time_old = RTC.s; //запоминаем текущее время
-    time_tick = 0x03; //устанавливаем флаги анимации
+    time_flip = 0x03; //устанавливаем флаги анимации
   }
   if (time_flip && !_timer_ms[TMR_MS]) { //если анимация активна и пришло время
     _timer_ms[TMR_MS] = SECONDS_ANIM_TIME; //установили таймер
