@@ -1042,43 +1042,43 @@ void dataUpdate(void) //обработка данных
         tick_sec++; //прибавляем секунду
       }
     }
-  }
 
-  for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
-    //счет времени
-    if (++RTC.s > 59) { //секунды
-      RTC.s = 0;
-      if (++RTC.m > 59) { //минуты
-        RTC.m = 0;
-        if (++RTC.h > 23) { //часы
-          RTC.h = 0;
-          if (++RTC.DW > 7) RTC.DW = 1; //день недели
-          if (++RTC.DD > maxDays()) { //дата
-            RTC.DD = 1;
-            if (++RTC.MM > 12) { //месяц
-              RTC.MM = 1;
-              if (++RTC.YY > 2050) { //год
-                RTC.YY = 2021;
+    for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
+      //счет времени
+      if (++RTC.s > 59) { //секунды
+        RTC.s = 0;
+        if (++RTC.m > 59) { //минуты
+          RTC.m = 0;
+          if (++RTC.h > 23) { //часы
+            RTC.h = 0;
+            if (++RTC.DW > 7) RTC.DW = 1; //день недели
+            if (++RTC.DD > maxDays()) { //дата
+              RTC.DD = 1;
+              if (++RTC.MM > 12) { //месяц
+                RTC.MM = 1;
+                if (++RTC.YY > 2050) { //год
+                  RTC.YY = 2021;
+                }
               }
             }
           }
+          hourSound(); //звук смены часа
+          changeBright(); //установка яркости от времени суток
         }
-        hourSound(); //звук смены часа
-        changeBright(); //установка яркости от времени суток
-      }
-      _tmrBurn++; //прибавляем минуту к таймеру антиотравления
-      _animShow = 1; //показать анимацию переключения цифр
+        _tmrBurn++; //прибавляем минуту к таймеру антиотравления
+        _animShow = 1; //показать анимацию переключения цифр
 #if ALARM_TYPE
-      alarmDataUpdate(); //проверка будильников
+        alarmDataUpdate(); //проверка будильников
 #endif
-    }
+      }
 #if !BTN_ADD_DISABLE
-    switch (timerMode) {
-      case 1: if (timerCnt != 65535) timerCnt++; break;
-      case 2: if (timerCnt) timerCnt--; break;
-    }
+      switch (timerMode) {
+        case 1: if (timerCnt != 65535) timerCnt++; break;
+        case 2: if (timerCnt) timerCnt--; break;
+      }
 #endif
-    _sec = _dot = 0; //очищаем флаги секунды и точек
+      _sec = _dot = 0; //очищаем флаги секунды и точек
+    }
   }
 }
 //------------------------------------Звук смены часа------------------------------------
@@ -1851,7 +1851,6 @@ void settings_main(void) //настроки основные
       case SET_KEY_HOLD: //удержание средней кнопки
         updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
         changeBright(); //установка яркости от времени суток
-        _tmrTemp = 0; //сбрасываем таймер показа температуры
         return;
     }
   }
@@ -3110,14 +3109,17 @@ void mainScreen(void) //главный экран
   switch (check_keys()) {
     case LEFT_KEY_HOLD: //удержание левой кнопки
       settings_time(); //иначе настройки времени
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
     case LEFT_KEY_PRESS: //клик левой кнопкой
       showTemp(); //показать температуру
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
     case RIGHT_KEY_PRESS: //клик правой кнопкой
       showDate(); //показать дату
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
 #if ALARM_TYPE
@@ -3127,11 +3129,13 @@ void mainScreen(void) //главный экран
 #else
       settings_multiAlarm(); //настройка будильников
 #endif
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
 #endif
     case SET_KEY_PRESS: //клик средней кнопкой
       fastSetSwitch(); //переключение настроек
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
     case SET_KEY_HOLD: //удержание средней кнопки
@@ -3140,11 +3144,13 @@ void mainScreen(void) //главный экран
         alarmReset(); //сброс будильника
       }
       else settings_main(); //настроки основные
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
 #if !BTN_ADD_DISABLE
     case ADD_KEY_PRESS: //клик дополнительной кнопкой
       timerStopwatch(); //таймер-секундомер
+      _tmrTemp = 0; //сбрасываем таймер показа температуры
       _sec = _animShow = 0; //обновление экрана
       break;
 #endif
