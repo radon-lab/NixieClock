@@ -16,16 +16,6 @@
 
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 
-enum {
-  VCC_ERROR,        //ошибка напряжения питания
-  SQW_ERROR,        //ошибка сигнала SQW
-  DS3231_ERROR,     //ошибка связи с модулем DS3231
-  LOST_POWER_ERROR, //ошибка пропадания питания с модуля DS3231
-  MEMORY_ERROR,     //ошибка памяти еепром
-  SQW_TIME_ERROR,   //ошибка длительности сигнала SQW
-  RESET_ERROR       //ошибка аварийной перезагрузки
-};
-
 struct Settings {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
@@ -47,14 +37,6 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
 
-//-----------------------------------Установка ошибки------------------------------------------
-void SET_ERROR(uint8_t err) //установка ошибки
-{
-  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали ячейку ошибки
-  _error_reg |= (0x01 << err); //установили флаг ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, _error_reg); //обновили ячейку ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, _error_reg ^ 0xFF); //обновили ячейку контрольной суммы ошибки
-}
 //---------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_COMPA_vect) //динамическая индикация
 {

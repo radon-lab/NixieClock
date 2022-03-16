@@ -6,6 +6,19 @@
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab.
 */
+//----------------Процедуры-----------------
+enum {
+  VCC_ERROR,        //ошибка напряжения питания
+  SQW_ERROR,        //ошибка сигнала SQW
+  DS3231_ERROR,     //ошибка связи с модулем DS3231
+  LOST_POWER_ERROR, //ошибка пропадания питания с модуля DS3231
+  MEMORY_ERROR,     //ошибка памяти еепром
+  SQW_TIME_ERROR,   //ошибка длительности сигнала SQW
+  RESET_ERROR       //ошибка аварийной перезагрузки
+};
+void dataUpdate(void); //процедура обработки данных
+void SET_ERROR(uint8_t err); //процедура установка ошибки
+
 //-----------------Таймеры------------------
 enum {
   TMR_SENS, //таймер сенсоров температуры
@@ -26,7 +39,6 @@ struct temp {
   uint16_t press = 0; //давление
   uint8_t hum = 0; //влажность
 } sens;
-void dataUpdate(void); //процедура обработки данных
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -218,7 +230,8 @@ uint16_t vcc_adc; //напряжение питания
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_SETTINGS_DEBUG (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек отладки
-#define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_SETTINGS_DEBUG + sizeof(debugSettings)) //блок памяти количества будильников
+#define EEPROM_BLOCK_ERROR (EEPROM_BLOCK_SETTINGS_DEBUG + sizeof(debugSettings)) //блок памяти ошибок
+#define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + sizeof(alarms_num)) //блок памяти контрольной суммы настроек
 #define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы времени
@@ -226,9 +239,10 @@ uint16_t vcc_adc; //напряжение питания
 #define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы быстрых настроек
 #define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //первая ячейка памяти будильников
+#define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1)  //блок контрольной суммы памяти ошибок
+#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ERROR + 1) //первая ячейка памяти будильников
 
-#define MAX_ALARMS (((EEPROM_BLOCK_ERROR - 1) - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
+#define MAX_ALARMS ((1023 - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
 
 #if BTN_TYPE
 #define SET_CHK checkAnalogKey(key.setMin, key.setMax) //чтение средней аналоговой кнопки
@@ -236,7 +250,7 @@ uint16_t vcc_adc; //напряжение питания
 #define RIGHT_CHK checkAnalogKey(key.rightMin, key.rightMax) //чтение правой аналоговой кнопки
 #endif
 
-//----------------------------------Инициализация----------------------------------
+//----------------------------------Инициализация--------------------------------------------
 int main(void) //инициализация
 {
 #if !BTN_TYPE
@@ -325,7 +339,7 @@ int main(void) //инициализация
 #if ALARM_TYPE
   checkAlarms(); //проверка будильников
 #endif
-  //----------------------------------Главная----------------------------------
+  //------------------------------------Главная---------------------------------
   for (;;) //главная
   {
     dataUpdate(); //обработка данных
@@ -340,12 +354,12 @@ int main(void) //инициализация
   }
   return 0; //конец
 }
-//---------------------------------------Прерывание от RTC----------------------------------------------
+//---------------------------------Прерывание от RTC----------------------------
 ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
 {
   tick_sec++; //прибавляем секунду
 }
-//---------------------------------Прерывание сигнала для пищалки---------------------------------------
+//---------------------------Прерывание сигнала для пищалки---------------------
 ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалки
 {
   if (cnt_freq > 255) cnt_freq -= 255; //считаем циклы полуволны
@@ -363,13 +377,139 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
     }
   }
 }
-//----------------------------------Отключение uart----------------------------------------------------
+//-----------------------------Расчет шага яркости-----------------------------
+uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
+{
+  uint8_t temp = ceil((float)_brt / (float)_time * (float)_step); //расчёт шага яркости точки
+  if (!temp) temp = 1; //если шаг слишком мал, устанавливаем минимум
+  return temp;
+}
+//-------------------------Расчет периода шага яркости--------------------------
+uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет периода шага яркости
+{
+  uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
+  if (temp < _step) temp = _step; //если шаг слишком мал, устанавливаем минимум
+  return temp;
+}
+//-------------------------Получить 12-ти часовой формат------------------------
+uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
+{
+  return (timeH > 12) ? (timeH - 12) : (timeH) ? timeH : 12;
+}
+//------------------------------Отключение uart---------------------------------
 void uartDisable(void) //отключение uart
 {
   UCSR0B = 0; //выключаем UART
   PRR |= (0x01 << PRUSART0); //выключаем питание UART
 }
-//------------------------------------Проверка системы-------------------------------------------------
+//-----------------------------Установка ошибки---------------------------------
+void SET_ERROR(uint8_t err) //установка ошибки
+{
+  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали ячейку ошибки
+  _error_reg |= (0x01 << err); //установили флаг ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, _error_reg); //обновили ячейку ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, _error_reg ^ 0xFF); //обновили ячейку контрольной суммы ошибки
+}
+//------------------------Проверка данных в памяти-------------------------------
+boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
+{
+  uint8_t crc = 0;
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
+  if (crc != EEPROM_ReadByte(cellCRC)) return 1;
+  return 0;
+}
+//-----------------------Обновление данных в памяти-------------------------------
+void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
+{
+  uint8_t crc = 0;
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
+  EEPROM_UpdateBlock((uint16_t)str, cell, size);
+  EEPROM_UpdateByte(cellCRC, crc);
+}
+//------------------------Сверка контрольной суммы---------------------------------
+void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
+{
+  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
+    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
+    data >>= 0x01; //сдвигаем буфер
+  }
+}
+//--------------------Проверка контрольной суммы настроек--------------------------
+boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
+{
+  uint8_t CRC = 0; //буфер контрольной суммы
+
+  for (uint8_t i = 0; i < sizeof(RTC); i++) checkCRC(&CRC, *((uint8_t*)&RTC + i));
+  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
+  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
+
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == CRC) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
+  return 1;
+}
+//----------------Проверка контрольной суммы настроек отладки-----------------------
+boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
+{
+  uint8_t CRC = 0; //буфер контрольной суммы
+
+  for (uint8_t i = 0; i < sizeof(debugSettings); i++) checkCRC(&CRC, *((uint8_t*)&debugSettings + i));
+
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == CRC) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
+  return 1;
+}
+//-----------------Обновление пределов аналоговых кнопок----------------------------
+void updateKeysADC(void) //обновление пределов аналоговых кнопок
+{
+  int16_t temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_SET_R_HIGH));
+  key.setMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
+  key.setMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
+
+  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_LEFT_R_HIGH));
+  key.leftMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
+  key.leftMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
+
+  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_RIGHT_R_HIGH));
+  key.rightMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
+  key.rightMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
+}
+//-----------------Обновление предела удержания напряжения-------------------------
+void updateTresholdADC(void) //обновление предела удержания напряжения
+{
+  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + constrain(debugSettings.hvCorrect, -25, 25);
+}
+//----------------------Чтение напряжения питания----------------------------------
+void checkVCC(void) //чтение напряжения питания
+{
+  uint16_t temp = 0; //буфер замеров
+  ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS1) | (0x01 << ADPS2); //настройка АЦП пределитель 128
+  ADMUX = (0x01 << REFS0) | (0x01 << MUX3) | (0x01 << MUX2) | (0x01 << MUX1); //выбор внешнего опорного + 1.1в
+  _delay_ms(1000); //ждём пока напряжение успокоится
+  for (uint8_t i = 0; i < 10; i++) {
+    _delay_ms(5); //ждём пока опорное успокоится
+    ADCSRA |= (1 << ADSC); //запускаем преобразование
+    while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
+    temp += ADCL | ((uint16_t)ADCH << 8);
+  }
+  vcc_adc = temp / 10; //получаем напряжение питания
+  ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
+
+  if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
+}
+//------------------------Чтение аналоговой кнопки--------------------------------
+void checkKeyADC(void) //чтение аналоговой кнопки
+{
+  ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
+  ADCSRA |= (1 << ADSC); //запускаем преобразование
+  while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
+  btn_adc = ADCH; //записываем результат опроса
+}
+//-----------------------Проверка аналоговой кнопки--------------------------------
+boolean checkAnalogKey(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
+{
+  return !(minADC < btn_adc && btn_adc <= maxADC); //возвращаем результат опроса
+}
+//---------------------------Проверка системы---------------------------------------
 void testLamp(void) //проверка системы
 {
 #if !BACKL_WS2812B
@@ -399,6 +539,51 @@ void testLamp(void) //проверка системы
 #endif
     }
   }
+}
+//------------------Проверка модуля часов реального времени-------------------------
+void testRTC(void) //проверка модуля часов реального времени
+{
+  if (disable32K()) SET_ERROR(DS3231_ERROR); //отключение вывода 32K
+  if (setSQW()) SET_ERROR(DS3231_ERROR); //установка SQW на 1Гц
+
+  EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
+  EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
+
+  for (_timer_ms[TMR_MS] = TEST_SQW_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) { //ждем сигнала от SQW
+    for (; tick_ms; tick_ms--) { //если был тик, обрабатываем данные
+      if (_timer_ms[TMR_MS] > MS_PERIOD) _timer_ms[TMR_MS] -= MS_PERIOD; //если таймер больше периода
+      else if (_timer_ms[TMR_MS]) _timer_ms[TMR_MS] = 0; //иначе сбрасываем таймер
+    }
+  }
+
+  if (getTime()) SET_ERROR(DS3231_ERROR); //считываем время из RTC
+  if (getOSF()) { //если пропадало питание
+    EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
+    sendTime(); //отправить время в RTC
+    SET_ERROR(LOST_POWER_ERROR); //установили ошибку пропадания питания
+  }
+
+  if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
+    EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
+    EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
+  }
+  else SET_ERROR(SQW_ERROR); //иначе выдаем ошибку
+}
+//-----------------------------Проверка ошибок-------------------------------------
+void checkErrors(void) //проверка ошибок
+{
+  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR);
+  if ((_error_reg ^ 0xFF) == EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) {
+    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+      if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
+        buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+        indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
+        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+      }
+    }
+  }
+  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
 }
 //-----------------------------Проверка пароля------------------------------------
 boolean check_pass(void) //проверка пароля
@@ -595,99 +780,6 @@ void settings_debug(void) //отладка
         return;
     }
   }
-}
-//------------------------Проверка модуля часов реального времени--------------------------------------
-void testRTC(void) //проверка модуля часов реального времени
-{
-  if (disable32K()) SET_ERROR(DS3231_ERROR); //отключение вывода 32K
-  if (setSQW()) SET_ERROR(DS3231_ERROR); //установка SQW на 1Гц
-
-  EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
-  EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
-
-  for (_timer_ms[TMR_MS] = TEST_SQW_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) { //ждем сигнала от SQW
-    for (; tick_ms; tick_ms--) { //если был тик, обрабатываем данные
-      if (_timer_ms[TMR_MS] > MS_PERIOD) _timer_ms[TMR_MS] -= MS_PERIOD; //если таймер больше периода
-      else if (_timer_ms[TMR_MS]) _timer_ms[TMR_MS] = 0; //иначе сбрасываем таймер
-    }
-  }
-
-  if (getTime()) SET_ERROR(DS3231_ERROR); //считываем время из RTC
-  if (getOSF()) { //если пропадало питание
-    EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
-    sendTime(); //отправить время в RTC
-    SET_ERROR(LOST_POWER_ERROR); //установили ошибку пропадания питания
-  }
-
-  if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
-    EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
-    EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
-  }
-  else SET_ERROR(SQW_ERROR); //иначе выдаем ошибку
-}
-//-----------------------------Проверка ошибок------------------------------------------------------
-void checkErrors(void) //проверка ошибок
-{
-  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR);
-  if ((_error_reg ^ 0xFF) == EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) {
-    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
-      if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
-        buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
-        indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
-        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-      }
-    }
-  }
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
-}
-//------------------------Проверка данных в памяти--------------------------------------------------
-boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
-  if (crc != EEPROM_ReadByte(cellCRC)) return 1;
-  return 0;
-}
-//-----------------------Обновление данных в памяти-------------------------------------------------
-void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
-  EEPROM_UpdateBlock((uint16_t)str, cell, size);
-  EEPROM_UpdateByte(cellCRC, crc);
-}
-//------------------------Сверка контрольной суммы--------------------------------------------------
-void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
-{
-  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
-    data >>= 0x01; //сдвигаем буфер
-  }
-}
-//------------------------Проверка контрольной суммы настроек-----------------------------------------
-boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
-{
-  uint8_t CRC = 0; //буфер контрольной суммы
-
-  for (uint8_t i = 0; i < sizeof(RTC); i++) checkCRC(&CRC, *((uint8_t*)&RTC + i));
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
-  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
-
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
-  return 1;
-}
-//--------------------Проверка контрольной суммы настроек отладки-------------------------------------
-boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
-{
-  uint8_t CRC = 0; //буфер контрольной суммы
-
-  for (uint8_t i = 0; i < sizeof(debugSettings); i++) checkCRC(&CRC, *((uint8_t*)&debugSettings + i));
-
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
-  return 1;
 }
 //------------------------------Генерация частот бузера------------------------------------------------
 void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
@@ -996,57 +1088,6 @@ void hourSound(void) //звук смены часа
       buzz_pulse(HOUR_SOUND_FREQ, HOUR_SOUND_TIME); //звук смены часа
     }
   }
-}
-//-----------------------Обновление пределов аналоговых кнопок--------------------------------
-void updateKeysADC(void) //обновление пределов аналоговых кнопок
-{
-  int16_t temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_SET_R_HIGH));
-  key.setMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
-  key.setMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
-
-  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_LEFT_R_HIGH));
-  key.leftMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
-  key.leftMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
-
-  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_RIGHT_R_HIGH));
-  key.rightMin = constrain(temp - BTN_ANALOG_GIST, 5, 255);
-  key.rightMax = constrain(temp + BTN_ANALOG_GIST, 5, 255);
-}
-//----------------------Обновление предела удержания напряжения------------------------------
-void updateTresholdADC(void) //обновление предела удержания напряжения
-{
-  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + constrain(debugSettings.hvCorrect, -25, 25);
-}
-//-----------------------------Чтение напряжения питания-------------------------------------
-void checkVCC(void) //чтение напряжения питания
-{
-  uint16_t temp = 0; //буфер замеров
-  ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS1) | (0x01 << ADPS2); //настройка АЦП пределитель 128
-  ADMUX = (0x01 << REFS0) | (0x01 << MUX3) | (0x01 << MUX2) | (0x01 << MUX1); //выбор внешнего опорного + 1.1в
-  _delay_ms(1000); //ждём пока напряжение успокоится
-  for (uint8_t i = 0; i < 10; i++) {
-    _delay_ms(5); //ждём пока опорное успокоится
-    ADCSRA |= (1 << ADSC); //запускаем преобразование
-    while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
-    temp += ADCL | ((uint16_t)ADCH << 8);
-  }
-  vcc_adc = temp / 10; //получаем напряжение питания
-  ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
-
-  if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
-}
-//-----------------------Чтение аналоговой кнопки-----------------------------------------------
-void checkKeyADC(void) //чтение аналоговой кнопки
-{
-  ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
-  ADCSRA |= (1 << ADSC); //запускаем преобразование
-  while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
-  btn_adc = ADCH; //записываем результат опроса
-}
-//-----------------------Проверка аналоговой кнопки-----------------------------------------------
-boolean checkAnalogKey(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
-{
-  return !(minADC < btn_adc && btn_adc <= maxADC); //возвращаем результат опроса
 }
 //-----------------------------Проверка кнопок----------------------------------------------------
 uint8_t check_keys(void) //проверка кнопок
@@ -1812,20 +1853,6 @@ void settings_main(void) //настроки основные
         return;
     }
   }
-}
-//---------------------Установка яркости от времени суток-----------------------------
-uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //установка яркости от времени суток
-{
-  uint8_t temp = ceil((float)_brt / (float)_time * (float)_step); //расчёт шага яркости точки
-  if (!temp) temp = 1; //если шаг слишком мал, устанавливаем минимум
-  return temp;
-}
-//---------------------Установка яркости от времени суток-----------------------------
-uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //установка яркости от времени суток
-{
-  uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
-  if (temp < _step) temp = _step; //если шаг слишком мал, устанавливаем минимум
-  return temp;
 }
 //---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
@@ -3120,9 +3147,4 @@ void mainScreen(void) //главный экран
       break;
 #endif
   }
-}
-//-------------------------------Получить 12-ти часовой формат---------------------------------------------------
-uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
-{
-  return (timeH > 12) ? (timeH - 12) : (timeH) ? timeH : 12;
 }
