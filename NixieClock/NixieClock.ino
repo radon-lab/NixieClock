@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.7 релиз от 15.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.7 релиз от 16.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -35,7 +35,6 @@ void dataUpdate(void); //процедура обработки данных
 #include "userConfig.h"
 #include "connection.h"
 #include "config.h"
-#include "indiDisp.h"
 #include "wire.h"
 #include "EEPROM.h"
 #include "RTC.h"
@@ -43,6 +42,7 @@ void dataUpdate(void); //процедура обработки данных
 #include "DHT.h"
 #include "DS.h"
 #include "WS.h"
+#include "INDICATION.h"
 
 //----------------Настройки----------------
 struct Settings_1 {
@@ -214,14 +214,6 @@ uint8_t semp; //переключатель семплов мелодии
 #define GET_ADC(vcc, coef) (int16_t)((256.0 / (float)vcc) * ((float)vcc / (float)coef)) //рассчет значения ацп кнопок
 uint16_t vcc_adc; //напряжение питания
 
-#define VCC_ERROR 0x01 //ошибка напряжения питания
-#define SQW_ERROR 0x02 //ошибка сигнала SQW
-#define DS3231_ERROR 0x04 //ошибка связи с модулем DS3231
-#define LOST_POWER_ERROR 0x08 //ошибка пропадания питания с модуля DS3231
-#define MEMORY_ERROR 0x10 //ошибка памяти еепром
-#define SET_ERROR(err) (_error_reg |= err)
-uint8_t _error_reg; //регистр ошибок
-
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
@@ -236,7 +228,7 @@ uint8_t _error_reg; //регистр ошибок
 #define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //первая ячейка памяти будильников
 
-#define MAX_ALARMS ((1023 - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
+#define MAX_ALARMS (((EEPROM_BLOCK_ERROR - 1) - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
 
 #if BTN_TYPE
 #define SET_CHK checkAnalogKey(key.setMin, key.setMax) //чтение средней аналоговой кнопки
@@ -633,16 +625,21 @@ void testRTC(void) //проверка модуля часов реального
   }
   else SET_ERROR(SQW_ERROR); //иначе выдаем ошибку
 }
-//----------------------------Проверка ошибок------------------------------------------------------
+//-----------------------------Проверка ошибок------------------------------------------------------
 void checkErrors(void) //проверка ошибок
 {
-  for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
-    if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
-      buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
-      indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
-      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR);
+  if ((_error_reg ^ 0xFF) == EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) {
+    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+      if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
+        buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+        indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
+        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+      }
     }
   }
+  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
 }
 //------------------------Проверка данных в памяти--------------------------------------------------
 boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
@@ -917,23 +914,40 @@ void dataUpdate(void) //обработка данных
       case 1: if (btn_tmr) btn_tmr--; break; //убираем дребезг
     }
 
-    if (!EIMSK) { //если внешние часы не обнаружены
+    timerCorrect += debugSettings.timePeriod % 1000; //остаток для коррекции
+    uint16_t msDec = (debugSettings.timePeriod + timerCorrect) / 1000; //находим целые мс
+    for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
+      if (_timer_ms[tm]) { //если таймер активен
+        if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше периода
+        else _timer_ms[tm] = 0; //иначе сбрасываем таймер
+      }
+    }
+    if (timerCorrect >= 1000) timerCorrect -= 1000; //если коррекция больше либо равна 1 мс
+
+    if (EIMSK) { //если работаем от внешнего тактирования
+      timeNotRTC += msDec; //прибавили время
+      if (tick_sec) { //если был сигнал SQW
+        if (timeNotRTC < MIN_SQW_TIME) { //если сигнал слишком короткий
+          EIMSK = 0; //перешли на внутреннее тактирование
+          tick_sec = 0; //сбросили тики
+          timeNotRTC = 0; //сбросили таймер
+          SET_ERROR(SQW_TIME_ERROR); //устанавливаем ошибку длительности сигнала
+        }
+      }
+      else if (timeNotRTC > MAX_SQW_TIME) { //если сигнал слишком длинный
+        EIMSK = 0; //перешли на внутреннее тактирование
+        tick_sec = 0; //сбросили тики
+        timeNotRTC = 0; //сбросили таймер
+        SET_ERROR(SQW_TIME_ERROR); //устанавливаем ошибку длительности сигнала
+      }
+    }
+    else { //если внешние тактирование не обнаружено
       timeNotRTC += debugSettings.timePeriod; //добавляем ко времени период таймера
       if (timeNotRTC > 1000000UL) { //если прошла секунда
         timeNotRTC -= 1000000UL; //оставляем остаток
         tick_sec++; //прибавляем секунду
       }
     }
-
-    timerCorrect += debugSettings.timePeriod % 1000; //остаток для коррекции
-    uint16_t msDec = (debugSettings.timePeriod + timerCorrect) / 1000; //находим целые мс
-    for (uint8_t tm = 0; tm < TIMERS_NUM; tm++) { //опрашиваем все таймеры
-      if (_timer_ms[tm]) { //если таймер активен
-        if (_timer_ms[tm] > msDec) _timer_ms[tm] -= msDec; //если таймер больше периода
-        else if (_timer_ms[tm]) _timer_ms[tm] = 0; //иначе сбрасываем таймер
-      }
-    }
-    if (timerCorrect >= 1000) timerCorrect -= 1000; //если коррекция больше либо равна 1 мс
   }
 
   for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
