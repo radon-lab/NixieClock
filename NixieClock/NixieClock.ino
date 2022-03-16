@@ -6,15 +6,16 @@
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab.
 */
-//----------------Процедуры-----------------
+//-----------------Ошибки-----------------
 enum {
-  VCC_ERROR,        //ошибка напряжения питания
-  SQW_ERROR,        //ошибка сигнала SQW
-  DS3231_ERROR,     //ошибка связи с модулем DS3231
-  LOST_POWER_ERROR, //ошибка пропадания питания с модуля DS3231
-  MEMORY_ERROR,     //ошибка памяти еепром
-  SQW_TIME_ERROR,   //ошибка длительности сигнала SQW
-  RESET_ERROR       //ошибка аварийной перезагрузки
+  VCC_ERROR,           //0001 - ошибка напряжения питания
+  SQW_ERROR,           //0002 - ошибка сигнала SQW
+  DS3231_ERROR,        //0003 - ошибка связи с модулем DS3231
+  LOST_POWER_ERROR,    //0004 - ошибка пропадания питания с модуля DS3231
+  MEMORY_ERROR,        //0005 - ошибка памяти еепром
+  SQW_LOW_TIME_ERROR,  //0006 - ошибка слишком короткий сигнал SQW
+  SQW_HIGH_TIME_ERROR, //0007 - ошибка слишком доинный сигнала SQW
+  RESET_ERROR          //0008 - ошибка аварийной перезагрузки
 };
 void dataUpdate(void); //процедура обработки данных
 void SET_ERROR(uint8_t err); //процедура установка ошибки
@@ -974,6 +975,7 @@ void dataUpdate(void) //обработка данных
 {
   static uint32_t timeNotRTC; //счетчик реального времени
   static uint16_t timerCorrect; //остаток для коррекции времени
+  static uint16_t timerSQW = MIN_SQW_TIME; //таймер контроля сигнала SQW
 #if BACKL_WS2812B
   backlEffect(); //анимация подсветки
 #else
@@ -1017,20 +1019,20 @@ void dataUpdate(void) //обработка данных
     if (timerCorrect >= 1000) timerCorrect -= 1000; //если коррекция больше либо равна 1 мс
 
     if (EIMSK) { //если работаем от внешнего тактирования
-      timeNotRTC += msDec; //прибавили время
+      timerSQW += msDec; //прибавили время
       if (tick_sec) { //если был сигнал SQW
-        if (timeNotRTC < MIN_SQW_TIME) { //если сигнал слишком короткий
+        if (timerSQW < MIN_SQW_TIME) { //если сигнал слишком короткий
           EIMSK = 0; //перешли на внутреннее тактирование
           tick_sec = 0; //сбросили тики
-          timeNotRTC = 0; //сбросили таймер
-          SET_ERROR(SQW_TIME_ERROR); //устанавливаем ошибку длительности сигнала
+          timerSQW = 0; //сбросили таймер
+          SET_ERROR(SQW_LOW_TIME_ERROR); //устанавливаем ошибку короткого сигнала
         }
       }
-      else if (timeNotRTC > MAX_SQW_TIME) { //если сигнал слишком длинный
+      else if (timerSQW > MAX_SQW_TIME) { //если сигнал слишком длинный
         EIMSK = 0; //перешли на внутреннее тактирование
         tick_sec = 0; //сбросили тики
-        timeNotRTC = 0; //сбросили таймер
-        SET_ERROR(SQW_TIME_ERROR); //устанавливаем ошибку длительности сигнала
+        timerSQW = 0; //сбросили таймер
+        SET_ERROR(SQW_HIGH_TIME_ERROR); //устанавливаем ошибку длинного сигнала
       }
     }
     else { //если внешние тактирование не обнаружено
