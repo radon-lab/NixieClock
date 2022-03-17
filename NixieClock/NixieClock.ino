@@ -11,7 +11,7 @@ enum {
   VCC_ERROR,           //0001 - ошибка напряжения питания
   SQW_ERROR,           //0002 - ошибка сигнала SQW
   DS3231_ERROR,        //0003 - ошибка связи с модулем DS3231
-  LOST_POWER_ERROR,    //0004 - ошибка пропадания питания с модуля DS3231
+  DS3231_POWER_ERROR,  //0004 - ошибка пропадания питания с модуля DS3231
   MEMORY_ERROR,        //0005 - ошибка памяти еепром
   SQW_LOW_TIME_ERROR,  //0006 - ошибка слишком короткий сигнал SQW
   SQW_HIGH_TIME_ERROR, //0007 - ошибка слишком длинный сигнал SQW
@@ -407,10 +407,9 @@ void uartDisable(void) //отключение uart
 //-----------------------------Установка ошибки---------------------------------
 void SET_ERROR(uint8_t err) //установка ошибки
 {
-  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали ячейку ошибки
-  _error_reg |= (0x01 << err); //установили флаг ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, _error_reg); //обновили ячейку ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, _error_reg ^ 0xFF); //обновили ячейку контрольной суммы ошибки
+  uint8_t _error_bit = (0x01 << err); //выбрали флаг ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
 }
 //------------------------Проверка данных в памяти-------------------------------
 boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
@@ -562,7 +561,7 @@ void testRTC(void) //проверка модуля часов реального
   if (getOSF()) { //если пропадало питание
     EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
     sendTime(); //отправить время в RTC
-    SET_ERROR(LOST_POWER_ERROR); //установили ошибку пропадания питания
+    SET_ERROR(DS3231_POWER_ERROR); //установили ошибку пропадания питания
   }
 
   if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
