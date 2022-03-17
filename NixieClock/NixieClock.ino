@@ -240,8 +240,9 @@ uint16_t vcc_adc; //напряжение питания
 #define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы быстрых настроек
 #define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1)  //блок контрольной суммы памяти ошибок
-#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ERROR + 1) //первая ячейка памяти будильников
+#define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок контрольной суммы памяти ошибок
+#define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы количества будильников
+#define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ALARM + 1) //первая ячейка памяти будильников
 
 #define MAX_ALARMS ((1023 - EEPROM_BLOCK_ALARM_DATA) / 5) //максимальное количество будильников
 
@@ -254,6 +255,8 @@ uint16_t vcc_adc; //напряжение питания
 //----------------------------------Инициализация--------------------------------------------
 int main(void) //инициализация
 {
+  uartDisable(); //отключение uart
+
 #if !BTN_TYPE
   SET_INIT; //инициализация средней кнопки
   LEFT_INIT; //инициализация левой кнопки
@@ -271,9 +274,8 @@ int main(void) //инициализация
   BACKL_INIT; //инициализация подсветки
   BUZZ_INIT; //инициализация бузера
 
-  uartDisable(); //отключение uart
-  checkErrorsCRC(); //проверка контрольной суммы ошибок
-  
+  if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
+
   checkVCC(); //чтение напряжения питания
 #if BTN_TYPE
   updateKeysADC(); //обновление пределов аналоговых кнопок
@@ -285,7 +287,7 @@ int main(void) //инициализация
     updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
     updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
 #if ALARM_TYPE
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем количество будильников в память
+    updateByte(alarms_num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
 #endif
   }
   else { //иначе загружаем настройки из памяти
@@ -304,7 +306,11 @@ int main(void) //инициализация
     }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
 #if ALARM_TYPE
-    alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
+    if (checkByte(EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM)) { //проверяем количетво будильников
+      updateByte(alarms_num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
+      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    }
+    else alarms_num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
 #endif
   }
 
@@ -411,13 +417,31 @@ void SET_ERROR(uint8_t err) //установка ошибки
   EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
   EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
 }
+//------------------------Сверка контрольной суммы---------------------------------
+void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
+{
+  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
+    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
+    data >>= 0x01; //сдвигаем буфер
+  }
+}
+//------------------------Проверка байта в памяти-------------------------------
+boolean checkByte(uint8_t cell, uint8_t cellCRC) //проверка байта в памяти
+{
+  return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cellCRC));
+}
+//-----------------------Обновление байта в памяти-------------------------------
+void updateByte(uint8_t data, uint8_t cell, uint8_t cellCRC) //обновление байта в памяти
+{
+  EEPROM_UpdateByte(cell, data);
+  EEPROM_UpdateByte(cellCRC, data ^ 0xFF);
+}
 //------------------------Проверка данных в памяти-------------------------------
 boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
 {
   uint8_t crc = 0;
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
-  if (crc != EEPROM_ReadByte(cellCRC)) return 1;
-  return 0;
+  return (boolean)(crc != EEPROM_ReadByte(cellCRC));
 }
 //-----------------------Обновление данных в памяти-------------------------------
 void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
@@ -426,14 +450,6 @@ void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //о�
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
   EEPROM_UpdateBlock((uint16_t)str, cell, size);
   EEPROM_UpdateByte(cellCRC, crc);
-}
-//------------------------Сверка контрольной суммы---------------------------------
-void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
-{
-  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
-    data >>= 0x01; //сдвигаем буфер
-  }
 }
 //--------------------Проверка контрольной суммы настроек--------------------------
 boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
@@ -581,16 +597,7 @@ void checkErrors(void) //проверка ошибок
       for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
     }
   }
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
-}
-//--------------------Проверка контрольной суммы ошибок----------------------------
-void checkErrorsCRC(void) //проверка контрольной суммы ошибок
-{
-  if ((EEPROM_ReadByte(EEPROM_BLOCK_ERROR) ^ 0xFF) != EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) { //если контрольная сумма ошибок не совпала
-    EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
-    EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
-  }
+  updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
 }
 //-----------------------------Проверка пароля------------------------------------
 boolean check_pass(void) //проверка пароля
@@ -811,7 +818,7 @@ void initAlarm(void) //инициализация будильника
   if (!alarms_num) newAlarm(); //создать новый будильник
   else if (alarms_num > 1) { //если будильников в памяти больше одного
     alarms_num = 1; //оставляем один будильник
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, alarms_num); //записываем будильник в память
+    updateByte(alarms_num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
 //-----------------------------------Проверка будильников-------------------------------------------------
@@ -937,29 +944,30 @@ void alarmReset(void) //сброс будильника
 //----------------------------------Получить основные данные будильника---------------------------------------------------------
 uint8_t alarmRead(uint8_t almNum, uint8_t almData) //получить основные данные будильника
 {
-  return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + (almNum * 5) + almData); //возвращаем запрошеный байт
+  return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * 5) + almData); //возвращаем запрошеный байт
 }
 //----------------------------------Получить блок основных данных будильника---------------------------------------------------------
 void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
 {
-  for (uint8_t i = 0; i < 5; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i) : 0; //считываем блок данных
+  for (uint8_t i = 0; i < 5; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)(almNum - 1) * 5) + i) : 0; //считываем блок данных
 }
 //----------------------------------Записать блок основных данных будильника---------------------------------------------------------
 void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
 {
   if (!almNum) return; //если нет ни одного будильника - выходим
-  for (uint8_t i = 0; i < 5; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((almNum - 1) * 5) + i, data[i]); //записываем блок данных
+  for (uint8_t i = 0; i < 5; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)(almNum - 1) * 5) + i, data[i]); //записываем блок данных
 }
 //---------------------Создать новый будильник---------------------------------------------------------
 void newAlarm(void) //создать новый будильник
 {
   if (alarms_num < MAX_ALARMS) { //если новый будильник меньше максимума
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), DEFAULT_ALARM_TIME_HH); //устанавливаем час по умолчанию
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, DEFAULT_ALARM_TIME_MM); //устанавливаем минуты по умолчанию
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, DEFAULT_ALARM_MODE); //устанавливаем режим по умолчанию
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, 0); //устанавливаем дни недели по умолчанию
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, DEFAULT_ALARM_SOUND); //устанавливаем мелодию по умолчанию
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, ++alarms_num); //записываем количество будильников в память
+    uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)alarms_num * 5);
+    EEPROM_UpdateByte(newCell, DEFAULT_ALARM_TIME_HH); //устанавливаем час по умолчанию
+    EEPROM_UpdateByte(newCell + 1, DEFAULT_ALARM_TIME_MM); //устанавливаем минуты по умолчанию
+    EEPROM_UpdateByte(newCell + 2, DEFAULT_ALARM_MODE); //устанавливаем режим по умолчанию
+    EEPROM_UpdateByte(newCell + 3, 0); //устанавливаем дни недели по умолчанию
+    EEPROM_UpdateByte(newCell + 4, DEFAULT_ALARM_SOUND); //устанавливаем мелодию по умолчанию
+    updateByte(++alarms_num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
 //---------------------Удалить будильник---------------------------------------------------------
@@ -967,13 +975,11 @@ void delAlarm(uint8_t alarm) //удалить будильник
 {
   if (alarms_num) { //если будильник доступен
     for (uint8_t start = alarm; start < alarms_num; start++) { //перезаписываем массив будильников
-      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5), EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5)));
-      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 1, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 1));
-      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 2, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 2));
-      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 3, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 3));
-      EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + (alarms_num * 5) + 4, EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((alarms_num + 1) * 5) + 4));
+      uint16_t oldCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)start * 5);
+      uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)(start - 1) * 5);
+      for (uint8_t block = 0; block < 5; block++) EEPROM_UpdateByte(newCell + block, EEPROM_ReadByte(oldCell + block));
     }
-    EEPROM_UpdateByte(EEPROM_BLOCK_ALARM, --alarms_num); //записываем количество будильников в память
+    updateByte(--alarms_num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
 //----------------------------------Обработка данных---------------------------------------------------------
