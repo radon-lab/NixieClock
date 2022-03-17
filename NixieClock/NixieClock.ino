@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.7 релиз от 16.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.7 релиз от 17.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -272,7 +272,8 @@ int main(void) //инициализация
   BUZZ_INIT; //инициализация бузера
 
   uartDisable(); //отключение uart
-
+  checkErrorsCRC(); //проверка контрольной суммы ошибок
+  
   checkVCC(); //чтение напряжения питания
 #if BTN_TYPE
   updateKeysADC(); //обновление пределов аналоговых кнопок
@@ -573,18 +574,24 @@ void testRTC(void) //проверка модуля часов реального
 //-----------------------------Проверка ошибок-------------------------------------
 void checkErrors(void) //проверка ошибок
 {
-  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR);
-  if ((_error_reg ^ 0xFF) == EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) {
-    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
-      if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
-        buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
-        indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
-        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-      }
+  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали регистр ошибок
+  for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+    if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
+      buzz_pulse(ERROR_SOUND_FREQ, ERROR_SOUND_TIME); //сигнал ошибки модуля часов
+      indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
+      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
     }
   }
   EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
   EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
+}
+//--------------------Проверка контрольной суммы ошибок----------------------------
+void checkErrorsCRC(void) //проверка контрольной суммы ошибок
+{
+  if ((EEPROM_ReadByte(EEPROM_BLOCK_ERROR) ^ 0xFF) != EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR)) { //если контрольная сумма ошибок не совпала
+    EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, 0x00); //сбросили ошибки
+    EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, 0xFF); //перезаписали контрольную сумму
+  }
 }
 //-----------------------------Проверка пароля------------------------------------
 boolean check_pass(void) //проверка пароля
