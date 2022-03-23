@@ -1,5 +1,5 @@
-#define _INDI_ON  TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
-#define _INDI_OFF TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
+#define _INDI_START  TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
+#define _INDI_STOP   TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
 #define DEAD_TIME 30 //период тишины для закрытия оптопар
 #define FREQ_TICK (uint8_t)(1000 / (float)(INDI_FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
@@ -24,6 +24,7 @@ struct Settings {
 } debugSettings;
 
 uint8_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
+float pwm_coef; //коэффициент Linear Advance
 
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
 
@@ -37,7 +38,7 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
 
-//---------------------------------Динамическая индикация---------------------------------------
+//----------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_COMPA_vect) //динамическая индикация
 {
   OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
@@ -54,7 +55,7 @@ ISR(TIMER0_COMPB_vect) {
   *anodePort[indiState] &= ~anodeBit[indiState]; //выключаем индикатор
   if (++indiState > LAMP_NUM) indiState = 0; //переходим к следующему индикатору
 }
-//---------------------------------Динамическая подсветка---------------------------------------
+//-----------------------------------Динамическая подсветка---------------------------------------
 #if (!BACKL_WS2812B && BACKL_MODE)
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
 {
@@ -67,7 +68,19 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
   reti(); //возврат
 }
 #endif
-//-------------------------Инициализация индикаторов----------------------------------------------------
+//---------------------------Обновление коэффициента Linear Advance-------------------------------
+void indiChangeCoef(void) //обновление коэффициента Linear Advance
+{
+  pwm_coef = ((float)(debugSettings.max_pwm - debugSettings.min_pwm) / (120.0 * LAMP_NUM));
+}
+//---------------------------------Установка Linear Advance---------------------------------------
+void indiChangePwm(void) //установка Linear Advance
+{
+  uint16_t dimm_all = 0;
+  for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  OCR1A = constrain(debugSettings.min_pwm + ((float)dimm_all * pwm_coef), 100, 200);
+}
+//--------------------------------Инициализация индикаторов---------------------------------------
 void IndiInit(void) //инициализация индикаторов
 {
   for (uint8_t i = 0; i < 4; i++) {
@@ -83,6 +96,8 @@ void IndiInit(void) //инициализация индикаторов
     indi_dimm[i] = 120; //устанавливаем максимальную юркость
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
+
+  indiChangeCoef(); //обновление коэффициента Linear Advance
 
   OCR0A = FREQ_TICK; //максимальная частота
   OCR0B = 120; //максимальная яркость
@@ -117,14 +132,8 @@ void IndiInit(void) //инициализация индикаторов
   TCCR2B = (0x01 << CS21); //пределитель 8
 
   sei(); //разрешаем прерывания глобально
-  _INDI_ON; //запускаем динамическую индикацию
-}
-//---------------------------------Установка Linear Advance---------------------------------------
-void indiChangePwm(void) //установка Linear Advance
-{
-  uint16_t dimm_all = 0;
-  for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = constrain(debugSettings.min_pwm + (float)(dimm_all / LAMP_NUM) * ((float)(debugSettings.max_pwm - debugSettings.min_pwm) / 120.0), 100, 200);
+  
+  _INDI_START; //запускаем динамическую индикацию
 }
 //-------------------------Очистка индикаторов----------------------------------------------------
 void indiClr(void) //очистка индикаторов
@@ -159,7 +168,7 @@ uint8_t indiGet(uint8_t indi) //получить состояние индика
 void indiEnable(void) //включение индикаторов
 {
   indiClr(); //очистка индикаторов
-  _INDI_ON; //запускаем генерацию
+  _INDI_START; //запускаем генерацию
 #if !GEN_DISABLE
   TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
 #endif
@@ -167,7 +176,7 @@ void indiEnable(void) //включение индикаторов
 //---------------------------------Выключение индикаторов---------------------------------------
 void indiDisable(void) //выключение индикаторов
 {
-  _INDI_OFF; //отключаем генерацию
+  _INDI_STOP; //отключаем генерацию
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) {
     *anodePort[i] &= ~anodeBit[i]; //сбрасываем аноды
     if (i < 4) PORTC |= (0x01 << decoderMask[i]); //сбрасываем катоды

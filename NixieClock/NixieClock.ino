@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.8 релиз от 21.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.8 релиз от 23.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -702,10 +702,16 @@ void settings_debug(void) //отладка
                   case 1: if (aging > -127) aging--; else aging = 127; break;
                 }
                 break;
-              case DEB_DEFAULT_MIN_PWM: if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; break; //минимальное значение шим
-              case DEB_DEFAULT_MAX_PWM: if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; break; //максимальное значение шим
+              case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
+                if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; //минимальное значение шим
+                indiChangeCoef(); //обновление коэффициента Linear Advance
+                break;
+              case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
+                if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
+                indiChangeCoef(); //обновление коэффициента Linear Advance
+                break;
 #if !GEN_DISABLE && GEN_FEEDBACK
-              case DEB_HV_ADC:
+              case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect > -25) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
@@ -727,10 +733,16 @@ void settings_debug(void) //отладка
                   case 1: if (aging < 127) aging++; else aging = -127; break;
                 }
                 break;
-              case DEB_DEFAULT_MIN_PWM: if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; break; //минимальное значение шим
-              case DEB_DEFAULT_MAX_PWM: if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; break; //максимальное значение шим
+              case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
+                if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; //минимальное значение шим
+                indiChangeCoef(); //обновление коэффициента Linear Advance
+                break;
+              case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
+                if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
+                indiChangeCoef(); //обновление коэффициента Linear Advance
+                break;
 #if !GEN_DISABLE && GEN_FEEDBACK
-              case DEB_HV_ADC:
+              case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect < 25) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
@@ -758,6 +770,7 @@ void settings_debug(void) //отладка
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
                 debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
+                indiChangeCoef(); //обновление коэффициента Linear Advance
 #if !GEN_DISABLE && GEN_FEEDBACK
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
