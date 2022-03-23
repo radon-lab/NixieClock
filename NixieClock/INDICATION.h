@@ -68,6 +68,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
   reti(); //возврат
 }
 #endif
+
 //---------------------------Обновление коэффициента Linear Advance-------------------------------
 void indiChangeCoef(void) //обновление коэффициента Linear Advance
 {
@@ -96,8 +97,6 @@ void IndiInit(void) //инициализация индикаторов
     indi_dimm[i] = 120; //устанавливаем максимальную юркость
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
-
-  indiChangeCoef(); //обновление коэффициента Linear Advance
 
   OCR0A = FREQ_TICK; //максимальная частота
   OCR0B = 120; //максимальная яркость

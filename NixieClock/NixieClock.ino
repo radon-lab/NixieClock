@@ -327,28 +327,32 @@ int main(void) //инициализация
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
 
-#if ALARM_TYPE == 1
-  initAlarm(); //инициализация будильника
-#endif
+  indiChangeCoef(); //обновление коэффициента линейного регулирования
 
   WireInit(); //инициализация шины Wire
   IndiInit(); //инициализация индикаторов
 
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+  backlAnimDisable(); //запретили эффекты подсветки
 
   testRTC(); //проверка модуля часов
   if (!LEFT_CHK && check_pass()) settings_debug(); //если правая кнопка зажата запускаем отладку
   if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы
   checkErrors(); //проверка на наличие ошибок
 
+#if ALARM_TYPE == 1
+  initAlarm(); //инициализация будильника
+#endif
+
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
   _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер антиотравления
   animsReset(); //сброс анимаций
   changeBright(); //установка яркости от времени суток
+  
 #if ALARM_TYPE
   checkAlarms(); //проверка будильников
 #endif
+
   mainScreen(); //главный экран
   return 0; //конец
 }
@@ -388,6 +392,16 @@ uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расч
   uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
   if (temp < _step) temp = _step; //если шаг слишком мал, устанавливаем минимум
   return temp;
+}
+//-------------------------Разрешить анимации подсветки-------------------------
+void backlAnimEnable(void) //разрешить анимации подсветки
+{
+  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+}
+//-------------------------Запретить анимации подсветки-------------------------
+void backlAnimDisable(void) //запретить анимации подсветки
+{
+  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
 }
 //-------------------------Получить 12-ти часовой формат------------------------
 uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
@@ -1100,16 +1114,6 @@ void dataUpdate(void) //обработка данных
       if (_timer_sec[tm]) _timer_sec[tm]--; //если таймер активен
     }
     _sec = _dot = 0; //очищаем флаги секунды и точек
-  }
-}
-//------------------------------------Звук смены часа------------------------------------
-void hourSound(void) //звук смены часа
-{
-  if (!alarm || alarmWaint) { //если будильник не работает
-    if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && RTC.h < mainSettings.timeHour[1] && RTC.h >= mainSettings.timeHour[0]) ||
-        (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (RTC.h < mainSettings.timeHour[1] || RTC.h >= mainSettings.timeHour[0]))) {
-      buzz_pulse(HOUR_SOUND_FREQ, HOUR_SOUND_TIME); //звук смены часа
-    }
   }
 }
 //-----------------------------Проверка кнопок----------------------------------------------------
@@ -1853,7 +1857,7 @@ void settings_main(void) //настроки основные
 #else
               OCR2A = mainSettings.backlBright[0]; //если посветка статичная, устанавливаем яркость
 #endif
-              fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+              backlAnimDisable(); //запретили эффекты подсветки
               break;
             case SET_TEMP_SENS:
               updateTemp(); //обновить показания температуры
@@ -1903,7 +1907,7 @@ void changeBright(void) //установка яркости от времени 
       else dotSetBright(0); //если точки выключены
       break;
   }
-  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+  backlAnimEnable(); //разрешили эффекты подсветки
 #if BACKL_WS2812B
   if (backlMaxBright) {
     switch (fastSettings.backlMode) {
@@ -2593,6 +2597,16 @@ void animsReset(void) //сброс анимаций
   _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
   _animShow = 0; //сбрасываем флаг анимации цифр
   _sec = 0; //обновление экрана
+}
+//------------------------------------Звук смены часа------------------------------------
+void hourSound(void) //звук смены часа
+{
+  if (!alarm || alarmWaint) { //если будильник не работает
+    if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && RTC.h < mainSettings.timeHour[1] && RTC.h >= mainSettings.timeHour[0]) ||
+        (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (RTC.h < mainSettings.timeHour[1] || RTC.h >= mainSettings.timeHour[0]))) {
+      buzz_pulse(HOUR_SOUND_FREQ, HOUR_SOUND_TIME); //звук смены часа
+    }
+  }
 }
 //------------------------------------Имитация глюков------------------------------------
 void glitchMode(void) //имитация глюков
