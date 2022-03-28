@@ -38,6 +38,76 @@ uint8_t unpackHours(uint8_t data) //распаковка часов
   else if (data & 0x10) return ((data & 0x0F) + 10);
   else return (data & 0x0F);
 }
+//-------------------------------Чтение коррекции хода-------------------------------------
+uint8_t readAgingRTC(void) //чтение коррекции хода
+{
+  if (WireRequestFrom(RTC_ADDR, 0x10)) return 0; //запрашиваем чтение данных, если нет ответа выходим
+  return WireRead();
+}
+//-------------------------------Запись коррекции хода-------------------------------------
+void writeAgingRTC(uint8_t data) //запись коррекции хода
+{
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x10); //устанавливаем адрес записи
+  WireWrite(data); //записываем коррекцию хода
+}
+//--------------------------------Проверка флага OSF--------------------------------------
+boolean getOSF(void) //проверка флага OSF
+{
+  if (WireRequestFrom(RTC_ADDR, 0x0F)) { //запрашиваем чтение данных, если нет ответа то
+    SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
+    return 0; //выходим
+  }
+  uint8_t ctrlReg = WireReadEndByte(); //прочитали регистр статуса
+
+  if (ctrlReg & 0x80) { //проверяем установлен ли флаг OSF
+    ctrlReg &= 0x7F; //очистили флаг OSF
+    WireBeginTransmission(RTC_ADDR); //начало передачи
+    WireWrite(0x0F); //устанавливаем адрес записи
+    WireWrite(ctrlReg); //отправляем настройку OSF
+    WireEnd(); //конец передачи
+    SET_ERROR(DS3231_OSF_ERROR); //установили ошибку осцилятора модуля RTC
+    return 0;
+  }
+  return 1;
+}
+//-----------------------------------Настройка SQW-----------------------------------------
+void setSQW(void) //настройка SQW
+{
+  if (WireRequestFrom(RTC_ADDR, 0x0E)) { //запрашиваем чтение данных, если нет ответа то
+    SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
+    return; //выходим
+  }
+  uint8_t ctrlReg = WireReadEndByte() & 0x20; //выключаем INTCON и устанавливаем частоту 1Гц
+
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x0E); //устанавливаем адрес записи
+  WireWrite(ctrlReg); //отправляем настройку SQW
+  WireEnd(); //конец передачи
+}
+//-------------------------------Отключение вывода 32K-------------------------------------
+void disable32K(void) //отключение вывода 32K
+{
+  if (WireRequestFrom(RTC_ADDR, 0x0F)) { //запрашиваем чтение данных, если нет ответа то
+    SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
+    return; //выходим
+  }
+  uint8_t ctrlReg = WireReadEndByte() & 0xF7; //выключаем 32K
+
+  WireBeginTransmission(RTC_ADDR); //начало передачи
+  WireWrite(0x0F); //устанавливаем адрес записи
+  WireWrite(ctrlReg); //отправляем настройку SQW
+  WireEnd(); //конец передачи
+}
+//-------------------------------Чтение температуры-------------------------------------
+void readTempRTC(void) //чтение температуры
+{
+  if (WireRequestFrom(RTC_ADDR, 0x11)) return; //запрашиваем чтение данных, если нет ответа выходим
+  uint16_t temp = ((float)(WireRead() << 2 | WireReadEndByte() >> 6) * 0.25) * 100.0;
+  sens.temp = (temp > 8500) ? 0 : temp;
+  sens.press = 0;
+  sens.hum = 0;
+}
 //--------------------------------------Отправить время в RTC------------------------------------------
 void sendTime(void) //отправить время в RTC
 {
@@ -58,76 +128,20 @@ void sendTime(void) //отправить время в RTC
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
 boolean getTime(void) //запрашиваем время из RTC
 {
-  if (WireRequestFrom(RTC_ADDR, 0x00)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  RTC.s = unpackREG(WireRead()); //получаем секунды
-  RTC.m = unpackREG(WireRead()); //получаем минуты
-  RTC.h = unpackHours(WireRead()); //получаем часы
-  WireRead(); //пропускаем день недели
-  RTC.DD = unpackREG(WireRead()); //получаем дату
-  RTC.MM = unpackREG(WireRead()); //получаем месяц
-  RTC.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
-  RTC.DW = getWeekDay(RTC.YY, RTC.MM, RTC.DD); //получаем день недели
-  return 0;
-}
-//--------------------------------Проверка флага OSF--------------------------------------
-boolean getOSF(void) //проверка флага OSF
-{
-  if (WireRequestFrom(RTC_ADDR, 0x0F)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  uint8_t ctrlReg = WireReadEndByte(); //прочитали регистр статуса
-  
-  if (ctrlReg & 0x80) { //проверяем установлен ли флаг OSF
-    ctrlReg &= 0x7F; //очистили флаг OSF
-    WireBeginTransmission(RTC_ADDR); //начало передачи
-    WireWrite(0x0F); //устанавливаем адрес записи
-    WireWrite(ctrlReg); //отправляем настройку OSF
-    WireEnd(); //конец передачи
-    return 1;
+  if (getOSF()) { //проверка флага OSF
+    if (WireRequestFrom(RTC_ADDR, 0x00)) { //запрашиваем чтение данных, если нет ответа то
+      SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
+      return 1; //выходим
+    }
+    RTC.s = unpackREG(WireRead()); //получаем секунды
+    RTC.m = unpackREG(WireRead()); //получаем минуты
+    RTC.h = unpackHours(WireRead()); //получаем часы
+    WireRead(); //пропускаем день недели
+    RTC.DD = unpackREG(WireRead()); //получаем дату
+    RTC.MM = unpackREG(WireRead()); //получаем месяц
+    RTC.YY = unpackREG(WireReadEndByte()) + 2000; //получаем год
+    RTC.DW = getWeekDay(RTC.YY, RTC.MM, RTC.DD); //получаем день недели
+    return 0;
   }
-  return 0;
-}
-//-----------------------------------Настройка SQW-----------------------------------------
-boolean setSQW(void) //настройка SQW
-{
-  if (WireRequestFrom(RTC_ADDR, 0x0E)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  uint8_t ctrlReg = WireReadEndByte() & 0x20; //выключаем INTCON и устанавливаем частоту 1Гц
-
-  WireBeginTransmission(RTC_ADDR); //начало передачи
-  WireWrite(0x0E); //устанавливаем адрес записи
-  WireWrite(ctrlReg); //отправляем настройку SQW
-  WireEnd(); //конец передачи
-  return 0;
-}
-//-------------------------------Отключение вывода 32K-------------------------------------
-boolean disable32K(void) //отключение вывода 32K
-{
-  if (WireRequestFrom(RTC_ADDR, 0x0F)) return 1; //запрашиваем чтение данных, если нет ответа выходим
-  uint8_t ctrlReg = WireReadEndByte() & 0xF7; //выключаем 32K
-
-  WireBeginTransmission(RTC_ADDR); //начало передачи
-  WireWrite(0x0F); //устанавливаем адрес записи
-  WireWrite(ctrlReg); //отправляем настройку SQW
-  WireEnd(); //конец передачи
-  return 0;
-}
-//-------------------------------Чтение температуры-------------------------------------
-void readTempRTC(void) //чтение температуры
-{
-  if (WireRequestFrom(RTC_ADDR, 0x11)) return; //запрашиваем чтение данных, если нет ответа выходим
-  uint16_t temp = ((float)(WireRead() << 2 | WireReadEndByte() >> 6) * 0.25) * 100.0;
-  sens.temp = (temp > 8500) ? 0 : temp;
-  sens.press = 0;
-  sens.hum = 0;
-}
-//-------------------------------Чтение коррекции хода-------------------------------------
-uint8_t readAgingRTC(void) //чтение коррекции хода
-{
-  if (WireRequestFrom(RTC_ADDR, 0x10)) return 0; //запрашиваем чтение данных, если нет ответа выходим
-  return WireRead();
-}
-//-------------------------------Запись коррекции хода-------------------------------------
-void writeAgingRTC(uint8_t data) //запись коррекции хода
-{
-  WireBeginTransmission(RTC_ADDR); //начало передачи
-  WireWrite(0x10); //устанавливаем адрес записи
-  WireWrite(data); //записываем коррекцию хода
+  return 1; //выходим
 }

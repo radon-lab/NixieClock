@@ -1,20 +1,19 @@
-#define _INDI_START  TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
-#define _INDI_STOP   TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
+#define FREQ_TICK constrain((uint8_t)((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016), 125, 255) //расчет переполнения таймера динамической индикации
+#define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
 
-#define DEAD_TIME 30 //период тишины для закрытия оптопар
-#define FREQ_TICK (uint8_t)(1000 / (float)(INDI_FREQ_ADG * LAMP_NUM) / 0.016) //расчет переполнения таймера динамической индикации
-#define LIGHT_STEP (uint8_t)((FREQ_TICK - DEAD_TIME) / 30) //расчет шага яркости
-
-#define US_PERIOD (uint16_t)(FREQ_TICK * 16) //период тика таймера в мкс
+#define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
 #define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
 
 #define MS_PERIOD (US_PERIOD / 1000) //период тика таймера в целых мс
 
 #define R_COEF(low, high) (((float)low + (float)high) / (float)low) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint8_t)(256.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
+#define HV_ADC(vcc) (uint8_t)(255.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
 
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
+
+#define _INDI_START  TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
+#define _INDI_STOP TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
 struct Settings {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
@@ -94,12 +93,12 @@ void IndiInit(void) //инициализация индикаторов
     *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
     *(anodePort[i] - 1) |= anodeBit[i]; //устанавливаем анод как выход
 
-    indi_dimm[i] = 120; //устанавливаем максимальную юркость
+    indi_dimm[i] = LIGHT_MAX; //устанавливаем максимальную яркость
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
 
   OCR0A = FREQ_TICK; //максимальная частота
-  OCR0B = 120; //максимальная яркость
+  OCR0B = LIGHT_MAX; //максимальная яркость
 
   TIMSK0 = 0; //отключаем прерывания Таймера0
   TCCR0A = (0x01 << WGM01); //режим CTC
@@ -189,7 +188,7 @@ void indiDisable(void) //выключение индикаторов
 void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркости индикатора
 {
   if (pwm > 30) pwm = 30;
-  indi_dimm[indi + 1] = pwm * LIGHT_STEP;
+  indi_dimm[indi + 1] = map(pwm, 0, 30, 0, LIGHT_MAX);
 #if !GEN_DISABLE
   indiChangePwm(); //установка Linear Advance
 #endif
@@ -198,7 +197,8 @@ void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркост�
 void indiSetBright(uint8_t pwm) //установка общей яркости
 {
   if (pwm > 30) pwm = 30;
-  for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm * LIGHT_STEP;
+  pwm = map(pwm, 0, 30, 0, LIGHT_MAX);
+  for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm;
 #if !GEN_DISABLE
   indiChangePwm(); //установка Linear Advance
 #endif
@@ -243,8 +243,7 @@ void dotSetBright(uint8_t pwm) //установка яркости точек
 {
   OCR1B = pwm; //устанавливаем яркость точек
 #if NEON_DOT
-  pwm >>= 1; //ограничиваем диапазон
-  indi_dimm[0] = pwm; //устанавливаем яркость точек
+  indi_dimm[0] = map(pwm, 0, 250, 0, LIGHT_MAX); //устанавливаем яркость точек
   if (pwm) indi_buf[0] = 0; //разрешаем включать точки
   else indi_buf[0] = indi_null; //запрещаем включать точки
 #endif
