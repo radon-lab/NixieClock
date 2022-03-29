@@ -8,7 +8,7 @@
 #define MS_PERIOD (US_PERIOD / 1000) //период тика таймера в целых мс
 
 #define R_COEF(low, high) (((float)low + (float)high) / (float)low) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint8_t)(255.0 / (float)vcc * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
+#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)vcc) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
 
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 
@@ -22,7 +22,7 @@ struct Settings {
   int8_t hvCorrect = 0; //коррекция напряжения
 } debugSettings;
 
-uint8_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
+uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
 float pwm_coef; //коэффициент Linear Advance
 
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)

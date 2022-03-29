@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 28.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 29.03.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -511,7 +511,7 @@ void checkVCC(void) //чтение напряжения питания
   btn_adc = ADCH; //записываем результат опроса
 #endif
 #if !GEN_DISABLE && GEN_FEEDBACK
-  ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
+  ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
 
 #if (!GEN_DISABLE && GEN_FEEDBACK) || BTN_TYPE
@@ -1033,7 +1033,7 @@ void dataUpdate(void) //обработка данных
           static uint8_t adc_cycle; //циклы буфера усреднения
           static uint16_t adc_temp; //буфер усреднения
 
-          adc_temp += ADCH; //добавляем значение в буфер
+          adc_temp += ADCL | ((uint16_t)ADCH << 8); //добавляем значение в буфер
           if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
             adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
             if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
@@ -1055,7 +1055,7 @@ void dataUpdate(void) //обработка данных
         btn_adc = ADCH; //записываем результат опроса
         btn_update = 0; //очищаем флаг обновления АЦП кнопок
 #if !GEN_DISABLE && GEN_FEEDBACK
-        ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
+        ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
         break;
 #endif
@@ -2350,7 +2350,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
         indiPrintNum(mode + 1, 5); //режим
         switch (mode) {
           case FAST_BACKL_MODE: indiPrintNum(fastSettings.backlMode, anim - 1, 2); break; //вывод режима подсветки
-          case FAST_FLIP_MODE: indiPrintNum(fastSettings.flipMode, anim, 2); break; //вывод режима анимации
+          case FAST_FLIP_MODE: indiPrintNum(fastSettings.flipMode, anim - 1, 2); break; //вывод режима анимации
           case FAST_DOT_MODE: indiPrintNum(fastSettings.dotMode, anim); break; //вывод режима точек
           case FAST_BACKL_COLOR: indiPrintNum(fastSettings.backlColor / 10, anim - 1, 2); break; //вывод цвета подсветки
         }
