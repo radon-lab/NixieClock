@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 30.03.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 04.04.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -122,6 +122,24 @@ uint8_t dotMaxBright;  //максимальная яркость точек
 
 uint8_t indiMaxBright; //максимальная яркость индикаторов
 
+boolean _animShow; //флаг анимации
+boolean _sec; //флаг обновления секунды
+boolean _dot; //флаг обновления точек
+
+//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника
+boolean alarmEnabled; //флаг включенного будильника
+boolean alarmWaint; //флаг ожидания звука будильника
+uint8_t alarmsNum; //текущее количество будильников
+uint8_t alarm; //флаг активоного будильника
+
+uint8_t timerMode; //режим таймера/секундомера
+uint16_t timerCnt; //счетчик таймера/секундомера
+uint16_t timerTime = TIMER_TIME; //время таймера сек
+
+volatile uint16_t cnt_puls; //количество циклов для работы пищалки
+volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
+uint16_t tmr_score; //циклы полуволны для работы пищалки
+
 enum {
   KEY_NULL,        //кнопка не нажата
   LEFT_KEY_PRESS,  //клик левой кнопкой
@@ -201,24 +219,6 @@ enum {
   DOT_BLINK,        //одиночное мигание
   DOT_DOOBLE_BLINK  //двойное мигание
 };
-
-boolean _animShow; //флаг анимации
-boolean _sec; //флаг обновления секунды
-boolean _dot; //флаг обновления точек
-
-//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника
-boolean alarmEnabled; //флаг включенного будильника
-boolean alarmWaint; //флаг ожидания звука будильника
-uint8_t alarmsNum; //текущее количество будильников
-uint8_t alarm; //флаг активоного будильника
-
-uint8_t timerMode; //режим таймера/секундомера
-uint16_t timerCnt; //счетчик таймера/секундомера
-uint16_t timerTime = TIMER_TIME; //время таймера сек
-
-volatile uint16_t cnt_puls; //количество циклов для работы пищалки
-volatile uint16_t cnt_freq; //частота для генерации звука пищалкой
-uint16_t tmr_score; //циклы полуволны для работы пищалки
 
 uint8_t semp; //переключатель семплов мелодии
 #define MELODY_PLAY(melody) _melody_chart(melody) //воспроизведение мелодии
@@ -738,7 +738,7 @@ void settings_debug(void) //отладка
                 break;
 #if !GEN_DISABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
-                if (debugSettings.hvCorrect > -25) debugSettings.hvCorrect--; //значение ацп преобразователя
+                if (debugSettings.hvCorrect > -30) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
 #endif
@@ -769,7 +769,7 @@ void settings_debug(void) //отладка
                 break;
 #if !GEN_DISABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
-                if (debugSettings.hvCorrect < 25) debugSettings.hvCorrect++; //значение ацп преобразователя
+                if (debugSettings.hvCorrect < 30) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
 #endif
@@ -809,16 +809,12 @@ void settings_debug(void) //отладка
         else {
           dotSetBright(0); //выключаем точки
           indiSetBright(30); //устанавливаем максимальную яркость индикаторов
-          switch (cur_mode) {
-            case DEB_TIME_CORRECT:
-              if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
-              break;
-          }
         }
         _sec = 0; //обновление экрана
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
+        if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
         updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
         return;
     }
