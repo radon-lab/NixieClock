@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 04.04.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 09.04.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -496,7 +496,7 @@ void checkVCC(void) //чтение напряжения питания
     _delay_ms(5); //ждём пока опорное успокоится
     ADCSRA |= (1 << ADSC); //запускаем преобразование
     while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
-    temp += ADCL | ((uint16_t)ADCH << 8);
+    temp += ADCL | ((uint16_t)ADCH << 8); //записали результат
   }
   vcc_adc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
 
@@ -621,7 +621,8 @@ boolean check_pass(void) //проверка пароля
   boolean blink_data = 0; //мигание сигментами
   uint8_t cur_indi = 0; //текущий индикатор
   uint8_t time_out = 0; //таймер авто выхода
-  uint16_t pass = 0; //введеный пароль
+  uint8_t attempts_pass = 0; //попытки ввода пароля
+  uint16_t entry_pass = 0; //введеный пароль
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
@@ -635,9 +636,9 @@ boolean check_pass(void) //проверка пароля
     }
 
     if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
-      _timer_ms[TMR_MS] = DEBUG_BLINK_TIME; //устанавливаем таймер
+      _timer_ms[TMR_MS] = DEBUG_PASS_BLINK_TIME; //устанавливаем таймер
 
-      indiPrintNum(pass, (LAMP_NUM / 2 - 2), 4, 0); //вывод пароля
+      indiPrintNum(entry_pass, (LAMP_NUM / 2 - 2), 4, 0); //вывод пароля
       if (blink_data) indiClr(cur_indi + (LAMP_NUM / 2 - 2)); //очистка индикатора
 
       blink_data = !blink_data; //мигаем индикатором
@@ -647,32 +648,36 @@ boolean check_pass(void) //проверка пароля
     switch (check_keys()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_indi) {
-          case 0: if (((pass % 10000) / 1000) > 0) pass -= 1000; else pass += 9000; break;
-          case 1: if (((pass % 1000) / 100) > 0) pass -= 100; else pass += 900; break;
-          case 2: if (((pass % 100) / 10) > 0) pass -= 10; else pass += 90; break;
-          case 3: if ((pass % 10) > 0) pass -= 1; else pass += 9; break;
+          case 0: if (((entry_pass % 10000) / 1000) > 0) entry_pass -= 1000; else entry_pass += 9000; break; //первый разряд
+          case 1: if (((entry_pass % 1000) / 100) > 0) entry_pass -= 100; else entry_pass += 900; break; //второй разряд
+          case 2: if (((entry_pass % 100) / 10) > 0) entry_pass -= 10; else entry_pass += 90; break; //третий разряд
+          case 3: if ((entry_pass % 10) > 0) entry_pass -= 1; else entry_pass += 9; break; //четвертый разряд
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_indi) {
-          case 0: if (((pass % 10000) / 1000) < 9) pass += 1000; else pass -= 9000; break;
-          case 1: if (((pass % 1000) / 100) < 9) pass += 100; else pass -= 900; break;
-          case 2: if (((pass % 100) / 10) < 9) pass += 10; else pass -= 90; break;
-          case 3: if ((pass % 10) < 9) pass += 1; else pass -= 9; break;
+          case 0: if (((entry_pass % 10000) / 1000) < 9) entry_pass += 1000; else entry_pass -= 9000; break; //первый разряд
+          case 1: if (((entry_pass % 1000) / 100) < 9) entry_pass += 100; else entry_pass -= 900; break; //второй разряд
+          case 2: if (((entry_pass % 100) / 10) < 9) entry_pass += 10; else entry_pass -= 90; break; //третий разряд
+          case 3: if ((entry_pass % 10) < 9) entry_pass += 1; else entry_pass -= 9; break; //четвертый разряд
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
-        if (cur_indi < 3) cur_indi++; else cur_indi = 0;
+        if (cur_indi < 3) cur_indi++; else cur_indi = 0; //переключаем разряды
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (pass == DEBUG_PASS) return 1; //если пароль совпал
-        return 0; //пароль не совпал
+        if (entry_pass == DEBUG_PASS) return 1; //если пароль совпал
+        cur_indi = 0; //сбросили текущий индикатор
+        entry_pass = 0; //сбросили введеный пароль
+        buzz_pulse(DEBUG_PASS_SOUND_FREQ, DEBUG_PASS_SOUND_TIME); //сигнал ошибки ввода пароля
+        if (++attempts_pass >= DEBUG_PASS_ATTEMPTS) return 0; //превышено количество попыток ввода пароля
+        break; //пароль не совпал
     }
   }
   return 0;
@@ -1096,7 +1101,8 @@ void dataUpdate(void) //обработка данных
     }
   }
 
-  for (; tick_sec > 0; tick_sec--) { //если был тик, обрабатываем данные
+  if (tick_sec) { //если был тик, обрабатываем данные
+    tick_sec--; //убавили счетчик секунд
     _sec = _dot = 0; //очищаем флаги секунды и точек
 
     for (uint8_t tm = 0; tm < TIMERS_SEC_NUM; tm++) { //опрашиваем все таймеры
@@ -1124,7 +1130,7 @@ void dataUpdate(void) //обработка данных
     }
     else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
       _timer_sec[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //установили таймер
-      if (!getTime()) timeClock = 0; //если получили новое время то сбрасываем счетчик секунд
+      getTime(); //получили новое время
       return; //выходим
     }
 
@@ -2246,7 +2252,7 @@ void showTemp(void) //показать температуру
   updateTemp(); //обновить показания температуры
   dotSetBright(dotMaxBright); //включаем точки
 
-  for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
+  for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
 
     if (!_sec) {
@@ -2276,7 +2282,7 @@ void showTemp(void) //показать температуру
           case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) dotSetBright(dotMaxBright); //включаем точки
-        _timer_ms[TMR_MS] = SHOW_TIME;
+        _timer_ms[TMR_MS] = SHOW_TEMP_TIME;
         _sec = 0; //обновление экрана
         break;
 
@@ -2294,7 +2300,7 @@ void showDate(void) //показать дату
   _sec = 0; //обновление экрана
   dotSetBright(dotMaxBright); //включаем точки
 
-  for (_timer_ms[TMR_MS] = SHOW_TIME; _timer_ms[TMR_MS];) {
+  for (_timer_ms[TMR_MS] = SHOW_DATE_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
 
     if (!_sec) {
@@ -2317,7 +2323,7 @@ void showDate(void) //показать дату
           case 0: dotSetBright(dotMaxBright); break; //включаем точки
           case 1: dotSetBright(0); break; //выключаем точки
         }
-        _timer_ms[TMR_MS] = SHOW_TIME;
+        _timer_ms[TMR_MS] = SHOW_DATE_TIME;
         _sec = 0; //обновление экрана
         break;
 
@@ -2340,7 +2346,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
 
     if (anim < 4) {
       if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-        _timer_ms[TMR_ANIM] = ANIM_TIME; //устанавливаем таймер
+        _timer_ms[TMR_ANIM] = FAST_ANIM_TIME; //устанавливаем таймер
 
         indiClr(); //очистка индикаторов
         indiPrintNum(mode + 1, 5); //режим
