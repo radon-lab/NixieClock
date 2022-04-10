@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 09.04.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 10.04.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -50,6 +50,7 @@ struct temp {
   uint16_t temp = 0; //температура
   uint16_t press = 0; //давление
   uint8_t hum = 0; //влажность
+  boolean err = 0; //ошибка сенсора
 } sens;
 
 //----------------Библиотеки----------------
@@ -550,12 +551,20 @@ void testLamp(void) //проверка системы
     for (byte indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
 #if BACKL_WS2812B
+#if TEST_BACKL_REVERSE
+      setLedBright((LAMP_NUM - 1) - indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
+#else
       setLedBright(indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
+#endif
 #endif
       for (byte digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_WS2812B
+#if TEST_BACKL_REVERSE
+        setLedHue((LAMP_NUM - 1) - indi, digit * 25); //устанавливаем статичный цвет
+#else
         setLedHue(indi, digit * 25); //устанавливаем статичный цвет
+#endif
         showLeds(); //отрисовка светодиодов
 #endif
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
@@ -565,7 +574,7 @@ void testLamp(void) //проверка системы
         }
       }
 #if BACKL_WS2812B
-      setLedBright(indi, 0); //выключаем светодиод
+      setLedBright(0); //выключаем светодиоды
 #endif
     }
   }
@@ -1679,35 +1688,39 @@ void settings_main(void) //настроки основные
         case 1:
           indiPrintNum(cur_mode + 1, 5); //режим
           switch (cur_mode) {
-            case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break;
-            case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break;
-            case SET_BTN_SOUND: if (!blink_data) indiPrintNum(mainSettings.knock_sound, 3); break;
+            case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
+            case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
+            case SET_BTN_SOUND: if (!blink_data) indiPrintNum(mainSettings.knock_sound, 3); break; //вывод звука кнопок
             case SET_HOUR_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[1], 2, 2, 0); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[1], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
               break;
             case SET_BRIGHT_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[0], 0, 2, 0); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[1], 2, 2, 0); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[0], 0, 2, 0); //вывод часа начала ночной посветки
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[1], 2, 2, 0); //вывод часа окончания ночной посветки
               break;
             case SET_INDI_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[0], 0, 2, 0); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[1], 2, 2, 0); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[0], 0, 2, 0); //яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[1], 2, 2, 0); //вывод яркости день
               break;
             case SET_BACKL_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[0] / 10, 0, 2, 0); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[1] / 10, 2, 2, 0); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[0] / 10, 0, 2, 0); //яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[1] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_DOT_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[0] / 10, 0, 2, 0); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[1] / 10, 2, 2, 0); //вывод часов
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[0] / 10, 0, 2, 0); //вывод яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[1] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_TEMP_SENS:
-              if (!blink_data || cur_indi) indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод часов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод часов
+              updateTemp(); //обновить показания температуры
+              if (!blink_data || cur_indi) {
+                if (sens.err) indiPrintNum(0, 0); //вывод ошибки
+                else indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод температуры
+              }
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод сенсора температуры
               break;
             case SET_AUTO_TEMP:
-              if (!blink_data) indiPrintNum(mainSettings.autoTempTime, 1, 3);
+              if (!blink_data) indiPrintNum(mainSettings.autoTempTime, 1, 3); //вывод времени автопоказа температуры
               break;
           }
           blink_data = !blink_data; //мигание сигментами
@@ -1766,10 +1779,7 @@ void settings_main(void) //настроки основные
               case SET_TEMP_SENS: //настройка сенсора температуры
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127; break;
-                  case 1:
-                    if (mainSettings.sensorSet > 0) mainSettings.sensorSet--;
-                    updateTemp(); //обновить показания температуры
-                    break;
+                  case 1: if (mainSettings.sensorSet > 0) mainSettings.sensorSet--; break;
                 }
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
@@ -1837,7 +1847,6 @@ void settings_main(void) //настроки основные
 #else
                     if (mainSettings.sensorSet < 1) mainSettings.sensorSet++;
 #endif
-                    updateTemp(); //обновить показания температуры
                     break;
                 }
                 break;
@@ -1904,9 +1913,6 @@ void settings_main(void) //настроки основные
               OCR2A = mainSettings.backlBright[0]; //если посветка статичная, устанавливаем яркость
 #endif
               backlAnimDisable(); //запретили эффекты подсветки
-              break;
-            case SET_TEMP_SENS:
-              updateTemp(); //обновить показания температуры
               break;
           }
           dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dotMaxBright : mainSettings.dotBright[0]); //включаем точки
@@ -2177,6 +2183,7 @@ void dotFlash(void) //мигание точек
 //--------------------------------Обновить показания температуры----------------------------------------
 void updateTemp(void) //обновить показания температуры
 {
+  sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (mainSettings.sensorSet) { //выбор датчика температуры
     default: readTempRTC(); break; //чтение температуры с датчика DS3231
     case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
@@ -2196,7 +2203,10 @@ void autoShowTemp(void) //автоматический показ темпера
     uint8_t pos = LAMP_NUM; //текущее положение анимации
     boolean drv = 0; //направление анимации
 
-    updateTemp(); //обновить показания температуры
+    if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+      updateTemp(); //обновить показания температуры
+      _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+    }
     dotSetBright(dotMaxBright); //включаем точки
 
     for (uint8_t mode = 0; mode < 3; mode++) {
@@ -2249,7 +2259,10 @@ void showTemp(void) //показать температуру
 
   _sec = 0; //обновление экрана
 
-  updateTemp(); //обновить показания температуры
+  if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+    updateTemp(); //обновить показания температуры
+    _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+  }
   dotSetBright(dotMaxBright); //включаем точки
 
   for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {

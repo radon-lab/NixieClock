@@ -1,12 +1,14 @@
 boolean initDHT = 0; //флаг инициализации датчика
 
+#define DHT11_RESET 25 //время сигнала сброса DHT11
+#define DHT22_RESET 8  //время сигнала сброса DHT22
+#define DHT_CHECK_TIMEOUT 1000 //таймаут ожидания
+
 //-------------------------------------------Сигнал сброса шины----------------------------------------------
 boolean wireReset(uint8_t time)
 {
-  SENS_OUT;
   SENS_LO;
   for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
-  SENS_INP;
   SENS_HI;
   _delay_us(2);
   for (uint8_t c = 80; c; c--) {
@@ -28,13 +30,10 @@ void readTempDHT22(void)
     _delay_ms(2);
   }
 
-  if (_timer_ms[TMR_SENS]) return;
-
-  if (wireReset(8)) { //посылаем сигнал сброса
+  if (wireReset(DHT22_RESET)) { //посылаем сигнал сброса
     readTempRTC(); //читаем температуру DS3231
     return; //выходим
   }
-  _timer_ms[TMR_SENS] = 2000;
 
   uint8_t data[5];
 
@@ -43,11 +42,11 @@ void readTempDHT22(void)
 
     uint16_t low = 0;
     while (!SENS_CHK) {
-      if (++low > 1000) return;
+      if (++low > DHT_CHECK_TIMEOUT) return;
     }
     uint16_t high = 0;
     while (SENS_CHK) {
-      if (++high > 1000) return;
+      if (++high > DHT_CHECK_TIMEOUT) return;
     }
 
     if (low < high) data[i >> 3] |= 0x01;
@@ -58,9 +57,10 @@ void readTempDHT22(void)
     return; //выходим
   }
 
-  sens.temp = (((uint16_t)(data[2] & 0x7F)) << 8 | data[3]) * 10;
-  sens.press = 0;
-  sens.hum = (((uint16_t)data[0]) << 8 | data[1]) / 10;
+  sens.temp = (((uint16_t)(data[2] & 0x7F)) << 8 | data[3]) * 10; //установили температуру
+  sens.press = 0; //сбросили давление
+  sens.hum = (((uint16_t)data[0]) << 8 | data[1]) / 10; //установили влажность
+  sens.err = 0; //сбросили ошибку датчика температуры
 }
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT11(void)
@@ -71,13 +71,10 @@ void readTempDHT11(void)
     _delay_ms(2);
   }
 
-  if (_timer_ms[TMR_SENS]) return;
-
-  if (wireReset(25)) { //посылаем сигнал сброса
+  if (wireReset(DHT11_RESET)) { //посылаем сигнал сброса
     readTempRTC(); //читаем температуру DS3231
     return; //выходим
   }
-  _timer_ms[TMR_SENS] = 2000;
 
   uint8_t data[5];
 
@@ -86,11 +83,11 @@ void readTempDHT11(void)
 
     uint16_t low = 0;
     while (!SENS_CHK) {
-      if (++low > 1000) return;
+      if (++low > DHT_CHECK_TIMEOUT) return;
     }
     uint16_t high = 0;
     while (SENS_CHK) {
-      if (++high > 1000) return;
+      if (++high > DHT_CHECK_TIMEOUT) return;
     }
 
     if (low < high) data[i >> 3] |= 0x01;
@@ -101,7 +98,8 @@ void readTempDHT11(void)
     return; //выходим
   }
 
-  sens.temp = (((uint16_t)data[2] * 10) + data[3]) * 10;
-  sens.press = 0;
-  sens.hum = data[0];
+  sens.temp = (((uint16_t)data[2] * 10) + data[3]) * 10; //установили температуру
+  sens.press = 0; //сбросили давление
+  sens.hum = data[0]; //установили влажность
+  sens.err = 0; //сбросили ошибку датчика температуры
 }

@@ -1,4 +1,4 @@
-#define RTC_ADDR 0x68 //адрес RTC
+#define RTC_ADDR 0x68 //адрес RTC DS3231
 
 struct time { //структура времени
   uint8_t s = 0;
@@ -105,8 +105,9 @@ void readTempRTC(void) //чтение температуры
   if (WireRequestFrom(RTC_ADDR, 0x11)) return; //запрашиваем чтение данных, если нет ответа выходим
   uint16_t temp = ((float)(WireRead() << 2 | WireReadEndByte() >> 6) * 0.25) * 100.0;
   sens.temp = (temp > 8500) ? 0 : temp;
-  sens.press = 0;
-  sens.hum = 0;
+  sens.press = 0; //сбросили давление
+  sens.hum = 0; //сбросили влажность
+  sens.err = 0; //сбросили ошибку датчика температуры
 }
 //--------------------------------------Отправить время в RTC------------------------------------------
 void sendTime(void) //отправить время в RTC
