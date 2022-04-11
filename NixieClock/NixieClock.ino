@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 10.04.22
+  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 11.04.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -47,10 +47,14 @@ uint16_t _timer_sec[TIMERS_SEC_NUM]; //таймер отсчета секунд
 
 //----------------Температура--------------
 struct temp {
-  uint16_t temp = 0; //температура
-  uint16_t press = 0; //давление
-  uint8_t hum = 0; //влажность
-  boolean err = 0; //ошибка сенсора
+  uint16_t temp; //температура
+  uint16_t press; //давление
+  uint8_t hum; //влажность
+  boolean err; //ошибка сенсора
+  boolean initPort; //флаг инициализации порта
+  boolean initBME; //флаг инициализации BME
+  boolean initDS; //флаг инициализации DS
+  uint8_t typeDS; //тип датчика DS
 } sens;
 
 //----------------Библиотеки----------------
@@ -1677,6 +1681,11 @@ void settings_main(void) //настроки основные
       if (++time_out >= SETTINGS_TIMEOUT) return;
     }
 
+    if (cur_mode == SET_TEMP_SENS && !_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+      updateTemp(); //обновить показания температуры
+      _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+    }
+
     if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
       _timer_ms[TMR_MS] = SETTINGS_BLINK_TIME; //устанавливаем таймер
 
@@ -1712,7 +1721,6 @@ void settings_main(void) //настроки основные
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[1] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_TEMP_SENS:
-              updateTemp(); //обновить показания температуры
               if (!blink_data || cur_indi) {
                 if (sens.err) indiPrintNum(0, 0); //вывод ошибки
                 else indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод температуры
@@ -1779,7 +1787,10 @@ void settings_main(void) //настроки основные
               case SET_TEMP_SENS: //настройка сенсора температуры
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127; break;
-                  case 1: if (mainSettings.sensorSet > 0) mainSettings.sensorSet--; break;
+                  case 1:
+                    if (mainSettings.sensorSet > 0) mainSettings.sensorSet--;
+                    _timer_ms[TMR_SENS] = 0; //обновить показания температуры
+                    break;
                 }
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
@@ -1847,6 +1858,7 @@ void settings_main(void) //настроки основные
 #else
                     if (mainSettings.sensorSet < 1) mainSettings.sensorSet++;
 #endif
+                    _timer_ms[TMR_SENS] = 0; //обновить показания температуры
                     break;
                 }
                 break;
@@ -1914,6 +1926,7 @@ void settings_main(void) //настроки основные
 #endif
               backlAnimDisable(); //запретили эффекты подсветки
               break;
+            case SET_TEMP_SENS: _timer_ms[TMR_SENS] = 0; break; //настройка сенсора температуры
           }
           dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dotMaxBright : mainSettings.dotBright[0]); //включаем точки
         }
@@ -2185,7 +2198,7 @@ void updateTemp(void) //обновить показания температур
 {
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (mainSettings.sensorSet) { //выбор датчика температуры
-    default: readTempRTC(); break; //чтение температуры с датчика DS3231
+    default: if (readTempRTC()) sens.err = 0; break; //чтение температуры с датчика DS3231
     case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
 #if !SENS_PORT_DISABLE
     case 2: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11

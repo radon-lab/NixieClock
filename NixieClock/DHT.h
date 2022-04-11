@@ -1,8 +1,8 @@
-boolean initDHT = 0; //флаг инициализации датчика
-
-#define DHT11_RESET 25 //время сигнала сброса DHT11
-#define DHT22_RESET 8  //время сигнала сброса DHT22
-#define DHT_CHECK_TIMEOUT 1000 //таймаут ожидания
+#define DHT11_RESET 25 //время сигнала сброса DHT11(мс)
+#define DHT22_RESET 8  //время сигнала сброса DHT22(мс)
+#define DHT_RESET_WAIT_TIME 80 //длительность ожидания сигнала присутствия(мкс)
+#define DHT_PRESENCE_TIME 150  //длительность сигнала присутствия(мкс)
+#define DHT_CHECK_TIMEOUT 1000 //таймаут ожидания(циклов)
 
 //-------------------------------------------Сигнал сброса шины----------------------------------------------
 boolean wireReset(uint8_t time)
@@ -11,11 +11,19 @@ boolean wireReset(uint8_t time)
   for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
   SENS_HI;
   _delay_us(2);
-  for (uint8_t c = 80; c; c--) {
+  for (uint8_t c = DHT_RESET_WAIT_TIME; c; c--) {
     if (!SENS_CHK) {
-      for (uint8_t i = 150; !SENS_CHK && i; i--) _delay_us(1);
-      for (uint8_t i = 150; SENS_CHK && i; i--) _delay_us(1);
-      return 0;
+      for (uint8_t i = DHT_PRESENCE_TIME; i; i--) {
+        if (SENS_CHK) {
+          for (uint8_t f = DHT_PRESENCE_TIME; f; f--) {
+            if (!SENS_CHK) return 0;
+            _delay_us(1);
+          }
+          return 1;
+        }
+        _delay_us(1);
+      }
+      return 1;
     }
     _delay_us(1);
   }
@@ -24,10 +32,9 @@ boolean wireReset(uint8_t time)
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT22(void)
 {
-  if (!initDHT) {
-    initDHT = 1;
-    SENS_INIT; //инициализируем датчик
-    _delay_ms(2);
+  if (!sens.initPort) {
+    sens.initPort = 1;
+    SENS_INIT; //инициализируем порт
   }
 
   if (wireReset(DHT22_RESET)) { //посылаем сигнал сброса
@@ -65,10 +72,9 @@ void readTempDHT22(void)
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT11(void)
 {
-  if (!initDHT) {
-    initDHT = 1;
-    SENS_INIT; //инициализируем датчик
-    _delay_ms(2);
+  if (!sens.initPort) {
+    sens.initPort = 1;
+    SENS_INIT; //инициализируем порт
   }
 
   if (wireReset(DHT11_RESET)) { //посылаем сигнал сброса

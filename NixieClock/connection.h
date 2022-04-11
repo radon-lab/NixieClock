@@ -149,7 +149,7 @@
 #define ADD_INIT  ADD_CLR; ADD_INP
 #endif
 
-//Пин сенсора температуры(для DS18B20 и DHT21/22)
+//Пин сенсора температуры(для DS18x20 и DHTxx)
 #define SENS_BIT    DECODE_BIT(SENS_PIN)
 #define SENS_PORT   DECODE_PORT(SENS_PIN)
 
