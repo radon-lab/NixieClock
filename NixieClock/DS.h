@@ -7,12 +7,12 @@
 #define SENS_DS18S20 0x10 //идентификатор датчика DS18S20/DS1820
 #define SENS_DS18B20 0x28 //идентификатор датчика DS18B20
 
-#define DS_CONVERT_TIME 120   //время ожидания нового замера(мс)
-#define DS_RESET_TIME 520     //длительность сигнала сброса(мкс)
-#define DS_RESET_WAIT_TIME 80 //длительность ожидания сигнала присутствия(мкс)
-#define DS_PRESENCE_TIME 250  //длительность сигнала присутствия(мкс)
-#define DS_SLOT_MAX_TIME 60   //максимальное время слота(мкс)
-#define DS_SLOT_MIN_TIME 5    //минимальное время слота(мкс)
+#define DS_CONVERT_TIME 120   //время ожидания нового замера(95..150)(мс)
+#define DS_RESET_TIME 520     //длительность сигнала сброса(480..700)(мкс)
+#define DS_RESET_WAIT_TIME 80 //длительность ожидания сигнала присутствия(50..150)(мкс)
+#define DS_PRESENCE_TIME 250  //длительность сигнала присутствия(200..300)(мкс)
+#define DS_SLOT_MAX_TIME 60   //максимальное время слота(60..120)(мкс)
+#define DS_SLOT_MIN_TIME 5    //минимальное время слота(1..15)(мкс)
 
 //-----------------------------------Сигнал сброса шины--------------------------------------------
 boolean oneWireReset(void)
@@ -68,21 +68,31 @@ uint8_t oneWireRead(void)
   return data;
 }
 //---------------------------------------Запрос температуры-----------------------------------------
-void requestTemp(void)
+boolean requestTemp(void)
 {
-  if (oneWireReset()) return; //выходим
+  if (oneWireReset()) return 1; //выходим
   oneWireWrite(SKIP_ROM); //пропуск адресации
   oneWireWrite(CONVERT_T); //запрос на преобразование температуры
+  return 0; //выходим
+}
+//---------------------------------------Чтение температуры-----------------------------------------
+boolean readTemp(void)
+{
+  if (oneWireReset()) return 1; //выходим
+  oneWireWrite(SKIP_ROM); //пропуск адресации
+  oneWireWrite(READ_STRATCHPAD); //чтение памяти
+  return 0; //выходим
 }
 //-----------------------------------Установка разрешения датчика-----------------------------------
-void setResolution(void)
+boolean setResolution(void)
 {
-  if (oneWireReset()) return; //выходим
+  if (oneWireReset()) return 1; //выходим
   oneWireWrite(SKIP_ROM); //пропуск адресации
   oneWireWrite(WRITE_STRATCHPAD); //запись в память
   oneWireWrite(0xFF); //устанавливаем разрешение
   oneWireWrite(0x00);
   oneWireWrite(0x1F);
+  return 0; //выходим
 }
 //-------------------------------------Чтение семейства датчика-------------------------------------
 uint8_t readSensCode(void)
@@ -94,34 +104,29 @@ uint8_t readSensCode(void)
 //--------------------------------------Чтение температуры------------------------------------------
 void readTempDS(void)
 {
-  if (!sens.initPort) {
-    sens.initPort = 1;
+  static uint8_t typeDS; //тип датчика DS
+
+  if (!sens.initPort) { //если порт не инициализирован
+    sens.initPort = 1; //устанавливаем флаг инициализации
     SENS_INIT; //инициализируем порт
   }
-  if (!sens.initDS) {
-    sens.typeDS = readSensCode();
-    switch (sens.typeDS) {
-      case SENS_DS18S20: sens.initDS = 1; break; //датчик DS18S20
-      case SENS_DS18B20: setResolution(); sens.initDS = 1; break; //датчик DS18B20
-      default: readTempRTC(); sens.initDS = 0; return; //выходим
+  if (!typeDS) { //если тип датчика не определен
+    typeDS = readSensCode(); //читаем тип датчика
+    switch (typeDS) {
+      case SENS_DS18S20: break; //датчик DS18S20
+      case SENS_DS18B20: if (setResolution()) return; break; //датчик DS18B20
+      default: typeDS = 0; return; //выходим
     }
   }
 
-  requestTemp(); //запрашиваем температуру
-  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
-
-  if (oneWireReset()) {
-    readTempRTC(); //читаем температуру DS3231
-    return; //выходим
-  }
-
-  oneWireWrite(SKIP_ROM); //пропуск адресации
-  oneWireWrite(READ_STRATCHPAD); //чтение памяти
+  if (requestTemp()) return; //запрашиваем температуру, если нет ответа выходим
+  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем окончания преобразования
+  if (readTemp()) return; //чтаем температуру, если нет ответа выходим
 
   uint16_t raw = oneWireRead() | ((uint16_t)oneWireRead() << 8); //читаем сырое значение
   if (raw & 0x8000) raw = 0; //если значение отрицательное
 
-  switch (sens.typeDS) {
+  switch (typeDS) {
     case SENS_DS18S20: sens.temp = raw * 50; break; //переводим в температуру для DS18S20
     case SENS_DS18B20: sens.temp = (raw * 100) >> 4; break; //переводим в температуру для DS18B20
   }

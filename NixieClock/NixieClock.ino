@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.5.9 релиз от 11.04.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.0 релиз от 16.04.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -22,8 +22,8 @@ void SET_ERROR(uint8_t err); //процедура установка ошибк�
 
 //-----------------Таймеры------------------
 enum {
-  TMR_SENS,      //таймер сенсоров температуры
   TMR_MS,        //таймер общего назначения
+  TMR_SENS,      //таймер сенсоров температуры
   TMR_MELODY,    //таймер мелодий
   TMR_BACKL,     //таймер подсветки
   TMR_COLOR,     //таймер смены цвета подсветки
@@ -46,15 +46,12 @@ enum {
 uint16_t _timer_sec[TIMERS_SEC_NUM]; //таймер отсчета секунд
 
 //----------------Температура--------------
-struct temp {
+struct sensorData {
   uint16_t temp; //температура
   uint16_t press; //давление
   uint8_t hum; //влажность
   boolean err; //ошибка сенсора
   boolean initPort; //флаг инициализации порта
-  boolean initBME; //флаг инициализации BME
-  boolean initDS; //флаг инициализации DS
-  uint8_t typeDS; //тип датчика DS
 } sens;
 
 //----------------Библиотеки----------------
@@ -66,6 +63,7 @@ struct temp {
 #include "config.h"
 #include "wire.h"
 #include "EEPROM.h"
+#include "RDA.h"
 #include "RTC.h"
 #include "BME.h"
 #include "DHT.h"
@@ -96,7 +94,7 @@ struct Settings_2 {
 } fastSettings;
 
 //переменные обработки кнопок
-struct Settings_3 {
+struct keysData {
   uint8_t leftMax; //максимальное значение левой клавиши
   uint8_t leftMin; //минимальное значение левой клавиши
   uint8_t rightMax; //максимальное значение правой клавиши
@@ -111,7 +109,7 @@ boolean btn_state; //флаг текущего состояния кнопки
 boolean btn_update; //флаг обновления аналоговых кнопок
 
 //переменные работы с подсветкой
-struct Settings_4 {
+struct backlData {
   uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_2_step; //шаг эффекта номер 2
   uint8_t mode_4_step; //шаг эффекта номер 4
@@ -229,25 +227,27 @@ uint8_t semp; //переключатель семплов мелодии
 #define MELODY_PLAY(melody) _melody_chart(melody) //воспроизведение мелодии
 #define MELODY_RESET semp = 0; _timer_ms[TMR_MELODY] = 0 //сброс мелодии
 
-#define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
-#define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
-
+uint16_t vcc_adc; //напряжение питания
 #define GET_VCC(ref, adc) (float)((ref * 1023.0) / (float)adc) //расчет напряжения питания
 #define GET_ADC(vcc, coef) (int16_t)((255.0 / (float)vcc) * ((float)vcc / (float)coef)) //рассчет значения ацп кнопок
-uint16_t vcc_adc; //напряжение питания
+
+#define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
+#define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
 
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
-#define EEPROM_BLOCK_SETTINGS_DEBUG (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек отладки
+#define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио
+#define EEPROM_BLOCK_SETTINGS_DEBUG (EEPROM_BLOCK_SETTINGS_RADIO + sizeof(radioSettings)) //блок памяти настроек отладки
 #define EEPROM_BLOCK_ERROR (EEPROM_BLOCK_SETTINGS_DEBUG + sizeof(debugSettings)) //блок памяти ошибок
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + sizeof(alarmsNum)) //блок памяти контрольной суммы настроек
 #define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы времени
-#define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_TIME + 1) //блок памяти контрольной суммы основных настроек
-#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы быстрых настроек
-#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы настроек отладки
+#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_TIME + 1) //блок памяти контрольной суммы быстрых настроек
+#define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы основных настроек
+#define EEPROM_BLOCK_CRC_RADIO (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы настроек радио
+#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок контрольной суммы памяти ошибок
 #define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы количества будильников
@@ -293,6 +293,7 @@ int main(void) //инициализация
     updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
     updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
     updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
+    updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
 #if ALARM_TYPE
     updateByte(alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
 #endif
@@ -312,6 +313,11 @@ int main(void) //инициализация
       SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
+    if (checkData(sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO)) { //проверяем настройки радио
+      updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    }
+    else EEPROM_ReadBlock((uint16_t)&radioSettings, EEPROM_BLOCK_SETTINGS_RADIO, sizeof(radioSettings)); //считываем настройки радио из памяти
 #if ALARM_TYPE
     if (checkByte(EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM)) { //проверяем количетво будильников
       updateByte(alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
@@ -467,8 +473,10 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
   uint8_t CRC = 0; //буфер контрольной суммы
 
   for (uint8_t i = 0; i < sizeof(RTC); i++) checkCRC(&CRC, *((uint8_t*)&RTC + i));
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
   for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
+  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
+  for (uint8_t i = 0; i < sizeof(radioSettings); i++) checkCRC(&CRC, *((uint8_t*)&radioSettings + i));
+
 
   if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == CRC) return 0;
   else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
@@ -1261,6 +1269,8 @@ void settings_time(void) //настройки времени
   indiClr(); //очищаем индикаторы
   dotSetBright(dotMaxBright); //включаем точки
 
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
+
   //настройки
   while (1) {
     dataUpdate(); //обработка данных
@@ -1365,6 +1375,8 @@ void settings_singleAlarm(void) //настройка будильника
 
   alarmReset(); //сброс будильника
   alarmReadBlock(1, alarm); //читаем блок данных
+
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
 
   while (1) {
     dataUpdate(); //обработка данных
@@ -1508,6 +1520,8 @@ void settings_multiAlarm(void) //настройка будильников
 
   alarmReset(); //сброс будильника
   alarmReadBlock(curAlarm, alarm); //читаем блок данных
+
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
 
   while (1) {
     dataUpdate(); //обработка данных
@@ -1671,6 +1685,8 @@ void settings_main(void) //настроки основные
 
   indiClr(); //очищаем индикаторы
   dotSetBright(0); //выключаем точки
+
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
 
   //настройки
   while (1) {
@@ -2198,14 +2214,15 @@ void updateTemp(void) //обновить показания температур
 {
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (mainSettings.sensorSet) { //выбор датчика температуры
-    default: if (readTempRTC()) sens.err = 0; break; //чтение температуры с датчика DS3231
-    case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME
+    default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
+    case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME(P)280
 #if !SENS_PORT_DISABLE
     case 2: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
-    case 3: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
-    case 4: readTempDS(); break; //чтение температуры с датчика DS18B20
+    case 3: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT11
+    case 4: readTempDS(); break; //чтение температуры с датчика DS18x20
 #endif
   }
+  if (sens.err) readTempRTC(); //чтение температуры с датчика DS3231
 }
 //--------------------------------Автоматический показ температуры----------------------------------------
 void autoShowTemp(void) //автоматический показ температуры
@@ -2480,6 +2497,138 @@ void fastSetSwitch(void) //переключение быстрых настро�
   }
   if (mode == 1) flipIndi(fastSettings.flipMode, 1); //демонстрация анимации цифр
   updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
+}
+//------------------------Остановка автопоиска радиостанции-----------------------------
+void radioSeekStop(void) //остановка автопоиска радиостанции
+{
+  stopSeekRDA(); //остановили поиск радио
+  setFreqRDA(radioSettings.freq); //устанавливаем частоту
+  setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
+}
+//---------------------------------Радиоприемник----------------------------------------
+void radioMenu(void) //радиоприемник
+{
+  if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
+    static uint8_t station_num; //текущая ячейка памяти станции
+    uint8_t time_out = 0; //таймаут автовыхода
+    boolean station_show = 0; //флаг анимации номера станции
+    boolean seek_run = 0; //флаг поиска
+
+    if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
+      setPowerRDA(RDA_ON); //включаем радио
+      setVolumeRDA(RDA_MAX_VOL); //устанавливаем громкость
+      setFreqRDA(radioSettings.freq); //устанавливаем частоту
+    }
+
+    _timer_ms[TMR_MS] = 0; //сбросили таймер
+
+    while (1) {
+      dataUpdate(); //обработка данных
+
+      if (!_sec) { //если прошла секунда
+        _sec = 1; //сбросили флаг секунды
+        if (++time_out >= RADIO_TIMEOUT) { //если время вышло
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return; //выходим по тайм-ауту
+        }
+      }
+
+      if (!_timer_ms[TMR_MS]) { //если таймер истек
+        _timer_ms[TMR_MS] = 500; //устанавливаем таймер
+
+        dotSetBright((getStationStatusRDA()) ? dotMaxBright : 0); //управление точками в зависимости от устойчивости сигнала
+        if (seek_run && getSeekCompleteStatusRDA()) { //если был инициализирован поиск и поиск завершился
+          clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
+          setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
+          radioSettings.freq = getFreqRDA(); //прочитали частоту
+          seek_run = 0; //сбросили флаг поиска
+        }
+
+        indiClr(); //очистка индикаторов
+        if (station_show) { //если нужно показать номер станции
+          station_show = 0; //сбросили флага показа номера станции
+          indiPrintNum(station_num + 1, ((LAMP_NUM / 2) - 1), 2, 0); //номер станции
+        }
+        else {
+          indiPrintNum(radioSettings.freq, 0, 4); //текущаяя частота
+          indiPrintNum(station_num + 1, 5); //номер станции
+        }
+      }
+
+      switch (check_keys()) {
+        case RIGHT_KEY_PRESS: //клик правой кнопкой
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          if (radioSettings.freq < RDA_MAX_FREQ) radioSettings.freq++; else radioSettings.freq = RDA_MIN_FREQ; //переключаем частоту
+          setFreqRDA(radioSettings.freq); //установили частоту
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+
+        case LEFT_KEY_PRESS: //клик левой кнопкой
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          if (radioSettings.freq > RDA_MIN_FREQ) radioSettings.freq--; else radioSettings.freq = RDA_MAX_FREQ; //переключаем частоту
+          setFreqRDA(radioSettings.freq); //установили частоту
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+
+        case ADD_KEY_PRESS: //клик дополнительной кнопкой
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          if (station_num < 8) station_num++; else station_num = 0; //переключаем станцию
+          if (radioSettings.stationsSave[station_num]) { //если в памяти записана частота
+            radioSettings.freq = radioSettings.stationsSave[station_num]; //прочитали частоту
+            setFreqRDA(radioSettings.freq); //установили частоту
+          }
+          station_show = 1; //подняли флаг отображения номера станции
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+
+        case SET_KEY_PRESS: //клик средней кнопкой
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return; //выходим
+
+        case RIGHT_KEY_HOLD: //удержание правой кнопки
+          if (!seek_run) { //если не идет поиск
+            setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
+            startSeekRDA(RDA_SEEK_UP); //начинаем поиск вверх
+          }
+          else radioSeekStop(); //иначе остановка автопоиска радиостанции
+          seek_run = !seek_run; //изменили флаг поиска
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 500; //устанавливаем таймер
+          break;
+
+        case LEFT_KEY_HOLD: //удержание левой кнопки
+          if (!seek_run) { //если не идет поиск
+            setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
+            startSeekRDA(RDA_SEEK_DOWN); //начинаем поиск вниз
+          }
+          else radioSeekStop(); //иначе остановка автопоиска радиостанции
+          seek_run = !seek_run; //изменили флаг поиска
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 500; //устанавливаем таймер
+          break;
+
+        case ADD_KEY_HOLD: //удержание дополнительной кнопки
+          if (!seek_run) { //если не идет поиск
+            buzz_pulse(RADIO_SAVE_SOUND_FREQ, RADIO_SAVE_SOUND_TIME); //сигнал успешной записи радиостанции в память
+            radioSettings.stationsSave[station_num] = radioSettings.freq; //записали частоту в память
+            station_show = 1; //подняли флаг отображения номера станции
+          }
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+
+        case SET_KEY_HOLD: //удержание средней кнопк
+          setPowerRDA(RDA_OFF); //выключили радио
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return; //выходим
+      }
+    }
+  }
 }
 //--------------------------------Тревога таймера----------------------------------------
 void timerWarn(void) //тревога таймера
@@ -3290,6 +3439,10 @@ void mainScreen(void) //главный экран
 #if !BTN_ADD_DISABLE
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
         timerStopwatch(); //таймер-секундомер
+        animsReset(); //сброс анимаций
+        break;
+      case ADD_KEY_HOLD: //удержание дополнительной кнопки
+        radioMenu(); //радиоприемник
         animsReset(); //сброс анимаций
         break;
 #endif

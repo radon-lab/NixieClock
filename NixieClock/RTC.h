@@ -41,10 +41,7 @@ uint8_t unpackHours(uint8_t data) //распаковка часов
 //-------------------------------Чтение коррекции хода-------------------------------------
 uint8_t readAgingRTC(void) //чтение коррекции хода
 {
-  if (WireRequestFrom(RTC_ADDR, 0x10)) { //запрашиваем чтение данных, если нет ответа выходим
-    WireEnd(); //остановка шины Wire
-    return 0; //возвращаем ошибку
-  }
+  if (WireRequestFrom(RTC_ADDR, 0x10)) return 0; //запрашиваем чтение данных, если нет ответа выходим
   return WireReadEndByte(); //возвращаем результат
 }
 //-------------------------------Запись коррекции хода-------------------------------------
@@ -53,12 +50,12 @@ void writeAgingRTC(uint8_t data) //запись коррекции хода
   WireBeginTransmission(RTC_ADDR); //начало передачи
   WireWrite(0x10); //устанавливаем адрес записи
   WireWrite(data); //записываем коррекцию хода
+  WireEnd(); //остановка шины Wire
 }
 //--------------------------------Проверка флага OSF--------------------------------------
 boolean getOSF(void) //проверка флага OSF
 {
   if (WireRequestFrom(RTC_ADDR, 0x0F)) { //запрашиваем чтение данных, если нет ответа то
-    WireEnd(); //остановка шины Wire
     SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
     return 0; //выходим
   }
@@ -79,7 +76,6 @@ boolean getOSF(void) //проверка флага OSF
 void setSQW(void) //настройка SQW
 {
   if (WireRequestFrom(RTC_ADDR, 0x0E)) { //запрашиваем чтение данных, если нет ответа то
-    WireEnd(); //остановка шины Wire
     SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
     return; //выходим
   }
@@ -94,7 +90,6 @@ void setSQW(void) //настройка SQW
 void disable32K(void) //отключение вывода 32K
 {
   if (WireRequestFrom(RTC_ADDR, 0x0F)) { //запрашиваем чтение данных, если нет ответа то
-    WireEnd(); //остановка шины Wire
     SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
     return; //выходим
   }
@@ -108,10 +103,7 @@ void disable32K(void) //отключение вывода 32K
 //-------------------------------Чтение температуры-------------------------------------
 boolean readTempRTC(void) //чтение температуры
 {
-  if (WireRequestFrom(RTC_ADDR, 0x11)) { //запрашиваем чтение данных, если нет ответа выходим
-    WireEnd(); //остановка шины Wire
-    return 0; //выходим
-  }
+  if (WireRequestFrom(RTC_ADDR, 0x11)) return 0; //запрашиваем чтение данных, если нет ответа выходим
   uint16_t temp = (((uint16_t)WireRead() << 2 | WireReadEndByte() >> 6) * 100) >> 2;
   sens.temp = (temp > 8500) ? 0 : temp;
   sens.press = 0; //сбросили давление
@@ -140,7 +132,6 @@ boolean getTime(void) //запрашиваем время из RTC
 {
   if (getOSF()) { //проверка флага OSF
     if (WireRequestFrom(RTC_ADDR, 0x00)) { //запрашиваем чтение данных, если нет ответа выходим
-      WireEnd(); //остановка шины Wire
       SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
       return 1; //выходим
     }
