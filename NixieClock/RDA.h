@@ -21,7 +21,8 @@
 
 struct Settings_3 { //настройки радио
   uint16_t stationsSave[9] = {RADIO_STATIONS};
-  uint16_t freq = RDA_MIN_FREQ;
+  uint16_t stationsFreq = RDA_MIN_FREQ;
+  uint8_t stationNum;
 } radioSettings;
 
 struct rdaData { //буфер обмена радио
@@ -30,7 +31,7 @@ struct rdaData { //буфер обмена радио
 } rda;
 
 //------------------------------------------Запись в регистр--------------------------------------------------
-boolean readRegRDA(uint8_t _reg) 
+boolean readRegRDA(uint8_t _reg)
 {
   if (WireRequestFrom(RDA_ADDR, _reg)) return 1; //запрашиваем чтение данных, если нет ответа то выходим
   rda.highReg = WireRead(); //читаем старший байт
@@ -38,7 +39,7 @@ boolean readRegRDA(uint8_t _reg)
   return 0;
 }
 //-----------------------------------------Чтение из регистра-------------------------------------------------
-void writeRegRDA(uint8_t _reg) 
+void writeRegRDA(uint8_t _reg)
 {
   WireBeginTransmission(RDA_ADDR); //начало передачи
   WireWrite(_reg); //устанавливаем адрес записи

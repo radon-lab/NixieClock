@@ -21,9 +21,10 @@
 #define ADD_PIN   0  //пин доплнительной кнопки(0..13)(pin D)
 
 //Основная периферия
-#define SENS_PIN  1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
-#define CONV_PIN  9  //пин преобразователя(только пин 9)(pin D)
 #define SQW_PIN   2  //пин SQW(только пин 2)(pin D)
+#define CONV_PIN  9  //пин преобразователя(только пин 9)(pin D)
+#define SENS_PIN  1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
+#define DOTS_PIN  1  //пин разделительных точек в индикаторах(0..13)(pin D)
 #define DOT_PIN   10 //пин секундных точек(неоновая точка - 0..13 | светодиодная точка - 10)(pin D)
 #define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные диоды) или адресные диоды - 0..13 | хардверный шим(обычные диоды) - 11)(pin D)
 #define BUZZ_PIN  13 //пин пищалки(0..13)(pin D)
@@ -74,6 +75,16 @@
 //Пин точек
 #define DOT_BIT   DECODE_BIT(DOT_PIN)
 #define DOT_PORT  DECODE_PORT(DOT_PIN)
+
+//Пин точек индикаторов
+#define INDI_DOTS_BIT   DECODE_BIT(DOTS_PIN)
+#define INDI_DOTS_PORT  DECODE_PORT(DOTS_PIN)
+
+#define INDI_DOTS_OFF   (BIT_CLEAR(INDI_DOTS_PORT, INDI_DOTS_BIT))
+#define INDI_DOTS_ON    (BIT_SET(INDI_DOTS_PORT, INDI_DOTS_BIT))
+#define INDI_DOTS_OUT   (BIT_SET(DDR_REG(INDI_DOTS_PORT), INDI_DOTS_BIT))
+
+#define INDI_DOTS_INIT  INDI_DOTS_OFF; INDI_DOTS_OUT
 
 #if !BTN_TYPE
 //Пин кнопки ОК
