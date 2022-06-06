@@ -264,7 +264,8 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define KNOCK_SOUND_FREQ 1000        //частота звука клавиш(10..10000)(Гц)
 #define KNOCK_SOUND_TIME 30          //длительность звука клавиш(10..500)(мс)
 
-#define DAC_BUFF_SIZE 128            //(128..254)
+//Настройки SD карты
+#define DAC_BUFF_SIZE 128            //размер буфера ЦАП(128..254)
 
 //Настройки памяти
 #define EEPROM_BLOCK_NULL 0          //начальный блок памяти(0..511)
