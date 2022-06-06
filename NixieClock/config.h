@@ -113,7 +113,7 @@ const uint16_t _reset_settings[][3] PROGMEM = { //массив семплов ||
 const uint16_t _alarm_disable[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
   {1000, 200, 210}, {500, 200, 210}
 };
-const uint16_t _alarm_waint[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
+const uint16_t _alarm_wait[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
   {1500, 100, 200}, {1500, 100, 200}, {1500, 100, 200}
 };
 const uint16_t _hour_sound[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
@@ -128,16 +128,78 @@ const uint16_t general_sound[][2] PROGMEM = {
   SOUND_PATTERN(_pass_error),
   SOUND_PATTERN(_reset_settings),
   SOUND_PATTERN(_alarm_disable),
-  SOUND_PATTERN(_alarm_waint),
+  SOUND_PATTERN(_alarm_wait),
   SOUND_PATTERN(_timer_warn),
   SOUND_PATTERN(_hour_sound)
 };
 
 
+//Настройки треков плеера
+#define PLAYER_NUMBERS_FOLDER 1      //папка с озвучкой цифр(1..255)
+#define PLAYER_NUMBERS_START 3       //первый трек озвучки цифр(1..255)("ноль".."девятнадцать", "двадцать".."девяносто", "сто".."тысяча")
+#define PLAYER_NUMBERS_OTHER 1       //первый трек дополнительной озвучки цифр(1..255)("одна", "две")
+
+#define PLAYER_END_NUMBERS_FOLDER 2  //папка с озвучкой окончаний цифр(1..255)
+#define PLAYER_TIME_MINS_START 1     //первый трек озвучки минут(1..255)("минута", "минуты", "минут")
+#define PLAYER_TIME_HOUR_START 4     //первый трек озвучки часа(1..255)("час", "часа", "часов")
+#define PLAYER_SENS_TEMP_START 7     //первый трек озвучки температуры(1..255)("градус", "градуса", "градусов")
+#define PLAYER_SENS_CEIL_START 10    //первый трек озвучки целых чисел(1..255)("целая", "целых")
+#define PLAYER_SENS_DEC_START 12     //первый трек озвучки десятых долей чисел(1..255)("десятая", "десятых")
+#define PLAYER_SENS_HUM_START 14     //первый трек озвучки влажности(1..255)("процент", "процента", "процентов")
+#define PLAYER_SENS_PRESS_START 17   //первый трек озвучки давления(1..255)("миллиметр", "миллиметра", "миллиметров")
+#define PLAYER_SENS_PRESS_OTHER 20   //трек дополнительной озвучки давления(1..255)("ртутного столба")
+
+#define PLAYER_MENU_FOLDER 3         //папка с озвучкой меню(1..255)
+#define PLAYER_MAIN_MENU_START 1     //первый трек озвучки основного меню(1..255)
+#define PLAYER_FAST_MENU_START 11    //первый трек озвучки быстрого меню(1..255)
+#define PLAYER_DEBUG_MENU_START 20   //первый трек озвучки меню отладки(1..255)
+
+#define PLAYER_GENERAL_FOLDER 4      //папка с основной озвучкой(1..255)
+#define PLAYER_ALARM_DISABLE_SOUND 1 //трек озвучки оповещения отключения будильника(1..255)("будильник отключен")
+#define PLAYER_ALARM_WAIT_SOUND 2    //трек озвучки оповещения ожидания будильника(1..255)("будильник отложен")
+#define PLAYER_TIME_NOW_SOUND 3      //трек озвучки текущего времени(1..255)("текущее время")
+#define PLAYER_TEMP_SOUND 4          //трек озвучки ошибок(1..255)("температура")
+#define PLAYER_PRESS_SOUND 5         //трек озвучки ошибок(1..255)("давление")
+#define PLAYER_HUM_SOUND 6           //трек озвучки ошибок(1..255)("влажность")
+#define PLAYER_RESET_SOUND 7         //трек озвучки сброса настроек(1..255)("сброс настроек завершен")
+#define PLAYER_DEBUG_SOUND 8         //трек озвучки отладки(1..255)("меню отладки, введите пароль")
+#define PLAYER_TEST_SOUND 9          //трек озвучки режима тестирования(1..255)("тестирование системы")
+#define PLAYER_ERROR_SOUND 10        //трек озвучки ошибок(1..255)("ошибка")
+#define PLAYER_RADIO_SOUND 11        //трек озвучки меню радио(1..255)("радио")
+#define PLAYER_TIMER_SOUND 12        //трек озвучки меню таймера(1..255)("таймер")
+#define PLAYER_STOPWATCH_SOUND 13    //трек озвучки меню секундомера(1..255)("секундомер")
+#define PLAYER_ALARM_SET_SOUND 14    //трек озвучки меню настройки будильника(1..255)("настройка будильника")
+#define PLAYER_TIME_SET_SOUND 15     //трек озвучки меню настройки времени(1..255)("настройка времени")
+#define PLAYER_TIMER_SET_SOUND 16    //трек озвучки меню настройки таймера(1..255)("настйрока таймера")
+#define PLAYER_PASS_SOUND 17         //трек озвучки неверного пароля(1..255)
+#define PLAYER_HOUR_SOUND 18         //трек озвучки смены часа(1..255)
+#define PLAYER_TIMER_WARN_SOUND 19   //трек озвучки окончания таймера(1..255)
+
+#define PLAYER_ALARM_FOLDER 5        //папка с озвучкой будильника(1..255)
+#define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
+#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..255)
+
+
+//Настройки плеера
+#define PLAYER_MAX_BUFFER 10         //максимальное количество команд в буфере(1..25)
+#define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
+#define PLAYER_START_WAIT 500        //ожидание инициализации плеера(500..1000)(мс)
+#define PLAYER_UART_SPEED 9600       //скорость UART плеера(9600)
+
+#define PLAYER_VOLUME 15             //громкость звуков плеера
+#define PLAYER_MIN_VOL 0             //минимальная громкость
+#define PLAYER_MAX_VOL 30            //максимальная громкость
+
 //Настройки радиоприемника
 #define RADIO_STATIONS 877, 1025, 1057 //радиостанции(не более 9 пресетов)(870..1080)(МГц * 10)
 #define RADIO_UPDATE_TIME 500        //время обновления информации в режиме радио(100..1000)(мс)
+#define RADIO_ANIM_TIME 1000         //время анимации в режиме радио(500..1500)(мс)
 #define RADIO_TIMEOUT 50             //тайм-аут выхода из радио по бездействию(5..60)(сек)
+
+#define RDA_MIN_FREQ 870             //минимальная частота
+#define RDA_MAX_FREQ 1080            //максимальная частота
+#define RDA_MIN_VOL 0                //минмальная громкость
+#define RDA_MAX_VOL 15               //максимальная громкость
 
 //Настройки синхронизации времени
 #define RTC_SYNC_TIME 15             //период попытки синхронизации с модулем реального времени при отсутствии сигнала SQW(1..30)(м)
@@ -195,6 +257,14 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define BTN_HOLD_TIME 550            //время после которого считается что кнопка зажата(0..5000)(мс)
 
 #define BTN_ANALOG_GIST 25           //гистерезис значения ацп кнопок(5..50)
+#define BTN_MIN_RANGE 5              //минимальный диапазон аналоговых кнопок
+#define BTN_MAX_RANGE 255            //максимальный диапазон аналоговых кнопок
+
+//Настройки звука кнопок
+#define KNOCK_SOUND_FREQ 1000        //частота звука клавиш(10..10000)(Гц)
+#define KNOCK_SOUND_TIME 30          //длительность звука клавиш(10..500)(мс)
+
+#define DAC_BUFF_SIZE 128            //(128..254)
 
 //Настройки памяти
 #define EEPROM_BLOCK_NULL 0          //начальный блок памяти(0..511)

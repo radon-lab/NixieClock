@@ -15,11 +15,11 @@
 #define _INDI_START TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
 #define _INDI_STOP TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
-struct Settings {
+struct Settings_4 {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
-  int8_t hvCorrect = 0; //коррекция напряжения
+  int8_t hvCorrect; //коррекция напряжения
 } debugSettings;
 
 uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
@@ -34,9 +34,6 @@ uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
 uint8_t indi_null; //пустой сивол(отключеный индикатор)
 volatile uint8_t indiState; //текущей номер отрисовки индикатора
-
-volatile uint8_t tick_ms; //счетчик тиков миллисекунд
-volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
 
@@ -96,7 +93,7 @@ void indiChangePwm(void) //установка Linear Advance
   OCR1A = constrain(debugSettings.min_pwm + ((float)dimm_all * pwm_coef), 100, 200);
 }
 //--------------------------------Инициализация индикаторов---------------------------------------
-void IndiInit(void) //инициализация индикаторов
+void indiInit(void) //инициализация индикаторов
 {
   for (uint8_t i = 0; i < 4; i++) {
     PORTC |= (0x01 << decoderMask[i]); //устанавливаем высокий уровень катода
@@ -123,26 +120,30 @@ void IndiInit(void) //инициализация индикаторов
   TCCR0A = (0x01 << WGM01); //режим CTC
   TCCR0B = (0x01 << CS02); //пределитель 256
 
+#if PLAYER_MODE == 2
+  OCR1B = 128; //выключаем dac
+#else
   OCR1B = 0; //выключаем точки
-  TIMSK1 = 0; //отключаем прерывания Таймера1
-  TCCR1A = 0; //отключаем шим
+#endif
 
-#if !NEON_DOT
+  TIMSK1 = 0; //отключаем прерывания Таймера1
+  TCCR1A = (0x01 << WGM10); //режим коррекция фазы шим
+  TCCR1B = (0x01 << CS10);  //задаем частоту 31 кГц
+
+#if !NEON_DOT || PLAYER_MODE == 2
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #if !GEN_DISABLE
   OCR1A = constrain(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #endif
-  TCCR1A |= (0x01 << WGM10); //режим коррекция фазы шим
-  TCCR1B = (0x01 << CS10);  //задаем частоту 31 кГц
 
   OCR2A = 0; //выключаем подсветку
   OCR2B = 0; //сбравсывем бузер
 
   TIMSK2 = 0; //выключаем прерывания Таймера2
 #if (BACKL_WS2812B || BACKL_MODE)
-  TCCR2A = (0x01 << WGM20 | 0x01 << WGM21); //отключаем OCR2A и OCR2B
+  TCCR2A = 0; //отключаем OCR2A и OCR2B
 #else
   TCCR2A = (0x01 << COM2A1 | 0x01 << WGM20 | 0x01 << WGM21); //подключаем D11
 #endif

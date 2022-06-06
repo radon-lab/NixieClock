@@ -21,13 +21,21 @@
 #define ADD_PIN   0  //пин доплнительной кнопки(0..13)(pin D)
 
 //Основная периферия
-#define SQW_PIN   2  //пин SQW(только пин 2)(pin D)
 #define CONV_PIN  9  //пин преобразователя(только пин 9)(pin D)
-#define SENS_PIN  1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
-#define DOTS_PIN  1  //пин разделительных точек в индикаторах(0..13)(pin D)
 #define DOT_PIN   10 //пин секундных точек(неоновая точка - 0..13 | светодиодная точка - 10)(pin D)
 #define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные диоды) или адресные диоды - 0..13 | хардверный шим(обычные диоды) - 11)(pin D)
-#define BUZZ_PIN  13 //пин пищалки(0..13)(pin D)
+#define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 10)(pin D)
+
+//Дополнительная периферия
+#define SQW_PIN     2  //пин SQW(только пин 2)(pin D)
+#define SENS_PIN    1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
+#define DOTS_PIN    1  //пин разделительных точек в индикаторах(0..13)(pin D)
+#define DF_RX_PIN   1  //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
+#define DF_BUSY_PIN 0  //пин DF плеера BUSY(0..13)(pin D)
+#define SD_MISO_PIN 12
+#define SD_MOSI_PIN 11
+#define SD_SCK_PIN  13
+#define SD_CS_PIN   9
 
 //Обратная связь
 #define ANALOG_DET_PIN 6 //пин обратной связи(6..7)(pin A)
@@ -142,6 +150,7 @@
 #endif
 #endif
 
+#if (BTN_ADD_TYPE == 1)
 //Пин дополнительной кнопки
 #define ADD_BIT   DECODE_BIT(ADD_PIN)
 #define ADD_PORT  DECODE_PORT(ADD_PIN)
@@ -158,6 +167,7 @@
 #define ADD_INP   (BIT_CLEAR(DDR_REG(ADD_PORT), ADD_BIT))
 
 #define ADD_INIT  ADD_CLR; ADD_INP
+#endif
 #endif
 
 //Пин сенсора температуры(для DS18x20 и DHTxx)
@@ -208,5 +218,67 @@
 #define BUZZ_OFF   (BIT_CLEAR(BUZZ_PORT, BUZZ_BIT))
 #define BUZZ_INV   (BUZZ_PORT ^= (1 << BUZZ_BIT))
 #define BUZZ_OUT   (BIT_SET(DDR_REG(BUZZ_PORT), BUZZ_BIT))
+#define BUZZ_INP   (BIT_CLEAR(DDR_REG(BUZZ_PORT), BUZZ_BIT))
 
 #define BUZZ_INIT  BUZZ_OFF; BUZZ_OUT
+
+//Пин плеера RX
+#define DF_RX_BIT   DECODE_BIT(DF_RX_PIN)
+#define DF_RX_PORT  DECODE_PORT(DF_RX_PIN)
+
+#define DF_RX_SET   (BIT_SET(DF_RX_PORT, DF_RX_BIT))
+#define DF_RX_CLEAR (BIT_CLEAR(DF_RX_PORT, DF_RX_BIT))
+#define DF_RX_OUT   (BIT_SET(DDR_REG(DF_RX_PORT), DF_RX_BIT))
+
+#define DF_RX_INIT  DF_RX_SET; DF_RX_OUT
+
+//Пин плеера BUSY
+#define DF_BUSY_BIT   DECODE_BIT(DF_BUSY_PIN)
+#define DF_BUSY_PORT  DECODE_PORT(DF_BUSY_PIN)
+
+#define DF_BUSY_CHK   (BIT_READ(PIN_REG(DF_BUSY_PORT), DF_BUSY_BIT))
+#define DF_BUSY_SET   (BIT_SET(DF_BUSY_PORT, DF_BUSY_BIT))
+#define DF_BUSY_INP   (BIT_CLEAR(DDR_REG(DF_BUSY_PORT), DF_BUSY_BIT))
+
+#define DF_BUSY_INIT  DF_BUSY_SET; DF_BUSY_INP
+
+//Пин MISO карты памяти
+#define MISO_BIT   DECODE_BIT(SD_MISO_PIN)
+#define MISO_PORT  DECODE_PORT(SD_MISO_PIN)
+
+#define MISO_SET   (BIT_SET(MISO_PORT, MISO_BIT))
+#define MISO_CLEAR (BIT_CLEAR(MISO_PORT, MISO_BIT))
+#define MISO_INP   (BIT_CLEAR(DDR_REG(MISO_PORT), MISO_BIT))
+
+#define MISO_INIT  MISO_CLEAR; MISO_INP
+
+//Пин MOSI карты памяти
+#define MOSI_BIT   DECODE_BIT(SD_MOSI_PIN)
+#define MOSI_PORT  DECODE_PORT(SD_MOSI_PIN)
+
+#define MOSI_SET   (BIT_SET(MOSI_PORT, MOSI_BIT))
+#define MOSI_CLEAR (BIT_CLEAR(MOSI_PORT, MOSI_BIT))
+#define MOSI_OUT   (BIT_SET(DDR_REG(MOSI_PORT), MOSI_BIT))
+
+#define MOSI_INIT  MOSI_SET; MOSI_OUT
+
+//Пин SCK карты памяти
+#define SCK_BIT   DECODE_BIT(SD_SCK_PIN)
+#define SCK_PORT  DECODE_PORT(SD_SCK_PIN)
+
+#define SCK_INV   (SCK_PORT ^= SCK_BIT)
+#define SCK_SET   (BIT_SET(SCK_PORT, SCK_BIT))
+#define SCK_CLEAR (BIT_CLEAR(SCK_PORT, SCK_BIT))
+#define SCK_OUT   (BIT_SET(DDR_REG(SCK_PORT), SCK_BIT))
+
+#define SCK_INIT  SCK_CLEAR; SCK_OUT
+
+//Пин CS карты памяти
+#define CS_BIT     DECODE_BIT(SD_CS_PIN)
+#define CS_PORT    DECODE_PORT(SD_CS_PIN)
+
+#define CS_DISABLE (BIT_SET(CS_PORT, CS_BIT))
+#define CS_ENABLE  (BIT_CLEAR(CS_PORT, CS_BIT))
+#define CS_OUT     (BIT_SET(DDR_REG(CS_PORT), CS_BIT))
+
+#define CS_INIT    CS_DISABLE; CS_OUT

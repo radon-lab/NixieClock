@@ -14,17 +14,6 @@
 #define RDA_OFF 0x00 //радио выключено
 #define RDA_ON 0x01 //радио включено
 
-#define RDA_MIN_FREQ 870 //минимальная частота
-#define RDA_MAX_FREQ 1080 //максимальная частота
-#define RDA_MIN_VOL 0 //минмальная громкость
-#define RDA_MAX_VOL 15 //максимальная громкость
-
-struct Settings_3 { //настройки радио
-  uint16_t stationsSave[9] = {RADIO_STATIONS};
-  uint16_t stationsFreq = RDA_MIN_FREQ;
-  uint8_t stationNum;
-} radioSettings;
-
 struct rdaData { //буфер обмена радио
   uint8_t highReg; //старший байт
   uint8_t lowReg; //младший байт
