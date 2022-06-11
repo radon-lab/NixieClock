@@ -327,8 +327,14 @@ enum {
 //----------------------------------Инициализация--------------------------------------------
 int main(void) //инициализация
 {
-#if !PLAYER_MODE || UART_MODE
+#if (PLAYER_MODE == 1) && UART_MODE
   uartDisable(); //отключение uart
+#else
+  uartDisable(); //отключение uart
+  BUZZ_INIT; //инициализация бузера
+#if PLAYER_MODE == 2
+  for (uint8_t i = 0; i < 5; i++) if (!cardMount()) break;
+#endif
 #endif
 
 #if !BTN_TYPE
@@ -407,23 +413,17 @@ int main(void) //инициализация
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
 
-#if PLAYER_MODE == 2
-  for (uint8_t i = 0; i < 5; i++) if (!cardMount()) break;
-#endif
-
   indiChangeCoef(); //обновление коэффициента линейного регулирования
 
-  WireInit(); //инициализация шины Wire
+  wireInit(); //инициализация шины wire
   indiInit(); //инициализация индикаторов
-
-  backlAnimDisable(); //запретили эффекты подсветки
-  testRTC(); //проверка модуля часов
 
 #if PLAYER_MODE == 1
   playerInint(); //инициализация плеера
-#else
-  BUZZ_INIT; //инициализация бузера
 #endif
+
+  backlAnimDisable(); //запретили эффекты подсветки
+  testRTC(); //проверка модуля часов
 
   if (!LEFT_CHK && check_pass()) settings_debug(); //если правая кнопка зажата запускаем отладку
   if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы

@@ -30,8 +30,12 @@
 #define SQW_PIN     2  //пин SQW(только пин 2)(pin D)
 #define SENS_PIN    1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
 #define DOTS_PIN    1  //пин разделительных точек в индикаторах(0..13)(pin D)
+
+//DF плеер
 #define DF_RX_PIN   1  //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
 #define DF_BUSY_PIN 0  //пин DF плеера BUSY(0..13)(pin D)
+
+//SD плеер
 #define SD_MISO_PIN 12 //пин SD карты MISO(0..13)(pin D)
 #define SD_MOSI_PIN 11 //пин SD карты MOSI(0..13)(pin D)
 #define SD_SCK_PIN  13 //пин SD карты SCK(0..13)(pin D)

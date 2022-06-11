@@ -22,19 +22,19 @@ struct rdaData { //буфер обмена радио
 //------------------------------------------Запись в регистр--------------------------------------------------
 boolean readRegRDA(uint8_t _reg)
 {
-  if (WireRequestFrom(RDA_ADDR, _reg)) return 1; //запрашиваем чтение данных, если нет ответа то выходим
-  rda.highReg = WireRead(); //читаем старший байт
-  rda.lowReg = WireReadEndByte(); //читаем младший байт
+  if (wireRequestFrom(RDA_ADDR, _reg)) return 1; //запрашиваем чтение данных, если нет ответа то выходим
+  rda.highReg = wireRead(); //читаем старший байт
+  rda.lowReg = wireReadEndByte(); //читаем младший байт
   return 0;
 }
 //-----------------------------------------Чтение из регистра-------------------------------------------------
 void writeRegRDA(uint8_t _reg)
 {
-  WireBeginTransmission(RDA_ADDR); //начало передачи
-  WireWrite(_reg); //устанавливаем адрес записи
-  WireWrite(rda.highReg); //отправляем старший байт
-  WireWrite(rda.lowReg); //отправляем младший байт
-  WireEnd(); //конец передачи
+  wireBeginTransmission(RDA_ADDR); //начало передачи
+  wireWrite(_reg); //устанавливаем адрес записи
+  wireWrite(rda.highReg); //отправляем старший байт
+  wireWrite(rda.lowReg); //отправляем младший байт
+  wireEnd(); //конец передачи
 }
 //-------------------------------Получить статус настройки на радиостанцию------------------------------------
 boolean getStationStatusRDA(void)

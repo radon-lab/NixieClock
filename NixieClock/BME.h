@@ -66,58 +66,58 @@ struct CalibrationDataBMP180 {
 //--------------------------------------Запись одного байта------------------------------------------
 void writeREG(uint8_t _addr, uint8_t _reg, uint8_t _data) //Запись одного байта
 {
-  WireBeginTransmission(_addr); //начало передачи
-  WireWrite(_reg); //устанавливаем адрес записи
-  WireWrite(_data); //записываем байт
-  WireEnd(); //конец передачи
+  wireBeginTransmission(_addr); //начало передачи
+  wireWrite(_reg); //устанавливаем адрес записи
+  wireWrite(_data); //записываем байт
+  wireEnd(); //конец передачи
 }
 //--------------------------------------Чтение калибровок датчика------------------------------------------
 boolean readCalibrationBMP180(void) //чтение калибровок датчика
 {
-  if (WireRequestFrom(BMP180_ADDR, 0xAA)) return 0; //запрашиваем чтение данных, если нет ответа выходим
+  if (wireRequestFrom(BMP180_ADDR, 0xAA)) return 0; //запрашиваем чтение данных, если нет ответа выходим
 
-  CalibrationBMP.AC_1 = ((WireRead() << 8) | WireRead()); //читаем
-  CalibrationBMP.AC_2 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.AC_3 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.AC_4 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.AC_5 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.AC_6 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.B_1 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.B_2 = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.MB = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.MC = ((WireRead() << 8) | WireRead());
-  CalibrationBMP.MD = ((WireRead() << 8) | WireReadEndByte());
+  CalibrationBMP.AC_1 = ((wireRead() << 8) | wireRead()); //читаем
+  CalibrationBMP.AC_2 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.AC_3 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.AC_4 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.AC_5 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.AC_6 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.B_1 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.B_2 = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.MB = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.MC = ((wireRead() << 8) | wireRead());
+  CalibrationBMP.MD = ((wireRead() << 8) | wireReadEndByte());
 
   return 1;
 }
 //--------------------------------------Чтение калибровок датчика------------------------------------------
 boolean readCalibrationBME280(void) //чтение калибровок датчика
 {
-  if (WireRequestFrom(BME280_ADDR, 0x88)) return 0; //запрашиваем чтение данных, если нет ответа выходим
+  if (wireRequestFrom(BME280_ADDR, 0x88)) return 0; //запрашиваем чтение данных, если нет ответа выходим
 
-  CalibrationBME.TEMP_1 = (WireRead() | (WireRead() << 8)); //читаем
-  CalibrationBME.TEMP_2 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.TEMP_3 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_1 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_2 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_3 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_4 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_5 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_6 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_7 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_8 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.PRESS_9 = (WireRead() | (WireRead() << 8));
-  CalibrationBME.HUM_1 = WireReadEndByte();
+  CalibrationBME.TEMP_1 = (wireRead() | (wireRead() << 8)); //читаем
+  CalibrationBME.TEMP_2 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.TEMP_3 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_1 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_2 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_3 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_4 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_5 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_6 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_7 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_8 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.PRESS_9 = (wireRead() | (wireRead() << 8));
+  CalibrationBME.HUM_1 = wireReadEndByte();
 
-  if (WireRequestFrom(BME280_ADDR, 0xE1)) return 0; //запрашиваем чтение данных, если нет ответа выходим
+  if (wireRequestFrom(BME280_ADDR, 0xE1)) return 0; //запрашиваем чтение данных, если нет ответа выходим
 
-  CalibrationBME.HUM_2 = (WireRead() | (WireRead() << 8)); //читаем
-  CalibrationBME.HUM_3 = WireRead();
-  CalibrationBME.HUM_4 = (WireRead() << 4);
-  uint8_t interVal = WireRead();
+  CalibrationBME.HUM_2 = (wireRead() | (wireRead() << 8)); //читаем
+  CalibrationBME.HUM_3 = wireRead();
+  CalibrationBME.HUM_4 = (wireRead() << 4);
+  uint8_t interVal = wireRead();
   CalibrationBME.HUM_4 |= (interVal & 0x0F);
-  CalibrationBME.HUM_5 = (((interVal & 0xF0) >> 4) | (WireRead() << 4));
-  CalibrationBME.HUM_6 = WireReadEndByte();
+  CalibrationBME.HUM_5 = (((interVal & 0xF0) >> 4) | (wireRead() << 4));
+  CalibrationBME.HUM_6 = wireReadEndByte();
 
   return 1;
 }
@@ -147,26 +147,26 @@ void readTempBME(void) //чтение температуры/давления/в
         writeREG(BMP180_ADDR, BMP180_CONTROL_REG, BMP180_READ_TEMP); //запустили замер температуры
         while (1) { //ожидаем окончания замера
           dataUpdate(); //обработка данных
-          if (WireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
-          if (!(WireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
+          if (wireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+          if (!(wireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
 
-        if (WireRequestFrom(BMP180_ADDR, BMP180_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
-        temp_raw = (((uint16_t)WireRead() << 8) | WireReadEndByte());
+        if (wireRequestFrom(BMP180_ADDR, BMP180_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+        temp_raw = (((uint16_t)wireRead() << 8) | wireReadEndByte());
 
         _timer_ms[TMR_SENS] = BME_CHECK_TIMEOUT; //установили таймаут
 
         writeREG(BMP180_ADDR, BMP180_CONTROL_REG, BMP180_READ_PRESS | (BMP180_OVERSAMP << 6)); //запустили замер давления
         while (1) { //ожидаем окончания замера
           dataUpdate(); //обработка данных
-          if (WireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
-          if (!(WireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
+          if (wireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+          if (!(wireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
 
-        if (WireRequestFrom(BMP180_ADDR, BMP180_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
-        press_raw = (((uint32_t)WireRead() << 16) | ((uint32_t)WireRead() << 8) | WireReadEndByte());
+        if (wireRequestFrom(BMP180_ADDR, BMP180_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+        press_raw = (((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8) | wireReadEndByte());
         press_raw >>= (8 - BMP180_OVERSAMP);
 
         int32_t temp_val_1 = ((temp_raw - CalibrationBMP.AC_6) * CalibrationBMP.AC_5 >> 15) + ((int32_t)CalibrationBMP.MC << 11) / (((temp_raw - CalibrationBMP.AC_6) * CalibrationBMP.AC_5 >> 15) + CalibrationBMP.MD);
@@ -187,15 +187,15 @@ void readTempBME(void) //чтение температуры/давления/в
         writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
         while (1) { //ожидаем окончания замера
           dataUpdate(); //обработка данных
-          if (WireRequestFrom(BME280_ADDR, BME280_STATUS_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
-          if (!(WireReadEndByte() & 0x08)) break; //если замер завершён продолжаем
+          if (wireRequestFrom(BME280_ADDR, BME280_STATUS_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+          if (!(wireReadEndByte() & 0x08)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
-        if (WireRequestFrom(BME280_ADDR, BME280_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
+        if (wireRequestFrom(BME280_ADDR, BME280_DATA_OUT_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
 
-        uint32_t press_raw = (((uint32_t)WireRead() << 16) | ((uint32_t)WireRead() << 8) | (uint32_t)WireRead()) >> 4; //читаем 24-х битное значение ацп давления
-        int32_t temp_raw = (((uint32_t)WireRead() << 16) | ((uint32_t)WireRead() << 8) | (uint32_t)WireRead()) >> 4; //читаем 24-х битное значение ацп температуры
-        int32_t hum_raw = ((uint16_t)WireRead() << 8) | (uint16_t)WireReadEndByte(); //читаем 16-и битное значение ацп влажности
+        uint32_t press_raw = (((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8) | (uint32_t)wireRead()) >> 4; //читаем 24-х битное значение ацп давления
+        int32_t temp_raw = (((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8) | (uint32_t)wireRead()) >> 4; //читаем 24-х битное значение ацп температуры
+        int32_t hum_raw = ((uint16_t)wireRead() << 8) | (uint16_t)wireReadEndByte(); //читаем 16-и битное значение ацп влажности
 
 
         int32_t temp_val_1 = ((((temp_raw >> 3) - ((int32_t)CalibrationBME.TEMP_1 << 1))) * ((int32_t)CalibrationBME.TEMP_2)) >> 11;

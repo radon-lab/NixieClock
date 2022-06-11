@@ -77,8 +77,8 @@ void uartSendData(uint8_t _byte)
   UDR0 = _byte;
 #endif
 }
-#if PLAYER_MODE == 1
 //------------------------------Софтовая обработка UART----------------------------------
+#if PLAYER_MODE == 1
 #if UART_MODE
 ISR(TIMER2_COMPB_vect)
 {
