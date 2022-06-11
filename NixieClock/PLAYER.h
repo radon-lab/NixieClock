@@ -36,6 +36,7 @@ enum {
 };
 
 struct playerData { //буфер обмена
+  boolean playbackMute; //флаг работы без звука
   boolean playbackNow; //флаг срочной отправки данных
   uint8_t playbackEnd; //последний байт буфера
   uint8_t playbackStart; //первый байт буфера
@@ -187,7 +188,10 @@ void playerSetMute(boolean _mute)
 {
   uint8_t _buff = player.playbackEnd + 1;
   if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
-  if (_buff != player.playbackStart) playerSendData(PLAYER_CMD_MUTE, _mute);
+  if (_buff != player.playbackStart) {
+    if (!_mute) player.playbackMute = 0;
+    playerSendData(PLAYER_CMD_MUTE, _mute);
+  }
 }
 //-----------------------------------Воспроизвести трек в папке----------------------------------
 void playerSetTrack(uint8_t _track, uint8_t _folder)
@@ -259,7 +263,7 @@ void playerUpdate(void)
   if (transferByte || player.playbackEnd) {
     if (uartStatus()) {
       if (!transferByte) {
-        if ((writeState || _timer_ms[TMR_PLAYER]) && !player.playbackNow) return;
+        if (((writeState || _timer_ms[TMR_PLAYER]) && !player.playbackNow) || player.playbackMute) return;
         if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
         player.playbackNow = 0;
         player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
@@ -273,6 +277,7 @@ void playerUpdate(void)
         transferByte = 0;
         _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
         writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER ) ? 0 : 1;
+        if (player.transferBuff[_COMMAND] == PLAYER_CMD_MUTE) player.playbackMute = player.transferBuff[_DATA_L];
         if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
       }
     }
@@ -280,7 +285,7 @@ void playerUpdate(void)
 #elif PLAYER_MODE == 2
   readerUpdate();
 
-  if (player.playbackEnd) {
+  if (player.playbackEnd && !player.playbackMute) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow) {
         player.playbackNow = 0;
@@ -301,6 +306,7 @@ void playerUpdate(void)
       case PLAYER_CMD_STOP: player.playbackStart += 2; break;
       case PLAYER_CMD_MUTE:
         player.playbackStart++;
+        player.playbackMute = player.playbackBuff[player.playbackStart];
         if (player.playbackBuff[player.playbackStart++]) BUZZ_INP;
         else BUZZ_OUT;
         break;
