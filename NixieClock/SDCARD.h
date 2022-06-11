@@ -487,6 +487,9 @@ void readerUpdate(void)
             OCR1B = 128; //выключаем dac
             OCR2B = 255; //устанавливаем COMB в начало
             TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
+#if !AMP_PORT_DISABLE
+            AMP_ENABLE;
+#endif
             reader.playerState = READER_SOUND_WAIT;
           }
         }
@@ -508,6 +511,9 @@ void readerUpdate(void)
         if (buffer.dacStart == buffer.dacEnd) {
           TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
           OCR1B = 128; //выключаем dac
+#if !AMP_PORT_DISABLE
+          AMP_DISABLE;
+#endif
           reader.playerState = READER_IDLE;
         }
         break;

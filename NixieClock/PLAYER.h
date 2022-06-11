@@ -241,8 +241,18 @@ void playerUpdate(void)
   if (!_timer_ms[TMR_PLAYER]) {
     if (busyState != DF_BUSY_CHK) {
       busyState = !busyState;
-      if (!busyState) _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
-      else writeState = 0;
+      if (!busyState) {
+#if !AMP_PORT_DISABLE
+        AMP_ENABLE;
+#endif
+        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+      }
+      else {
+#if !AMP_PORT_DISABLE
+        AMP_DISABLE;
+#endif
+        writeState = 0;
+      }
     }
   }
 
@@ -293,6 +303,10 @@ void playerUpdate(void)
         player.playbackStart++;
         if (player.playbackBuff[player.playbackStart++]) BUZZ_INP;
         else BUZZ_OUT;
+        break;
+      case PLAYER_CMD_SET_VOL:
+        player.playbackStart++;
+        buffer.dacVolume = player.playbackBuff[player.playbackStart++];
         break;
     }
 

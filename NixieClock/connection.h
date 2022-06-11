@@ -30,6 +30,7 @@
 #define SQW_PIN     2  //пин SQW(только пин 2)(pin D)
 #define SENS_PIN    1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
 #define DOTS_PIN    1  //пин разделительных точек в индикаторах(0..13)(pin D)
+#define AMP_PIN 8  //пин управления питанием усилителя
 
 //DF плеер
 #define DF_RX_PIN   1  //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
@@ -286,3 +287,13 @@
 #define CS_OUT     (BIT_SET(DDR_REG(CS_PORT), CS_BIT))
 
 #define CS_INIT    CS_DISABLE; CS_OUT
+
+//Пин управления питание усилителя
+#define AMP_BIT     DECODE_BIT(AMP_PIN)
+#define AMP_PORT    DECODE_PORT(AMP_PIN)
+
+#define AMP_DISABLE (BIT_CLEAR(AMP_PORT, AMP_BIT))
+#define AMP_ENABLE  (BIT_SET(AMP_PORT, AMP_BIT))
+#define AMP_OUT     (BIT_SET(DDR_REG(CS_PORT), AMP_BIT))
+
+#define AMP_INIT    AMP_DISABLE; AMP_OUT

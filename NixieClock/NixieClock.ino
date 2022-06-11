@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.2 релиз от 11.06.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 11.06.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -44,7 +44,7 @@ enum {
   TMR_GLITCH,    //таймер глюков
   TIMERS_SEC_NUM //количество таймеров
 };
-uint16_t _timersecUpd[TIMERS_SEC_NUM]; //таймер отсчета секунд
+uint16_t _timer_sec[TIMERS_SEC_NUM]; //таймер отсчета секунд
 
 volatile uint8_t tick_ms;  //счетчик тиков миллисекунд
 volatile uint8_t tick_sec; //счетчик тиков от RTC
@@ -276,13 +276,27 @@ enum {
   ALARM_MAX_ARR //максимальное количество данных
 };
 
+//перечисления датчиков температуры
+enum {
+  SENS_DS3231, //
+#if !SENS_BME_DISABLE
+  SENS_BME, //
+#endif
+#if !SENS_PORT_DISABLE
+  SENS_DHT11, //
+  SENS_DHT22, //
+  SENS_DS18B20,
+#endif
+  SENS_ALL
+};
+
 //перечисления системных звуков
 enum {
   SOUND_PASS_ERROR, //звук ошибки ввода пароля
   SOUND_RESET_SETTINGS, //звук сброса настроек
   SOUND_ALARM_DISABLE, //звук отключения будильника
   SOUND_ALARM_WAINT, //звук ожидания будильника
-  SOUND_TIMER_WARN, //зыук окончания таймера
+  SOUND_TIMER_WARN, //звук окончания таймера
   SOUND_HOUR //звук смены часа
 };
 
@@ -327,13 +341,17 @@ enum {
 //----------------------------------Инициализация--------------------------------------------
 int main(void) //инициализация
 {
+#if !AMP_PORT_DISABLE
+  AMP_INIT; //инициализация питания усилителя
+#endif
+
 #if (PLAYER_MODE == 1) && UART_MODE
   uartDisable(); //отключение uart
 #else
   uartDisable(); //отключение uart
   BUZZ_INIT; //инициализация бузера
 #if PLAYER_MODE == 2
-  for (uint8_t i = 0; i < 5; i++) if (!cardMount()) break;
+  for (uint8_t i = 0; i < 5; i++) if (!cardMount()) break; //инициализация карты памяти
 #endif
 #endif
 
@@ -434,8 +452,8 @@ int main(void) //инициализация
 #endif
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
-  _timersecUpd[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер антиотравления
-  _timersecUpd[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //устанавливаем таймер синхронизации
+  _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер антиотравления
+  _timer_sec[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //устанавливаем таймер синхронизации
 
   animsReset(); //сброс анимаций
   changeBright(); //установка яркости от времени суток
@@ -1008,9 +1026,9 @@ void alarmReset(void) //сброс будильника
 {
   if (alarmRead(alarm - 1, ALARM_MODE) == 1) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) * ALARM_MAX_ARR) + ALARM_MODE, 0); //если был установлен режим одиночный то выключаем будильник
   checkAlarms(); //проверка будильников
-  _timersecUpd[TMR_ALM] = 0; //сбрасываем таймер отключения будильника
-  _timersecUpd[TMR_ALM_WAINT] = 0; //сбрасываем таймер ожидания повторного включения тревоги
-  _timersecUpd[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
+  _timer_sec[TMR_ALM] = 0; //сбрасываем таймер отключения будильника
+  _timer_sec[TMR_ALM_WAINT] = 0; //сбрасываем таймер ожидания повторного включения тревоги
+  _timer_sec[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
   alarmWaint = 0; //сбрасываем флаг ожидания
   alarm = 0; //сбрасываем флаг тревоги
 }
@@ -1067,8 +1085,8 @@ void checkAlarms(void) //проверка будильников
       if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
         if (!alarm) { //если тревога не активна
           alarm = alm + 1; //устанавливаем флаг тревоги
-          _timersecUpd[TMR_ALM] = (ALARM_TIMEOUT * 60);
-          _timersecUpd[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
+          _timer_sec[TMR_ALM] = (ALARM_TIMEOUT * 60);
+          _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
           return; //выходим
         }
       }
@@ -1079,21 +1097,21 @@ void checkAlarms(void) //проверка будильников
 void alarmDataUpdate(void) //обновление данных будильников
 {
   if (alarm) { //если тревога активна
-    if (!_timersecUpd[TMR_ALM]) { //если пришло время выключить будильник
+    if (!_timer_sec[TMR_ALM]) { //если пришло время выключить будильник
       alarmReset(); //сброс будильника
       return; //выходим
     }
 
     if (ALARM_WAINT && alarmWaint) { //если будильник в режиме ожидания
-      if (!_timersecUpd[TMR_ALM_WAINT]) { //если пришло время повторно включить звук
-        _timersecUpd[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
+      if (!_timer_sec[TMR_ALM_WAINT]) { //если пришло время повторно включить звук
+        _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
         alarmWaint = 0; //сбрасываем флаг ожидания
       }
     }
     else if (ALARM_TIMEOUT_SOUND) { //если таймаут тревоги включен
-      if (!_timersecUpd[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
+      if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
         if (ALARM_WAINT) { //если время ожидания включено
-          _timersecUpd[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
+          _timer_sec[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
           alarmWaint = 1; //устанавливаем флаг ожидания тревоги
         }
         else alarmReset(); //сброс будильника
@@ -1155,8 +1173,8 @@ void alarmWarn(void) //тревога будильника
         case ADD_KEY_PRESS: //клик дополнительной кнопкой
           if (ALARM_WAINT) { //если есть время ожидания
             alarmWaint = 1; //устанавливаем флаг ожидания
-            _timersecUpd[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
-            _timersecUpd[TMR_ALM_SOUND] = 0;
+            _timer_sec[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
+            _timer_sec[TMR_ALM_SOUND] = 0;
 #if PLAYER_MODE
             playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
 #else
@@ -1288,7 +1306,7 @@ void dataUpdate(void) //обработка данных
     secUpd = dotUpd = 0; //очищаем флаги секунды и точек
 
     for (uint8_t tm = 0; tm < TIMERS_SEC_NUM; tm++) { //опрашиваем все таймеры
-      if (_timersecUpd[tm]) _timersecUpd[tm]--; //если таймер активен
+      if (_timer_sec[tm]) _timer_sec[tm]--; //если таймер активен
     }
 
 #if ALARM_TYPE
@@ -1310,8 +1328,8 @@ void dataUpdate(void) //обработка данных
       }
       timerSQW = 0; //сбросили таймер
     }
-    else if (!_timersecUpd[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
-      _timersecUpd[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //установили таймер
+    else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
+      _timer_sec[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //установили таймер
       getTime(); //получили новое время
       return; //выходим
     }
@@ -2127,11 +2145,7 @@ void settings_main(void) //настроки основные
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127; break;
                   case 1:
-#if !SENS_PORT_DISABLE
-                    if (mainSettings.sensorSet < 4) mainSettings.sensorSet++;
-#else
-                    if (mainSettings.sensorSet < 1) mainSettings.sensorSet++;
-#endif
+                    if (mainSettings.sensorSet < (SENS_ALL - 1)) mainSettings.sensorSet++;
                     _timer_ms[TMR_SENS] = 0; //обновить показания температуры
                     break;
                 }
@@ -2481,11 +2495,13 @@ void updateTemp(void) //обновить показания температур
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (mainSettings.sensorSet) { //выбор датчика температуры
     default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
-    case 1: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
+#if !SENS_BME_DISABLE
+    case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
+#endif
 #if !SENS_PORT_DISABLE
-    case 2: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
-    case 3: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
-    case 4: readTempDS(); break; //чтение температуры с датчика DS18x20
+    case SENS_DHT11: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
+    case SENS_DHT22: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
+    case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
 #endif
   }
   if (sens.err) readTempRTC(); //чтение температуры с датчика DS3231
@@ -2527,8 +2543,8 @@ void speakPress(void) //воспроизвести давление
 //--------------------------------Автоматический показ температуры----------------------------------------
 void autoShowTemp(void) //автоматический показ температуры
 {
-  if (mainSettings.autoTempTime && !_timersecUpd[TMR_TEMP] && RTC.s > 7 && RTC.s < 55) {
-    _timersecUpd[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер
+  if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s > 7 && RTC.s < 55) {
+    _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер
 
     uint8_t pos = LAMP_NUM; //текущее положение анимации
     boolean drv = 0; //направление анимации
@@ -3280,8 +3296,8 @@ void animsReset(void) //сброс анимаций
 #if !DOTS_PORT_DISABLE
   indiClrDots(); //выключаем разделительные точки
 #endif
-  _timersecUpd[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
-  _timersecUpd[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
   animShow = 0; //сбрасываем флаг анимации цифр
   secUpd = 0; //обновление экрана
 }
@@ -3307,7 +3323,7 @@ void hourSound(void) //звук смены часа
 void glitchMode(void) //имитация глюков
 {
   if (mainSettings.glitchMode) { //если глюки включены
-    if (!_timersecUpd[TMR_GLITCH] && RTC.s > 7 && RTC.s < 55) { //если пришло время
+    if (!_timer_sec[TMR_GLITCH] && RTC.s > 7 && RTC.s < 55) { //если пришло время
       boolean indiState = 0; //состояние индикатора
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
@@ -3327,7 +3343,7 @@ void glitchMode(void) //имитация глюков
           if (!glitchCounter--) break; //выходим если закончились глюки
         }
       }
-      _timersecUpd[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+      _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
       indiSet(indiSave, glitchIndic); //восстанавливаем состояние индикатора
     }
   }
@@ -3336,8 +3352,8 @@ void glitchMode(void) //имитация глюков
 void burnIndi(void) //антиотравление индикаторов
 {
 #if INDI_BURN_TYPE
-  if (!_timersecUpd[TMR_BURN] && RTC.s >= BURN_PHASE) {
-    _timersecUpd[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
+  if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) {
+    _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
     dotSetBright(0); //выключаем точки
     for (byte indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
@@ -3359,8 +3375,8 @@ void burnIndi(void) //антиотравление индикаторов
     indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
   }
 #else
-  if (!_timersecUpd[TMR_BURN] && RTC.s >= BURN_PHASE) {
-    _timersecUpd[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
+  if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) {
+    _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
     for (byte indi = 0; indi < LAMP_NUM; indi++) {
       for (byte loops = 0; loops < BURN_LOOPS; loops++) {
         for (byte digit = 0; digit < 10; digit++) {
