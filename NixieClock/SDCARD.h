@@ -31,7 +31,7 @@ struct BUFFER {
   uint16_t readSize; //байт к прочтению сектора
   uint32_t readSector; //текущий сектор чтения
   uint8_t readData[DAC_BUFF_SIZE]; //буфер карты памяти
-  uint8_t dacVolume; //громкость трека
+  uint8_t dacVolume = DAC_VOLUME; //громкость трека
   uint8_t dacStart; //начало буфера чтения
   uint8_t dacEnd; //конец буфера чтения
 } buffer;
@@ -212,7 +212,7 @@ void bufferUpdate(void)
           readByte++; //пропускаем байт
         }
         else {
-          if (buffer.readSize % 8) buffer.readStart += 6;
+          if ((uint8_t)buffer.readSize & 0x07) buffer.readStart += 6;
           else {
             buffer.readStart += 20;
             readByte += 2;
@@ -227,35 +227,43 @@ void bufferUpdate(void)
       else buffer.readState = BUFFER_STOP;
       break;
     case BUFFER_READ_DATA:
-      if (readByte < 512) {
-        if (readByte < buffer.readSize) {
-          if (writeBufferDAC()) readByte++; //читаем данные в буфер
+      for (uint8_t i = 0; i < DAC_READ_DEPTH; i++) {
+        if (readByte < 512) {
+          if (readByte < buffer.readSize) {
+            if (writeBufferDAC()) readByte++; //читаем данные в буфер
+            else break;
+          }
+          else {
+            readSPI(); //чтение шины
+            readByte++; //пропускаем байт
+          }
         }
         else {
-          readSPI(); //чтение шины
-          readByte++; //пропускаем байт
+          buffer.readState = BUFFER_STOP;
+          break;
         }
       }
-      else buffer.readState = BUFFER_STOP;
       break;
     case BUFFER_READ_FAT:
-      if (readByte < 512) {
-        if (readByte < buffer.readStart) {
-          readSPI(); //чтение шины
-          readByte++; //пропускаем байт
-        }
-        else {
-          reader.dataCluster = (uint16_t)readSPI() | ((uint16_t)readSPI() << 8);
-          readByte += 2;
-          if (fs.fatType == FS_FAT32) {
-            reader.dataCluster |= ((uint32_t)readSPI() << 16) | ((uint32_t)readSPI() << 24);
-            reader.dataCluster &= 0x0FFFFFFF;
-            readByte += 2;
+      for (uint8_t i = 0; i < DAC_FAT_DEPTH; i++) {
+        if (readByte < 512) {
+          if (readByte < buffer.readStart) {
+            readSPI(); //чтение шины
+            readByte++; //пропускаем байт
           }
-          buffer.readStart = 512;
+          else {
+            reader.dataCluster = (uint16_t)readSPI() | ((uint16_t)readSPI() << 8);
+            readByte += 2;
+            if (fs.fatType == FS_FAT32) {
+              reader.dataCluster |= ((uint32_t)readSPI() << 16) | ((uint32_t)readSPI() << 24);
+              reader.dataCluster &= 0x0FFFFFFF;
+              readByte += 2;
+            }
+            buffer.readStart = 512;
+          }
         }
+        else buffer.readState = BUFFER_STOP;
       }
-      else buffer.readState = BUFFER_STOP;
       break;
   }
 }

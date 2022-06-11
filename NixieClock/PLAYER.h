@@ -102,7 +102,8 @@ ISR(TIMER2_COMPB_vect)
   OCR2B += 182;
   if (buffer.dacStart != buffer.dacEnd) {
     if (++buffer.dacStart >= DAC_BUFF_SIZE) buffer.dacStart = 0;
-    OCR1B = buffer.readData[buffer.dacStart];
+    if (buffer.readData[buffer.dacStart] < 128) OCR1B = buffer.readData[buffer.dacStart] + ((((uint16_t)(buffer.readData[buffer.dacStart] ^ 0x7F) * buffer.dacVolume) * 26) >> 8);
+    else OCR1B = buffer.readData[buffer.dacStart] - ((((uint16_t)(buffer.readData[buffer.dacStart] & 0x7F) * buffer.dacVolume) * 26) >> 8);
   }
 }
 #endif
