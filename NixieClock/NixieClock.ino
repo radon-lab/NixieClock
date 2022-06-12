@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 11.06.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 12.06.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -660,7 +660,7 @@ boolean checkAnalogKey(uint8_t minADC, uint8_t maxADC) //проверка ана
 //---------------------------Проверка системы---------------------------------------
 void testLamp(void) //проверка системы
 {
-#if !BACKL_WS2812B
+#if BACKL_MODE != 2
   backlSetBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
   dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
@@ -674,7 +674,7 @@ void testLamp(void) //проверка системы
       indiClrDots(); //выключаем разделительные точки
       indiSetDots(indi); //включаем разделителную точку
 #endif
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
 #if TEST_BACKL_REVERSE
       setLedBright((LAMP_NUM - 1) - indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
 #else
@@ -683,7 +683,7 @@ void testLamp(void) //проверка системы
 #endif
       for (byte digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
 #if TEST_BACKL_REVERSE
         setLedHue((LAMP_NUM - 1) - indi, digit * 25); //устанавливаем статичный цвет
 #else
@@ -699,7 +699,7 @@ void testLamp(void) //проверка системы
           if (check_keys()) return; //возврат если нажата кнопка
         }
       }
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
       setLedBright(0); //выключаем светодиоды
 #endif
     }
@@ -1214,7 +1214,7 @@ void dataUpdate(void) //обработка данных
   static uint16_t timeClock; //счетчик реального времени
   static uint16_t timerCorrect; //остаток для коррекции времени
   static uint16_t timerSQW = MIN_SQW_TIME; //таймер контроля сигнала SQW
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
   backlEffect(); //анимация подсветки
 #else
   backlFlash(); //"дыхание" подсветки
@@ -2055,7 +2055,7 @@ void settings_main(void) //настроки основные
                   case 0: if (mainSettings.backlBright[0] > 0) mainSettings.backlBright[0] -= 10; else mainSettings.backlBright[0] = 250; break;
                   case 1: if (mainSettings.backlBright[1] > 10) mainSettings.backlBright[1] -= 10; else mainSettings.backlBright[1] = 250; break;
                 }
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
                 setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
                 showLeds(); //отрисовка светодиодов
@@ -2126,7 +2126,7 @@ void settings_main(void) //настроки основные
                   case 0: if (mainSettings.backlBright[0] < 250) mainSettings.backlBright[0] += 10; else mainSettings.backlBright[0] = 0; break;
                   case 1: if (mainSettings.backlBright[1] < 250) mainSettings.backlBright[1] += 10; else mainSettings.backlBright[1] = 10; break;
                 }
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
                 setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
                 showLeds(); //отрисовка светодиодов
@@ -2165,7 +2165,7 @@ void settings_main(void) //настроки основные
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[0]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
               setLedBright(mainSettings.backlBright[0]); //устанавливаем максимальную яркость
               setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
               showLeds(); //отрисовка светодиодов
@@ -2200,7 +2200,7 @@ void settings_main(void) //настроки основные
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[0]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
               setLedBright(mainSettings.backlBright[0]); //устанавливаем максимальную яркость
               setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
               showLeds(); //отрисовка светодиодов
@@ -2220,7 +2220,7 @@ void settings_main(void) //настроки основные
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[1]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
               setLedBright(mainSettings.backlBright[1]); //устанавливаем максимальную яркость
               setLedHue(fastSettings.backlColor); //устанавливаем статичный цвет
               showLeds(); //отрисовка светодиодов
@@ -2269,7 +2269,7 @@ void changeBright(void) //установка яркости от времени 
       break;
   }
   backlAnimEnable(); //разрешили эффекты подсветки
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
   if (backlMaxBright) {
     switch (fastSettings.backlMode) {
       case BACKL_OFF: clrLeds(); break; //выключили светодиоды
@@ -2301,7 +2301,7 @@ void changeBright(void) //установка яркости от времени 
     backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
     backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
     backl.mode_4_step = ceil((float)backlMaxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
     if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал, устанавливаем минимум
     backl.mode_6_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
@@ -2814,7 +2814,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
           mode = FAST_BACKL_MODE; //демострация текущего режима работы
         }
         else {
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
           if (++fastSettings.backlMode < BACKL_EFFECT_NUM) {
             switch (fastSettings.backlMode) {
               case BACKL_STATIC:
@@ -2855,7 +2855,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
         _timer_ms[TMR_MS] = FAST_BACKL_TIME;
         anim = 0;
         break;
-#if BACKL_WS2812B
+#if BACKL_MODE == 2
       case SET_KEY_HOLD: //удержание средней кнопки
         if (!mode) {
           switch (fastSettings.backlMode) {

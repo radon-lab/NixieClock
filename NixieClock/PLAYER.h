@@ -116,7 +116,11 @@ inline boolean playerWriteStatus(void)
 //-------------------------------Статус воспроизведения плеера--------------------------------
 boolean playerPlayStatus(void)
 {
+#if PLAYER_MODE == 1
   return (DF_BUSY_CHK && !_timer_ms[TMR_PLAYER]);
+#elif PLAYER_MODE == 2
+  return (reader.playerState == READER_IDLE);
+#endif
 }
 //-------------------------------Генерация контрольной суммы----------------------------------
 void playerGenCRC(uint8_t* arr)

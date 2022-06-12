@@ -67,7 +67,7 @@ ISR(TIMER0_COMPB_vect) {
   }
 }
 //-----------------------------------Динамическая подсветка---------------------------------------
-#if (!BACKL_WS2812B && BACKL_MODE)
+#if (BACKL_MODE == 1)
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
 {
   BACKL_SET; //включили подсветку
@@ -142,7 +142,7 @@ void indiInit(void) //инициализация индикаторов
   OCR2B = 0; //сбравсывем бузер
 
   TIMSK2 = 0; //выключаем прерывания Таймера2
-#if (BACKL_WS2812B || BACKL_MODE)
+#if (BACKL_MODE)
   TCCR2A = 0; //отключаем OCR2A и OCR2B
 #else
   TCCR2A = (0x01 << COM2A1 | 0x01 << WGM20 | 0x01 << WGM21); //подключаем D11
@@ -269,15 +269,18 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
 void backlSetBright(uint8_t pwm) //установка яркости подсветки
 {
   OCR2A = pwm; //устанавливаем яркость точек
-#if BACKL_MODE
+#if BACKL_MODE == 1
   if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
   else {
     TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер
     BACKL_CLEAR; //выключили подсветку
   }
-#else
+#elif !BACKL_MODE
   if (pwm) TCCR2A |= (0x01 << COM2A1); //подключаем D11
-  else TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
+  else {
+    TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
+    BACKL_CLEAR; //выключили подсветку
+  }
 #endif
 }
 //-----------------------------------Уменьшение яркости------------------------------------------
