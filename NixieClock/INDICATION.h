@@ -28,6 +28,7 @@ float pwm_coef; //коэффициент Linear Advance
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
 
 uint8_t indi_dot; //буфер точек индикаторов
+uint8_t dot_dimm; //яркость секундной точки
 volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
 
 uint8_t indi_buf[7]; //буфер индикаторов
@@ -67,7 +68,7 @@ ISR(TIMER0_COMPB_vect) {
   }
 }
 //-----------------------------------Динамическая подсветка---------------------------------------
-#if (BACKL_MODE == 1)
+#if (BACKL_TYPE == 1)
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
 {
   BACKL_SET; //включили подсветку
@@ -120,7 +121,7 @@ void indiInit(void) //инициализация индикаторов
   TCCR0A = (0x01 << WGM01); //режим CTC
   TCCR0B = (0x01 << CS02); //пределитель 256
 
-#if PLAYER_MODE == 2
+#if PLAYER_TYPE == 2
   OCR1B = 128; //выключаем dac
 #else
   OCR1B = 0; //выключаем точки
@@ -130,7 +131,7 @@ void indiInit(void) //инициализация индикаторов
   TCCR1A = (0x01 << WGM10); //режим коррекция фазы шим
   TCCR1B = (0x01 << CS10);  //задаем частоту 31 кГц
 
-#if !NEON_DOT || PLAYER_MODE == 2
+#if !NEON_DOT || PLAYER_TYPE == 2
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #if !GEN_DISABLE
@@ -142,7 +143,7 @@ void indiInit(void) //инициализация индикаторов
   OCR2B = 0; //сбравсывем бузер
 
   TIMSK2 = 0; //выключаем прерывания Таймера2
-#if (BACKL_MODE)
+#if (BACKL_TYPE)
   TCCR2A = 0; //отключаем OCR2A и OCR2B
 #else
   TCCR2A = (0x01 << COM2A1 | 0x01 << WGM20 | 0x01 << WGM21); //подключаем D11
@@ -265,17 +266,22 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
   indiChangePwm(); //установка Linear Advance
 #endif
 }
+//-------------------------------Получить яркости подсветки---------------------------------------
+inline uint8_t backGetBright(void) //получить яркости подсветки
+{
+  return OCR2A;
+}
 //------------------------------Установка яркости подсветки---------------------------------------
 void backlSetBright(uint8_t pwm) //установка яркости подсветки
 {
   OCR2A = pwm; //устанавливаем яркость точек
-#if BACKL_MODE == 1
+#if BACKL_TYPE == 1
   if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
   else {
     TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер
     BACKL_CLEAR; //выключили подсветку
   }
-#elif !BACKL_MODE
+#elif !BACKL_TYPE
   if (pwm) TCCR2A |= (0x01 << COM2A1); //подключаем D11
   else {
     TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
@@ -286,7 +292,7 @@ void backlSetBright(uint8_t pwm) //установка яркости подсв�
 //-----------------------------------Уменьшение яркости------------------------------------------
 boolean backlDecBright(uint8_t _step, uint8_t _min)
 {
-  if (((int16_t)OCR2A - _step) > _min) backlSetBright(OCR2A - _step);
+  if (((int16_t)backGetBright() - _step) > _min) backlSetBright(backGetBright() - _step);
   else {
     backlSetBright(_min);
     return 1;
@@ -296,27 +302,43 @@ boolean backlDecBright(uint8_t _step, uint8_t _min)
 //-----------------------------------Увеличение яркости------------------------------------------
 boolean backlIncBright(uint8_t _step, uint8_t _max)
 {
-  if (((uint16_t)OCR2A + _step) < _max) backlSetBright(OCR2A + _step);
+  if (((uint16_t)backGetBright() + _step) < _max) backlSetBright(backGetBright() + _step);
   else {
     backlSetBright(_max);
     return 1;
   }
   return 0;
 }
-//---------------------------------Установка яркости точек---------------------------------------
-void dotSetBright(uint8_t pwm) //установка яркости точек
+//----------------------------------Получить яркость точек---------------------------------------
+inline uint8_t dotGetBright(void) //получить яркость точек
 {
-  OCR1B = pwm; //устанавливаем яркость точек
 #if NEON_DOT
-  indi_dimm[0] = map(pwm, 0, 250, 0, LIGHT_MAX); //устанавливаем яркость точек
-  if (pwm) indi_buf[0] = 0; //разрешаем включать точки
+  return dot_dimm;
+#else
+  return OCR1B;
+#endif
+}
+//---------------------------------Установка яркости точек---------------------------------------
+void dotSetBright(uint8_t _pwm) //установка яркости точек
+{
+#if NEON_DOT
+  dot_dimm = _pwm;
+  indi_dimm[0] = map(_pwm, 0, 250, 0, LIGHT_MAX); //устанавливаем яркость точек
+  if (_pwm) indi_buf[0] = 0; //разрешаем включать точки
   else indi_buf[0] = indi_null; //запрещаем включать точки
+#else
+  OCR1B = _pwm; //устанавливаем яркость точек
+  if (_pwm) TCCR1A |= (0x01 << COM1B1); //подключаем D10
+  else {
+    TCCR1A &= ~(0x01 << COM1B1); //отключаем D10
+    DOT_CLEAR; //выключили точки
+  }
 #endif
 }
 //--------------------------------Уменьшение яркости точек----------------------------------------
 boolean dotDecBright(uint8_t _step, uint8_t _min)
 {
-  if (((int16_t)OCR1B - _step) > _min) dotSetBright(OCR1B - _step);
+  if (((int16_t)dotGetBright() - _step) > _min) dotSetBright(dotGetBright() - _step);
   else {
     dotSetBright(_min);
     return 1;
@@ -326,7 +348,7 @@ boolean dotDecBright(uint8_t _step, uint8_t _min)
 //--------------------------------Увеличение яркости точек----------------------------------------
 boolean dotIncBright(uint8_t _step, uint8_t _max)
 {
-  if (((uint16_t)OCR1B + _step) < _max) dotSetBright(OCR1B + _step);
+  if (((uint16_t)dotGetBright() + _step) < _max) dotSetBright(dotGetBright() + _step);
   else {
     dotSetBright(_max);
     return 1;

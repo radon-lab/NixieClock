@@ -8,11 +8,8 @@
 
 #define PLAYER_CMD_STOP 0x16
 #define PLAYER_CMD_MUTE 0x1A
-#define PLAYER_CMD_PAUSE 0x0E
-#define PLAYER_CMD_REPLAY 0x41
 #define PLAYER_CMD_PLAY_TRACK_IN_FOLDER 0x0F
 #define PLAYER_CMD_SET_VOL 0x06
-#define PLAYER_CMD_RESET 0x0C
 
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
@@ -79,7 +76,7 @@ void uartSendData(uint8_t _byte)
 #endif
 }
 //------------------------------Софтовая обработка UART----------------------------------
-#if PLAYER_MODE == 1
+#if PLAYER_TYPE == 1
 #if UART_MODE
 ISR(TIMER2_COMPB_vect)
 {
@@ -96,7 +93,7 @@ ISR(TIMER2_COMPB_vect)
   }
 }
 #endif
-#elif PLAYER_MODE == 2
+#elif PLAYER_TYPE == 2
 //------------------------------Обновление буфера ЦАП----------------------------------
 ISR(TIMER2_COMPB_vect)
 {
@@ -116,11 +113,14 @@ inline boolean playerWriteStatus(void)
 //-------------------------------Статус воспроизведения плеера--------------------------------
 boolean playerPlayStatus(void)
 {
-#if PLAYER_MODE == 1
+#if PLAYER_TYPE == 1
   return (DF_BUSY_CHK && !_timer_ms[TMR_PLAYER]);
-#elif PLAYER_MODE == 2
+#elif PLAYER_TYPE == 2
   return (reader.playerState == READER_IDLE);
+#else
+  return 0;
 #endif
+
 }
 //-------------------------------Генерация контрольной суммы----------------------------------
 void playerGenCRC(uint8_t* arr)
@@ -238,7 +238,7 @@ uint8_t playerGetSpeak(uint16_t _num)
 //------------------------------------Обработка буфера плеера-----------------------------------
 void playerUpdate(void)
 {
-#if PLAYER_MODE == 1
+#if PLAYER_TYPE == 1
   static boolean busyState;
   static boolean writeState;
   static uint8_t transferByte;
@@ -286,7 +286,7 @@ void playerUpdate(void)
       }
     }
   }
-#elif PLAYER_MODE == 2
+#elif PLAYER_TYPE == 2
   if (player.playbackEnd) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow) {
