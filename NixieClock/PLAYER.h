@@ -283,8 +283,6 @@ void playerUpdate(void)
     }
   }
 #elif PLAYER_MODE == 2
-  readerUpdate();
-
   if (player.playbackEnd) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow) {
@@ -320,6 +318,8 @@ void playerUpdate(void)
 
     if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
   }
+
+  readerUpdate();
 #endif
 }
 //------------------------------------Инициализация плеера------------------------------------

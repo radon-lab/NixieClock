@@ -27,10 +27,10 @@
 #define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 10)(pin D)
 
 //Дополнительная периферия
-#define SQW_PIN     2  //пин SQW(только пин 2)(pin D)
-#define SENS_PIN    1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
-#define DOTS_PIN    1  //пин разделительных точек в индикаторах(0..13)(pin D)
-#define AMP_PIN     8  //пин управления питанием усилителя
+#define SQW_PIN  2  //пин SQW(только пин 2)(pin D)
+#define SENS_PIN 1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
+#define DOTS_PIN 1  //пин разделительных точек в индикаторах(0..13)(pin D)
+#define AMP_PIN  8  //пин управления питанием усилителя
 
 //DF плеер
 #define DF_RX_PIN   1  //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
