@@ -3034,8 +3034,8 @@ void radioMenu(void) //радиоприемник
         case SET_KEY_PRESS: //клик средней кнопкой
 #if PLAYER_MODE
           if (power_state) {
-            radioPowerOn(); //включить питание радиоприемника
             playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+            radioPowerOn(); //включить питание радиоприемника
           }
 #endif
           if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
