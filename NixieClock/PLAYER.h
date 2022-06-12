@@ -289,15 +289,19 @@ void playerUpdate(void)
 #elif PLAYER_TYPE == 2
   if (player.playbackEnd) {
     if (reader.playerState != READER_IDLE) {
-      if (player.playbackNow) {
+      if (player.playbackNow && reader.playerState == READER_SOUND_WAIT) {
         player.playbackNow = 0;
-        buffer.readSize = 0;
-        buffer.dacStart = buffer.dacEnd = 0;
-        reader.playerState = READER_SOUND_END;
+        switch (player.playbackBuff[player.playbackStart]) {
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
+          case PLAYER_CMD_STOP:
+            buffer.readSize = 0;
+            buffer.dacStart = buffer.dacEnd = 0;
+            reader.playerState = READER_SOUND_END;
+            return;
+        }
       }
-      return;
+      else return;
     }
-    if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
 
     switch (player.playbackBuff[player.playbackStart++]) {
       case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
@@ -321,9 +325,8 @@ void playerUpdate(void)
     }
 
     if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
+    if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
   }
-
-  readerUpdate();
 #endif
 }
 //------------------------------------Инициализация плеера------------------------------------

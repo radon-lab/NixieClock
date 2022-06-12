@@ -16,10 +16,10 @@ inline void writeSPI(uint8_t data)
     "BRNE _LOOP_START_%=              \n\t" //переход в начало цикла отправки бита
     : "=r"(data)
     : [DATA]"0"(data),
-    [_MOSI_PORT]"I"(_SFR_IO_ADDR(MOSI_PORT)),
-    [_MOSI_PIN]"I"(MOSI_BIT),
-    [_SCK_PORT]"I"(_SFR_IO_ADDR(SCK_PORT)),
-    [_SCK_PIN]"I"(SCK_BIT)
+    [_MOSI_PORT]"I"(_SFR_IO_ADDR(SD_MOSI_PORT)),
+    [_MOSI_PIN]"I"(SD_MOSI_BIT),
+    [_SCK_PORT]"I"(_SFR_IO_ADDR(SD_SCK_PORT)),
+    [_SCK_PIN]"I"(SD_SCK_BIT)
   );
 }
 //-----------------------------Чтение данных с шины-------------------------------------------
@@ -40,10 +40,10 @@ inline uint8_t readSPI(void)
     "DEC r19                          \n\t" //декремент счетчика циклов байта
     "BRNE _LOOP_START_%=              \n\t" //переход в начало цикла отправки бита
     : [DATA]"=r"(data)
-    : [_MISO_PORT]"I"(_SFR_IO_ADDR(PIN_REG(MISO_PORT))),
-    [_MISO_PIN]"I"(MISO_BIT),
-    [_SCK_PORT]"I"(_SFR_IO_ADDR(SCK_PORT)),
-    [_SCK_PIN]"I"(SCK_BIT)
+    : [_MISO_PORT]"I"(_SFR_IO_ADDR(PIN_REG(SD_MISO_PORT))),
+    [_MISO_PIN]"I"(SD_MISO_BIT),
+    [_SCK_PORT]"I"(_SFR_IO_ADDR(SD_SCK_PORT)),
+    [_SCK_PIN]"I"(SD_SCK_BIT)
   );
   return data;
 }

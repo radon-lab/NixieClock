@@ -345,13 +345,15 @@ int main(void) //инициализация
   AMP_INIT; //инициализация питания усилителя
 #endif
 
-#if (PLAYER_TYPE == 1) && UART_MODE
+#if PLAYER_TYPE == 1
+#if UART_MODE
   uartDisable(); //отключение uart
+#endif
 #else
   uartDisable(); //отключение uart
   BUZZ_INIT; //инициализация бузера
 #if PLAYER_TYPE == 2
-  for (uint8_t i = 0; i < 5; i++) if (!cardMount()) break; //инициализация карты памяти
+    for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) if (!cardMount()) break; else buffer.cardType = 0; //инициализация карты памяти
 #endif
 #endif
 
@@ -1222,6 +1224,9 @@ void dataUpdate(void) //обработка данных
 
 #if PLAYER_TYPE
   playerUpdate(); //обработка плеера
+#if PLAYER_TYPE == 2
+  readerUpdate();
+#endif
 #else
   melodyUpdate(); //обработка мелодий
 #endif

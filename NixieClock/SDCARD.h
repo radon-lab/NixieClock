@@ -119,9 +119,9 @@ uint8_t cardSendCmd(uint8_t _command, uint32_t _data)
   }
 
   //выбираем карту
-  CS_DISABLE; //отключаем пин CS
+  SD_CS_DISABLE; //отключаем пин CS
   readSPI(); //чтение шины
-  CS_ENABLE; //включаем пин CS
+  SD_CS_ENABLE; //включаем пин CS
   readSPI(); //чтение шины
 
   //отправляем пакет данных
@@ -169,7 +169,7 @@ void bufferUpdate(void)
     case BUFFER_STOP:
       readSPI(); //чтение шины
       readSPI(); //чтение шины
-      CS_DISABLE; //отключаем пин CS
+      SD_CS_DISABLE; //отключаем пин CS
       readSPI(); //чтение шины
       buffer.readState = BUFFER_READY;
       break;
@@ -301,17 +301,17 @@ boolean cardInit(void)
 {
   buffer.cardType = 0; //сбрасываем тип карты
 
-  CS_INIT; //иничиализация CS
-  SCK_INIT; //иничиализация SCK
-  MISO_INIT; //иничиализация MISO
-  MOSI_INIT; //иничиализация MOSI
+  SD_CS_INIT; //иничиализация CS
+  SD_SCK_INIT; //иничиализация SCK
+  SD_MISO_INIT; //иничиализация MISO
+  SD_MOSI_INIT; //иничиализация MOSI
 
   //отправляем 80 импульсов для перехода в SPI режими
   for (uint8_t i = 160; i; i--) {
-    SCK_INV; //инвертируем пин SCK
+    SD_SCK_INV; //инвертируем пин SCK
     _delay_us(5); //ждем
   }
-  SCK_CLEAR; //очищаем пин SCK
+  SD_SCK_CLEAR; //очищаем пин SCK
 
   if (cardSendCmd(CMD0, 0) == 1) { //если карта перешла в idle режим
     _delay_ms(150); //ждем
@@ -336,7 +336,7 @@ boolean cardInit(void)
   }
 
   //завершаем работу с картой
-  CS_DISABLE; //отключаем пин CS
+  SD_CS_DISABLE; //отключаем пин CS
   readSPI(); //чтение шины
 
   return buffer.cardType; //возвращаем состояние инициализации
