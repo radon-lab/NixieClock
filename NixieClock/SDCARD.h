@@ -31,7 +31,7 @@ struct BUFFER {
   uint16_t readSize; //байт к прочтению сектора
   uint32_t readSector; //текущий сектор чтения
   uint8_t readData[DAC_BUFF_SIZE]; //буфер карты памяти
-  uint8_t dacVolume = DAC_VOLUME; //громкость трека
+  uint8_t dacVolume; //громкость трека
   uint8_t dacStart; //начало буфера чтения
   uint8_t dacEnd; //конец буфера чтения
 } buffer;

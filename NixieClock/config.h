@@ -181,12 +181,12 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки плеера
+#define PLAYER_VOLUME 15             //громкость звуков плеера(DF - 0..30 | SD - 0..9)
 #define PLAYER_MAX_BUFFER 10         //максимальное количество команд в буфере(1..25)
 #define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
 #define PLAYER_START_WAIT 500        //ожидание инициализации плеера(500..1000)(мс)
 #define PLAYER_UART_SPEED 9600       //скорость UART плеера(9600)
 
-#define PLAYER_VOLUME 15             //громкость звуков плеера
 #define PLAYER_MIN_VOL 0             //минимальная громкость
 #define PLAYER_MAX_VOL 30            //максимальная громкость
 
@@ -265,7 +265,6 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define KNOCK_SOUND_TIME 30          //длительность звука клавиш(10..500)(мс)
 
 //Настройки SD плеера
-#define DAC_VOLUME 0                 //громкость звуков ЦАП(0..9)
 #define DAC_BUFF_SIZE 128            //размер буфера ЦАП(128..254)
 #define DAC_READ_DEPTH 8             //глубина буферизации чтения данных ЦАП(8..16)(шаг 8)
 #define DAC_FAT_DEPTH 16             //глубина буферизации чтения данных файловой таблицы(8..64)(шаг 8)

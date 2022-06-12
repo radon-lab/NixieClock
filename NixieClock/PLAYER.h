@@ -319,7 +319,8 @@ void playerUpdate(void)
         break;
       case PLAYER_CMD_SET_VOL:
         player.playbackStart++;
-        buffer.dacVolume = player.playbackBuff[player.playbackStart++];
+        buffer.dacVolume = 9 - player.playbackBuff[player.playbackStart++];
+        if (buffer.dacVolume > 9) buffer.dacVolume = 9;
         break;
     }
 
@@ -329,8 +330,8 @@ void playerUpdate(void)
   }
 #endif
 }
-//------------------------------------Инициализация плеера------------------------------------
-void playerInint(void)
+//------------------------------------Инициализация DF плеера------------------------------------
+void dfPlayerInint(void)
 {
   DF_BUSY_INIT;
   DF_RX_INIT;
@@ -344,4 +345,17 @@ void playerInint(void)
 
   playerSendCommandNow(PLAYER_CMD_SET_VOL, PLAYER_VOLUME);
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
+}
+//------------------------------------Инициализация SD плеера------------------------------------
+void sdPlayerInint(void)
+{
+  for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) { //инициализация карты памяти
+    if (!cardMount()) {
+      BUZZ_INIT; //инициализация ЦАП
+      break;
+    }
+    else buffer.cardType = 0;
+  }
+  buffer.dacVolume = (9 - PLAYER_VOLUME);
+  if (buffer.dacVolume > 9) buffer.dacVolume = 9;
 }
