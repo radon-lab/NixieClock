@@ -290,7 +290,6 @@ void playerUpdate(void)
   if (player.playbackEnd) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow && reader.playerState == READER_SOUND_WAIT) {
-        player.playbackNow = 0;
         switch (player.playbackBuff[player.playbackStart]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
           case PLAYER_CMD_STOP:
@@ -324,6 +323,7 @@ void playerUpdate(void)
         break;
     }
 
+    player.playbackNow = 0;
     if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
     if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
   }
