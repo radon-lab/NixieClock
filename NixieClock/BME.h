@@ -66,7 +66,7 @@ struct CalibrationDataBMP180 {
 //--------------------------------------Запись одного байта------------------------------------------
 void writeREG(uint8_t _addr, uint8_t _reg, uint8_t _data) //Запись одного байта
 {
-  wireBeginTransmission(_addr); //начало передачи
+  if (wireBeginTransmission(_addr)) return; //начало передачи
   wireWrite(_reg); //устанавливаем адрес записи
   wireWrite(_data); //записываем байт
   wireEnd(); //конец передачи

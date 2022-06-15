@@ -293,6 +293,7 @@ void playerUpdate(void)
         switch (player.playbackBuff[player.playbackStart]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
           case PLAYER_CMD_STOP:
+            TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
             buffer.readSize = 0;
             buffer.dacStart = buffer.dacEnd = 0;
             reader.playerState = READER_SOUND_END;
@@ -309,19 +310,20 @@ void playerUpdate(void)
           reader.playerFolder = player.playbackBuff[player.playbackStart++];
           reader.playerTrack = player.playbackBuff[player.playbackStart++];
         }
+        else player.playbackStart += 2;
         break;
-      case PLAYER_CMD_STOP: player.playbackStart += 2; break;
       case PLAYER_CMD_MUTE:
         player.playbackStart++;
-        player.playbackMute = player.playbackBuff[player.playbackStart];
-        if (player.playbackBuff[player.playbackStart++]) BUZZ_INP;
+        player.playbackMute = player.playbackBuff[player.playbackStart++];
+        if (player.playbackMute) BUZZ_INP;
         else BUZZ_OUT;
         break;
       case PLAYER_CMD_SET_VOL:
         player.playbackStart++;
         buffer.dacVolume = 9 - player.playbackBuff[player.playbackStart++];
-        if (buffer.dacVolume > 9) buffer.dacVolume = 9;
+        if (buffer.dacVolume > 9) buffer.dacVolume = 0;
         break;
+      default: player.playbackStart += 2; break;
     }
 
     player.playbackNow = 0;
@@ -357,5 +359,5 @@ void sdPlayerInint(void)
     else buffer.cardType = 0;
   }
   buffer.dacVolume = (9 - PLAYER_VOLUME);
-  if (buffer.dacVolume > 9) buffer.dacVolume = 9;
+  if (buffer.dacVolume > 9) buffer.dacVolume = 0;
 }

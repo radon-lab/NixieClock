@@ -30,7 +30,7 @@ boolean readRegRDA(uint8_t _reg)
 //-----------------------------------------Чтение из регистра-------------------------------------------------
 void writeRegRDA(uint8_t _reg)
 {
-  wireBeginTransmission(RDA_ADDR); //начало передачи
+  if (wireBeginTransmission(RDA_ADDR)) return; //начало передачи
   wireWrite(_reg); //устанавливаем адрес записи
   wireWrite(rda.highReg); //отправляем старший байт
   wireWrite(rda.lowReg); //отправляем младший байт

@@ -472,6 +472,9 @@ void readerUpdate(void)
           if (!buffer.dacStart) {
             fileBuff = searchFileData(buffer.readData + 1);
             if (fileBuff != 255) {
+#if !AMP_PORT_DISABLE
+              AMP_ENABLE;
+#endif
               buffer.dacStart = fileBuff + 8;
               reader.currentSector = 0;
               reader.dataSize = get_uint32_t(buffer.readData + fileBuff + 5);
@@ -487,9 +490,6 @@ void readerUpdate(void)
             OCR1B = 128; //выключаем dac
             OCR2B = 255; //устанавливаем COMB в начало
             TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
-#if !AMP_PORT_DISABLE
-            AMP_ENABLE;
-#endif
             reader.playerState = READER_SOUND_WAIT;
           }
         }
@@ -519,7 +519,7 @@ void readerUpdate(void)
         break;
 
       case READER_FAT_WAIT:
-        if (reader.dataCluster < 2 || reader.dataCluster >= fs.fatSize) reader.playerState = READER_IDLE; //если кластер за пределами таблицы
+        if (reader.dataCluster < 2 || reader.dataCluster >= fs.fatSize) reader.playerState = (modeBuff == BUFFER_READ_DATA) ? READER_SOUND_END : READER_IDLE; //если кластер за пределами таблицы
         else {
           reader.dataSector = get_sector(reader.dataCluster); //новый сектор
           reader.playerState = (modeBuff == BUFFER_READ_DATA) ? READER_SOUND_WAIT : READER_TRACK_WAIT;

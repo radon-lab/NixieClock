@@ -4,8 +4,8 @@
 #define WRITE_STRATCHPAD 0x4E //запись в память
 #define READ_STRATCHPAD 0xBE //чтенеие памяти
 
-#define SENS_DS18S20 0x10 //идентификатор датчика DS18S20/DS1820
-#define SENS_DS18B20 0x28 //идентификатор датчика DS18B20
+#define DS18S20_ADDR 0x10 //идентификатор датчика DS18S20/DS1820
+#define DS18B20_ADDR 0x28 //идентификатор датчика DS18B20
 
 #define DS_CONVERT_TIME 120   //время ожидания нового замера(95..150)(мс)
 #define DS_RESET_TIME 520     //длительность сигнала сброса(480..700)(мкс)
@@ -113,8 +113,8 @@ void readTempDS(void)
   if (!typeDS) { //если тип датчика не определен
     typeDS = readSensCode(); //читаем тип датчика
     switch (typeDS) {
-      case SENS_DS18S20: break; //датчик DS18S20
-      case SENS_DS18B20: if (setResolution()) return; break; //датчик DS18B20
+      case DS18S20_ADDR: break; //датчик DS18S20
+      case DS18B20_ADDR: if (setResolution()) return; break; //датчик DS18B20
       default: typeDS = 0; return; //выходим
     }
   }
@@ -127,8 +127,8 @@ void readTempDS(void)
   if (raw & 0x8000) raw = 0; //если значение отрицательное
 
   switch (typeDS) {
-    case SENS_DS18S20: sens.temp = raw * 50; break; //переводим в температуру для DS18S20
-    case SENS_DS18B20: sens.temp = (raw * 100) >> 4; break; //переводим в температуру для DS18B20
+    case DS18S20_ADDR: sens.temp = raw * 50; break; //переводим в температуру для DS18S20
+    case DS18B20_ADDR: sens.temp = (raw * 100) >> 4; break; //переводим в температуру для DS18B20
   }
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность
