@@ -1980,7 +1980,7 @@ void settings_main(void) //настроки основные
           indiPrintNum(cur_mode + 1, (LAMP_NUM / 2 - 1), 2, 0); //вывод режима
           break;
         case 1:
-          indiPrintNum(cur_mode + 1, 5); //режим
+          indiPrintNum(cur_mode + 1, 4, 2); //режим
           switch (cur_mode) {
             case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
             case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
