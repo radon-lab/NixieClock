@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 18.06.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 19.06.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3583,15 +3583,15 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
               indiClr(); //очистка индикатора
               switch (c) {
                 case 0:
-                  indiPrintNum(old_time, i + 1); //вывод часов
+                  indiPrintNum(old_time, i + 1, 4, 0); //вывод часов
 #if LAMP_NUM > 4
-                  indiPrintNum(59, i + 5); //вывод секунд
+                  indiPrintNum(59, i + 5, 2, 0); //вывод секунд
 #endif
                   break;
                 case 1:
-                  indiPrintNum(new_time, i - (LAMP_NUM - 1)); //вывод часов
+                  indiPrintNum(new_time, i - (LAMP_NUM - 1), 4, 0); //вывод часов
 #if LAMP_NUM > 4
-                  indiPrintNum(RTC.s, i - 1); //вывод секунд
+                  indiPrintNum(RTC.s, i - 1, 2, 0); //вывод секунд
 #endif
                   break;
               }
@@ -3697,15 +3697,15 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
               indiClr(); //очистка индикатора
               switch (c) {
                 case 0:
-                  indiPrintNum(old_time_left, -i); //вывод часов
-                  indiPrintNum(old_time_right, i + (LAMP_NUM / 2)); //вывод часов
+                  indiPrintNum(old_time_left, -i, (LAMP_NUM / 2), 0); //вывод часов
+                  indiPrintNum(old_time_right, i + (LAMP_NUM / 2), (LAMP_NUM / 2), 0); //вывод часов
                   break;
                 case 1:
-                  indiPrintNum(new_time_left, i - (LAMP_NUM / 2)); //вывод часов
+                  indiPrintNum(new_time_left, i - (LAMP_NUM / 2), (LAMP_NUM / 2), 0); //вывод часов
 #if LAMP_NUM > 4
-                  indiPrintNum(new_time_right + RTC.s, LAMP_NUM - i); //вывод часов
+                  indiPrintNum(new_time_right + RTC.s, LAMP_NUM - i, (LAMP_NUM / 2), 0); //вывод часов
 #else
-                  indiPrintNum(new_time_right, LAMP_NUM - i); //вывод часов
+                  indiPrintNum(new_time_right, LAMP_NUM - i, (LAMP_NUM / 2), 0); //вывод часов
 #endif
                   break;
               }
