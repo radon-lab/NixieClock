@@ -432,14 +432,14 @@ int main(void) //инициализация
   indiChangeCoef(); //обновление коэффициента линейного регулирования
 
 #if PLAYER_TYPE == 2
-  sdPlayerInint(); //инициализация плеера
+  sdPlayerInit(); //инициализация плеера
 #endif
 
   wireInit(); //инициализация шины wire
   indiInit(); //инициализация индикаторов
 
 #if PLAYER_TYPE == 1
-  dfPlayerInint(); //инициализация плеера
+  dfPlayerInit(); //инициализация плеера
 #endif
 
   backlAnimDisable(); //запретили эффекты подсветки

@@ -333,7 +333,7 @@ void playerUpdate(void)
 #endif
 }
 //------------------------------------Инициализация DF плеера------------------------------------
-void dfPlayerInint(void)
+void dfPlayerInit(void)
 {
   DF_BUSY_INIT;
   DF_RX_INIT;
@@ -349,7 +349,7 @@ void dfPlayerInint(void)
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
-void sdPlayerInint(void)
+void sdPlayerInit(void)
 {
   for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) { //инициализация карты памяти
     if (!cardMount()) {
