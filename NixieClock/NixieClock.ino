@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.3 релиз от 19.06.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.4 релиз от 29.06.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -67,10 +67,8 @@ struct sensorData {
 #include "config.h"
 
 //----------------Периферия----------------
-#include "SPI.h"
 #include "WIRE.h"
 #include "EEPROM.h"
-#include "SDCARD.h"
 #include "PLAYER.h"
 #include "RDA.h"
 #include "RTC.h"
@@ -492,6 +490,13 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
   }
 }
 #endif
+//-----------------------------Установка ошибки---------------------------------
+void SET_ERROR(uint8_t err) //установка ошибки
+{
+  uint8_t _error_bit = (0x01 << err); //выбрали флаг ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
+  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
+}
 //-----------------------------Расчет шага яркости-----------------------------
 uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
 {
@@ -520,19 +525,6 @@ void backlAnimDisable(void) //запретить анимации подсвет
 uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
 {
   return (timeH > 12) ? (timeH - 12) : (timeH) ? timeH : 12; //возвращаем результат
-}
-//------------------------------Отключение uart---------------------------------
-void uartDisable(void) //отключение uart
-{
-  UCSR0B = 0; //выключаем UART
-  PRR |= (0x01 << PRUSART0); //выключаем питание UART
-}
-//-----------------------------Установка ошибки---------------------------------
-void SET_ERROR(uint8_t err) //установка ошибки
-{
-  uint8_t _error_bit = (0x01 << err); //выбрали флаг ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
 }
 //------------------------Сверка контрольной суммы---------------------------------
 void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы

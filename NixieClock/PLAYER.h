@@ -14,6 +14,8 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
+#include "READER.h"
+
 enum {
   _START_BYTE, //стартовый байт
   _VERSION, //версия
@@ -53,6 +55,12 @@ void playerSendDataNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high =
 void playerSpeakNumber(uint16_t _num, boolean _type = NORMAL_NUM);
 void playerSendCommandNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 
+//------------------------------Отключение uart---------------------------------
+void uartDisable(void) //отключение uart
+{
+  UCSR0B = 0; //выключаем UART
+  PRR |= (0x01 << PRUSART0); //выключаем питание UART
+}
 //-------------------------------------Статус UART--------------------------------------
 boolean uartStatus(void)
 {
@@ -76,8 +84,7 @@ void uartSendData(uint8_t _byte)
 #endif
 }
 //------------------------------Софтовая обработка UART----------------------------------
-#if PLAYER_TYPE == 1
-#if UART_MODE
+#if PLAYER_TYPE == 1 && UART_MODE
 ISR(TIMER2_COMPB_vect)
 {
   OCR2B += SOFT_UART_TIME;
@@ -90,18 +97,6 @@ ISR(TIMER2_COMPB_vect)
       else DF_RX_CLEAR;
       uartData >>= 1;
       break;
-  }
-}
-#endif
-#elif PLAYER_TYPE == 2
-//------------------------------Обновление буфера ЦАП----------------------------------
-ISR(TIMER2_COMPB_vect)
-{
-  OCR2B += 182;
-  if (buffer.dacStart != buffer.dacEnd) {
-    if (++buffer.dacStart >= DAC_BUFF_SIZE) buffer.dacStart = 0;
-    if (buffer.readData[buffer.dacStart] < 128) OCR1B = buffer.readData[buffer.dacStart] + ((((uint16_t)(buffer.readData[buffer.dacStart] ^ 0x7F) * buffer.dacVolume) * 26) >> 8);
-    else OCR1B = buffer.readData[buffer.dacStart] - ((((uint16_t)(buffer.readData[buffer.dacStart] & 0x7F) * buffer.dacVolume) * 26) >> 8);
   }
 }
 #endif
