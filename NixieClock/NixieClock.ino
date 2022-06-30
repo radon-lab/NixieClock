@@ -1122,14 +1122,14 @@ void alarmWarn(void) //тревога будильника
 #if PLAYER_TYPE
     playerStop(); //сброс позиции мелодии
 #else
-    melodyPlay(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+    melodyPlay(alarmRead(alarm - 1, ALARM_SOUND), SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
 
     while (1) {
       dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-      if (!playerWriteStatus()) playerSetTrack(alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER);
+      if (!playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER);
 #endif
 
       if (!alarm || alarmWaint) { //если тревога сброшена
