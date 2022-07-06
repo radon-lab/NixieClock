@@ -20,8 +20,12 @@ void ledWrite(uint8_t* data, uint16_t size) {
     "CLI                  \n\t" //запретили прерывания
     "SBI %[PORT], %[PIN]  \n\t" //HIGH на выход пина
     "NOP                  \n\t" //пропускаем цикл
+    "NOP                  \n\t" //пропускаем цикл
+    "NOP                  \n\t" //пропускаем цикл
     "SBRS r21, 7          \n\t" //если бит "7" установлен то пропускаем переход
     "CBI %[PORT], %[PIN]  \n\t" //LOW на выход пина
+    "NOP                  \n\t" //пропускаем цикл
+    "NOP                  \n\t" //пропускаем цикл
     "NOP                  \n\t" //пропускаем цикл
     "NOP                  \n\t" //пропускаем цикл
     "NOP                  \n\t" //пропускаем цикл
@@ -50,7 +54,7 @@ void showLeds(void)
   for (uint8_t f = 0; f < LAMP_NUM; f++) {
     uint8_t pallet = (float)(ledColor[f] % 85) * ((float)ledBright[f] / 85.0);
     switch (ledColor[f] / 85) {
-      case 0:
+      default:
         ledBuff[f * 3] = pallet;
         ledBuff[f * 3 + 1] = ledBright[f] - pallet;
         ledBuff[f * 3 + 2] = 0;

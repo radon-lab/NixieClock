@@ -242,13 +242,13 @@ void playerUpdate(void)
     if (busyState != DF_BUSY_CHK) {
       busyState = !busyState;
       if (!busyState) {
-#if !AMP_PORT_DISABLE
+#if AMP_PORT_ENABLE
         AMP_ENABLE;
 #endif
         _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
       }
       else {
-#if !AMP_PORT_DISABLE
+#if AMP_PORT_ENABLE
         AMP_DISABLE;
 #endif
         writeState = 0;

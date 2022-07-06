@@ -135,11 +135,11 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки треков плеера
-#define PLAYER_NUMBERS_FOLDER 1      //папка с озвучкой цифр(1..255)
+#define PLAYER_NUMBERS_FOLDER 1      //папка с озвучкой цифр(1..16)
 #define PLAYER_NUMBERS_START 3       //первый трек озвучки цифр(1..255)("ноль".."девятнадцать", "двадцать".."девяносто", "сто".."тысяча")
 #define PLAYER_NUMBERS_OTHER 1       //первый трек дополнительной озвучки цифр(1..255)("одна", "две")
 
-#define PLAYER_END_NUMBERS_FOLDER 2  //папка с озвучкой окончаний цифр(1..255)
+#define PLAYER_END_NUMBERS_FOLDER 2  //папка с озвучкой окончаний цифр(1..16)
 #define PLAYER_TIME_MINS_START 1     //первый трек озвучки минут(1..255)("минута", "минуты", "минут")
 #define PLAYER_TIME_HOUR_START 4     //первый трек озвучки часа(1..255)("час", "часа", "часов")
 #define PLAYER_SENS_TEMP_START 7     //первый трек озвучки температуры(1..255)("градус", "градуса", "градусов")
@@ -149,12 +149,12 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_SENS_PRESS_START 17   //первый трек озвучки давления(1..255)("миллиметр", "миллиметра", "миллиметров")
 #define PLAYER_SENS_PRESS_OTHER 20   //трек дополнительной озвучки давления(1..255)("ртутного столба")
 
-#define PLAYER_MENU_FOLDER 3         //папка с озвучкой меню(1..255)
+#define PLAYER_MENU_FOLDER 3         //папка с озвучкой меню(1..16)
 #define PLAYER_MAIN_MENU_START 1     //первый трек озвучки основного меню(1..255)
 #define PLAYER_FAST_MENU_START 11    //первый трек озвучки быстрого меню(1..255)
 #define PLAYER_DEBUG_MENU_START 20   //первый трек озвучки меню отладки(1..255)
 
-#define PLAYER_GENERAL_FOLDER 4      //папка с основной озвучкой(1..255)
+#define PLAYER_GENERAL_FOLDER 4      //папка с основной озвучкой(1..16)
 #define PLAYER_ALARM_DISABLE_SOUND 1 //трек озвучки оповещения отключения будильника(1..255)("будильник отключен")
 #define PLAYER_ALARM_WAIT_SOUND 2    //трек озвучки оповещения ожидания будильника(1..255)("будильник отложен")
 #define PLAYER_TIME_NOW_SOUND 3      //трек озвучки текущего времени(1..255)("текущее время")
@@ -175,9 +175,9 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_HOUR_SOUND 18         //трек озвучки смены часа(1..255)
 #define PLAYER_TIMER_WARN_SOUND 19   //трек озвучки окончания таймера(1..255)
 
-#define PLAYER_ALARM_FOLDER 5        //папка с озвучкой будильника(1..255)
+#define PLAYER_ALARM_FOLDER 5        //папка с озвучкой будильника(1..16)
 #define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
-#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..255)
+#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..99)
 
 
 //Настройки плеера
@@ -234,6 +234,9 @@ const uint16_t general_sound[][2] PROGMEM = {
 //Настройки режима тестирования
 #define TEST_LAMP_TIME 500           //время проверки горения цифры в режиме тестирования(500..5000)(мс)
 #define TEST_BACKL_REVERSE 0         //реверс порядка проверки светодиодов в режиме тестирования(0 - нормальное отображение | 1 - реверсивное отображение)
+#define TEST_BACKL_BRIGHT 250        //яркость подсветки ламп в режиме тестирования(10..250)(шаг 10)
+#define TEST_INDI_BRIGHT 30          //яркость цифр в режиме тестирования(0..30)
+#define TEST_DOT_BRIGHT 250          //яркость точки в режиме тестирования(10..250)(шаг 10)
 #define TEST_FREQ_STEP 500           //шаг перебора частот для теста бузера(100..1000)(Гц)
 
 //Настройки обновления температуры

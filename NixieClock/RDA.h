@@ -92,7 +92,7 @@ void setPowerRDA(boolean _pwr)
   rda.highReg = (_pwr) ? (0xC0 | (RADIO_MONO << 5) | (RADIO_BASS << 4)) : 0x00; //записываем настройку
   rda.lowReg = (_pwr) ? 0x81 : 0x00; //записываем настройку
   writeRegRDA(RDA_CONFIG_REG); //отправляем данные
-#if !AMP_PORT_DISABLE
+#if AMP_PORT_ENABLE
   if (_pwr) AMP_ENABLE;
   else AMP_DISABLE;
 #endif

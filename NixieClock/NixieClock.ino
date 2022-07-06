@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.4 релиз от 29.06.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.5 релиз от 06.07.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -210,7 +210,7 @@ enum {
   DEB_TIME_CORRECT, //корректировка хода времени
   DEB_DEFAULT_MIN_PWM, //минимальное значение шим
   DEB_DEFAULT_MAX_PWM, //максимальное значение шим
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
   DEB_HV_ADC, //значение ацп преобразователя
 #endif
   DEB_RESET, //максимальное значение шим
@@ -277,10 +277,10 @@ enum {
 //перечисления датчиков температуры
 enum {
   SENS_DS3231, //датчик DS3231
-#if !SENS_BME_DISABLE
+#if SENS_BME_ENABLE
   SENS_BME, //датчики BME/BMP
 #endif
-#if !SENS_PORT_DISABLE
+#if SENS_PORT_ENABLE
   SENS_DHT11, //датчик DHT11
   SENS_DHT22, //датчик DHT22
   SENS_DS18B20, //датчик DS18B20
@@ -339,7 +339,7 @@ enum {
 //----------------------------------Инициализация--------------------------------------------
 int main(void) //инициализация
 {
-#if !AMP_PORT_DISABLE
+#if AMP_PORT_ENABLE
   AMP_INIT; //инициализация питания усилителя
 #endif
 
@@ -361,10 +361,10 @@ int main(void) //инициализация
   ADD_INIT; //инициализация дополнительной кнопки
 #endif
 
-#if !GEN_DISABLE
+#if GEN_ENABLE
   CONV_INIT; //инициализация преобразователя
 #endif
-#if !SQW_PORT_DISABLE
+#if SQW_PORT_ENABLE
   SQW_INIT; //инициализация счета секунд
 #endif
   BACKL_INIT; //инициализация подсветки
@@ -423,7 +423,7 @@ int main(void) //инициализация
   }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
 
@@ -616,11 +616,11 @@ void checkVCC(void) //чтение напряжения питания
   while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
   btn_adc = ADCH; //записываем результат опроса
 #endif
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
   ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
 
-#if (!GEN_DISABLE && GEN_FEEDBACK) || BTN_TYPE
+#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
@@ -655,27 +655,28 @@ boolean checkAnalogKey(uint8_t minADC, uint8_t maxADC) //проверка ана
 void testLamp(void) //проверка системы
 {
 #if BACKL_TYPE != 2
-  backlSetBright(DEFAULT_BACKL_BRIGHT); //устанавливаем максимальную яркость
+  backlSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
-  dotSetBright(DEFAULT_DOT_BRIGHT); //установка яркости точек
+  indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
+  dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
 #if PLAYER_TYPE
   playerSetTrack(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
   while (1) {
-    for (byte indi = 0; indi < LAMP_NUM; indi++) {
+    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
       indiClrDots(); //выключаем разделительные точки
       indiSetDots(indi); //включаем разделителную точку
 #endif
 #if BACKL_TYPE == 2
 #if TEST_BACKL_REVERSE
-      setLedBright((LAMP_NUM - 1) - indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
+      setLedBright((LAMP_NUM - 1) - indi, TEST_BACKL_BRIGHT); //включаем светодиод
 #else
-      setLedBright(indi, DEFAULT_BACKL_BRIGHT); //включаем светодиод
+      setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
 #endif
 #endif
-      for (byte digit = 0; digit < 10; digit++) {
+      for (uint8_t digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_TYPE == 2
 #if TEST_BACKL_REVERSE
@@ -704,7 +705,7 @@ void testRTC(void) //проверка модуля часов реального
 {
   disable32K(); //отключение вывода 32K
 
-#if !SQW_PORT_DISABLE
+#if SQW_PORT_ENABLE
   setSQW(); //установка SQW на 1Гц
 
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
@@ -723,7 +724,7 @@ void testRTC(void) //проверка модуля часов реального
     sendTime(); //отправить время в RTC
   }
 
-#if !SQW_PORT_DISABLE
+#if SQW_PORT_ENABLE
   if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
     EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
     EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
@@ -855,7 +856,7 @@ void settings_debug(void) //отладка
               break;
             case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break;
             case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break;
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
             case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break;
 #endif
           }
@@ -883,7 +884,7 @@ void settings_debug(void) //отладка
                 if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента Linear Advance
                 break;
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect > -30) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
@@ -914,7 +915,7 @@ void settings_debug(void) //отладка
                 if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента Linear Advance
                 break;
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect < 30) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
@@ -944,7 +945,7 @@ void settings_debug(void) //отладка
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
                 debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента Linear Advance
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
 #endif
@@ -1223,10 +1224,10 @@ void dataUpdate(void) //обработка данных
   melodyUpdate(); //обработка мелодий
 #endif
 
-#if (!GEN_DISABLE && GEN_FEEDBACK) || BTN_TYPE
+#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE
   if (!(ADCSRA & (1 << ADSC))) { //ждем окончания преобразования
     switch (ADMUX & 0x0F) {
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
       case ANALOG_DET_PIN: {
           static uint8_t adc_cycle; //циклы буфера усреднения
           static uint16_t adc_temp; //буфер усреднения
@@ -1252,7 +1253,7 @@ void dataUpdate(void) //обработка данных
       case ANALOG_BTN_PIN:
         btn_adc = ADCH; //записываем результат опроса
         btn_update = 0; //очищаем флаг обновления АЦП кнопок
-#if !GEN_DISABLE && GEN_FEEDBACK
+#if GEN_ENABLE && GEN_FEEDBACK
         ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
         break;
@@ -1612,7 +1613,7 @@ void settings_singleAlarm(void) //настройка будильника
           }
           break;
         case 3:
-          if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 3); //вывод номера мелодии
+          if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
           break;
       }
       blink_data = !blink_data; //мигание сигментами
@@ -2172,7 +2173,7 @@ void settings_main(void) //настроки основные
               backlAnimDisable(); //запретили эффекты подсветки
               break;
             case SET_TEMP_SENS: //настройка сенсора температуры
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
               indiSetDots(2); //включаем разделителную точку
 #endif
               _timer_ms[TMR_SENS] = 0;
@@ -2183,7 +2184,7 @@ void settings_main(void) //настроки основные
         else {
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #endif
         }
@@ -2492,10 +2493,10 @@ void updateTemp(void) //обновить показания температур
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (mainSettings.sensorSet) { //выбор датчика температуры
     default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
-#if !SENS_BME_DISABLE
+#if SENS_BME_ENABLE
     case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
-#if !SENS_PORT_DISABLE
+#if SENS_PORT_ENABLE
     case SENS_DHT11: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
     case SENS_DHT22: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
     case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
@@ -2551,7 +2552,7 @@ void autoShowTemp(void) //автоматический показ темпера
       _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
     }
 
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем точки
 #else
     dotSetBright(dotMaxBright); //включаем точки
@@ -2564,7 +2565,7 @@ void autoShowTemp(void) //автоматический показ темпера
             if (!sens.press) return; //выходим
             else mode = 2; //отображаем давление
           }
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #else
           dotSetBright(0); //выключаем точки
@@ -2583,7 +2584,7 @@ void autoShowTemp(void) //автоматический показ темпера
           switch (mode) {
             case 0:
               indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
               indiClrDots(); //выключаем разделительные точки
               indiSetDots(pos + 2); //включаем разделителную точку
 #endif
@@ -2621,7 +2622,7 @@ void showTemp(void) //показать температуру
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   indiSetDots(2); //включаем разделителную точку
   dotSetBright(0); //выключаем точки
 #else
@@ -2655,7 +2656,7 @@ void showTemp(void) //показать температуру
               if (!sens.press) mode = 0;
               else {
                 mode = 2;
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
                 indiClrDots(); //выключаем разделительные точки
 #else
                 dotSetBright(0); //выключаем точки
@@ -2663,7 +2664,7 @@ void showTemp(void) //показать температуру
               }
             }
             else {
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
               indiClrDots(); //выключаем разделительные точки
 #else
               dotSetBright(0); //выключаем точки
@@ -2673,7 +2674,7 @@ void showTemp(void) //показать температуру
           case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) { //если режим отображения температуры
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
           indiSetDots(2); //включаем разделителную точку
 #else
           dotSetBright(dotMaxBright); //включаем точки
@@ -2715,7 +2716,7 @@ void showDate(void) //показать дату
   uint8_t mode = 0; //текущий режим
   secUpd = 0; //обновление экрана
 
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   indiSetDots(2); //включаем разделителную точку
   dotSetBright(0); //выключаем точки
 #else
@@ -2747,14 +2748,14 @@ void showDate(void) //показать дату
         if (++mode > 1) mode = 0;
         switch (mode) {
           case 0: //дата
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
             indiSetDots(2); //включаем разделителную точку
 #else
             dotSetBright(dotMaxBright); //включаем точки
 #endif
             break;
           case 1: //год
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
 #else
             dotSetBright(0); //выключаем точки
@@ -2991,7 +2992,7 @@ void radioMenu(void) //радиоприемник
           indiPrintNum(radioSettings.stationNum + 1, ((LAMP_NUM / 2) - 1), 2, 0); //номер станции
         }
         else {
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
           indiSetDots(3); //включаем разделителную точку
 #endif
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
@@ -3290,7 +3291,7 @@ void timerStopwatch(void) //таймер-секундомер
 //------------------------------------Сброс анимаций-------------------------------------
 void animsReset(void) //сброс анимаций
 {
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   indiClrDots(); //выключаем разделительные точки
 #endif
   _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
@@ -3352,10 +3353,10 @@ void burnIndi(void) //антиотравление индикаторов
   if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) {
     _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
     dotSetBright(0); //выключаем точки
-    for (byte indi = 0; indi < LAMP_NUM; indi++) {
+    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
-      for (byte loops = 0; loops < BURN_LOOPS; loops++) {
-        for (byte digit = 0; digit < 10; digit++) {
+      for (uint8_t loops = 0; loops < BURN_LOOPS; loops++) {
+        for (uint8_t digit = 0; digit < 10; digit++) {
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
           for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
             if (check_keys()) { //если нажата кнопка
@@ -3374,9 +3375,9 @@ void burnIndi(void) //антиотравление индикаторов
 #else
   if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) {
     _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
-    for (byte indi = 0; indi < LAMP_NUM; indi++) {
-      for (byte loops = 0; loops < BURN_LOOPS; loops++) {
-        for (byte digit = 0; digit < 10; digit++) {
+    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
+      for (uint8_t loops = 0; loops < BURN_LOOPS; loops++) {
+        for (uint8_t digit = 0; digit < 10; digit++) {
           indiPrintNum(cathodeMask[digit], indi); //отрисовываем цифру
           for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
             if (check_keys()) { //если нажата кнопка

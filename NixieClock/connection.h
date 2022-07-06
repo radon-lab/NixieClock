@@ -40,7 +40,7 @@
 #define SD_MISO_PIN 12 //пин SD карты MISO(0..13)(pin D)
 #define SD_MOSI_PIN 11 //пин SD карты MOSI(0..13)(pin D)
 #define SD_SCK_PIN  13 //пин SD карты SCK(0..13)(pin D)
-#define SD_CS_PIN   9  //пин SD карты CS(0..13)(pin D)
+#define SD_CS_PIN   0  //пин SD карты CS(0..13)(pin D)
 
 //Обратная связь
 #define ANALOG_DET_PIN 6 //пин обратной связи(6..7)(pin A)

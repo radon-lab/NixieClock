@@ -45,7 +45,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 
   PORTC = (PORTC & 0xF0) | indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
   *anodePort[indiState] |= (indi_buf[indiState] != indi_null) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   if (indi_dot & indi_dot_pos) INDI_DOTS_ON; //включаем точки
 #endif
 
@@ -56,12 +56,12 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 }
 ISR(TIMER0_COMPB_vect) {
   *anodePort[indiState] &= ~anodeBit[indiState]; //выключаем индикатор
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   INDI_DOTS_OFF; //выключаем точки
   indi_dot_pos <<= 1; //сместили текущей номер точек индикаторов
 #endif
   if (++indiState > LAMP_NUM) { //переходим к следующему индикатору
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
     indi_dot_pos = 0x01; //сбросили текущей номер точек индикаторов
 #endif
     indiState = 0; //сбросили позицию индикатора
@@ -110,7 +110,7 @@ void indiInit(void) //инициализация индикаторов
     indi_buf[i] = indi_null; //очищаем буфер пустыми символами
   }
 
-#if !DOTS_PORT_DISABLE
+#if DOTS_PORT_ENABLE
   INDI_DOTS_INIT; //инициализация разделительных точек в индикаторах
 #endif
 
@@ -134,7 +134,7 @@ void indiInit(void) //инициализация индикаторов
 #if !NEON_DOT || PLAYER_TYPE == 2
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
-#if !GEN_DISABLE
+#if GEN_ENABLE
   OCR1A = constrain(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #endif
@@ -158,7 +158,7 @@ void indiInit(void) //инициализация индикаторов
 void indiClr(void) //очистка индикаторов
 {
   for (uint8_t cnt = 0; cnt < LAMP_NUM; cnt++) indi_buf[cnt + 1] = indi_null;
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
@@ -166,7 +166,7 @@ void indiClr(void) //очистка индикаторов
 void indiClr(uint8_t indi) //очистка индикатора
 {
   indi_buf[indi + 1] = indi_null;
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
@@ -174,7 +174,7 @@ void indiClr(uint8_t indi) //очистка индикатора
 void indiSet(uint8_t buf, uint8_t indi) //установка индикатора
 {
   indi_buf[indi + 1] = buf; //устанавливаем в ячейку буфера
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
@@ -188,7 +188,7 @@ void indiEnable(void) //включение индикаторов
 {
   indiClr(); //очистка индикаторов
   _INDI_START; //запускаем генерацию
-#if !GEN_DISABLE
+#if GEN_ENABLE
   TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
 #endif
 }
@@ -200,7 +200,7 @@ void indiDisable(void) //выключение индикаторов
     *anodePort[i] &= ~anodeBit[i]; //сбрасываем аноды
     if (i < 4) PORTC |= (0x01 << decoderMask[i]); //сбрасываем катоды
   }
-#if !GEN_DISABLE
+#if GEN_ENABLE
   TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
   CONV_OFF; //выключаем пин преобразователя
 #endif
@@ -210,7 +210,7 @@ void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркост�
 {
   if (pwm > 30) pwm = 30;
   indi_dimm[indi + 1] = map(pwm, 0, 30, 0, LIGHT_MAX);
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
@@ -220,7 +220,7 @@ void indiSetBright(uint8_t pwm) //установка общей яркости
   if (pwm > 30) pwm = 30;
   pwm = map(pwm, 0, 30, 0, LIGHT_MAX);
   for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm;
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
@@ -262,7 +262,7 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
     if (_indi < 0) _indi++; //если число за гранью поля индикаторов
     else if (_indi < LAMP_NUM) indi_buf[++_indi] = mergeBuf; //если число в поле индикатора то устанавливаем его
   }
-#if !GEN_DISABLE
+#if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
 }
