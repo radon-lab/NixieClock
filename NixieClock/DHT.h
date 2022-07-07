@@ -29,6 +29,38 @@ boolean wireReset(uint8_t time)
   }
   return 1;
 }
+//-------------------------------------------Сигнал сброса шины----------------------------------------------
+boolean wireGetData(uint8_t* buff, uint8_t time)
+{
+  if (!sens.initPort) { //если порт не инициализирован
+    sens.initPort = 1; //устанавливаем флаг инициализации
+    SENS_INIT; //инициализируем порт
+  }
+
+  if (wireReset(time)) return 1; //посылаем сигнал сброса, если нет ответа то выходим
+
+  uint16_t low; //буфер низкого уровня
+  uint16_t high; //буфер высокого уровня
+
+  for (uint8_t i = 0; i < 40; i++) { //читаем все биты
+    buff[i >> 3] <<= 1; //сдвинули байт
+
+    low = 0; //сбросили буфер низкого уровня
+    while (!SENS_CHK) { //пока низкий уровень
+      if (++low > DHT_CHECK_TIMEOUT) return 1; //если таймаут то выходим
+    }
+    high = 0; //сбросили буфер высокого уровня
+    while (SENS_CHK) { //пока высокий уровень
+      if (++high > DHT_CHECK_TIMEOUT) return 1; //если таймаут то выходим
+    }
+
+    if (low < high) buff[i >> 3] |= 0x01; //установили бит
+  }
+
+  if (buff[4] != (uint8_t)(buff[0] + buff[1] + buff[2] + buff[3])) return 1; //если контрольная сумма не совпала то выходим
+
+  return 0;
+}
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempDHT22(void)
 {
@@ -37,26 +69,9 @@ void readTempDHT22(void)
     SENS_INIT; //инициализируем порт
   }
 
-  if (wireReset(DHT22_RESET)) return; //посылаем сигнал сброса, если нет ответа то выходим
-
   uint8_t data[5]; //буфер приема
 
-  for (uint8_t i = 0; i < 40; i++) { //читаем все биты
-    data[i >> 3] <<= 1; //сдвинули байт
-
-    uint16_t low = 0; //буфер низкого уровня
-    while (!SENS_CHK) { //пока низкий уровень
-      if (++low > DHT_CHECK_TIMEOUT) return; //если таймаут то выходим
-    }
-    uint16_t high = 0; //буфер высокого уровня
-    while (SENS_CHK) { //пока высокий уровень
-      if (++high > DHT_CHECK_TIMEOUT) return; //если таймаут то выходим
-    }
-
-    if (low < high) data[i >> 3] |= 0x01; //установили бит
-  }
-
-  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return; //если контрольная сумма не совпала то выходим
+  if (wireGetData(data, DHT22_RESET)) return; //посылаем сигнал сброса, если нет ответа то выходим
 
   sens.temp = (((uint16_t)(data[2] & 0x7F)) << 8 | data[3]) * 10; //установили температуру
   if (sens.temp > 8500) sens.temp = 0; //если вышли за предел
@@ -73,26 +88,9 @@ void readTempDHT11(void)
     SENS_INIT; //инициализируем порт
   }
 
-  if (wireReset(DHT11_RESET)) return; //посылаем сигнал сброса, если нет ответа то выходим
-
   uint8_t data[5]; //буфер приема
-
-  for (uint8_t i = 0; i < 40; i++) { //читаем все биты
-    data[i >> 3] <<= 1; //сдвинули байт
-
-    uint16_t low = 0; //буфер низкого уровня
-    while (!SENS_CHK) { //пока низкий уровень
-      if (++low > DHT_CHECK_TIMEOUT) return; //если таймаут то выходим
-    }
-    uint16_t high = 0; //буфер высокого уровня
-    while (SENS_CHK) { //пока высокий уровень
-      if (++high > DHT_CHECK_TIMEOUT) return; //если таймаут то выходим
-    }
-
-    if (low < high) data[i >> 3] |= 0x01; //установили бит
-  }
-
-  if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) return; //если контрольная сумма не совпала то выходим
+  
+  if (wireGetData(data, DHT11_RESET)) return; //посылаем сигнал сброса, если нет ответа то выходим
 
   sens.temp = (((uint16_t)data[2] * 10) + data[3]) * 10; //установили температуру
   if (sens.temp > 8500) sens.temp = 0; //если вышли за предел

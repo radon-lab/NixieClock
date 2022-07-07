@@ -46,6 +46,7 @@ struct playerData { //буфер обмена
 const uint8_t speakTable[] PROGMEM = {2, 0, 1, 1, 1, 2, 2, 2, 2, 2}; //таблица воспроизведения окончаний фраз
 
 volatile uint8_t uartData; //буфер UART
+volatile uint8_t uartByte; //текущий байт UART
 volatile uint8_t uartBit; //текущий бит UART
 #define SOFT_UART_TIME (uint8_t)((1e9 / PLAYER_UART_SPEED) / 500) //период фрейма UART
 
@@ -53,7 +54,7 @@ volatile uint8_t uartBit; //текущий бит UART
 void playerSendData(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSendDataNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSpeakNumber(uint16_t _num, boolean _type = NORMAL_NUM);
-void playerSendCommandNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
+void playerSendCommand(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 
 //------------------------------Отключение uart---------------------------------
 void uartDisable(void) //отключение uart
@@ -62,36 +63,46 @@ void uartDisable(void) //отключение uart
   PRR |= (0x01 << PRUSART0); //выключаем питание UART
 }
 //-------------------------------------Статус UART--------------------------------------
-boolean uartStatus(void)
+inline boolean uartStatus(void)
 {
 #if UART_MODE
   return (boolean)!(TIMSK2 & (0x01 << OCIE2B));
 #else
-  return (boolean)(UCSR0A & (0x01 << UDRE0));
+  return (boolean)!(UCSR0B & (0x01 << UDRIE0));
 #endif
 }
 //-------------------------------Отправка данных в UART---------------------------------
-void uartSendData(uint8_t _byte)
+void uartSendData(void)
 {
 #if UART_MODE
-  uartData = _byte;
+  uartData = player.transferBuff[0];
+  uartByte = 0;
   uartBit = 0;
   OCR2B = 0; //устанавливаем COMB в начало
   TIFR2 |= (0x01 << OCF2B); //сбросили флаг прерывания
   TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
 #else
-  UDR0 = _byte;
+  uartByte = 0;
+  UCSR0B |= (0x01 << UDRIE0); //разрешаем прерывание по завершению передачи
 #endif
 }
-//------------------------------Софтовая обработка UART----------------------------------
-#if PLAYER_TYPE == 1 && UART_MODE
+
+#if PLAYER_TYPE == 1
+#if UART_MODE
+//---------------------------------Софтовая обработка UART----------------------------------
 ISR(TIMER2_COMPB_vect)
 {
   OCR2B += SOFT_UART_TIME;
   switch (uartBit++) {
     case 0: DF_RX_CLEAR; break;
     case 9: DF_RX_SET; break;
-    case 10: TIMSK2 &= ~(0x01 << OCIE2B); break; //выключаем таймер
+    case 10:
+      if (++uartByte >= sizeof(player.transferBuff)) TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
+      else {
+        uartData = player.transferBuff[uartByte];
+        uartBit = 0;
+      }
+      break;
     default:
       if (uartData & 0x01) DF_RX_SET;
       else DF_RX_CLEAR;
@@ -99,6 +110,14 @@ ISR(TIMER2_COMPB_vect)
       break;
   }
 }
+#else
+//--------------------------------Хардверная обработка UART----------------------------------
+ISR(USART_UDRE_vect)
+{
+  if (uartByte >= sizeof(player.transferBuff)) UCSR0B &= ~(0x01 << UDRIE0); //выключаем прерывания передачи
+  else UDR0 = player.transferBuff[uartByte++]; //записываем байт в буфер UART
+}
+#endif
 #endif
 //----------------------------------Статус буфера плеера--------------------------------------
 inline boolean playerWriteStatus(void)
@@ -115,7 +134,6 @@ boolean playerPlayStatus(void)
 #else
   return 0;
 #endif
-
 }
 //-------------------------------Генерация контрольной суммы----------------------------------
 void playerGenCRC(uint8_t* arr)
@@ -127,18 +145,14 @@ void playerGenCRC(uint8_t* arr)
   arr[_CRC_L] = crc;
 }
 //----------------------------------Инициализация UART----------------------------------
-void playerSendCommandNow(uint8_t cmd, uint8_t data_low, uint8_t data_high)
+void playerSendCommand(uint8_t cmd, uint8_t data_low, uint8_t data_high)
 {
   player.transferBuff[_COMMAND] = cmd;
-  player.transferBuff[_DATA_H] = data_high;
   player.transferBuff[_DATA_L] = data_low;
+  player.transferBuff[_DATA_H] = data_high;
   playerGenCRC(player.transferBuff);
 
-  for (uint8_t i = 0; i < sizeof(player.transferBuff); i++) {
-    while (!uartStatus());
-    uartSendData(player.transferBuff[i]);
-    tick_ms = 0;
-  }
+  uartSendData();
 }
 //------------------------------Отправить команду без очереди---------------------------------
 void playerSendDataNow(uint8_t cmd, uint8_t data_low, uint8_t data_high)
@@ -149,8 +163,8 @@ void playerSendDataNow(uint8_t cmd, uint8_t data_low, uint8_t data_high)
     if ((player.playbackStart -= 3) >= sizeof(player.playbackBuff)) player.playbackStart = (sizeof(player.playbackBuff) - 3);
   }
   player.playbackBuff[player.playbackStart] = cmd;
-  player.playbackBuff[player.playbackStart + 1] = data_high;
-  player.playbackBuff[player.playbackStart + 2] = data_low;
+  player.playbackBuff[player.playbackStart + 1] = data_low;
+  player.playbackBuff[player.playbackStart + 2] = data_high;
 }
 //-------------------------------------Отправить команду---------------------------------------
 void playerSendData(uint8_t cmd, uint8_t data_low, uint8_t data_high)
@@ -158,8 +172,8 @@ void playerSendData(uint8_t cmd, uint8_t data_low, uint8_t data_high)
   if (player.playbackEnd >= (sizeof(player.playbackBuff) - 1)) player.playbackEnd = 0;
   if (player.playbackEnd) player.playbackEnd++;
   player.playbackBuff[player.playbackEnd] = cmd;
-  player.playbackBuff[++player.playbackEnd] = data_high;
   player.playbackBuff[++player.playbackEnd] = data_low;
+  player.playbackBuff[++player.playbackEnd] = data_high;
 }
 //-----------------------------------Воспроизвести трек в папке----------------------------------
 void playerSetTrack(uint8_t _track, uint8_t _folder)
@@ -236,7 +250,6 @@ void playerUpdate(void)
 #if PLAYER_TYPE == 1
   static boolean busyState;
   static boolean writeState;
-  static uint8_t transferByte;
 
   if (!_timer_ms[TMR_PLAYER]) {
     if (busyState != DF_BUSY_CHK) {
@@ -256,33 +269,27 @@ void playerUpdate(void)
     }
   }
 
-  if (transferByte || player.playbackEnd) {
-    if (uartStatus()) {
-      if (!transferByte) {
-        if ((writeState || _timer_ms[TMR_PLAYER]) && !player.playbackNow) return;
-        if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
-        player.playbackNow = 0;
-        player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
-        player.transferBuff[_DATA_H] = player.playbackBuff[player.playbackStart++];
-        player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
-        switch (player.transferBuff[_COMMAND]) {
-          case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
-          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (player.playbackMute) return; break;
-        }
-        playerGenCRC(player.transferBuff);
-      }
-      uartSendData(player.transferBuff[transferByte]);
+  if (playerWriteStatus() && uartStatus()) {
+    if (_timer_ms[TMR_PLAYER] || (writeState && !player.playbackNow)) return;
+    if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
+    player.playbackNow = 0;
 
-      if (++transferByte >= 10) {
-        transferByte = 0;
-        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
-        writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER) ? 0 : 1;
-        if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
-      }
-    }
+    player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
+    player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
+    player.transferBuff[_DATA_H] = player.playbackBuff[player.playbackStart++];
+
+    playerGenCRC(player.transferBuff);
+
+    writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER) ? 0 : 1;
+    if (player.transferBuff[_COMMAND] == PLAYER_CMD_MUTE) player.playbackMute = player.transferBuff[_DATA_L];
+
+    if (!player.playbackMute || !writeState) uartSendData();
+    if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
+
+    _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
   }
 #elif PLAYER_TYPE == 2
-  if (player.playbackEnd) {
+  if (playerWriteStatus()) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow && reader.playerState == READER_SOUND_WAIT) {
         switch (player.playbackBuff[player.playbackStart]) {
@@ -340,7 +347,7 @@ void dfPlayerInit(void)
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00)); //устанавливаем длинну посылки 8 бит
 #endif
 
-  playerSendCommandNow(PLAYER_CMD_SET_VOL, PLAYER_VOLUME);
+  playerSendCommand(PLAYER_CMD_SET_VOL, PLAYER_VOLUME);
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
