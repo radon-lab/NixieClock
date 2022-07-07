@@ -24,22 +24,22 @@ enum {
   BUFFER_READ_FAT
 };
 
-//---------Команды----------
-#define CMD0    (0x40 | 0)  //GO_IDLE_STATE
-#define CMD1    (0x40 | 1)  //SEND_OP_COND (MMC)
-#define CMD8    (0x40 | 8)  //SEND_IF_COND
-#define CMD16   (0x40 | 16) //SET_BLOCKLEN
-#define CMD17   (0x40 | 17) //READ_SINGLE_BLOCK
-#define ACMD41  (0xC0 | 41) //SEND_OP_COND (SDC)
-#define CMD55   (0x40 | 55) //APP_CMD
-#define CMD58   (0x40 | 58) //READ_OCR
-#define CMD59   (0x40 | 59) //CRC_ON_OFF
+//------------Команды-------------
+#define CMD0   0x40 //GO_IDLE_STATE
+#define CMD1   0x41 //SEND_OP_COND(MMC)
+#define CMD8   0x48 //SEND_IF_COND
+#define CMD16  0x50 //SET_BLOCKLEN
+#define CMD17  0x51 //READ_SINGLE_BLOCK
+#define ACMD41 0xE9 //SEND_OP_COND(SD)
+#define CMD55  0x77 //APP_CMD
+#define CMD58  0x7A //READ_OCR
+#define CMD59  0x7B //CRC_ON_OFF
 
 //--------Типы карт памяти---------
-#define CT_MMC        0x01  //карта MMC
-#define CT_SD1        0x02  //карта SD ver1
-#define CT_SD2        0x04  //карта SD ver2
-#define CT_BLOCK      0x08  //флаг блочной адресации
+#define CT_MMC   0x01 //карта MMC
+#define CT_SD1   0x02 //карта SD ver1
+#define CT_SD2   0x04 //карта SD ver2
+#define CT_BLOCK 0x08 //флаг блочной адресации
 
 #define get_uint16_t(ptr) (uint16_t)(*(uint16_t*)(ptr))
 #define get_uint32_t(ptr) (uint32_t)(*(uint32_t*)(ptr))
@@ -74,9 +74,9 @@ uint8_t cardSendCmd(uint8_t _command, uint32_t _data)
 
   //отправляем контрольную сумму
   switch (_command) {
-    case CMD0: writeSPI(0x95); break;     //команда 0
-    case CMD8: writeSPI(0x87); break;     //команда 8
-    default: writeSPI(0x01); break;       //игнорируем контрольную сумму
+    case CMD0: writeSPI(0x95); break; //команда 0
+    case CMD8: writeSPI(0x87); break; //команда 8
+    default: writeSPI(0x01); break; //игнорируем контрольную сумму
   }
 
   //ожидаем ответа на команду
@@ -122,7 +122,7 @@ void bufferUpdate(void)
       }
       break;
     case BUFFER_INIT:
-      if (!(buffer.cardType & CT_BLOCK)) buffer.readSector *= 512;  //конвертируем сектор в байты
+      if (!(buffer.cardType & CT_BLOCK)) buffer.readSector *= 512; //конвертируем сектор в байты
       if (!cardSendCmd(CMD17, buffer.readSector)) {
         readByte = 0;
         readWait = 40000;
