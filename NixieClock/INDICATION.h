@@ -17,6 +17,7 @@
 
 struct Settings_4 {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
+  uint8_t irButtons[8];
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
   int8_t hvCorrect; //коррекция напряжения
@@ -68,7 +69,7 @@ ISR(TIMER0_COMPB_vect) {
   }
 }
 //-----------------------------------Динамическая подсветка---------------------------------------
-#if (BACKL_TYPE == 1)
+#if (BACKL_TYPE == 1) && !IR_PORT_ENABLE
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
 {
   BACKL_SET; //включили подсветку
@@ -275,7 +276,7 @@ inline uint8_t backGetBright(void) //получить яркости подсв�
 void backlSetBright(uint8_t pwm) //установка яркости подсветки
 {
   OCR2A = pwm; //устанавливаем яркость точек
-#if BACKL_TYPE == 1
+#if (BACKL_TYPE == 1) && !IR_PORT_ENABLE
   if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
   else {
     TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер

@@ -30,7 +30,8 @@
 #define SQW_PIN  2  //пин SQW(только пин 2)(pin D)
 #define SENS_PIN 1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
 #define DOTS_PIN 1  //пин разделительных точек в индикаторах(0..13)(pin D)
-#define AMP_PIN  8  //пин управления питанием усилителя
+#define AMP_PIN  8  //пин управления питанием усилителя(0..13)(pin D)
+#define IR_PIN   7  //пин инфракрасного приемника(0..13)(pin D)
 
 //DF плеер
 #define DF_RX_PIN   1  //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
@@ -61,6 +62,8 @@
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
+#define DECODE_PCMSK(pin) ((pin < 8) ? PCMSK2 : PCMSK0)
+#define DECODE_PCIE(pin) ((pin < 8) ? PCIE2 : PCIE0)
 #define DECODE_PORT(pin) ((pin < 8) ? PORTD : PORTB)
 #define DECODE_BIT(pin) ((pin < 8) ? pin : (pin - 8))
 
@@ -296,6 +299,18 @@
 
 #define AMP_DISABLE (BIT_CLEAR(AMP_PORT, AMP_BIT))
 #define AMP_ENABLE  (BIT_SET(AMP_PORT, AMP_BIT))
+#define AMP_CHK     (BIT_READ(AMP_PORT, AMP_BIT))
 #define AMP_OUT     (BIT_SET(DDR_REG(AMP_PORT), AMP_BIT))
 
 #define AMP_INIT    AMP_DISABLE; AMP_OUT
+
+//Пин инфракрасного приемника
+#define IR_BIT   DECODE_BIT(IR_PIN)
+#define IR_PORT  DECODE_PORT(IR_PIN)
+
+#define IR_CHK   (BIT_READ(PIN_REG(IR_PORT), IR_BIT))
+#define IR_SET   (BIT_SET(IR_PORT, IR_BIT))
+#define IR_CLEAR (BIT_CLEAR(IR_PORT, IR_BIT))
+#define IR_INP   (BIT_CLEAR(DDR_REG(IR_PORT), IR_BIT))
+
+#define IR_INIT  IR_SET; IR_INP

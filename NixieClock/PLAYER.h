@@ -14,8 +14,6 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
-#include "READER.h"
-
 enum {
   _START_BYTE, //стартовый байт
   _VERSION, //версия
@@ -45,18 +43,20 @@ struct playerData { //буфер обмена
 
 const uint8_t speakTable[] PROGMEM = {2, 0, 1, 1, 1, 2, 2, 2, 2, 2}; //таблица воспроизведения окончаний фраз
 
-volatile uint8_t uartData; //буфер UART
-volatile uint8_t uartByte; //текущий байт UART
-volatile uint8_t uartBit; //текущий бит UART
-#define SOFT_UART_TIME (uint8_t)((1e9 / PLAYER_UART_SPEED) / 500) //период фрейма UART
-
-
+inline boolean playerWriteStatus(void);
 void playerSendData(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSendDataNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSpeakNumber(uint16_t _num, boolean _type = NORMAL_NUM);
 void playerSendCommand(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 
-//------------------------------Отключение uart---------------------------------
+#include "READER.h"
+
+volatile uint8_t uartData; //буфер UART
+volatile uint8_t uartByte; //текущий байт UART
+volatile uint8_t uartBit; //текущий бит UART
+#define SOFT_UART_TIME (uint8_t)((1e9 / PLAYER_UART_SPEED) / 500) //период фрейма UART
+
+//-----------------------------------Отключение uart------------------------------------
 void uartDisable(void) //отключение uart
 {
   UCSR0B = 0; //выключаем UART
@@ -254,39 +254,43 @@ void playerUpdate(void)
   if (!_timer_ms[TMR_PLAYER]) {
     if (busyState != DF_BUSY_CHK) {
       busyState = !busyState;
-      if (!busyState) {
-#if AMP_PORT_ENABLE
-        AMP_ENABLE;
-#endif
-        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
-      }
+      if (!busyState) _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
       else {
 #if AMP_PORT_ENABLE
-        AMP_DISABLE;
+        if (!playerWriteStatus()) AMP_DISABLE;
 #endif
         writeState = 0;
       }
     }
-  }
 
-  if (playerWriteStatus() && uartStatus()) {
-    if (_timer_ms[TMR_PLAYER] || (writeState && !player.playbackNow)) return;
-    if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
-    player.playbackNow = 0;
+    if (playerWriteStatus()) {
+#if AMP_PORT_ENABLE
+      if (!AMP_CHK && !player.playbackMute && (player.playbackBuff[player.playbackStart] == PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) {
+        AMP_ENABLE;
+        _timer_ms[TMR_PLAYER] = PLAYER_AMP_WAIT;
+        return;
+      }
+#endif
+      if (uartStatus()) {
+        if (writeState && !player.playbackNow) return;
+        if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
+        player.playbackNow = 0;
 
-    player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
-    player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
-    player.transferBuff[_DATA_H] = player.playbackBuff[player.playbackStart++];
+        player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
+        player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
+        player.transferBuff[_DATA_H] = player.playbackBuff[player.playbackStart++];
 
-    playerGenCRC(player.transferBuff);
+        playerGenCRC(player.transferBuff);
 
-    writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER) ? 0 : 1;
-    if (player.transferBuff[_COMMAND] == PLAYER_CMD_MUTE) player.playbackMute = player.transferBuff[_DATA_L];
+        writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER) ? 0 : 1;
+        if (player.transferBuff[_COMMAND] == PLAYER_CMD_MUTE) player.playbackMute = player.transferBuff[_DATA_L];
 
-    if (!player.playbackMute || !writeState) uartSendData();
-    if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
+        if (!player.playbackMute || !writeState) uartSendData();
+        if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
 
-    _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+      }
+    }
   }
 #elif PLAYER_TYPE == 2
   if (playerWriteStatus()) {
@@ -311,6 +315,12 @@ void playerUpdate(void)
           reader.playerState = READER_INIT;
           reader.playerFolder = player.playbackBuff[player.playbackStart++];
           reader.playerTrack = player.playbackBuff[player.playbackStart++];
+#if AMP_PORT_ENABLE
+          if (!AMP_CHK) {
+            AMP_ENABLE;
+            _timer_ms[TMR_PLAYER] = PLAYER_AMP_WAIT;
+          }
+#endif
         }
         else player.playbackStart += 2;
         break;

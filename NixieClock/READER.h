@@ -222,9 +222,6 @@ void readerUpdate(void)
           if (!buffer.dacStart) {
             fileBuff = searchFileData(buffer.readData + 1);
             if (fileBuff != 255) {
-#if AMP_PORT_ENABLE
-              AMP_ENABLE;
-#endif
               buffer.dacSampl = (uint8_t)(1000000UL / get_uint32_t(buffer.readData + 25)) * 2;
               buffer.dacStart = fileBuff + 8;
               reader.currentSector = 0;
@@ -261,7 +258,7 @@ void readerUpdate(void)
       case READER_SOUND_END:
         if (buffer.dacStart == buffer.dacEnd) {
 #if AMP_PORT_ENABLE
-          AMP_DISABLE;
+          if (!playerWriteStatus()) AMP_DISABLE;
 #endif
           TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
           OCR1B = 128; //выключаем dac
