@@ -2178,7 +2178,10 @@ void settings_main(void) //настроки основные
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127; break;
                   case 1:
-                    if (mainSettings.sensorSet > 0) mainSettings.sensorSet--;
+                    if (mainSettings.sensorSet > 0) {
+                      mainSettings.sensorSet--;
+                      mainSettings.tempCorrect = 0;
+                    }
                     _timer_ms[TMR_SENS] = 0; //обновить показания температуры
                     break;
                 }
@@ -2252,7 +2255,10 @@ void settings_main(void) //настроки основные
                 switch (cur_indi) {
                   case 0: if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127; break;
                   case 1:
-                    if (mainSettings.sensorSet < (SENS_ALL - 1)) mainSettings.sensorSet++;
+                    if (mainSettings.sensorSet < (SENS_ALL - 1)) {
+                      mainSettings.sensorSet++;
+                      mainSettings.tempCorrect = 0;
+                    }
                     _timer_ms[TMR_SENS] = 0; //обновить показания температуры
                     break;
                 }
