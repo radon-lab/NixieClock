@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.6 релиз от 12.07.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.6 релиз от 13.07.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -856,7 +856,7 @@ void playDebugSound(uint8_t _menu) //воспроизвести пункт от�
 #endif
     6
   };
-  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((EIMSK) ? 0 : debugSound[_menu]), PLAYER_MENU_FOLDER);
+  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : debugSound[_menu]), PLAYER_MENU_FOLDER);
 }
 //-----------------------------Отладка------------------------------------
 void settings_debug(void) //отладка
