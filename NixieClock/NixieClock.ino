@@ -868,6 +868,10 @@ void settings_debug(void) //отладка
   uint8_t cur_button = 0; //текущая кнопка пульта
 #endif
 
+#if PLAYER_TYPE
+  playDebugSound(0);
+#endif
+
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
 
