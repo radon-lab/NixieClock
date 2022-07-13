@@ -104,7 +104,7 @@ struct Settings_2 {
 
 struct Settings_3 { //настройки радио
   uint16_t stationsSave[9] = {RADIO_STATIONS};
-  uint16_t stationsFreq = RDA_MIN_FREQ;
+  uint16_t stationsFreq = RADIO_MIN_FREQ;
   uint8_t stationNum;
 } radioSettings;
 
@@ -357,7 +357,7 @@ int main(void) //инициализация
   AMP_INIT; //инициализация питания усилителя
 #endif
 
-#if (PLAYER_TYPE != 1) || UART_MODE
+#if (PLAYER_TYPE != 1) || PLAYER_UART_MODE
   uartDisable(); //отключение uart
 #endif
 
@@ -729,7 +729,7 @@ void testRTC(void) //проверка модуля часов реального
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
 
-  for (_timer_ms[TMR_MS] = TEST_SQW_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) { //ждем сигнала от SQW
+  for (_timer_ms[TMR_MS] = SQW_TEST_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) { //ждем сигнала от SQW
     for (; tick_ms; tick_ms--) { //если был тик, обрабатываем данные
       if (_timer_ms[TMR_MS] > MS_PERIOD) _timer_ms[TMR_MS] -= MS_PERIOD; //если таймер больше периода
       else if (_timer_ms[TMR_MS]) _timer_ms[TMR_MS] = 0; //иначе сбрасываем таймер
@@ -758,8 +758,8 @@ void checkErrors(void) //проверка ошибок
     if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
       indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
 #if PLAYER_TYPE
-      playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER);
-      playerSpeakNumber(i + 1);
+      playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим трек ошибки
+      playerSpeakNumber(i + 1); //воспроизводим номер ошибки
 #else
       melodyPlay(i, SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим мелодию
 #endif
@@ -846,7 +846,7 @@ boolean check_pass(void) //проверка пароля
 //---------------------Воспроизвести пункт отладки-------------------------
 void playDebugSound(uint8_t _menu) //воспроизвести пункт отладки
 {
-  static const uint8_t debugSound[] = {
+  static const uint8_t debugSound[] = { //массив треков меню отладки
     1, 2, 3,
 #if GEN_ENABLE && GEN_FEEDBACK
     4,
@@ -856,7 +856,7 @@ void playDebugSound(uint8_t _menu) //воспроизвести пункт от�
 #endif
     6
   };
-  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : debugSound[_menu]), PLAYER_MENU_FOLDER);
+  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : debugSound[_menu]), PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
 }
 //-----------------------------Отладка------------------------------------
 void settings_debug(void) //отладка
@@ -887,18 +887,18 @@ void settings_debug(void) //отладка
           indiPrintNum(cur_mode + 1, 5); //режим
           switch (cur_mode) {
             case DEB_TIME_CORRECT:
-              if (EIMSK) indiPrintNum((aging < 0) ? (uint8_t) - aging : (uint8_t)aging, 0, (aging > 0) ? 4 : 0);
-              else indiPrintNum(debugSettings.timePeriod, 0);
+              if (EIMSK) indiPrintNum((aging < 0) ? (uint8_t) - aging : (uint8_t)aging, 0, (aging > 0) ? 4 : 0); //выводим коррекцию DS3231
+              else indiPrintNum(debugSettings.timePeriod, 0); //выводим коррекцию внутреннего таймера
               break;
-            case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break;
-            case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break;
+            case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
+            case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break; //выводим максимальный шим
 #if GEN_ENABLE && GEN_FEEDBACK
-            case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break;
+            case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break; //выводим корекцию напряжения
 #endif
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
-              indiPrintNum(cur_button + 1, 0);
-              indiPrintNum(debugSettings.irButtons[cur_button], 1, 3);
+              indiPrintNum(cur_button + 1, 0); //выводим номер кнопки пульта
+              indiPrintNum(debugSettings.irButtons[cur_button], 1, 3); //выводим код кнопки пульта
               break;
 #endif
           }
@@ -906,9 +906,9 @@ void settings_debug(void) //отладка
       }
     }
 #if IR_PORT_ENABLE
-    if (irDisable && irCommand) {
-      debugSettings.irButtons[cur_button] = irCommand;
-      irCommand = 0;
+    if (irDisable && irCommand) { //если управление ИК заблокировано и пришла новая команда
+      debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
+      irCommand = 0; //сбрасываем команду
       secUpd = 0; //обновление экрана
     }
 #endif
@@ -1163,8 +1163,8 @@ void checkAlarms(void) //проверка будильников
       if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
         if (!alarm) { //если тревога не активна
           alarm = alm + 1; //устанавливаем флаг тревоги
-          _timer_sec[TMR_ALM] = (ALARM_TIMEOUT * 60);
-          _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
+          _timer_sec[TMR_ALM] = (ALARM_TIMEOUT * 60); //установили таймер таймаута будильника
+          _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60); //установили таймер таймаута звука будильника
           return; //выходим
         }
       }
@@ -1213,7 +1213,7 @@ void alarmWarn(void) //тревога будильника
       dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-      if (!playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER);
+      if (!playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER); //воспроизводим мелодию
 #endif
 
       if (!alarm || alarmWaint) { //если тревога сброшена
@@ -1291,7 +1291,7 @@ void dataUpdate(void) //обработка данных
 {
   static uint16_t timeClock; //счетчик реального времени
   static uint16_t timerCorrect; //остаток для коррекции времени
-  static uint16_t timerSQW = MIN_SQW_TIME; //таймер контроля сигнала SQW
+  static uint16_t timerSQW = SQW_MIN_TIME; //таймер контроля сигнала SQW
 #if BACKL_TYPE == 2
   backlEffect(); //анимация подсветки
 #else
@@ -1302,9 +1302,9 @@ void dataUpdate(void) //обработка данных
   playerUpdate(); //обработка плеера
 #if PLAYER_TYPE == 2
 #if AMP_PORT_ENABLE
-  if (!_timer_ms[TMR_PLAYER])
+  if (!_timer_ms[TMR_PLAYER]) //если таймер истек
 #endif
-    readerUpdate();
+    readerUpdate(); //обработка SD плеера
 #endif
 #else
   melodyUpdate(); //обработка мелодий
@@ -1371,7 +1371,7 @@ void dataUpdate(void) //обработка данных
 
     if (EIMSK) { //если работаем от внешнего тактирования
       timerSQW += msDec; //прибавили время
-      if (timerSQW > MAX_SQW_TIME) { //если сигнал слишком длинный
+      if (timerSQW > SQW_MAX_TIME) { //если сигнал слишком длинный
         EIMSK = 0; //перешли на внутреннее тактирование
         SET_ERROR(SQW_HIGH_TIME_ERROR); //устанавливаем ошибку длинного сигнала
       }
@@ -1404,7 +1404,7 @@ void dataUpdate(void) //обработка данных
 #endif
 
     if (EIMSK) { //если работаем от внешнего тактирования
-      if (timerSQW < MIN_SQW_TIME) { //если сигнал слишком короткий
+      if (timerSQW < SQW_MIN_TIME) { //если сигнал слишком короткий
         EIMSK = 0; //перешли на внутреннее тактирование
         tick_sec = 0; //сбросили тики
         SET_ERROR(SQW_LOW_TIME_ERROR); //устанавливаем ошибку короткого сигнала
@@ -1531,23 +1531,23 @@ uint8_t check_keys(void) //проверка кнопок
   }
 
 #if IR_PORT_ENABLE
-  if (irCommand && !irDisable) {
-    uint8_t command = irCommand;
-    irCommand = 0;
-    for (uint8_t button = 0; button < sizeof(debugSettings.irButtons); button++) {
-      if (command == debugSettings.irButtons[button]) {
+  if (irCommand && !irDisable) { //если пришла команда и управление ИК не заблокировано
+    uint8_t command = irCommand; //копируем команду
+    irCommand = 0; //сбрасываем команду
+    for (uint8_t button = 0; button < sizeof(debugSettings.irButtons); button++) { //ищем номер кнопки
+      if (command == debugSettings.irButtons[button]) { //если команда совпала
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
         melodyStop(); //сброс воспроизведения мелодии
 #endif
-        return button + 1;
+        return button + 1; //возвращаем номер кнопки
       }
     }
   }
 #endif
 
-  return KEY_NULL;
+  return KEY_NULL; //кнопка не нажата
 }
 //----------------------------Настройки времени----------------------------------
 void settings_time(void) //настройки времени
@@ -1562,7 +1562,7 @@ void settings_time(void) //настройки времени
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if PLAYER_TYPE
-  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER);
+  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
   //настройки
@@ -1674,14 +1674,14 @@ void settings_singleAlarm(void) //настройка будильника
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if PLAYER_TYPE
-  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER);
+  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
   while (1) {
     dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-    if (cur_mode == 3 && !playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER);
+    if (cur_mode == 3 && !playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
 #endif
 
     if (!secUpd) {
@@ -1846,14 +1846,14 @@ void settings_multiAlarm(void) //настройка будильников
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if PLAYER_TYPE
-  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER);
+  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
   while (1) {
     dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-    if (cur_mode == 6 && !playerWriteStatus()) playerSetTrackNow(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER);
+    if (cur_mode == 6 && !playerWriteStatus()) playerSetTrackNow(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
 #endif
 
     if (!secUpd) {
@@ -2050,7 +2050,7 @@ void settings_main(void) //настроки основные
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if PLAYER_TYPE
-  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_MAIN_MENU_START, PLAYER_MENU_FOLDER);
+  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_MAIN_MENU_START, PLAYER_MENU_FOLDER); //воспроизводим название меню
 #endif
 
   //настройки
@@ -3046,7 +3046,7 @@ void radioSeekStop(void) //остановка автопоиска радиос�
 void radioPowerOn(void) //включить питание радиоприемника
 {
   setPowerRDA(RDA_ON); //включаем радио
-  setVolumeRDA(RDA_MAX_VOL); //устанавливаем громкость
+  setVolumeRDA(RADIO_VOLUME); //устанавливаем громкость
   setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
 }
 //---------------------------------Радиоприемник----------------------------------------
@@ -3135,7 +3135,7 @@ void radioMenu(void) //радиоприемник
             seek_run = 0; //выключили поиск
             radioSeekStop(); //остановка автопоиска радиостанции
           }
-          if (radioSettings.stationsFreq < RDA_MAX_FREQ) radioSettings.stationsFreq++; else radioSettings.stationsFreq = RDA_MIN_FREQ; //переключаем частоту
+          if (radioSettings.stationsFreq < RADIO_MAX_FREQ) radioSettings.stationsFreq++; else radioSettings.stationsFreq = RADIO_MIN_FREQ; //переключаем частоту
           setFreqRDA(radioSettings.stationsFreq); //установили частоту
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -3146,7 +3146,7 @@ void radioMenu(void) //радиоприемник
             seek_run = 0; //выключили поиск
             radioSeekStop(); //остановка автопоиска радиостанции
           }
-          if (radioSettings.stationsFreq > RDA_MIN_FREQ) radioSettings.stationsFreq--; else radioSettings.stationsFreq = RDA_MAX_FREQ; //переключаем частоту
+          if (radioSettings.stationsFreq > RADIO_MIN_FREQ) radioSettings.stationsFreq--; else radioSettings.stationsFreq = RADIO_MAX_FREQ; //переключаем частоту
           setFreqRDA(radioSettings.stationsFreq); //установили частоту
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -3181,7 +3181,7 @@ void radioMenu(void) //радиоприемник
         case RIGHT_KEY_HOLD: //удержание правой кнопки
           if (!seek_run) { //если не идет поиск
             seek_run = 2; //включили поиск
-            seek_freq = RDA_MAX_FREQ; //установили максимальную частоту
+            seek_freq = RADIO_MAX_FREQ; //установили максимальную частоту
             setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
             startSeekRDA(RDA_SEEK_UP); //начинаем поиск вверх
             dotSetBright(0); //выключаем точки
@@ -3197,7 +3197,7 @@ void radioMenu(void) //радиоприемник
         case LEFT_KEY_HOLD: //удержание левой кнопки
           if (!seek_run) { //если не идет поиск
             seek_run = 1; //включили поиск
-            seek_freq = RDA_MIN_FREQ; //установили минимальную частоту
+            seek_freq = RADIO_MIN_FREQ; //установили минимальную частоту
             setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
             startSeekRDA(RDA_SEEK_DOWN); //начинаем поиск вниз
             dotSetBright(0); //выключаем точки

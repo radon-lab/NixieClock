@@ -65,7 +65,7 @@ void uartDisable(void) //отключение uart
 //-------------------------------------Статус UART--------------------------------------
 inline boolean uartStatus(void)
 {
-#if UART_MODE
+#if PLAYER_UART_MODE
   return (boolean)!(TIMSK2 & (0x01 << OCIE2B));
 #else
   return (boolean)!(UCSR0B & (0x01 << UDRIE0));
@@ -74,7 +74,7 @@ inline boolean uartStatus(void)
 //-------------------------------Отправка данных в UART---------------------------------
 void uartSendData(void)
 {
-#if UART_MODE
+#if PLAYER_UART_MODE
   uartData = player.transferBuff[0];
   uartByte = 0;
   uartBit = 0;
@@ -88,7 +88,7 @@ void uartSendData(void)
 }
 
 #if PLAYER_TYPE == 1
-#if UART_MODE
+#if PLAYER_UART_MODE
 //---------------------------------Софтовая обработка UART----------------------------------
 ISR(TIMER2_COMPB_vect)
 {
@@ -227,15 +227,15 @@ void playerSpeakNumber(uint16_t _num, boolean _type)
     _num /= 10; //отнимаем младший разряд от числа
   }
 
-  if (buff[3]) playerSetTrack(PLAYER_NUMBERS_START + 37, PLAYER_NUMBERS_FOLDER);
-  if (buff[2]) playerSetTrack((PLAYER_NUMBERS_START + 27) + buff[2], PLAYER_NUMBERS_FOLDER);
+  if (buff[3]) playerSetTrack(PLAYER_NUMBERS_START + 37, PLAYER_NUMBERS_FOLDER); //воспроизведение тысяч
+  if (buff[2]) playerSetTrack((PLAYER_NUMBERS_START + 27) + buff[2], PLAYER_NUMBERS_FOLDER); //воспроизведение сотен
   if (buff[1] > 1) {
-    playerSetTrack((PLAYER_NUMBERS_START + 18) + buff[1], PLAYER_NUMBERS_FOLDER);
+    playerSetTrack((PLAYER_NUMBERS_START + 18) + buff[1], PLAYER_NUMBERS_FOLDER); //воспроизведение десятков
     if (!buff[0]) return;
   }
   else if (buff[1]) buff[0] += 10;
-  if (_type && (buff[0] == 1 || buff[0] == 2)) playerSetTrack((PLAYER_NUMBERS_OTHER - 1) + buff[0], PLAYER_NUMBERS_FOLDER);
-  else playerSetTrack(PLAYER_NUMBERS_START + buff[0], PLAYER_NUMBERS_FOLDER);
+  if (_type && (buff[0] == 1 || buff[0] == 2)) playerSetTrack((PLAYER_NUMBERS_OTHER - 1) + buff[0], PLAYER_NUMBERS_FOLDER); //воспроизведение единиц
+  else playerSetTrack(PLAYER_NUMBERS_START + buff[0], PLAYER_NUMBERS_FOLDER); //воспроизведение единиц
 }
 //--------------------------------Найти окончание фразы по числу--------------------------------
 uint8_t playerGetSpeak(uint16_t _num)
@@ -247,7 +247,7 @@ uint8_t playerGetSpeak(uint16_t _num)
 //------------------------------------Обработка буфера плеера-----------------------------------
 void playerUpdate(void)
 {
-#if PLAYER_TYPE == 1
+#if PLAYER_TYPE == 1 //DF плеер
   static boolean busyState;
   static boolean writeState;
 
@@ -292,7 +292,7 @@ void playerUpdate(void)
       }
     }
   }
-#elif PLAYER_TYPE == 2
+#elif PLAYER_TYPE == 2 //SD плеер
   if (playerWriteStatus()) {
     if (reader.playerState != READER_IDLE) {
       if (player.playbackNow && reader.playerState == READER_SOUND_WAIT) {
@@ -347,10 +347,10 @@ void playerUpdate(void)
 //------------------------------------Инициализация DF плеера------------------------------------
 void dfPlayerInit(void)
 {
-  DF_BUSY_INIT;
-  DF_RX_INIT;
+  DF_BUSY_INIT; //инициализация busy
+  DF_RX_INIT; //инициализация rx
 
-#if !UART_MODE
+#if !PLAYER_UART_MODE
   UBRR0 = (F_CPU / (8UL * PLAYER_UART_SPEED)) - 1; //устанавливаем битрейт
   UCSR0A = (0x01 << U2X0); //устанавливаем удвоение скорости
   UCSR0B = (0x01 << TXEN0); //разрешаем передачу
@@ -364,12 +364,12 @@ void dfPlayerInit(void)
 void sdPlayerInit(void)
 {
   for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) { //инициализация карты памяти
-    if (!cardMount()) {
+    if (!cardMount()) { //если карта обнаружена
       BUZZ_INIT; //инициализация ЦАП
-      break;
+      break; //продолжаем
     }
-    else buffer.cardType = 0;
+    else buffer.cardType = 0; //иначе ошибка инициализации
   }
-  buffer.dacVolume = (9 - PLAYER_VOLUME);
-  if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+  buffer.dacVolume = (9 - PLAYER_VOLUME); //устанавливаем громкость
+  if (buffer.dacVolume > 9) buffer.dacVolume = 0; //ограничиваем громкость
 }
