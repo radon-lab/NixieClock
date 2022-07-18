@@ -20,11 +20,16 @@ struct Settings_4 {
   uint8_t irButtons[8];
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
+  uint8_t min_light = LIGHT_SENS_START_MIN; //минимальный шим
+  uint8_t max_light = LIGHT_SENS_START_MAX; //максимальный шим
   int8_t hvCorrect; //коррекция напряжения
 } debugSettings;
 
 uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
 float pwm_coef; //коэффициент Linear Advance
+
+uint8_t adc_light; //значение АЦП сенсора яркости освещения
+boolean state_light = 1; //состояние сенсора яркости освещения
 
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
 

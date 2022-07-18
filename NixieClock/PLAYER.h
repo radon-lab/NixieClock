@@ -254,7 +254,7 @@ void playerUpdate(void)
   if (!_timer_ms[TMR_PLAYER]) {
     if (busyState != DF_BUSY_CHK) {
       busyState = !busyState;
-      if (!busyState) _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+      if (!busyState) _timer_ms[TMR_PLAYER] = PLAYER_BUSY_WAIT;
       else {
 #if AMP_PORT_ENABLE
         if (!playerWriteStatus()) AMP_DISABLE;
@@ -282,10 +282,12 @@ void playerUpdate(void)
 
         playerGenCRC(player.transferBuff);
 
-        writeState = (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER) ? 0 : 1;
-        if (player.transferBuff[_COMMAND] == PLAYER_CMD_MUTE) player.playbackMute = player.transferBuff[_DATA_L];
+        switch (player.transferBuff[_COMMAND]) {
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: writeState = 1; break;
+          case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
+        }
 
-        if (!player.playbackMute || !writeState) uartSendData();
+        if (!player.playbackMute || (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) uartSendData();
         if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
 
         _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;

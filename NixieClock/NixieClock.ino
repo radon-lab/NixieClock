@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.6 релиз от 13.07.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.7 релиз от 18.07.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -27,6 +27,7 @@ enum {
   TMR_SENS,      //таймер сенсоров температуры
   TMR_PLAYER,    //таймер плеера/мелодий
   TMR_BACKL,     //таймер подсветки
+  TMR_LIGHT,     //таймер сенсора яркости
   TMR_COLOR,     //таймер смены цвета подсветки
   TMR_DOT,       //таймер точек
   TMR_ANIM,      //таймер анимаций
@@ -54,8 +55,9 @@ struct sensorData {
   uint16_t temp; //температура
   uint16_t press; //давление
   uint8_t hum; //влажность
+  uint8_t type; //тип датчика температуры
+  boolean init; //флаг инициализации порта
   boolean err; //ошибка сенсора
-  boolean initPort; //флаг инициализации порта
 } sens;
 
 //----------------Библиотеки----------------
@@ -88,7 +90,6 @@ struct Settings_1 {
   uint8_t timeHour[2] = {DEFAULT_HOUR_SOUND_START, DEFAULT_HOUR_SOUND_END}; //время звукового оповещения нового часа
   boolean timeFormat = DEFAULT_TIME_FORMAT; //формат времени
   boolean knockSound = DEFAULT_KNOCK_SOUND; //звук кнопок
-  uint8_t sensorSet = DEFAULT_TEMP_SENSOR; //сенсор температуры
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
@@ -110,7 +111,9 @@ struct Settings_3 { //настройки радио
 
 
 //переменные обработки кнопок
-struct keysData {
+struct buttonData {
+  uint8_t state; //текущее состояние кнопок
+  uint8_t adc; //результат опроса аналоговых кнопок
   uint8_t leftMax; //максимальное значение левой клавиши
   uint8_t leftMin; //минимальное значение левой клавиши
   uint8_t rightMax; //максимальное значение правой клавиши
@@ -121,15 +124,11 @@ struct keysData {
   uint8_t addMax; //максимальное значение дополнитнльной клавиши
   uint8_t addMin; //минимальное значение дополнитнльной клавиши
 #endif
-} key;
-uint16_t btn_tmr; //таймер тиков обработки кнопок
-uint8_t btn_adc; //результат опроса аналоговых кнопок
-boolean btn_check; //флаг разрешения опроса кнопки
-boolean btn_state; //флаг текущего состояния кнопки
-boolean btn_update; //флаг обновления аналоговых кнопок
+} btn;
+uint8_t analogState; //флаги обновления аналоговых портов
 
 //переменные работы с подсветкой
-struct backlData {
+struct backlightData {
   uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_2_step; //шаг эффекта номер 2
   uint8_t mode_4_step; //шаг эффекта номер 4
@@ -213,12 +212,9 @@ enum {
   DEB_TIME_CORRECT, //корректировка хода времени
   DEB_DEFAULT_MIN_PWM, //минимальное значение шим
   DEB_DEFAULT_MAX_PWM, //максимальное значение шим
-#if GEN_ENABLE && GEN_FEEDBACK
   DEB_HV_ADC, //значение ацп преобразователя
-#endif
-#if IR_PORT_ENABLE
   DEB_IR_BUTTONS, //програмирование кнопок
-#endif
+  DEB_LIGHT_SENS, //калибровка датчика освещения
   DEB_RESET, //максимальное значение шим
   DEB_MAX_ITEMS //максимум пунктов меню
 };
@@ -295,9 +291,8 @@ enum {
   SENS_BME, //датчики BME/BMP
 #endif
 #if SENS_PORT_ENABLE
-  SENS_DHT11, //датчик DHT11
-  SENS_DHT22, //датчик DHT22
   SENS_DS18B20, //датчик DS18B20
+  SENS_DHT, //датчик DHT
 #endif
   SENS_ALL //датчиков всего
 };
@@ -318,6 +313,9 @@ enum {
   REPLAY_ONCE, //проиграть один раз
   REPLAY_CYCLE //проиграть по кругу
 };
+
+#define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
+#define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
 
 #define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
@@ -341,12 +339,12 @@ enum {
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
 
 #if BTN_TYPE
-#define SET_CHK checkAnalogKey(key.setMin, key.setMax) //чтение средней аналоговой кнопки
-#define LEFT_CHK checkAnalogKey(key.leftMin, key.leftMax) //чтение левой аналоговой кнопки
-#define RIGHT_CHK checkAnalogKey(key.rightMin, key.rightMax) //чтение правой аналоговой кнопки
+#define SET_CHK buttonCheckADC(btn.setMin, btn.setMax) //чтение средней аналоговой кнопки
+#define LEFT_CHK buttonCheckADC(btn.leftMin, btn.leftMax) //чтение левой аналоговой кнопки
+#define RIGHT_CHK buttonCheckADC(btn.rightMin, btn.rightMax) //чтение правой аналоговой кнопки
 
 #if (BTN_ADD_TYPE == 2)
-#define ADD_CHK checkAnalogKey(key.addMin, key.addMax) //чтение правой аналоговой кнопки
+#define ADD_CHK buttonCheckADC(btn.addMin, btn.addMax) //чтение правой аналоговой кнопки
 #endif
 #endif
 
@@ -459,10 +457,13 @@ int main(void) //инициализация
 #endif
 
   backlAnimDisable(); //запретили эффекты подсветки
-  testRTC(); //проверка модуля часов
 
-  if (!LEFT_CHK && check_pass()) settings_debug(); //если правая кнопка зажата запускаем отладку
-  if (!RIGHT_CHK) testLamp(); //если правая кнопка зажата запускаем тест системы
+  checkRTC(); //проверка модуля часов
+  checkTempSens(); //проверка установленного датчика температуры
+
+  if (!LEFT_CHK && check_pass()) debug_menu(); //если правая кнопка зажата запускаем отладку
+  if (!RIGHT_CHK) test_system(); //если правая кнопка зажата запускаем тест системы
+
   checkErrors(); //проверка на наличие ошибок
 
 #if ALARM_TYPE == 1
@@ -470,8 +471,13 @@ int main(void) //инициализация
 #endif
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
-  _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер антиотравления
-  _timer_sec[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //устанавливаем таймер синхронизации
+  _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер антиотравления
+  _timer_sec[TMR_SYNC] = (uint16_t)(RTC_SYNC_TIME * 60); //устанавливаем таймер синхронизации
+
+#if LIGHT_SENS_ENABLE
+  _timer_ms[TMR_LIGHT] = LIGHT_SENS_TIME;
+  analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
+#endif
 
   animsReset(); //сброс анимаций
   changeBright(); //установка яркости от времени суток
@@ -539,6 +545,11 @@ void backlAnimDisable(void) //запретить анимации подсвет
 {
   fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
 }
+//---------------------Установка яркости от времени суток-----------------------------
+boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
+{
+  return ((_start > _end && (RTC.h >= _start || RTC.h < _end)) || (_start < _end && RTC.h >= _start && RTC.h < _end));
+}
 //-------------------------Получить 12-ти часовой формат------------------------
 uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
 {
@@ -604,10 +615,93 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
   else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
   return 1;
 }
+//---------------Проверка установленного датчика температуры-----------------------
+void checkTempSens(void) //проверка установленного датчика температуры
+{
+#if SENS_BME_ENABLE || SENS_PORT_ENABLE
+  for (_timer_ms[TMR_SENS] = TEMP_START_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
+#endif
+  for (sens.type = (SENS_ALL - 1); sens.type; sens.type--) { //перебираем все датчики температуры
+    updateTemp(); //обновить показания температуры
+    if (!sens.err) { //если найден датчик температуры
+      _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+      return; //выходим
+    }
+  }
+}
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
   hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + constrain(debugSettings.hvCorrect, -25, 25);
+}
+//------------------------------Обработка аналоговых входов-----------------------------------------
+void analogUpdate(void) //обработка аналоговых входов
+{
+  if (!(ADCSRA & (1 << ADSC))) { //ждем окончания преобразования
+    switch (ADMUX & 0x0F) {
+#if GEN_ENABLE && GEN_FEEDBACK
+      case ANALOG_DET_PIN: {
+          static uint8_t adc_cycle; //циклы буфера усреднения
+          static uint16_t adc_temp; //буфер усреднения
+
+          adc_temp += ADCL | ((uint16_t)ADCH << 8); //добавляем значение в буфер
+          if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
+            adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
+            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
+            else {
+              TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
+              CONV_OFF; //выключаем пин преобразователя
+            }
+            adc_temp = 0; //сбрасываем буфер усреднения
+            adc_cycle = 0; //сбрасываем циклы буфера усреднения
+
+            analogState |= 0x04; //установили флаг обновления АЦП обратной связи преобразователя
+            ADMUX = 0; //сбросли признак чтения АЦП
+          }
+          else ADCSRA |= (1 << ADSC); //перезапускаем преобразование
+        }
+        break;
+#endif
+#if BTN_TYPE
+      case ANALOG_BTN_PIN:
+        btn.adc = ADCH; //записываем результат опроса
+        ADMUX = 0; //сбросли признак чтения АЦП
+        break;
+#endif
+#if LIGHT_SENS_ENABLE
+      case ANALOG_LIGHT_PIN:
+        adc_light = ADCH; //записываем результат опроса
+        ADMUX = 0; //сбросли признак чтения АЦП
+        break;
+#endif
+      default:
+#if LIGHT_SENS_ENABLE
+        if (analogState & 0x01) { //сенсор яркости
+          analogState &= ~0x01; //сбросили флаг обновления АЦП сенсора яркости
+          ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_LIGHT_PIN; //настройка мультиплексатора АЦП
+          ADCSRA |= (1 << ADSC); //запускаем преобразование
+          return; //выходим
+        }
+#endif
+#if BTN_TYPE
+        if (analogState & 0x02) { //аналоговые кнопки
+          analogState &= ~0x02; //сбросили флаг обновления АЦП кнопок
+          ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
+          ADCSRA |= (1 << ADSC); //запускаем преобразование
+          return; //выходим
+        }
+#endif
+#if GEN_ENABLE && GEN_FEEDBACK
+        if (analogState & 0x04) { //обратная связь
+          analogState &= ~0x04; //сбросили флаг обновления АЦП обратной связи преобразователя
+          ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
+          ADCSRA |= (1 << ADSC); //запускаем преобразование
+          return; //выходим
+        }
+#endif
+        break;
+    }
+  }
 }
 //----------------------Чтение напряжения питания----------------------------------
 void checkVCC(void) //чтение напряжения питания
@@ -627,99 +721,168 @@ void checkVCC(void) //чтение напряжения питания
   if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
 
 #if BTN_TYPE
-  updateKeysADC(); //обновление пределов аналоговых кнопок
+  buttonUpdateADC(); //обновление пределов аналоговых кнопок
 
   ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
   ADCSRA |= (1 << ADSC); //запускаем преобразование
   while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
-  btn_adc = ADCH; //записываем результат опроса
+  btn.adc = ADCH; //записываем результат опроса
 #endif
 #if GEN_ENABLE && GEN_FEEDBACK
   ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
 
-#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE
+#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE || LIGHT_SENS_ENABLE
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
 }
 //-----------------Обновление пределов аналоговых кнопок----------------------------
-void updateKeysADC(void) //обновление пределов аналоговых кнопок
+void buttonUpdateADC(void) //обновление пределов аналоговых кнопок
 {
   int16_t temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_SET_R_HIGH));
-  key.setMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  key.setMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.setMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.setMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
 
   temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_LEFT_R_HIGH));
-  key.leftMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  key.leftMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.leftMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.leftMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
 
   temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_RIGHT_R_HIGH));
-  key.rightMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  key.rightMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.rightMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.rightMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
 
 #if (BTN_ADD_TYPE == 2)
   temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_ADD_R_HIGH));
-  key.addMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  key.addMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.addMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
+  btn.addMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
 #endif
 }
 //-----------------------Проверка аналоговой кнопки--------------------------------
-boolean checkAnalogKey(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
+inline boolean buttonCheckADC(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
 {
-  return !(minADC < btn_adc && btn_adc <= maxADC); //возвращаем результат опроса
+  return !(minADC < btn.adc && btn.adc <= maxADC); //возвращаем результат опроса
 }
-//---------------------------Проверка системы---------------------------------------
-void testLamp(void) //проверка системы
+//---------------------------Проверка кнопок---------------------------------------
+inline uint8_t buttonState(void) //проверка кнопок
 {
-#if BACKL_TYPE != 2
-  backlSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
+  uint8_t button = btn.state; //запоминаем текущее состояние кнопки
+  btn.state = 0; //сбрасываем текущее состояние кнопки
+  return button; //возвращаем состояние кнопки
+}
+//--------------------------Обновление кнопок--------------------------------------
+inline uint8_t buttonStateUpdate(void) //обновление кнопок
+{
+  static boolean btn_check; //флаг разрешения опроса кнопки
+  static boolean btn_state; //флаг текущего состояния кнопки
+  static uint8_t btn_switch; //флаг мультиплексатора кнопок
+  static uint16_t btn_tmr; //таймер тиков обработки кнопок
+
+#if BTN_TYPE
+  analogState |= 0x02; //устанавливаем флаг обновления АЦП кнопок
 #endif
-  indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
-  dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
+
+  switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
+    case 0:
+      if (!SET_CHK) { //если нажата кл. ок
+        btn_switch = 1; //выбираем клавишу опроса
+        btn_state = 0; //обновляем текущее состояние кнопки
+      }
+      else if (!LEFT_CHK) { //если нажата левая кл.
+        btn_switch = 2; //выбираем клавишу опроса
+        btn_state = 0; //обновляем текущее состояние кнопки
+      }
+      else if (!RIGHT_CHK) { //если нажата правая кл.
+        btn_switch = 3; //выбираем клавишу опроса
+        btn_state = 0; //обновляем текущее состояние кнопки
+      }
+#if BTN_ADD_TYPE
+      else if (!ADD_CHK) { //если нажата дополнительная кл.
+        btn_switch = 4; //выбираем клавишу опроса
+        btn_state = 0; //обновляем текущее состояние кнопки
+      }
+#endif
+      else btn_state = 1; //обновляем текущее состояние кнопки
+      break;
+    case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
+    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
+    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
+#if BTN_ADD_TYPE
+    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную клавишу
+#endif
+  }
+
+  switch (btn_state) { //переключаемся в зависимости от состояния клавиши
+    case 0:
+      if (btn_check) { //если разрешена провекрка кнопки
+        if (++btn_tmr > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
+          btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+          btn_check = 0; //запрещем проврку кнопки
 #if PLAYER_TYPE
-  playerSetTrack(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER);
-#endif
-  while (1) {
-    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
-      indiClr(); //очистка индикаторов
-#if DOTS_PORT_ENABLE
-      indiClrDots(); //выключаем разделительные точки
-      indiSetDots(indi); //включаем разделителную точку
-#endif
-#if BACKL_TYPE == 2
-#if TEST_BACKL_REVERSE
-      setLedBright((LAMP_NUM - 1) - indi, TEST_BACKL_BRIGHT); //включаем светодиод
+          playerStop(); //сброс воспроизведения плеера
 #else
-      setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
+          melodyStop(); //сброс воспроизведения мелодии
 #endif
+          switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
+            case 1: return SET_KEY_HOLD; //возвращаем удержание средней кнопки
+            case 2: return LEFT_KEY_HOLD; //возвращаем удержание левой кнопки
+            case 3: return RIGHT_KEY_HOLD; //возвращаем удержание правой кнопки
+#if BTN_ADD_TYPE
+            case 4: return ADD_KEY_HOLD; //возвращаем удержание дополнительной кнопки
 #endif
-      for (uint8_t digit = 0; digit < 10; digit++) {
-        indiPrintNum(digit, indi); //отрисовываем цифру
-#if BACKL_TYPE == 2
-#if TEST_BACKL_REVERSE
-        setLedHue((LAMP_NUM - 1) - indi, digit * 25); //устанавливаем статичный цвет
-#else
-        setLedHue(indi, digit * 25); //устанавливаем статичный цвет
-#endif
-        showLeds(); //отрисовка светодиодов
-#endif
-#if !PLAYER_TYPE
-        buzz_pulse(TEST_FREQ_STEP + (digit * TEST_FREQ_STEP), TEST_LAMP_TIME); //перебор частот
-#endif
-        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
-          dataUpdate(); //обработка данных
-          if (check_keys()) return; //возврат если нажата кнопка
+          }
         }
       }
-#if BACKL_TYPE == 2
-      setLedBright(0); //выключаем светодиоды
+      break;
+
+    case 1:
+      if (btn_tmr > BTN_GIST_TICK) { //если таймер больше времени антидребезга
+        btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+        btn_check = 0; //запрещем проврку кнопки
+#if PLAYER_TYPE
+        playerStop(); //сброс воспроизведения плеера
+#else
+        if (mainSettings.knockSound) buzz_pulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+        melodyStop(); //сброс воспроизведения мелодии
 #endif
+        switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
+          case 1: return SET_KEY_PRESS; //возвращаем клик средней кнопкой
+          case 2: return LEFT_KEY_PRESS; //возвращаем клик левой кнопкой
+          case 3: return RIGHT_KEY_PRESS; //возвращаем клик правой кнопкой
+#if BTN_ADD_TYPE
+          case 4: return ADD_KEY_PRESS; //возвращаем клик дополнительной кнопкой
+#endif
+        }
+      }
+      else if (!btn_tmr) {
+        btn_check = 1; //разрешаем проврку кнопки
+        btn_switch = 0; //сбрасываем мультиплексатор кнопок
+      }
+      else btn_tmr--; //убираем дребезг
+      break;
+  }
+
+#if IR_PORT_ENABLE
+  if (irCommand && !irDisable) { //если пришла команда и управление ИК не заблокировано
+    uint8_t command = irCommand; //копируем команду
+    irCommand = 0; //сбрасываем команду
+    for (uint8_t button = 0; button < sizeof(debugSettings.irButtons); button++) { //ищем номер кнопки
+      if (command == debugSettings.irButtons[button]) { //если команда совпала
+#if PLAYER_TYPE
+        playerStop(); //сброс воспроизведения плеера
+#else
+        melodyStop(); //сброс воспроизведения мелодии
+#endif
+        return button + 1; //возвращаем номер кнопки
+      }
     }
   }
+#endif
+
+  return KEY_NULL; //кнопка не нажата
 }
 //------------------Проверка модуля часов реального времени-------------------------
-void testRTC(void) //проверка модуля часов реального времени
+void checkRTC(void) //проверка модуля часов реального времени
 {
   disable32K(); //отключение вывода 32K
 
@@ -763,10 +926,68 @@ void checkErrors(void) //проверка ошибок
 #else
       melodyPlay(i, SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим мелодию
 #endif
-      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !check_keys() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
     }
   }
   updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
+}
+//---------------------------Проверка системы---------------------------------------
+void test_system(void) //проверка системы
+{
+  indiPrintNum(CONVERT_NUM(FIRMWARE_VERSION), 0); //отрисовываем версию прошивки
+#if PLAYER_TYPE
+  playerSetTrackNow(PLAYER_FIRMWARE_SOUND, PLAYER_GENERAL_FOLDER);
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[0]));
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[2]));
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
+#endif
+  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) dataUpdate(); //ждем
+#if PLAYER_TYPE
+  playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER);
+#endif
+
+#if BACKL_TYPE != 2
+  backlSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
+#endif
+  indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
+  dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
+  while (1) {
+    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
+      indiClr(); //очистка индикаторов
+#if DOTS_PORT_ENABLE
+      indiClrDots(); //выключаем разделительные точки
+      indiSetDots(indi); //включаем разделителную точку
+#endif
+#if BACKL_TYPE == 2
+#if TEST_BACKL_REVERSE
+      setLedBright((LAMP_NUM - 1) - indi, TEST_BACKL_BRIGHT); //включаем светодиод
+#else
+      setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
+#endif
+#endif
+      for (uint8_t digit = 0; digit < 10; digit++) {
+        indiPrintNum(digit, indi); //отрисовываем цифру
+#if BACKL_TYPE == 2
+#if TEST_BACKL_REVERSE
+        setLedHue((LAMP_NUM - 1) - indi, digit * 25); //устанавливаем статичный цвет
+#else
+        setLedHue(indi, digit * 25); //устанавливаем статичный цвет
+#endif
+        showLeds(); //отрисовка светодиодов
+#endif
+#if !PLAYER_TYPE
+        buzz_pulse(TEST_FREQ_STEP + (digit * TEST_FREQ_STEP), TEST_LAMP_TIME); //перебор частот
+#endif
+        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+          dataUpdate(); //обработка данных
+          if (buttonState()) return; //возврат если нажата кнопка
+        }
+      }
+#if BACKL_TYPE == 2
+      setLedBright(0); //выключаем светодиоды
+#endif
+    }
+  }
 }
 //-----------------------------Проверка пароля------------------------------------
 boolean check_pass(void) //проверка пароля
@@ -802,7 +1023,7 @@ boolean check_pass(void) //проверка пароля
     }
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_indi) {
           case 0: if (((entry_pass % 10000) / 1000) > 0) entry_pass -= 1000; else entry_pass += 9000; break; //первый разряд
@@ -844,22 +1065,12 @@ boolean check_pass(void) //проверка пароля
   return 0;
 }
 //---------------------Воспроизвести пункт отладки-------------------------
-void playDebugSound(uint8_t _menu) //воспроизвести пункт отладки
+void debugPlayItem(uint8_t _menu) //воспроизвести пункт отладки
 {
-  static const uint8_t debugSound[] = { //массив треков меню отладки
-    1, 2, 3,
-#if GEN_ENABLE && GEN_FEEDBACK
-    4,
-#endif
-#if IR_PORT_ENABLE
-    5,
-#endif
-    6
-  };
-  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : debugSound[_menu]), PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
+  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : _menu + 1), PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
 }
 //-----------------------------Отладка------------------------------------
-void settings_debug(void) //отладка
+void debug_menu(void) //отладка
 {
   boolean set = 0; //режим настройки
   int8_t aging = 0; //буфер регистра старения
@@ -867,9 +1078,13 @@ void settings_debug(void) //отладка
 #if IR_PORT_ENABLE
   uint8_t cur_button = 0; //текущая кнопка пульта
 #endif
+#if LIGHT_SENS_ENABLE
+  uint8_t temp_min = 255;
+  uint8_t temp_max = 0;
+#endif
 
 #if PLAYER_TYPE
-  playDebugSound(0);
+  debugPlayItem(0);
 #endif
 
   dotSetBright(0); //выключаем точки
@@ -905,26 +1120,51 @@ void settings_debug(void) //отладка
               indiPrintNum(debugSettings.irButtons[cur_button], 1, 3); //выводим код кнопки пульта
               break;
 #endif
+#if LIGHT_SENS_ENABLE
+            case DEB_LIGHT_SENS: //калибровка датчика освещения
+              indiPrintNum(adc_light, 1, 3); //выводим значение АЦП датчика освещения
+              break;
+#endif
           }
           break;
       }
     }
+
+#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
+    if (set) {
+      switch (cur_mode) {
 #if IR_PORT_ENABLE
-    if (irDisable && irCommand) { //если управление ИК заблокировано и пришла новая команда
-      debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
-      irCommand = 0; //сбрасываем команду
-      secUpd = 0; //обновление экрана
+        case DEB_IR_BUTTONS: //програмирование кнопок
+          if (irDisable && irCommand) { //если управление ИК заблокировано и пришла новая команда
+            debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
+            irCommand = 0; //сбрасываем команду
+            secUpd = 0; //обновление экрана
+          }
+          break;
+#endif
+#if LIGHT_SENS_ENABLE
+        case DEB_LIGHT_SENS: //калибровка датчика освещения
+          if (!_timer_ms[TMR_LIGHT]) {
+            if (temp_min > adc_light) temp_min = adc_light;
+            if (temp_max < adc_light) temp_max = adc_light;
+            analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
+            _timer_ms[TMR_LIGHT] = LIGHT_SENS_TIME;
+            secUpd = 0; //обновление экрана
+          }
+          break;
+#endif
+      }
     }
 #endif
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (set) {
           case 0:
             if (cur_mode > 0) cur_mode--;
             else cur_mode = DEB_MAX_ITEMS - 1;
 #if PLAYER_TYPE
-            playDebugSound(cur_mode);
+            debugPlayItem(cur_mode);
 #endif
             break;
           case 1:
@@ -966,7 +1206,7 @@ void settings_debug(void) //отладка
             if (cur_mode < (DEB_MAX_ITEMS - 1)) cur_mode++;
             else cur_mode = 0;
 #if PLAYER_TYPE
-            playDebugSound(cur_mode);
+            debugPlayItem(cur_mode);
 #endif
             break;
           case 1:
@@ -1003,7 +1243,18 @@ void settings_debug(void) //отладка
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
-        set = !set;
+        switch (cur_mode) {
+#if !GEN_ENABLE || !GEN_FEEDBACK
+          case DEB_HV_ADC: break; //коррекция значения ацп преобразователя
+#endif
+#if !IR_PORT_ENABLE
+          case DEB_IR_BUTTONS: break; //програмирование кнопок
+#endif
+#if !LIGHT_SENS_ENABLE
+          case DEB_LIGHT_SENS: break; //калибровка датчика освещения
+#endif
+          default: set = !set; break;
+        }
         if (set) {
           dotSetBright(DEFAULT_DOT_BRIGHT); //включаем точки
           switch (cur_mode) {
@@ -1016,6 +1267,12 @@ void settings_debug(void) //отладка
             case DEB_IR_BUTTONS: //програмирование кнопок
               irDisable = 1;
               cur_button = 0;
+              break;
+#endif
+#if LIGHT_SENS_ENABLE
+            case DEB_LIGHT_SENS: //калибровка датчика освещения
+              temp_min = 255;
+              temp_max = 0;
               break;
 #endif
             case DEB_RESET:
@@ -1040,9 +1297,24 @@ void settings_debug(void) //отладка
           }
         }
         else {
+#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
+          switch (cur_mode) {
 #if IR_PORT_ENABLE
-          irDisable = 0;
+            case DEB_IR_BUTTONS: //програмирование кнопок
+              irDisable = 0;
+              break;
 #endif
+#if LIGHT_SENS_ENABLE
+            case DEB_LIGHT_SENS: { //калибровка датчика освещения
+                uint8_t temp_mid = ((temp_max - temp_min) / 2) + temp_min;
+                debugSettings.min_light = temp_mid - LIGHT_SENS_GIST;
+                debugSettings.max_light = temp_mid + LIGHT_SENS_GIST;
+              }
+              break;
+#endif
+          }
+#endif
+
           dotSetBright(0); //выключаем точки
           indiSetBright(30); //устанавливаем максимальную яркость индикаторов
         }
@@ -1167,8 +1439,8 @@ void checkAlarms(void) //проверка будильников
       if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
         if (!alarm) { //если тревога не активна
           alarm = alm + 1; //устанавливаем флаг тревоги
-          _timer_sec[TMR_ALM] = (ALARM_TIMEOUT * 60); //установили таймер таймаута будильника
-          _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60); //установили таймер таймаута звука будильника
+          _timer_sec[TMR_ALM] = (uint16_t)(ALARM_TIMEOUT * 60); //установили таймер таймаута будильника
+          _timer_sec[TMR_ALM_SOUND] = (uint16_t)(ALARM_TIMEOUT_SOUND * 60); //установили таймер таймаута звука будильника
           return; //выходим
         }
       }
@@ -1186,14 +1458,14 @@ void alarmDataUpdate(void) //обновление данных будильни�
 
     if (ALARM_WAINT && alarmWaint) { //если будильник в режиме ожидания
       if (!_timer_sec[TMR_ALM_WAINT]) { //если пришло время повторно включить звук
-        _timer_sec[TMR_ALM_SOUND] = (ALARM_TIMEOUT_SOUND * 60);
+        _timer_sec[TMR_ALM_SOUND] = (uint16_t)(ALARM_TIMEOUT_SOUND * 60);
         alarmWaint = 0; //сбрасываем флаг ожидания
       }
     }
     else if (ALARM_TIMEOUT_SOUND) { //если таймаут тревоги включен
       if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
         if (ALARM_WAINT) { //если время ожидания включено
-          _timer_sec[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
+          _timer_sec[TMR_ALM_WAINT] = (uint16_t)(ALARM_WAINT * 60);
           alarmWaint = 1; //устанавливаем флаг ожидания тревоги
         }
         else alarmReset(); //сброс будильника
@@ -1248,14 +1520,14 @@ void alarmWarn(void) //тревога будильника
         blink_data = !blink_data; //мигаем временем
       }
 
-      switch (check_keys()) {
+      switch (buttonState()) {
         case LEFT_KEY_PRESS: //клик левой кнопкой
         case RIGHT_KEY_PRESS: //клик правой кнопкой
         case SET_KEY_PRESS: //клик средней кнопкой
         case ADD_KEY_PRESS: //клик дополнительной кнопкой
           if (ALARM_WAINT) { //если есть время ожидания
             alarmWaint = 1; //устанавливаем флаг ожидания
-            _timer_sec[TMR_ALM_WAINT] = (ALARM_WAINT * 60);
+            _timer_sec[TMR_ALM_WAINT] = (uint16_t)(ALARM_WAINT * 60);
             _timer_sec[TMR_ALM_SOUND] = 0;
 #if PLAYER_TYPE
             playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
@@ -1290,7 +1562,7 @@ void alarmWarn(void) //тревога будильника
     }
   }
 }
-//----------------------------------Обработка данных---------------------------------------------------------
+//----------------------------------Обработка данных------------------------------------------------
 void dataUpdate(void) //обработка данных
 {
   static uint16_t timeClock; //счетчик реального времени
@@ -1314,54 +1586,12 @@ void dataUpdate(void) //обработка данных
   melodyUpdate(); //обработка мелодий
 #endif
 
-#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE
-  if (!(ADCSRA & (1 << ADSC))) { //ждем окончания преобразования
-    switch (ADMUX & 0x0F) {
-#if GEN_ENABLE && GEN_FEEDBACK
-      case ANALOG_DET_PIN: {
-          static uint8_t adc_cycle; //циклы буфера усреднения
-          static uint16_t adc_temp; //буфер усреднения
-
-          adc_temp += ADCL | ((uint16_t)ADCH << 8); //добавляем значение в буфер
-          if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
-            adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
-            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
-            else {
-              TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
-              CONV_OFF; //выключаем пин преобразователя
-            }
-            adc_temp = 0; //сбрасываем буфер усреднения
-            adc_cycle = 0; //сбрасываем циклы буфера усреднения
-#if BTN_TYPE
-            if (btn_update) ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
-#endif
-          }
-        }
-        break;
-#endif
-#if BTN_TYPE
-      case ANALOG_BTN_PIN:
-        btn_adc = ADCH; //записываем результат опроса
-        btn_update = 0; //очищаем флаг обновления АЦП кнопок
-#if GEN_ENABLE && GEN_FEEDBACK
-        ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
-#endif
-        break;
-#endif
-    }
-    ADCSRA |= (1 << ADSC); //запускаем преобразование
-  }
+#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE || LIGHT_SENS_ENABLE
+  analogUpdate(); //обработка аналоговых входов
 #endif
 
   for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
-    switch (btn_state) { //таймер опроса кнопок
-      case 0: if (btn_check) btn_tmr++; break; //считаем циклы
-      case 1: if (btn_tmr) btn_tmr--; break; //убираем дребезг
-    }
-
-#if BTN_TYPE
-    btn_update = 1; //устанавливаем флаг обновления АЦП кнопок
-#endif
+    btn.state = buttonStateUpdate(); //обновление состояния кнопок
 
     timerCorrect += debugSettings.timePeriod; //прибавляем период для коррекции
     uint8_t msDec = timerCorrect / 1000; //находим целые мс
@@ -1417,7 +1647,7 @@ void dataUpdate(void) //обработка данных
       timerSQW = 0; //сбросили таймер
     }
     else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
-      _timer_sec[TMR_SYNC] = (uint16_t)RTC_SYNC_TIME * 60; //установили таймер
+      _timer_sec[TMR_SYNC] = (uint16_t)(RTC_SYNC_TIME * 60); //установили таймер
       getTime(); //получили новое время
       return; //выходим
     }
@@ -1449,109 +1679,6 @@ void dataUpdate(void) //обработка данных
 #endif
     }
   }
-}
-//-----------------------------Проверка кнопок----------------------------------------------------
-uint8_t check_keys(void) //проверка кнопок
-{
-  static uint8_t btn_switch; //флаг мультиплексатора кнопок
-
-  switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
-    case 0:
-      if (!SET_CHK) { //если нажата кл. ок
-        btn_switch = 1; //выбираем клавишу опроса
-        btn_state = 0; //обновляем текущее состояние кнопки
-      }
-      else if (!LEFT_CHK) { //если нажата левая кл.
-        btn_switch = 2; //выбираем клавишу опроса
-        btn_state = 0; //обновляем текущее состояние кнопки
-      }
-      else if (!RIGHT_CHK) { //если нажата правая кл.
-        btn_switch = 3; //выбираем клавишу опроса
-        btn_state = 0; //обновляем текущее состояние кнопки
-      }
-#if BTN_ADD_TYPE
-      else if (!ADD_CHK) { //если нажата дополнительная кл.
-        btn_switch = 4; //выбираем клавишу опроса
-        btn_state = 0; //обновляем текущее состояние кнопки
-      }
-#endif
-      else btn_state = 1; //обновляем текущее состояние кнопки
-      break;
-    case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
-    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
-    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
-#if BTN_ADD_TYPE
-    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную клавишу
-#endif
-  }
-
-  switch (btn_state) { //переключаемся в зависимости от состояния клавиши
-    case 0:
-      if (btn_check) { //если разрешена провекрка кнопки
-        if (btn_tmr > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
-          btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-          btn_check = 0; //запрещем проврку кнопки
-#if PLAYER_TYPE
-          playerStop(); //сброс воспроизведения плеера
-#else
-          melodyStop(); //сброс воспроизведения мелодии
-#endif
-          switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
-            case 1: return SET_KEY_HOLD; //возвращаем удержание средней кнопки
-            case 2: return LEFT_KEY_HOLD; //возвращаем удержание левой кнопки
-            case 3: return RIGHT_KEY_HOLD; //возвращаем удержание правой кнопки
-#if BTN_ADD_TYPE
-            case 4: return ADD_KEY_HOLD; //возвращаем удержание дополнительной кнопки
-#endif
-          }
-        }
-      }
-      break;
-
-    case 1:
-      if (btn_tmr > BTN_GIST_TICK) { //если таймер больше времени антидребезга
-        btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-        btn_check = 0; //запрещем проврку кнопки
-#if PLAYER_TYPE
-        playerStop(); //сброс воспроизведения плеера
-#else
-        if (mainSettings.knockSound) buzz_pulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
-        melodyStop(); //сброс воспроизведения мелодии
-#endif
-        switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
-          case 1: return SET_KEY_PRESS; //возвращаем клик средней кнопкой
-          case 2: return LEFT_KEY_PRESS; //возвращаем клик левой кнопкой
-          case 3: return RIGHT_KEY_PRESS; //возвращаем клик правой кнопкой
-#if BTN_ADD_TYPE
-          case 4: return ADD_KEY_PRESS; //возвращаем клик дополнительной кнопкой
-#endif
-        }
-      }
-      else if (!btn_tmr) {
-        btn_check = 1; //разрешаем проврку кнопки
-        btn_switch = 0; //сбрасываем мультиплексатор кнопок
-      }
-      break;
-  }
-
-#if IR_PORT_ENABLE
-  if (irCommand && !irDisable) { //если пришла команда и управление ИК не заблокировано
-    uint8_t command = irCommand; //копируем команду
-    irCommand = 0; //сбрасываем команду
-    for (uint8_t button = 0; button < sizeof(debugSettings.irButtons); button++) { //ищем номер кнопки
-      if (command == debugSettings.irButtons[button]) { //если команда совпала
-#if PLAYER_TYPE
-        playerStop(); //сброс воспроизведения плеера
-#else
-        melodyStop(); //сброс воспроизведения мелодии
-#endif
-        return button + 1; //возвращаем номер кнопки
-      }
-    }
-  }
-#endif
-
-  return KEY_NULL; //кнопка не нажата
 }
 //----------------------------Настройки времени----------------------------------
 void settings_time(void) //настройки времени
@@ -1602,7 +1729,7 @@ void settings_time(void) //настройки времени
     }
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
           //настройка времени
@@ -1727,7 +1854,7 @@ void settings_singleAlarm(void) //настройка будильника
     }
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
           //настройка времени будильника
@@ -1903,7 +2030,7 @@ void settings_multiAlarm(void) //настройка будильников
     }
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
           case 0: if (curAlarm > (alarmsNum > 0)) curAlarm--; else curAlarm = alarmsNum; alarmReadBlock(curAlarm, alarm); break; //будильник
@@ -2106,11 +2233,11 @@ void settings_main(void) //настроки основные
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[1] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_TEMP_SENS:
-              if (!blink_data || cur_indi) {
+              if (!blink_data) {
                 if (sens.err) indiPrintNum(0, 0); //вывод ошибки
                 else indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод температуры
               }
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.sensorSet, 3); //вывод сенсора температуры
+              indiPrintNum(sens.type, 3); //вывод сенсора температуры
               break;
             case SET_AUTO_TEMP:
               if (!blink_data) indiPrintNum(mainSettings.autoTempTime, 1, 3); //вывод времени автопоказа температуры
@@ -2124,7 +2251,7 @@ void settings_main(void) //настроки основные
       }
     }
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (set) {
           case 0:
@@ -2178,17 +2305,8 @@ void settings_main(void) //настроки основные
                 }
                 dotSetBright(mainSettings.dotBright[cur_indi]); //включаем точки
                 break;
-              case SET_TEMP_SENS: //настройка сенсора температуры
-                switch (cur_indi) {
-                  case 0: if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127; break;
-                  case 1:
-                    if (mainSettings.sensorSet > 0) {
-                      mainSettings.sensorSet--;
-                      mainSettings.tempCorrect = 0;
-                    }
-                    _timer_ms[TMR_SENS] = 0; //обновить показания температуры
-                    break;
-                }
+              case SET_TEMP_SENS: //настройка коррекции температуры
+                if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
                 if (mainSettings.autoTempTime > 5) mainSettings.autoTempTime -= 5; else mainSettings.autoTempTime = 0;
@@ -2255,17 +2373,8 @@ void settings_main(void) //настроки основные
                 }
                 dotSetBright(mainSettings.dotBright[cur_indi]); //включаем точки
                 break;
-              case SET_TEMP_SENS: //настройка сенсора температуры
-                switch (cur_indi) {
-                  case 0: if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127; break;
-                  case 1:
-                    if (mainSettings.sensorSet < (SENS_ALL - 1)) {
-                      mainSettings.sensorSet++;
-                      mainSettings.tempCorrect = 0;
-                    }
-                    _timer_ms[TMR_SENS] = 0; //обновить показания температуры
-                    break;
-                }
+              case SET_TEMP_SENS: //настройка коррекции температуры
+                if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
                 if (mainSettings.autoTempTime < 240) mainSettings.autoTempTime += 5; else mainSettings.autoTempTime = 240;
@@ -2294,11 +2403,10 @@ void settings_main(void) //настроки основные
 #endif
               backlAnimDisable(); //запретили эффекты подсветки
               break;
-            case SET_TEMP_SENS: //настройка сенсора температуры
+            case SET_TEMP_SENS: //настройка коррекции температуры
 #if DOTS_PORT_ENABLE
               indiSetDots(2); //включаем разделителную точку
 #endif
-              _timer_ms[TMR_SENS] = 0;
               break;
           }
           dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dotMaxBright : mainSettings.dotBright[0]); //включаем точки
@@ -2329,6 +2437,7 @@ void settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[0]); break;//яркость точек
+            case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
@@ -2349,6 +2458,7 @@ void settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[1]); break;//яркость точек
+            case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
@@ -2361,11 +2471,28 @@ void settings_main(void) //настроки основные
     }
   }
 }
+//---------------------Обработка сенсора яркости освещения-----------------------------
+void lightSensUpdate(void) //обработка сенсора яркости освещения
+{
+  static boolean now_state_light;
+  if ((mainSettings.timeBright[0] == mainSettings.timeBright[1]) && !_timer_ms[TMR_LIGHT]) {
+    _timer_ms[TMR_LIGHT] = LIGHT_SENS_TIME;
+    analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
+#if LIGHT_SENS_PULL
+    now_state_light = (adc_light < debugSettings.min_light) ? 0 : ((adc_light > debugSettings.max_light) ? 1 : now_state_light);
+#else
+    now_state_light = (adc_light < debugSettings.min_light) ? 1 : ((adc_light > debugSettings.max_light) ? 0 : now_state_light);
+#endif
+    if (now_state_light != state_light) {
+      state_light = now_state_light;
+      changeBright(); //установка яркости
+    }
+  }
+}
 //---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
 {
-  if ((mainSettings.timeBright[0] > mainSettings.timeBright[1] && (RTC.h >= mainSettings.timeBright[0] || RTC.h < mainSettings.timeBright[1])) ||
-      (mainSettings.timeBright[0] < mainSettings.timeBright[1] && RTC.h >= mainSettings.timeBright[0] && RTC.h < mainSettings.timeBright[1])) {
+  if ((mainSettings.timeBright[0] != mainSettings.timeBright[1]) ? (checkHourStrart(mainSettings.timeBright[0], mainSettings.timeBright[1])) : state_light) {
     //ночной режим
     dotMaxBright = mainSettings.dotBright[0]; //установка максимальной яркости точек
     backlMaxBright = mainSettings.backlBright[0]; //установка максимальной яркости подсветки
@@ -2613,15 +2740,14 @@ void dotFlash(void) //мигание точек
 void updateTemp(void) //обновить показания температуры
 {
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
-  switch (mainSettings.sensorSet) { //выбор датчика температуры
+  switch (sens.type) { //выбор датчика температуры
     default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
 #if SENS_BME_ENABLE
     case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
 #if SENS_PORT_ENABLE
-    case SENS_DHT11: readTempDHT11(); break; //чтение температуры/влажности с датчика DHT11
-    case SENS_DHT22: readTempDHT22(); break; //чтение температуры/влажности с датчика DHT22
     case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
+    case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
 #endif
   }
   if (sens.err) readTempRTC(); //чтение температуры с датчика DS3231
@@ -2698,7 +2824,7 @@ void autoShowTemp(void) //автоматический показ темпера
 
       while (1) { //анимация перехода
         dataUpdate(); //обработка данных
-        if (check_keys()) return; //возврат если нажата кнопка
+        if (buttonState()) return; //возврат если нажата кнопка
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           _timer_ms[TMR_ANIM] = AUTO_TEMP_ANIM_TIME; //устанавливаем таймер
 
@@ -2769,7 +2895,7 @@ void showTemp(void) //показать температуру
       }
     }
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         if (++mode > 2) mode = 0;
         switch (mode) {
@@ -2865,7 +2991,7 @@ void showDate(void) //показать дату
       }
     }
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (++mode > 1) mode = 0;
         switch (mode) {
@@ -2925,7 +3051,7 @@ void fastSetSwitch(void) //переключение быстрых настро�
       }
     }
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case SET_KEY_PRESS: //клик средней кнопкой
         if (mode != FAST_BACKL_MODE) {
 #if PLAYER_TYPE
@@ -3133,7 +3259,7 @@ void radioMenu(void) //радиоприемник
         }
       }
 
-      switch (check_keys()) {
+      switch (buttonState()) {
         case RIGHT_KEY_PRESS: //клик правой кнопкой
           if (seek_run) { //если идет поиск
             seek_run = 0; //выключили поиск
@@ -3247,7 +3373,7 @@ void timerWarn(void) //тревога таймера
 #else
     melodyPlay(SOUND_TIMER_WARN, SOUND_LINK(general_sound), REPLAY_CYCLE); //звук окончания таймера
 #endif
-    while (!check_keys()) { //ждем
+    while (!buttonState()) { //ждем
       dataUpdate(); //обработка данных
 #if PLAYER_TYPE
       if (!playerWriteStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
@@ -3296,7 +3422,7 @@ void timerSettings(void) //настройки таймера
       blink_data = !blink_data;
     }
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case SET_KEY_PRESS: //клик средней кнопкой
         mode = !mode; //переключаем режим
         _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
@@ -3381,7 +3507,7 @@ void timerStopwatch(void) //таймер-секундомер
         break;
     }
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case SET_KEY_PRESS: //клик средней кнопкой
         if (mode && !timerMode) {
           timerSettings(); //настройки таймера
@@ -3455,8 +3581,7 @@ void animsReset(void) //сброс анимаций
 void hourSound(void) //звук смены часа
 {
   if (!alarm || alarmWaint) { //если будильник не работает
-    if ((mainSettings.timeHour[1] > mainSettings.timeHour[0] && RTC.h < mainSettings.timeHour[1] && RTC.h >= mainSettings.timeHour[0]) ||
-        (mainSettings.timeHour[1] < mainSettings.timeHour[0] && (RTC.h < mainSettings.timeHour[1] || RTC.h >= mainSettings.timeHour[0]))) {
+    if (checkHourStrart(mainSettings.timeHour[1], mainSettings.timeHour[0])) {
 #if PLAYER_TYPE
       if (mainSettings.knockSound) speakTime(); //воспроизвести время
       else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
@@ -3475,7 +3600,7 @@ void glitchMode(void) //имитация глюков
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
       uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
-      while (!check_keys()) {
+      while (!buttonState()) {
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 #if LAMP_NUM > 4 && SECONDS_ANIM
@@ -3499,7 +3624,7 @@ void glitchMode(void) //имитация глюков
 void burnIndi(void) //антиотравление индикаторов
 {
   if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) {
-    _timer_sec[TMR_BURN] = (uint16_t)BURN_PERIOD * 60; //устанавливаем таймер
+    _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер
 
     uint8_t indi = 0;
     switch (mainSettings.burnMode) {
@@ -3523,7 +3648,7 @@ void burnIndi(void) //антиотравление индикаторов
               break;
           }
           for (_timer_ms[TMR_MS] = BURN_TIME; _timer_ms[TMR_MS];) { //ждем
-            if (check_keys()) return; //если нажата кнопка выходим
+            if (buttonState()) return; //если нажата кнопка выходим
             dataUpdate(); //обработка данных
           }
         }
@@ -3581,7 +3706,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         anim_buf[0] = indiMaxBright;
         anim_buf[1] = 0;
 
-        while (!check_keys()) {
+        while (!buttonState()) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
 #if LAMP_NUM > 4 && SECONDS_ANIM
@@ -3629,7 +3754,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         anim_buf[10] = 0;
         anim_buf[11] = 0;
 
-        while (!check_keys()) {
+        while (!buttonState()) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
 
@@ -3683,7 +3808,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           }
         }
 
-        while (!check_keys()) {
+        while (!buttonState()) {
           dataUpdate(); //обработка данных
           dotFlash(); //мигаем точками
 
@@ -3713,7 +3838,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
               indiClr(); //очистка индикатора
               switch (c) {
@@ -3771,7 +3896,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
 #if LAMP_NUM > 4
               anim_buf[10] = RTC.s / 10; //секунды
@@ -3827,7 +3952,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
               indiClr(); //очистка индикатора
               switch (c) {
@@ -3863,7 +3988,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
 #if LAMP_NUM > 4
               anim_buf[4] = RTC.s / 10; //секунды
@@ -3893,7 +4018,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
 #if LAMP_NUM > 4
               anim_buf[4] = RTC.s / 10; //секунды
@@ -3933,7 +4058,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
-            if (check_keys()) return; //возврат если нажата кнопка
+            if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
 #if LAMP_NUM > 4
               anim_buf[4] = RTC.s / 10; //секунды
@@ -3992,6 +4117,10 @@ void mainScreen(void) //главный экран
     dataUpdate(); //обработка данных
     dotFlash(); //мигаем точками
 
+#if LIGHT_SENS_ENABLE
+    lightSensUpdate(); //обработка сенсора яркости освещения
+#endif
+
     if (!secUpd) { //если пришло время обновить индикаторы
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
       timerWarn(); //тревога таймера
@@ -4018,7 +4147,7 @@ void mainScreen(void) //главный экран
     tickSecs(); //анимация секунд
 #endif
 
-    switch (check_keys()) {
+    switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         showTemp(); //показать температуру
         animsReset(); //сброс анимаций
