@@ -3581,7 +3581,7 @@ void animsReset(void) //сброс анимаций
 void hourSound(void) //звук смены часа
 {
   if (!alarm || alarmWaint) { //если будильник не работает
-    if (checkHourStrart(mainSettings.timeHour[1], mainSettings.timeHour[0])) {
+    if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
 #if PLAYER_TYPE
       if (mainSettings.knockSound) speakTime(); //воспроизвести время
       else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
