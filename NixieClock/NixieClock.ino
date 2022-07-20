@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.7 релиз от 18.07.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 20.07.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -89,7 +89,8 @@ struct Settings_1 {
   uint8_t timeBright[2] = {DEFAULT_NIGHT_START, DEFAULT_NIGHT_END}; //время перехода яркости
   uint8_t timeHour[2] = {DEFAULT_HOUR_SOUND_START, DEFAULT_HOUR_SOUND_END}; //время звукового оповещения нового часа
   boolean timeFormat = DEFAULT_TIME_FORMAT; //формат времени
-  boolean knockSound = DEFAULT_KNOCK_SOUND; //звук кнопок
+  boolean knockSound = DEFAULT_KNOCK_SOUND; //звук кнопок или озвучка
+  uint8_t volumeSound = DEFAULT_PLAYER_VOLUME; //громкость озвучки
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
@@ -104,8 +105,9 @@ struct Settings_2 {
 } fastSettings;
 
 struct Settings_3 { //настройки радио
-  uint16_t stationsSave[9] = {RADIO_STATIONS};
+  uint16_t stationsSave[9] = {DEFAULT_RADIO_STATIONS};
   uint16_t stationsFreq = RADIO_MIN_FREQ;
+  uint8_t volume = DEFAULT_RADIO_VOLUME;
   uint8_t stationNum;
 } radioSettings;
 
@@ -446,14 +448,14 @@ int main(void) //инициализация
   indiChangeCoef(); //обновление коэффициента линейного регулирования
 
 #if PLAYER_TYPE == 2
-  sdPlayerInit(); //инициализация плеера
+  sdPlayerInit(mainSettings.volumeSound); //инициализация плеера
 #endif
 
   wireInit(); //инициализация шины wire
   indiInit(); //инициализация индикаторов
 
 #if PLAYER_TYPE == 1
-  dfPlayerInit(); //инициализация плеера
+  dfPlayerInit(mainSettings.volumeSound); //инициализация плеера
 #endif
 
   backlAnimDisable(); //запретили эффекты подсветки
@@ -2211,7 +2213,12 @@ void settings_main(void) //настроки основные
           switch (cur_mode) {
             case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
             case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
-            case SET_BTN_SOUND: if (!blink_data) indiPrintNum(mainSettings.knockSound, 3); break; //вывод звука кнопок
+            case SET_BTN_SOUND: //вывод звука кнопок
+#if PLAYER_TYPE
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.volumeSound, 2, 2, 0); //громкость озвучки
+#endif
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.knockSound, 0); //звук кнопок или озвучка
+              break;
             case SET_HOUR_TIME:
               if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[1], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
@@ -2265,7 +2272,14 @@ void settings_main(void) //настроки основные
             switch (cur_mode) {
               case SET_TIME_FORMAT: mainSettings.timeFormat = 0; break; //формат времени
               case SET_GLITCH: mainSettings.glitchMode = 0; break; //глюки
-              case SET_BTN_SOUND: mainSettings.knockSound = 0; break; //звук кнопок
+              case SET_BTN_SOUND: //звук кнопок
+                switch (cur_indi) {
+                  case 0: mainSettings.knockSound = 0; break;
+#if PLAYER_TYPE
+                  case 1: if (mainSettings.volumeSound > PLAYER_MIN_VOL) playerSetVol(--mainSettings.volumeSound); break;
+#endif
+                }
+                break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
                   case 0: if (mainSettings.timeHour[0] > 0) mainSettings.timeHour[0]--; else mainSettings.timeHour[0] = 23; break;
@@ -2333,7 +2347,14 @@ void settings_main(void) //настроки основные
             switch (cur_mode) {
               case SET_TIME_FORMAT: mainSettings.timeFormat = 1; break; //формат времени
               case SET_GLITCH: mainSettings.glitchMode = 1; break; //глюки
-              case SET_BTN_SOUND: mainSettings.knockSound = 1; break; //звук кнопок
+              case SET_BTN_SOUND: //звук кнопок
+                switch (cur_indi) {
+                  case 0: mainSettings.knockSound = 1; break;
+#if PLAYER_TYPE
+                  case 1: if (mainSettings.volumeSound < PLAYER_MAX_VOL) playerSetVol(++mainSettings.volumeSound); break;
+#endif
+                }
+                break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
                   case 0: if (mainSettings.timeHour[0] < 23) mainSettings.timeHour[0]++; else mainSettings.timeHour[0] = 0; break;
@@ -3164,6 +3185,44 @@ void fastSetSwitch(void) //переключение быстрых настро�
   if (mode == 1) flipIndi(fastSettings.flipMode, 1); //демонстрация анимации цифр
   updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
 }
+//---------------------------Настройка громкости радио----------------------------------
+boolean radioVolSettings(void) //настройка громкости радио
+{
+  boolean _state = 0;
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
+
+  while (1) {
+    dataUpdate(); //обработка данных
+
+    if (!_timer_ms[TMR_MS]) { //если таймер истек
+      _timer_ms[TMR_MS] = RADIO_VOL_TIME; //устанавливаем таймер
+      if (_state) return 0;
+      indiClr(); //очистка индикаторов
+      indiPrintNum(radioSettings.volume, ((LAMP_NUM / 2) - 1), 2, 0); //номер станции
+      _state = 1;
+    }
+
+    switch (buttonState()) {
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
+        if (radioSettings.volume < RADIO_MAX_VOL) radioSettings.volume++;
+        _state = 0;
+        _timer_ms[TMR_MS] = 0; //сбросили таймер
+        break;
+
+      case LEFT_KEY_PRESS: //клик левой кнопкой
+        if (radioSettings.volume > RADIO_MIN_VOL) radioSettings.volume--;
+        _state = 0;
+        _timer_ms[TMR_MS] = 0; //сбросили таймер
+        break;
+
+      case ADD_KEY_PRESS: //клик дополнительной кнопкой
+        return 0; //выходим
+
+      case SET_KEY_PRESS: //клик средней кнопкой
+        return 1; //выходим
+    }
+  }
+}
 //------------------------Остановка автопоиска радиостанции-----------------------------
 void radioSeekStop(void) //остановка автопоиска радиостанции
 {
@@ -3176,7 +3235,7 @@ void radioSeekStop(void) //остановка автопоиска радиос�
 void radioPowerOn(void) //включить питание радиоприемника
 {
   setPowerRDA(RDA_ON); //включаем радио
-  setVolumeRDA(RADIO_VOLUME); //устанавливаем громкость
+  setVolumeRDA(radioSettings.volume); //устанавливаем громкость
   setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
 }
 //---------------------------------Радиоприемник----------------------------------------
@@ -3298,15 +3357,24 @@ void radioMenu(void) //радиоприемник
           break;
 
         case SET_KEY_PRESS: //клик средней кнопкой
+          if (seek_run) { //если идет поиск
+            seek_run = 0; //выключили поиск
+            radioSeekStop(); //остановка автопоиска радиостанции
+          }
 #if PLAYER_TYPE
           if (power_state) {
             playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
             radioPowerOn(); //включить питание радиоприемника
           }
 #endif
-          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
-          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
-          return; //выходим
+          if (radioVolSettings()) { //настройка громкости радио
+            if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+            updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+            return; //выходим
+          }
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
 
         case RIGHT_KEY_HOLD: //удержание правой кнопки
           if (!seek_run) { //если не идет поиск

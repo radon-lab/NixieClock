@@ -14,6 +14,13 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
+#define PLAYER_MIN_VOL 0 //минимальная громкость
+#if PLAYER_TYPE == 2
+#define PLAYER_MAX_VOL 9 //максимальная громкость
+#else
+#define PLAYER_MAX_VOL 30 //максимальная громкость
+#endif
+
 enum {
   _START_BYTE, //стартовый байт
   _VERSION, //версия
@@ -347,7 +354,7 @@ void playerUpdate(void)
 #endif
 }
 //------------------------------------Инициализация DF плеера------------------------------------
-void dfPlayerInit(void)
+void dfPlayerInit(uint8_t _vol)
 {
   DF_BUSY_INIT; //инициализация busy
   DF_RX_INIT; //инициализация rx
@@ -359,11 +366,11 @@ void dfPlayerInit(void)
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00)); //устанавливаем длинну посылки 8 бит
 #endif
 
-  playerSendCommand(PLAYER_CMD_SET_VOL, PLAYER_VOLUME);
+  playerSendCommand(PLAYER_CMD_SET_VOL, _vol);
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
-void sdPlayerInit(void)
+void sdPlayerInit(uint8_t _vol)
 {
   for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) { //инициализация карты памяти
     if (!cardMount()) { //если карта обнаружена
@@ -372,6 +379,6 @@ void sdPlayerInit(void)
     }
     else buffer.cardType = 0; //иначе ошибка инициализации
   }
-  buffer.dacVolume = (9 - PLAYER_VOLUME); //устанавливаем громкость
+  buffer.dacVolume = (9 - _vol); //устанавливаем громкость
   if (buffer.dacVolume > 9) buffer.dacVolume = 0; //ограничиваем громкость
 }
