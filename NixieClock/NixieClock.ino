@@ -2214,10 +2214,10 @@ void settings_main(void) //настроки основные
             case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
             case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
             case SET_BTN_SOUND: //вывод звука кнопок
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.knockSound, 0); //звук кнопок или озвучка
 #if PLAYER_TYPE
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.volumeSound, 2, 2, 0); //громкость озвучки
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.volumeSound, 2, 2, 0); //громкость озвучки
 #endif
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.knockSound, 0); //звук кнопок или озвучка
               break;
             case SET_HOUR_TIME:
               if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
