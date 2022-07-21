@@ -16,9 +16,9 @@
 
 #define PLAYER_MIN_VOL 0 //минимальная громкость
 #if PLAYER_TYPE == 2
-#define PLAYER_MAX_VOL 9 //максимальная громкость
+#define PLAYER_MAX_VOL 9 //максимальная громкость SD плеер
 #else
-#define PLAYER_MAX_VOL 30 //максимальная громкость
+#define PLAYER_MAX_VOL 30 //максимальная громкость DF плеер
 #endif
 
 enum {

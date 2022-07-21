@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 20.07.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 21.07.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3204,13 +3204,13 @@ boolean radioVolSettings(void) //настройка громкости ради�
 
     switch (buttonState()) {
       case RIGHT_KEY_PRESS: //клик правой кнопкой
-        if (radioSettings.volume < RADIO_MAX_VOL) radioSettings.volume++;
+        if (radioSettings.volume < RADIO_MAX_VOL) setVolumeRDA(++radioSettings.volume);
         _state = 0;
         _timer_ms[TMR_MS] = 0; //сбросили таймер
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
-        if (radioSettings.volume > RADIO_MIN_VOL) radioSettings.volume--;
+        if (radioSettings.volume > RADIO_MIN_VOL) setVolumeRDA(--radioSettings.volume);
         _state = 0;
         _timer_ms[TMR_MS] = 0; //сбросили таймер
         break;
@@ -3361,14 +3361,13 @@ void radioMenu(void) //радиоприемник
             seek_run = 0; //выключили поиск
             radioSeekStop(); //остановка автопоиска радиостанции
           }
-#if PLAYER_TYPE
-          if (power_state) {
-            playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-            radioPowerOn(); //включить питание радиоприемника
-          }
-#endif
           if (radioVolSettings()) { //настройка громкости радио
-            if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+#if PLAYER_TYPE
+            if (power_state) {
+              playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+              radioPowerOn(); //включить питание радиоприемника
+            }
+#endif
             updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
             return; //выходим
           }
