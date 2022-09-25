@@ -1324,9 +1324,6 @@ void debug_menu(void) //отладка
 
       case SET_KEY_HOLD: //удержание средней кнопки
         if (!set) { //если не в режиме настройки
-#if IR_PORT_ENABLE
-          irState = 0; //сбросили состояние
-#endif
           if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
           updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
           return;
