@@ -16,8 +16,8 @@
 #define _INDI_STOP TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
 struct Settings_4 {
+  uint16_t irButtons[8]; //коды кнопок пульта
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-  uint8_t irButtons[8];
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
   uint8_t min_light = LIGHT_SENS_START_MIN; //минимальный шим

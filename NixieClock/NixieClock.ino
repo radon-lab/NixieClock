@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 21.07.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 25.09.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -865,11 +865,10 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
   }
 
 #if IR_PORT_ENABLE
-  if (irCommand && !irDisable) { //если пришла команда и управление ИК не заблокировано
-    uint8_t command = irCommand; //копируем команду
-    irCommand = 0; //сбрасываем команду
-    for (uint8_t button = 0; button < sizeof(debugSettings.irButtons); button++) { //ищем номер кнопки
-      if (command == debugSettings.irButtons[button]) { //если команда совпала
+  if (irState == IR_READY) { //если пришла команда и управление ИК не заблокировано
+    irState = 0; //сбрасываем флаг готовности
+    for (uint8_t button = 0; button < (sizeof(debugSettings.irButtons) / 2); button++) { //ищем номер кнопки
+      if (irCommand == debugSettings.irButtons[button]) { //если команда совпала
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
@@ -1119,7 +1118,7 @@ void debug_menu(void) //отладка
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               indiPrintNum(cur_button + 1, 0); //выводим номер кнопки пульта
-              indiPrintNum(debugSettings.irButtons[cur_button], 1, 3); //выводим код кнопки пульта
+              indiPrintNum((uint8_t)debugSettings.irButtons[cur_button], 1, 3); //выводим код кнопки пульта
               break;
 #endif
 #if LIGHT_SENS_ENABLE
@@ -1137,9 +1136,9 @@ void debug_menu(void) //отладка
       switch (cur_mode) {
 #if IR_PORT_ENABLE
         case DEB_IR_BUTTONS: //програмирование кнопок
-          if (irDisable && irCommand) { //если управление ИК заблокировано и пришла новая команда
+          if (irState == (IR_READY | IR_DISABLE)) { //если управление ИК заблокировано и пришла новая команда
             debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
-            irCommand = 0; //сбрасываем команду
+            irState = IR_DISABLE; //сбросили флаг готовности
             secUpd = 0; //обновление экрана
           }
           break;
@@ -1267,7 +1266,7 @@ void debug_menu(void) //отладка
             case DEB_DEFAULT_MAX_PWM: indiSetBright(30); break; //максимальное значение шим
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
-              irDisable = 1;
+              irState = IR_DISABLE; //установили флаг запрета
               cur_button = 0;
               break;
 #endif
@@ -1303,7 +1302,7 @@ void debug_menu(void) //отладка
           switch (cur_mode) {
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
-              irDisable = 0;
+              irState = 0; //сбросили состояние
               break;
 #endif
 #if LIGHT_SENS_ENABLE
@@ -1324,12 +1323,15 @@ void debug_menu(void) //отладка
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
+        if (!set) { //если не в режиме настройки
 #if IR_PORT_ENABLE
-        irDisable = 0;
+          irState = 0; //сбросили состояние
 #endif
-        if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
-        updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
-        return;
+          if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
+          updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
+          return;
+        }
+        break;
     }
   }
 }

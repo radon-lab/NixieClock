@@ -2,9 +2,12 @@
 #define IR_REPEAT_START_TIME 10  //сигнал начала повтора команды
 #define IR_DATA_TIME 5           //сигнал бита команды
 
-boolean irDisable; //флаг запрета работы с ИК пультом
+#define IR_READY 0x01            //флаг новой команды
+#define IR_DISABLE 0x02          //флаг запрета чтения команды
+
 volatile uint8_t irTime; //время сигнала от ИК приемника
-volatile uint8_t irCommand; //текущая команда от пульта
+volatile uint8_t irState; //текущее состояние ИК приемника
+volatile uint16_t irCommand; //текущая команда от пульта
 
 enum {
   IR_IDLE, //ожидание команды
@@ -18,6 +21,14 @@ void irInit(void) //инициализация IR приемника
   IR_INIT; //инициализация ИК приемника
   DECODE_PCMSK(IR_PIN) |= (0x01 << IR_BIT); //настраиваем маску прерывания порта
   PCICR |= (0x01 << DECODE_PCIE(IR_PIN)); //разрешаем прерывание порта
+}
+//-------------------------------Проверка принятой команды-------------------------------
+void irCheckCommand(uint8_t* _command) //проверка принятой команды
+{
+  if (_command[0] != (_command[1] ^ 0xFF)) return; //проверяем контрольную сумму
+  if (_command[2] != (_command[3] ^ 0xFF)) return; //проверяем контрольную сумму
+  irState |= IR_READY; //установили флаг готовности
+  irCommand = ((uint16_t)_command[0] << 8) | _command[2]; //скопировали команду
 }
 #if IR_PORT_ENABLE
 //-----------------------------Счетчик времени IR приемника-----------------------------
@@ -59,7 +70,7 @@ ISR(PCINT2_vect) //обработка сигнала IR приемника
 
             if (++_byte >= 4) { //если все байты приняты
               TIMSK2 &= ~(0x01 << TOIE2); //выключаем таймер
-              if (_command[2] == (_command[3] ^ 0xFF)) irCommand = _command[2]; //проверяем контрольную сумму команды
+              irCheckCommand(_command); //проверяем контрольную сумму команды
 #if IR_REPEAT_ENABLE
               _timer_ms[TMR_IR] = (IR_HOLD_TIME + IR_REPEAT_WAIT_TIME); //устанавливаем таймер удержания
 #endif
@@ -71,9 +82,9 @@ ISR(PCINT2_vect) //обработка сигнала IR приемника
           TIMSK2 &= ~(0x01 << TOIE2); //выключаем таймер
 #if IR_REPEAT_ENABLE
           if (_timer_ms[TMR_IR] && _timer_ms[TMR_IR] < IR_REPEAT_TIME) {
-            if (irTime < IR_DATA_TIME && (_command[2] == (_command[3] ^ 0xFF))) {
+            if (irTime < IR_DATA_TIME) { //если таймер истек
+              irCheckCommand(_command); //проверяем контрольную сумму команды
               _timer_ms[TMR_IR] = (IR_REPEAT_WAIT_TIME + IR_REPEAT_TIME); //устанавливаем таймер повтора
-              irCommand = _command[2]; //если таймер истек и контрольная сумма совпала
             }
           }
 #endif
