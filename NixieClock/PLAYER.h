@@ -290,7 +290,7 @@ void playerUpdate(void)
         playerGenCRC(player.transferBuff);
 
         switch (player.transferBuff[_COMMAND]) {
-          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: writeState = 1; break;
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) writeState = 1; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
         }
 
