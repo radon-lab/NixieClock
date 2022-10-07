@@ -1684,6 +1684,7 @@ void dataUpdate(void) //обработка данных
 //----------------------------Настройки времени----------------------------------
 void settings_time(void) //настройки времени
 {
+  boolean time_update = 0; //флаг изменения времени
   boolean blink_data = 0; //мигание сигментами
   uint8_t cur_mode = 0; //текущий режим
   uint8_t time_out = 0; //таймаут автовыхода
@@ -1734,8 +1735,8 @@ void settings_time(void) //настройки времени
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
           //настройка времени
-          case 0: if (RTC.h > 0) RTC.h--; else RTC.h = 23; RTC.s = 0; break; //часы
-          case 1: if (RTC.m > 0) RTC.m--; else RTC.m = 59; RTC.s = 0; break; //минуты
+          case 0: if (RTC.h > 0) RTC.h--; else RTC.h = 23; RTC.s = 0; time_update = 1; break; //часы
+          case 1: if (RTC.m > 0) RTC.m--; else RTC.m = 59; RTC.s = 0; time_update = 1; break; //минуты
 
           //настройка даты
           case 2: if (RTC.DD > 1) RTC.DD--; else RTC.DD = maxDays(); break; //день
@@ -1754,8 +1755,8 @@ void settings_time(void) //настройки времени
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_mode) {
           //настройка времени
-          case 0: if (RTC.h < 23) RTC.h++; else RTC.h = 0; RTC.s = 0; break; //часы
-          case 1: if (RTC.m < 59) RTC.m++; else RTC.m = 0; RTC.s = 0; break; //минуты
+          case 0: if (RTC.h < 23) RTC.h++; else RTC.h = 0; RTC.s = 0; time_update = 1; break; //часы
+          case 1: if (RTC.m < 59) RTC.m++; else RTC.m = 0; RTC.s = 0; time_update = 1; break; //минуты
 
           //настройка даты
           case 2: if (RTC.DD < maxDays()) RTC.DD++; else RTC.DD = 1; break; //день
@@ -1779,7 +1780,7 @@ void settings_time(void) //настройки времени
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (cur_mode < 2) RTC.s = 0; //сбрасываем секунды
+        if (cur_mode < 2 && time_update) RTC.s = 0; //сбрасываем секунды
         sendTime(); //отправить время в RTC
         changeBright(); //установка яркости от времени суток
         updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
