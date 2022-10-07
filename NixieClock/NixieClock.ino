@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.8 релиз от 02.10.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.9 релиз от 07.10.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1234,7 +1234,7 @@ void debug_menu(void) //отладка
 #endif
 #if IR_PORT_ENABLE
               case DEB_IR_BUTTONS: //програмирование кнопок
-                if (cur_button < (sizeof(debugSettings.irButtons) - 1)) cur_button++;
+                if (cur_button < ((sizeof(debugSettings.irButtons) / 2) - 1)) cur_button++;
                 break;
 #endif
             }
@@ -1779,6 +1779,7 @@ void settings_time(void) //настройки времени
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
+        if (cur_mode < 2) RTC.s = 0; //сбрасываем секунды
         sendTime(); //отправить время в RTC
         changeBright(); //установка яркости от времени суток
         updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
