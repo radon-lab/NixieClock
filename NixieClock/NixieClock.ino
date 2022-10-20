@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.6.9 релиз от 07.10.22
+  Arduino IDE 1.8.13 версия прошивки 1.6.9 релиз от 19.10.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3660,7 +3660,7 @@ void hourSound(void) //звук смены часа
   }
 }
 //------------------------------------Имитация глюков------------------------------------
-void glitchMode(void) //имитация глюков
+void glitchIndi(void) //имитация глюков
 {
   if (mainSettings.glitchMode) { //если глюки включены
     if (!_timer_sec[TMR_GLITCH] && RTC.s > 7 && RTC.s < 55) { //если пришло время
@@ -4199,7 +4199,7 @@ void mainScreen(void) //главный экран
       if (animShow) flipIndi(fastSettings.flipMode, 0); //анимация цифр основная
 
       burnIndi(); //антиотравление индикаторов
-      glitchMode(); //имитация глюков
+      glitchIndi(); //имитация глюков
       autoShowTemp(); //автоматический показ температуры
 
       indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
