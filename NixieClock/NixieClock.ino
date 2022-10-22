@@ -627,9 +627,6 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
 //---------------Проверка установленного датчика температуры-----------------------
 void checkTempSens(void) //проверка установленного датчика температуры
 {
-#if SENS_BME_ENABLE || SENS_PORT_ENABLE
-  for (_timer_ms[TMR_SENS] = TEMP_START_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
-#endif
   for (sens.type = (SENS_ALL - 1); sens.type; sens.type--) { //перебираем все датчики температуры
     updateTemp(); //обновить показания температуры
     if (!sens.err) { //если найден датчик температуры
