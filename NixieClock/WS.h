@@ -1,6 +1,11 @@
 uint8_t ledColor[LAMP_NUM]; //массив цветов
 uint8_t ledBright[LAMP_NUM]; //массив яркости
 
+enum {
+  WHITE_OFF, //выключить установку белого цвета
+  WHITE_ON //включить установку белого цвета
+};
+
 //---------------------------------Передача массива данных на шину-------------------------------------
 void ledWrite(uint8_t* data, uint16_t size) {
   __asm__ __volatile__ (
@@ -54,7 +59,7 @@ void showLeds(void)
   for (uint8_t f = 0; f < LAMP_NUM; f++) {
     uint8_t pallet = (float)(ledColor[f] % 85) * ((float)ledBright[f] / 85.0);
     switch (ledColor[f] / 85) {
-      default:
+      case 0:
         ledBuff[f * 3] = pallet;
         ledBuff[f * 3 + 1] = ledBright[f] - pallet;
         ledBuff[f * 3 + 2] = 0;
@@ -69,6 +74,12 @@ void showLeds(void)
         ledBuff[f * 3 + 1] = pallet;
         ledBuff[f * 3 + 2] = ledBright[f] - pallet;
         break;
+      case 3:
+        pallet = ledBright[f] / 3;
+        ledBuff[f * 3] = pallet;
+        ledBuff[f * 3 + 1] = pallet;
+        ledBuff[f * 3 + 2] = pallet;
+        break;
     }
   }
   ledWrite(ledBuff, sizeof(ledBuff));
@@ -81,13 +92,17 @@ void clrLeds(void)
   ledWrite(ledBuff, sizeof(ledBuff));
 }
 //---------------------------------Установка цвета в формате HV-------------------------------------
-void setLedHue(uint8_t _led, uint8_t _color)
+void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 {
-  if (_led < LAMP_NUM) ledColor[_led] = _color;
+  if (_led < LAMP_NUM) {
+    if (_mode == WHITE_OFF && _color == 255) _color = 0;
+    ledColor[_led] = _color;
+  }
 }
 //---------------------------------Установка цвета в формате HV-------------------------------------
-void setLedHue(uint8_t _color)
+void setLedHue(uint8_t _color, boolean _mode)
 {
+  if (_mode == WHITE_OFF && _color == 255) _color = 0;
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledColor[f] = _color;
 }
 //--------------------------------------Уменьшение яркости------------------------------------------
