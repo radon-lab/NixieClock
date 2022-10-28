@@ -249,6 +249,7 @@ enum {
 
 //перечисления анимаций перебора цифр секунд
 enum {
+  SECS_STATIC, //без анимации
   SECS_BRIGHT, //плавное угасание и появление
   SECS_ORDER_OF_NUMBERS, //перемотка по порядку числа
   SECS_EFFECT_NUM //максимум эффектов перелистывания
@@ -357,6 +358,7 @@ enum {
   MAIN_PROGRAM,       //главный экран
   TEMP_PROGRAM,       //температура
   DATE_PROGRAM,       //текущая дата
+  WARN_PROGRAM,       //предупреждение таймера
   ALARM_PROGRAM,      //тревога будильника
   RADIO_PROGRAM,      //радиоприемник
   TIMER_PROGRAM,      //таймер-секундомер
@@ -407,14 +409,21 @@ int main(void) //главный цикл программ
   INIT_SYSTEM(); //инициализация
 
   for (;;) {
-    animsReset(); //сброс анимаций
     backlAnimEnable(); //разрешили эффекты подсветки
     changeBright(); //установка яркости от времени суток
+#if DOTS_PORT_ENABLE
+    indiClrDots(); //выключаем разделительные точки
+#endif
+    dotReset(); //сброс анимации точек
+    secUpd = 0; //обновление экрана
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
       case TEMP_PROGRAM: mainTask = showTemp(); break; //показать температуру
       case DATE_PROGRAM: mainTask = showDate(); break; //показать дату
+#if BTN_ADD_TYPE || IR_PORT_ENABLE
+      case WARN_PROGRAM: mainTask = timerWarn(); break; //предупреждение таймера
+#endif
 #if ALARM_TYPE
       case ALARM_PROGRAM: mainTask = alarmWarn(); break; //тревога будильника
 #endif
@@ -1782,7 +1791,7 @@ void dataUpdate(void) //обработка данных
 
     secUpd = dot.update = 0; //очищаем флаги секунды и точек
 #if LAMP_NUM > 4
-    animShow = ANIM_SECS; //показать анимацию переключения цифр
+    if (mainSettings.secsMode) animShow = ANIM_SECS; //показать анимацию переключения цифр
 #endif
 
     //счет времени
@@ -2797,7 +2806,6 @@ void autoShowTemp(void) //автоматический показ темпера
 uint8_t showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
-  secUpd = 0; //обновление экрана
 
   if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
     updateTemp(); //обновить показания температуры
@@ -2910,7 +2918,6 @@ void speakTime(void) //воспроизвести время
 uint8_t showDate(void) //показать дату
 {
   uint8_t mode = 0; //текущий режим
-  secUpd = 0; //обновление экрана
 
 #if DOTS_PORT_ENABLE
   indiSetDots(2); //включаем разделителную точку
@@ -3207,11 +3214,18 @@ uint8_t radioMenu(void) //радиоприемник
       if (!secUpd) { //если прошла секунда
         secUpd = 1; //сбросили флаг секунды
 #if ALARM_TYPE
-        if (++time_out >= RADIO_TIMEOUT || (alarm && !alarmWaint)) //если флаг установлен флаг тревоги и флаг ожидания очещен или время вышло
-#else
-        if (++time_out >= RADIO_TIMEOUT) //если время вышло
+        if (alarm && !alarmWaint) {  //тревога таймера
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          return ALARM_PROGRAM;
+        }
 #endif
-        {
+#if BTN_ADD_TYPE || IR_PORT_ENABLE
+        if (timerMode == 2 && !timerCnt) { //тревога таймера
+          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          return WARN_PROGRAM;
+        }
+#endif
+        if (++time_out >= RADIO_TIMEOUT) { //если время вышло
           if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
           return MAIN_PROGRAM; //выходим по тайм-ауту
         }
@@ -3371,41 +3385,40 @@ uint8_t radioMenu(void) //радиоприемник
   return MAIN_PROGRAM;
 }
 //--------------------------------Тревога таймера----------------------------------------
-void timerWarn(void) //тревога таймера
+uint8_t timerWarn(void) //тревога таймера
 {
   boolean blink_data = 0; //флаг мигания индикаторами
-  if (timerMode == 2 && !timerCnt) {
+
 #if PLAYER_TYPE
-    playerStop(); //сброс позиции мелодии
+  playerStop(); //сброс позиции мелодии
 #else
-    melodyPlay(SOUND_TIMER_WARN, SOUND_LINK(general_sound), REPLAY_CYCLE); //звук окончания таймера
+  melodyPlay(SOUND_TIMER_WARN, SOUND_LINK(general_sound), REPLAY_CYCLE); //звук окончания таймера
 #endif
 #if BTN_ADD_TYPE
-    radioPowerOff(); //выключить питание радиоприемника
+  radioPowerOff(); //выключить питание радиоприемника
 #endif
-    while (!buttonState()) { //ждем
-      dataUpdate(); //обработка данных
+  while (!buttonState()) { //ждем
+    dataUpdate(); //обработка данных
 #if PLAYER_TYPE
-      if (!playerWriteStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
+    if (!playerWriteStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
-      if (!_timer_ms[TMR_ANIM]) {
-        _timer_ms[TMR_ANIM] = TIMER_BLINK_TIME;
-        switch (blink_data) {
-          case 0: indiClr(); dotSetBright(0); break; //очищаем индикаторы и выключаем точки
-          case 1:
-            indiPrintNum((timerTime < 3600) ? ((timerTime / 60) % 60) : (timerTime / 3600), 0, 2, 0); //вывод минут/часов
-            indiPrintNum((timerTime < 3600) ? (timerTime % 60) : ((timerTime / 60) % 60), 2, 2, 0); //вывод секунд/минут
-            indiPrintNum((timerTime < 3600) ? 0 : (timerTime % 60), 4, 2, 0); //вывод секунд
-            dotSetBright(dot.maxBright); //включаем точки
-            break;
-        }
-        blink_data = !blink_data; //мигаем временем
+    if (!_timer_ms[TMR_ANIM]) {
+      _timer_ms[TMR_ANIM] = TIMER_BLINK_TIME;
+      switch (blink_data) {
+        case 0: indiClr(); dotSetBright(0); break; //очищаем индикаторы и выключаем точки
+        case 1:
+          indiPrintNum((timerTime < 3600) ? ((timerTime / 60) % 60) : (timerTime / 3600), 0, 2, 0); //вывод минут/часов
+          indiPrintNum((timerTime < 3600) ? (timerTime % 60) : ((timerTime / 60) % 60), 2, 2, 0); //вывод секунд/минут
+          indiPrintNum((timerTime < 3600) ? 0 : (timerTime % 60), 4, 2, 0); //вывод секунд
+          dotSetBright(dot.maxBright); //включаем точки
+          break;
       }
+      blink_data = !blink_data; //мигаем временем
     }
-    timerMode = 0; //деактивируем таймер
-    timerCnt = timerTime; //сбрасываем таймер
-    animsReset(); //сброс анимаций
   }
+  timerMode = 0; //деактивируем таймер
+  timerCnt = timerTime; //сбрасываем таймер
+  return TIMER_PROGRAM;
 }
 //----------------------------Настройки таймера----------------------------------
 void timerSettings(void) //настройки таймера
@@ -3472,15 +3485,14 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   if (timerMode & 0x7F) mode = (timerMode & 0x7F) - 1; //если таймер был запущен
   else timerCnt = 0; //иначе сбрасываем таймер
 
-  secUpd = 0; //обновление экрана
-
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow((mode) ? PLAYER_TIMER_SOUND : PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
 
   while (1) {
     dataUpdate(); //обработка данных
-    timerWarn(); //тревога таймера
+
+    if (timerMode == 2 && !timerCnt) return WARN_PROGRAM; //тревога таймера
 #if LAMP_NUM > 4
     dotFlashMode((!timerCnt) ? 0 : ((timerMode > 2 || !timerMode ) ? 1 : 3)); //мигание точек по умолчанию
 #else
@@ -3847,21 +3859,6 @@ void dotReset(void) //сброс анимации точек
     dot.count = 0; //сбросили счетчик вспышек точек
   }
   else dot.update = 0; //сбросили флаг обновления точек
-}
-//--------------------------------Сброс анимаций-----------------------------------
-void animsReset(void) //сброс анимаций
-{
-#if DOTS_PORT_ENABLE
-  indiClrDots(); //выключаем разделительные точки
-#endif
-  dotReset(); //сброс анимации точек
-#if LAMP_NUM > 4
-  indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
-#endif
-  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
-  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
-  animShow = 0; //сбрасываем флаг анимации цифр
-  secUpd = 0; //обновление экрана
 }
 //------------------------------------Имитация глюков------------------------------------
 void glitchIndi(void) //имитация глюков
@@ -4416,6 +4413,13 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
 //-----------------------------Главный экран------------------------------------------------
 uint8_t mainScreen(void) //главный экран
 {
+#if LAMP_NUM > 4
+  indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
+#endif
+  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  animShow = 0; //сбрасываем флаг анимации цифр
+
   for (;;) { //основной цикл
     dataUpdate(); //обработка данных
     dotFlash(); //мигаем точками
@@ -4426,10 +4430,10 @@ uint8_t mainScreen(void) //главный экран
 
     if (!secUpd) { //если пришло время обновить индикаторы
 #if ALARM_TYPE
-      if (alarm && !alarmWaint) return ALARM_PROGRAM; //если флаг установлен флаг тревоги и флаг ожидания очещен
+      if (alarm && !alarmWaint) return ALARM_PROGRAM; //тревога будильника
 #endif
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
-      timerWarn(); //тревога таймера
+      if (timerMode == 2 && !timerCnt) return WARN_PROGRAM; //тревога таймера
 #endif
 
       if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
