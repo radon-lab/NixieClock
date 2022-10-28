@@ -411,9 +411,6 @@ int main(void) //главный цикл программ
   for (;;) {
     backlAnimEnable(); //разрешили эффекты подсветки
     changeBright(); //установка яркости от времени суток
-#if DOTS_PORT_ENABLE
-    indiClrDots(); //выключаем разделительные точки
-#endif
     dotReset(); //сброс анимации точек
     secUpd = 0; //обновление экрана
     switch (mainTask) {
@@ -3846,6 +3843,9 @@ void dotFlash(void) //мигание точек
 //-----------------------------Сброс анимации точек--------------------------------
 void dotReset(void) //сброс анимации точек
 {
+#if DOTS_PORT_ENABLE
+  indiClrDots(); //выключаем разделительные точки
+#endif
   dotSetBright(0); //выключаем секундные точки
   _timer_ms[TMR_DOT] = 0; //сбросили таймер
 #if ALARM_TYPE
@@ -4416,8 +4416,8 @@ uint8_t mainScreen(void) //главный экран
 #if LAMP_NUM > 4
   indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
 #endif
-  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
-  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+  if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
   animShow = 0; //сбрасываем флаг анимации цифр
 
   for (;;) { //основной цикл
@@ -4449,7 +4449,6 @@ uint8_t mainScreen(void) //главный экран
 
       if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s > AUTO_TEMP_PHASE_MIN && RTC.s < AUTO_TEMP_PHASE_MAX) { //если пришло время отобразить температуру
         autoShowTemp(); //автоматический показ температуры
-        _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер
         return MAIN_PROGRAM;
       }
 
