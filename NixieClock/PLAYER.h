@@ -131,6 +131,11 @@ inline boolean playerWriteStatus(void)
 {
   return player.playbackEnd;
 }
+//--------------------------------Статус приглушения плеера-----------------------------------
+inline boolean playerMuteStatus(void)
+{
+  return player.playbackMute;
+}
 //-------------------------------Статус воспроизведения плеера--------------------------------
 boolean playerPlayStatus(void)
 {
@@ -151,7 +156,7 @@ void playerGenCRC(uint8_t* arr)
   arr[_CRC_H] = crc >> 8;
   arr[_CRC_L] = crc;
 }
-//----------------------------------Инициализация UART----------------------------------
+//------------------------------Отправить команду немедленно----------------------------------
 void playerSendCommand(uint8_t cmd, uint8_t data_low, uint8_t data_high)
 {
   player.transferBuff[_COMMAND] = cmd;
@@ -182,20 +187,6 @@ void playerSendData(uint8_t cmd, uint8_t data_low, uint8_t data_high)
   player.playbackBuff[++player.playbackEnd] = data_low;
   player.playbackBuff[++player.playbackEnd] = data_high;
 }
-//-----------------------------------Воспроизвести трек в папке----------------------------------
-void playerSetTrack(uint8_t _track, uint8_t _folder)
-{
-  uint8_t _buff = player.playbackEnd + 1;
-  if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
-  if (_buff != player.playbackStart) playerSendData(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
-}
-//----------------------------Воспроизвести трек в папке без очереди----------------------------
-void playerSetTrackNow(uint8_t _track, uint8_t _folder)
-{
-  uint8_t _buff = player.playbackEnd + 1;
-  if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
-  if (_buff != player.playbackStart) playerSendDataNow(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
-}
 //----------------------------------Остановка очереди команд------------------------------------
 void playerStop(void)
 {
@@ -209,6 +200,20 @@ void playerStopTrack(void)
   uint8_t _buff = player.playbackEnd + 1;
   if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
   if (_buff != player.playbackStart) playerSendDataNow(PLAYER_CMD_STOP);
+}
+//-----------------------------------Воспроизвести трек в папке----------------------------------
+void playerSetTrack(uint8_t _track, uint8_t _folder)
+{
+  uint8_t _buff = player.playbackEnd + 1;
+  if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
+  if (_buff != player.playbackStart) playerSendData(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
+}
+//----------------------------Воспроизвести трек в папке без очереди----------------------------
+void playerSetTrackNow(uint8_t _track, uint8_t _folder)
+{
+  uint8_t _buff = player.playbackEnd + 1;
+  if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
+  if (_buff != player.playbackStart) playerSendDataNow(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
 }
 //-------------------------------------Установить громкость-------------------------------------
 void playerSetVol(uint8_t _vol)
@@ -256,7 +261,7 @@ void playerUpdate(void)
 {
 #if PLAYER_TYPE == 1 //DF плеер
   static boolean busyState;
-  static boolean writeState;
+  static boolean playState;
 
   if (!_timer_ms[TMR_PLAYER]) {
     if (busyState != DF_BUSY_CHK) {
@@ -266,7 +271,7 @@ void playerUpdate(void)
 #if AMP_PORT_ENABLE
         if (!playerWriteStatus()) AMP_DISABLE;
 #endif
-        writeState = 0;
+        playState = 0;
       }
     }
 
@@ -274,14 +279,15 @@ void playerUpdate(void)
 #if AMP_PORT_ENABLE
       if (!AMP_CHK && !player.playbackMute && (player.playbackBuff[player.playbackStart] == PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) {
         AMP_ENABLE;
-        _timer_ms[TMR_PLAYER] = PLAYER_AMP_WAIT;
+        _timer_ms[TMR_PLAYER] = AMP_WAIT_TIME;
         return;
       }
 #endif
       if (uartStatus()) {
-        if (writeState && !player.playbackNow) return;
+        if (playState && !player.playbackNow) return;
         if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
         player.playbackNow = 0;
+        playState = 0;
 
         player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
         player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
@@ -289,15 +295,15 @@ void playerUpdate(void)
 
         playerGenCRC(player.transferBuff);
 
+        if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
+        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+
         switch (player.transferBuff[_COMMAND]) {
-          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) writeState = 1; break;
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
         }
 
-        if (!player.playbackMute || (player.transferBuff[_COMMAND] != PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) uartSendData();
-        if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
-
-        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+        uartSendData(); //отправляем команду в плеер
       }
     }
   }
@@ -327,21 +333,21 @@ void playerUpdate(void)
 #if AMP_PORT_ENABLE
           if (!AMP_CHK) {
             AMP_ENABLE;
-            _timer_ms[TMR_PLAYER] = PLAYER_AMP_WAIT;
+            _timer_ms[TMR_PLAYER] = AMP_WAIT_TIME;
           }
 #endif
         }
         else player.playbackStart += 2;
         break;
       case PLAYER_CMD_MUTE:
-        player.playbackStart++;
         player.playbackMute = player.playbackBuff[player.playbackStart++];
+        player.playbackStart++;
         if (player.playbackMute) BUZZ_INP;
         else BUZZ_OUT;
         break;
       case PLAYER_CMD_SET_VOL:
-        player.playbackStart++;
         buffer.dacVolume = 9 - player.playbackBuff[player.playbackStart++];
+        player.playbackStart++;
         if (buffer.dacVolume > 9) buffer.dacVolume = 0;
         break;
       default: player.playbackStart += 2; break;

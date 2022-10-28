@@ -8,8 +8,10 @@
 
 #define RDA_SEEK_DOWN 0x00 //поиск вниз
 #define RDA_SEEK_UP 0x01 //поиск вверх
-#define RDA_MUTE_OFF 0x00 //включить приглушение звука
-#define RDA_MUTE_ON 0x01 //выключить приглушение звука
+
+#define RDA_MUTE_OFF 0x00 //выключить приглушение звука
+#define RDA_MUTE_ON 0x01 //включить приглушение звука
+
 #define RDA_ERROR 0xFF //ошибка связи с радиоприемником
 #define RDA_OFF 0x00 //радио выключено
 #define RDA_ON 0x01 //радио включено

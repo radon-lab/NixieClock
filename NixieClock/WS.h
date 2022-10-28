@@ -105,6 +105,17 @@ void setLedHue(uint8_t _color, boolean _mode)
   if (_mode == WHITE_OFF && _color == 255) _color = 0;
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledColor[f] = _color;
 }
+//---------------------------Установка цвета подсветки меню в формате HV----------------------------
+void setBacklHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
+{
+  for (uint8_t f = 0; f < LAMP_NUM; f++) {
+    if (_count && f >= _start) {
+      ledColor[f] = _color;
+      _count--;
+    }
+    else ledColor[f] = _color_main;
+  }
+}
 //--------------------------------------Уменьшение яркости------------------------------------------
 void decLedsBright(uint8_t _led, uint8_t _step)
 {
