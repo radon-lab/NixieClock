@@ -2420,6 +2420,7 @@ uint8_t settings_main(void) //настроки основные
             case SET_BTN_SOUND: setBacklHue(3, 1, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); break; //подсветка активных разрядов
 #endif
             case SET_TEMP_SENS: setBacklHue(0, 3, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); break; //подсветка активных разрядов
+            case SET_AUTO_TEMP: setBacklHue(1, 3, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); break; //подсветка активных разрядов
 #if LAMP_NUM < 6
             case SET_BURN_MODE: setBacklHue(0, 2, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); break; //подсветка активных разрядов
 #endif
@@ -3935,6 +3936,7 @@ void flipSecs(void) //анимация секунд
     case SECS_BRIGHT:
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
+        _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
         indi.timeBright = SECONDS_ANIM_2_TIME / indi.maxBright; //расчёт шага яркости режима 2
         indi.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         indi.animSeconds[0] = indi.maxBright; //новые секунды
@@ -3943,14 +3945,14 @@ void flipSecs(void) //анимация секунд
         indi.animSeconds[3] = indi.flipSeconds / 10; //старые секунды
         indi.flipSeconds = 0; //сбросили флаги анимации
         if (indi.animSeconds[2] != (RTC.s % 10)) indi.flipSeconds = 5;
-        if (indi.animSeconds[3] != (RTC.s / 10)) indi.flipSeconds = 6;
+        if (indi.animSeconds[3] != (RTC.s / 10)) indi.flipSeconds = 4;
       }
-      if (indi.flipSeconds && !_timer_ms[TMR_MS]) { //если анимация активна и пришло время
-        _timer_ms[TMR_MS] = indi.timeBright; //установили таймер
+      if (indi.flipSeconds && !_timer_ms[TMR_ANIM]) { //если анимация активна и пришло время
+        _timer_ms[TMR_ANIM] = indi.timeBright; //установили таймер
         if (!indi.animSeconds[1]) {
           if (indi.animSeconds[0] > 0) {
             indi.animSeconds[0]--;
-            for (uint8_t i = 4; i < indi.flipSeconds; i++) indiSetBright(indi.animSeconds[0], i);
+            for (uint8_t i = indi.flipSeconds; i < 6; i++) indiSetBright(indi.animSeconds[0], i);
           }
           else {
             indi.animSeconds[1] = 1;
@@ -3960,7 +3962,7 @@ void flipSecs(void) //анимация секунд
         else {
           if (indi.animSeconds[0] < indi.maxBright) {
             indi.animSeconds[0]++;
-            for (uint8_t i = 4; i < indi.flipSeconds; i++) indiSetBright(indi.animSeconds[0], i);
+            for (uint8_t i = indi.flipSeconds; i < 6; i++) indiSetBright(indi.animSeconds[0], i);
           }
           else indi.flipSeconds = 0;
         }
@@ -3969,6 +3971,7 @@ void flipSecs(void) //анимация секунд
     case SECS_ORDER_OF_NUMBERS:
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
+        _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
         indi.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         indi.animSeconds[0] = indi.flipSeconds % 10; //старые секунды
         indi.animSeconds[1] = indi.flipSeconds / 10; //старые секунды
@@ -3976,8 +3979,8 @@ void flipSecs(void) //анимация секунд
         indi.animSeconds[3] = RTC.s / 10; //новые секунды
         indi.flipSeconds = 0x03; //устанавливаем флаги анимации
       }
-      if (indi.flipSeconds && !_timer_ms[TMR_MS]) { //если анимация активна и пришло время
-        _timer_ms[TMR_MS] = SECONDS_ANIM_1_TIME; //установили таймер
+      if (indi.flipSeconds && !_timer_ms[TMR_ANIM]) { //если анимация активна и пришло время
+        _timer_ms[TMR_ANIM] = SECONDS_ANIM_1_TIME; //установили таймер
         for (uint8_t i = 0; i < 2; i++) { //перебираем все цифры
           if (indi.animSeconds[i] != indi.animSeconds[i + 2]) { //если не достигли конца анимации разряда
             if (--indi.animSeconds[i] > 9) indi.animSeconds[i] = 9; //меняем цифру разряда
