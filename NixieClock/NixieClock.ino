@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.1 релиз от 28.10.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.1 релиз от 29.10.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3869,18 +3869,18 @@ void glitchIndi(void) //имитация глюков
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
       uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
-      while (!buttonState()) {
+      while (!buttonState()) { //если не нажата кнопка
         dataUpdate(); //обработка данных
         dotFlash(); //мигаем точками
 #if LAMP_NUM > 4
-        if (!indiState) flipSecs(); //анимация секунд
+        if (!indiState || mainSettings.secsMode == SECS_BRIGHT) flipSecs(); //анимация секунд
 #endif
 
-        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+        if (!_timer_ms[TMR_MS]) { //если таймер истек
           if (!indiState) indiClr(glitchIndic); //выключаем индикатор
           else indiSet(indiSave, glitchIndic); //включаем индикатор
           indiState = !indiState; //меняем состояние глюка лампы
-          _timer_ms[TMR_ANIM] = random(1, 6) * GLITCH_TIME; //перезапускаем таймер глюка
+          _timer_ms[TMR_MS] = random(1, 6) * GLITCH_TIME; //перезапускаем таймер глюка
           if (!glitchCounter--) break; //выходим если закончились глюки
         }
       }
