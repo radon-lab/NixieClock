@@ -246,6 +246,10 @@ enum {
   BURN_SINGLE_TIME, //перебор одного индикатора с отображением времени
   BURN_EFFECT_NUM //максимум эффектов антиотравления
 };
+enum {
+  BURN_NORMAL, //нормальный режим
+  BURN_DEMO //демонстрация
+};
 
 //перечисления анимаций перебора цифр секунд
 enum {
@@ -277,8 +281,8 @@ enum {
   FLIP_EFFECT_NUM //максимум эффектов перелистывания
 };
 enum {
-  FLIP_NORMAL,
-  FLIP_DEMO
+  FLIP_NORMAL, //нормальный режим
+  FLIP_DEMO //демонстрация
 };
 
 //перечисления режимов подсветки
@@ -1943,8 +1947,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
   uint8_t cur_day = 1; //текущий день недели
   uint8_t time_out = 0; //таймаут автовыхода
 
-  indiClr(); //очищаем индикаторы
-  dotSetBright(dot.maxBright); //выключаем точки
+  dotSetBright(dot.maxBright); //включаем точки
 
   alarmReset(); //сброс будильника
   alarmReadBlock(1, alarm); //читаем блок данных
@@ -2118,9 +2121,6 @@ uint8_t settings_multiAlarm(void) //настройка будильников
   uint8_t cur_day = 1; //текущий день недели
   uint8_t time_out = 0; //таймаут автовыхода
   uint8_t curAlarm = alarmsNum > 0;
-
-  indiClr(); //очищаем индикаторы
-  dotSetBright(0); //выключаем точки
 
   alarmReset(); //сброс будильника
   alarmReadBlock(curAlarm, alarm); //читаем блок данных
@@ -2326,9 +2326,6 @@ uint8_t settings_main(void) //настроки основные
   uint8_t cur_mode = 0; //текущий режим
   uint8_t time_out = 0; //таймаут автовыхода
 
-  indiClr(); //очищаем индикаторы
-  dotSetBright(0); //выключаем точки
-
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if BACKL_TYPE == 2
@@ -2508,11 +2505,17 @@ uint8_t settings_main(void) //настроки основные
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
                 switch (cur_indi) {
-                  case 0: if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1); break;
+                  case 0:
+                    if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
+                    burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                    dotSetBright(dot.maxBright); //включаем точки
+                    break;
                   case 1: if (mainSettings.secsMode) mainSettings.secsMode--; else mainSettings.secsMode = (SECS_EFFECT_NUM - 1); break;
                 }
 #else
                 if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
+                burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                dotSetBright(dot.maxBright); //включаем точки
 #endif
                 break;
             }
@@ -2589,11 +2592,17 @@ uint8_t settings_main(void) //настроки основные
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
                 switch (cur_indi) {
-                  case 0: if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0; break;
+                  case 0:
+                    if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
+                    burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                    dotSetBright(dot.maxBright); //включаем точки
+                    break;
                   case 1: if (mainSettings.secsMode < (SECS_EFFECT_NUM - 1)) mainSettings.secsMode++; else mainSettings.secsMode = 0; break;
                 }
 #else
                 if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
+                burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                dotSetBright(dot.maxBright); //включаем точки
 #endif
                 break;
             }
@@ -2816,7 +2825,6 @@ uint8_t showTemp(void) //показать температуру
 
 #if DOTS_PORT_ENABLE
   indiSetDots(2); //включаем разделителную точку
-  dotSetBright(0); //выключаем точки
 #else
   dotSetBright(dot.maxBright); //включаем точки
 #endif
@@ -2918,7 +2926,6 @@ uint8_t showDate(void) //показать дату
 
 #if DOTS_PORT_ENABLE
   indiSetDots(2); //включаем разделителную точку
-  dotSetBright(0); //выключаем точки
 #else
   dotSetBright(dot.maxBright); //включаем точки
 #endif
@@ -2978,8 +2985,6 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
 {
   uint8_t anim = 0; //анимация переключения
   uint8_t mode = 0; //режим быстрой настройки
-
-  dotSetBright(0); //выключаем точки
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_FAST_MENU_START, PLAYER_MENU_FOLDER);
@@ -3890,14 +3895,21 @@ void glitchIndi(void) //имитация глюков
   }
 }
 //----------------------------Антиотравление индикаторов-------------------------------
-void burnIndi(uint8_t mode) //антиотравление индикаторов
+void burnIndi(uint8_t mode, boolean demo) //антиотравление индикаторов
 {
   uint8_t indi = 0;
   if (mode != BURN_SINGLE_TIME) dotReset(); //сброс анимации точек
 
   while (1) {
     if (mode == BURN_SINGLE) indiClr(); //очистка индикаторов
-    for (uint8_t loops = 0; loops < BURN_LOOPS; loops++) {
+    for (uint8_t loops = (demo) ? 1 : BURN_LOOPS; loops; loops--) {
+      if (mode == BURN_SINGLE_TIME) {
+        indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
+        indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
+#if LAMP_NUM > 4
+        indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+#endif
+      }
       for (uint8_t digit = 0; digit < 10; digit++) {
         switch (mode) {
           case BURN_ALL:
@@ -3913,13 +3925,6 @@ void burnIndi(uint8_t mode) //антиотравление индикаторо�
           if (buttonState()) return; //если нажата кнопка выходим
           if (mode == BURN_SINGLE_TIME) dotFlash(); //мигаем точками
         }
-      }
-      if (mode == BURN_SINGLE_TIME) {
-        indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
-        indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
-#if LAMP_NUM > 4
-        indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
       }
     }
     if (mode == BURN_ALL || (++indi >= LAMP_NUM)) return;
@@ -4442,7 +4447,7 @@ uint8_t mainScreen(void) //главный экран
       }
 
       if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) { //если пришло время отобразить анимацию антиотравления
-        burnIndi(mainSettings.burnMode); //антиотравление индикаторов
+        burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
         _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер
         return MAIN_PROGRAM;
       }
