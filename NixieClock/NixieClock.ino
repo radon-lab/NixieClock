@@ -2399,7 +2399,7 @@ uint8_t settings_main(void) //настроки основные
             case SET_TEMP_SENS:
               if (!blink_data) {
                 if (sens.err) indiPrintNum(0, 0); //вывод ошибки
-                else indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3); //вывод температуры
+                else indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3); //вывод температуры
               }
               indiPrintNum(sens.type, 3); //вывод сенсора температуры
               break;
@@ -2695,8 +2695,8 @@ uint8_t settings_main(void) //настроки основные
 //----------------------------Воспроизвести температуру--------------------------------------
 void speakTemp(void) //воспроизвести температуру
 {
-  uint16_t _ceil = (sens.temp / 10 + mainSettings.tempCorrect) / 10;
-  uint16_t _dec = (sens.temp / 10 + mainSettings.tempCorrect) % 10;
+  uint16_t _ceil = (sens.temp + mainSettings.tempCorrect) / 10;
+  uint16_t _dec = (sens.temp + mainSettings.tempCorrect) % 10;
 
   playerSetTrackNow(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
   if (_dec) {
@@ -2781,7 +2781,7 @@ void autoShowTemp(void) //автоматический показ темпера
         indiClr(); //очистка индикаторов
         switch (mode) {
           case 0:
-            indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
+            indiPrintNum(sens.temp + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
 #if DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
             indiSetDots(pos + 2); //включаем разделителную точку
@@ -2841,7 +2841,7 @@ uint8_t showTemp(void) //показать температуру
       indiClr(); //очистка индикаторов
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
-        case 0: indiPrintNum(sens.temp / 10 + mainSettings.tempCorrect, 0, 3, ' '); break;
+        case 0: indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); break;
         case 1: indiPrintNum(sens.hum, 0, 4, ' '); break;
         case 2: indiPrintNum(sens.press, 0, 4, ' '); break;
       }

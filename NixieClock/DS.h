@@ -127,8 +127,8 @@ void readTempDS(void)
   if (raw & 0x8000) raw = 0; //если значение отрицательное
 
   switch (typeDS) {
-    case DS18S20_ADDR: sens.temp = raw * 50; break; //переводим в температуру для DS18S20
-    case DS18B20_ADDR: sens.temp = (raw * 100) >> 4; break; //переводим в температуру для DS18B20
+    case DS18S20_ADDR: sens.temp = raw * 5; break; //переводим в температуру для DS18S20
+    case DS18B20_ADDR: sens.temp = (raw * 10) >> 4; break; //переводим в температуру для DS18B20
   }
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность

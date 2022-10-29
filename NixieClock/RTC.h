@@ -110,8 +110,8 @@ void disable32K(void) //отключение вывода 32K
 boolean readTempRTC(void) //чтение температуры
 {
   if (wireRequestFrom(RTC_ADDR, 0x11)) return 0; //запрашиваем чтение данных, если нет ответа выходим
-  uint16_t temp = (((uint16_t)wireRead() << 2 | wireReadEndByte() >> 6) * 100) >> 2;
-  sens.temp = (temp > 8500) ? 0 : temp;
+  uint16_t temp = (((uint16_t)wireRead() << 2 | wireReadEndByte() >> 6) * 10) >> 2;
+  sens.temp = (temp > 850) ? 0 : temp;
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность
   return 1; //выходим
