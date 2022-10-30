@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.1 релиз от 29.10.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.2 релиз от 30.10.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -256,6 +256,7 @@ enum {
   SECS_STATIC, //без анимации
   SECS_BRIGHT, //плавное угасание и появление
   SECS_ORDER_OF_NUMBERS, //перемотка по порядку числа
+  SECS_ORDER_OF_CATHODES, //перемотка по порядку катодов в лампе
   SECS_EFFECT_NUM //максимум эффектов перелистывания
 };
 
@@ -3939,7 +3940,7 @@ void flipSecs(void) //анимация секунд
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
         _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
-        indi.timeBright = SECONDS_ANIM_2_TIME / indi.maxBright; //расчёт шага яркости режима 2
+        indi.timeBright = SECONDS_ANIM_1_TIME / indi.maxBright; //расчёт шага яркости режима 2
         indi.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         indi.animSeconds[0] = indi.maxBright; //новые секунды
         indi.animSeconds[1] = 0; //сбросили флаг
@@ -3971,6 +3972,7 @@ void flipSecs(void) //анимация секунд
       }
       break;
     case SECS_ORDER_OF_NUMBERS:
+    case SECS_ORDER_OF_CATHODES: //перемотка по порядку катодов в лампе
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
         _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
@@ -3980,15 +3982,26 @@ void flipSecs(void) //анимация секунд
         indi.animSeconds[2] = RTC.s % 10; //новые секунды
         indi.animSeconds[3] = RTC.s / 10; //новые секунды
         indi.flipSeconds = 0x03; //устанавливаем флаги анимации
+
+        if (mainSettings.secsMode == SECS_ORDER_OF_CATHODES) {
+          for (uint8_t i = 0; i < 4; i++) {
+            for (uint8_t c = 0; c < 10; c++) {
+              if (cathodeMask[c] == indi.animSeconds[i]) {
+                indi.animSeconds[i] = c;
+                break;
+              }
+            }
+          }
+        }
       }
       if (indi.flipSeconds && !_timer_ms[TMR_ANIM]) { //если анимация активна и пришло время
-        _timer_ms[TMR_ANIM] = SECONDS_ANIM_1_TIME; //установили таймер
+        _timer_ms[TMR_ANIM] = (mainSettings.secsMode == SECS_ORDER_OF_NUMBERS) ? SECONDS_ANIM_2_TIME : SECONDS_ANIM_3_TIME; //установили таймер
         for (uint8_t i = 0; i < 2; i++) { //перебираем все цифры
           if (indi.animSeconds[i] != indi.animSeconds[i + 2]) { //если не достигли конца анимации разряда
             if (--indi.animSeconds[i] > 9) indi.animSeconds[i] = 9; //меняем цифру разряда
           }
           else indi.flipSeconds &= ~(0x01 << i); //иначе завершаем анимацию для разряда
-          indiPrintNum(indi.animSeconds[i], (LAMP_NUM - 1) - i); //вывод секунд
+          indiPrintNum((mainSettings.secsMode == SECS_ORDER_OF_NUMBERS) ? indi.animSeconds[i] : cathodeMask[indi.animSeconds[i]], (LAMP_NUM - 1) - i); //вывод секунд
         }
       }
       break;
@@ -4010,13 +4023,12 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
   uint8_t MM = (RTC.m) ? (RTC.m - 1) : 59; //предыдущая минута
 
   if (!demo) { //если не демонстрация
-    if (RTC.h / 10 != HH / 10) changeIndi |= (0x01 << 0); //установили флаг разряда
-    if (RTC.h % 10 != HH % 10) changeIndi |= (0x01 << 1); //установили флаг разряда
-    if (RTC.m / 10 != MM / 10) changeIndi |= (0x01 << 2); //установили флаг разряда
-    if (RTC.m % 10 != MM % 10) changeIndi |= (0x01 << 3); //установили флаг разряда
+    if (RTC.h / 10 != HH / 10) changeIndi++; //установили флаг разряда
+    if (RTC.h % 10 != HH % 10) changeIndi++; //установили флаг разряда
+    if (RTC.m / 10 != MM / 10) changeIndi++; //установили флаг разряда
+    if (RTC.m % 10 != MM % 10) changeIndi++; //установили флаг разряда
 #if LAMP_NUM > 4
-    changeIndi |= (0x01 << 4); //установили флаг разряда
-    changeIndi |= (0x01 << 5); //установили флаг разряда
+    changeIndi += 2; //установили флаг разрядов
 #endif
   }
   else { //иначе режим демонстрации
@@ -4045,7 +4057,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             if (!anim_buf[1]) {
               if (anim_buf[0] > 0) {
                 anim_buf[0]--;
-                for (uint8_t i = 0; i < LAMP_NUM; i++) if (changeIndi & (0x01 << i)) indiSetBright(anim_buf[0], i);
+                for (uint8_t i = (LAMP_NUM - changeIndi); i < LAMP_NUM; i++) indiSetBright(anim_buf[0], i);
               }
               else {
                 anim_buf[1] = 1;
@@ -4059,7 +4071,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
             else {
               if (anim_buf[0] < indi.maxBright) {
                 anim_buf[0]++;
-                for (uint8_t i = 0; i < LAMP_NUM; i++) if (changeIndi & (0x01 << i)) indiSetBright(anim_buf[0], i);
+                for (uint8_t i = (LAMP_NUM - changeIndi); i < LAMP_NUM; i++) indiSetBright(anim_buf[0], i);
               }
               else break;
             }
@@ -4090,13 +4102,13 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           dotFlash(); //мигаем точками
 
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            changeIndi = LAMP_NUM; //загрузили буфер
             for (uint8_t i = 0; i < LAMP_NUM; i++) {
-              if (changeIndi & (0x01 << i)) {
-                if (anim_buf[i]) anim_buf[i]--;
-                else anim_buf[i] = 9;
-                if (anim_buf[i] == anim_buf[i + 6]) changeIndi &= ~(0x01 << i);
+              if (anim_buf[i] != anim_buf[i + 6]) { //если не достигли конца анимации разряда
+                if (--anim_buf[i] > 9) anim_buf[i] = 9; //меняем цифру разряда
                 indiPrintNum(anim_buf[i], i);
               }
+              else changeIndi--; //иначе завершаем анимацию для разряда
             }
             if (!changeIndi) break;
             _timer_ms[TMR_ANIM] = FLIP_MODE_3_TIME; //устанавливаем таймер
@@ -4121,13 +4133,11 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           anim_buf[10] = 0;
           anim_buf[11] = 0;
 
-          for (uint8_t i = 0; i < LAMP_NUM; i++) {
-            for (uint8_t f = 0; f < 2; f++) {
-              for (uint8_t c = 0; c < 10; c++) {
-                if (cathodeMask[c] == anim_buf[i + ((f) ? 0 : 6)]) {
-                  anim_buf[i + ((f) ? 6 : 0)] = c;
-                  break;
-                }
+          for (uint8_t i = 0; i < 12; i++) {
+            for (uint8_t c = 0; c < 10; c++) {
+              if (cathodeMask[c] == anim_buf[i]) {
+                anim_buf[i] = c;
+                break;
               }
             }
           }
@@ -4144,13 +4154,13 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           dotFlash(); //мигаем точками
 
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+            changeIndi = LAMP_NUM; //загрузили буфер
             for (uint8_t i = 0; i < LAMP_NUM; i++) {
-              if (changeIndi & (0x01 << i)) {
-                if (anim_buf[i]) anim_buf[i]--;
-                else anim_buf[i] = 9;
-                if (anim_buf[i] == anim_buf[i + 6]) changeIndi &= ~(0x01 << i);
+              if (anim_buf[i] != anim_buf[i + 6]) { //если не достигли конца анимации разряда
+                if (--anim_buf[i] > 9) anim_buf[i] = 9; //меняем цифру разряда
                 indiPrintNum(cathodeMask[anim_buf[i]], i);
               }
+              else changeIndi--; //иначе завершаем анимацию для разряда
             }
             if (!changeIndi) break;
             _timer_ms[TMR_ANIM] = FLIP_MODE_4_TIME; //устанавливаем таймер
