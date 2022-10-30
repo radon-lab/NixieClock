@@ -3693,7 +3693,7 @@ void backlEffect(void) //анимация подсветки
                 backl.drive = 1;
                 if (fastSettings.backlMode == BACKL_PULS_COLOR) backl.color += BACKL_MODE_3_COLOR; //меняем цвет
                 else backl.color = fastSettings.backlColor; //иначе статичный цвет
-                setLedHue(backl.color, (fastSettings.backlMode == BACKL_PULS_COLOR) ? WHITE_OFF : WHITE_ON); //установили цвет
+                setLedHue(backl.color, WHITE_ON); //установили цвет
                 _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE; //установили таймер
               }
             }
