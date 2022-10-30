@@ -3504,7 +3504,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
 
     if (!secUpd) {
       secUpd = 1; //сбрасываем флаг
-      if ((!timerMode || timerMode & 0x80) && ++time_out >= SETTINGS_TIMEOUT) return MAIN_PROGRAM;
+      if ((!timerMode || timerMode & 0x80) && ++time_out >= TIMER_TIMEOUT) return MAIN_PROGRAM;
 
       indiClr(); //очистка индикаторов
       switch (timerMode) {
