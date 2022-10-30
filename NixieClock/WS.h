@@ -56,32 +56,43 @@ void ledWrite(uint8_t* data, uint16_t size) {
 void showLeds(void)
 {
   uint8_t ledBuff[LAMP_NUM * 3]; //массив светодиодов
+  uint8_t* ledLink = ledBuff; //ссылка на текущий элемент
+  
   for (uint8_t f = 0; f < LAMP_NUM; f++) {
-    uint8_t pallet = (float)(ledColor[f] % 85) * ((float)ledBright[f] / 85.0);
-    switch (ledColor[f] / 85) {
-      case 0:
-        ledBuff[f * 3] = pallet;
-        ledBuff[f * 3 + 1] = ledBright[f] - pallet;
-        ledBuff[f * 3 + 2] = 0;
-        break;
-      case 1:
-        ledBuff[f * 3] = ledBright[f] - pallet;
-        ledBuff[f * 3 + 1] = 0;
-        ledBuff[f * 3 + 2] = pallet;
-        break;
-      case 2:
-        ledBuff[f * 3] = 0;
-        ledBuff[f * 3 + 1] = pallet;
-        ledBuff[f * 3 + 2] = ledBright[f] - pallet;
-        break;
-      case 3:
-        pallet = ledBright[f] / 3;
-        ledBuff[f * 3] = pallet;
-        ledBuff[f * 3 + 1] = pallet;
-        ledBuff[f * 3 + 2] = pallet;
-        break;
+    uint8_t count = 0;
+    uint8_t pallet = ledColor[f];
+    if (pallet != 255) {
+      while (pallet > 85) {
+        pallet -= 85;
+        count++;
+      }
+      pallet = (uint8_t)((((uint16_t)pallet * ledBright[f]) * 3) >> 8);
+      switch (count) {
+        case 0:
+          *ledLink++ = pallet;
+          *ledLink++ = ledBright[f] - pallet;
+          *ledLink++ = 0;
+          break;
+        case 1:
+          *ledLink++ = ledBright[f] - pallet;
+          *ledLink++ = 0;
+          *ledLink++ = pallet;
+          break;
+        case 2:
+          *ledLink++ = 0;
+          *ledLink++ = pallet;
+          *ledLink++ = ledBright[f] - pallet;
+          break;
+      }
+    }
+    else {
+      pallet = (uint8_t)(((uint16_t)ledBright[f] * 86) >> 8);
+      *ledLink++ = pallet;
+      *ledLink++ = pallet;
+      *ledLink++ = pallet;
     }
   }
+  
   ledWrite(ledBuff, sizeof(ledBuff));
 }
 //--------------------------------------Очистка светодиодов-----------------------------------------
