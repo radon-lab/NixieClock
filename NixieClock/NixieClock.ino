@@ -3936,7 +3936,7 @@ void burnIndi(uint8_t mode, boolean demo) //антиотравление инд�
 void flipSecs(void) //анимация секунд
 {
   switch (mainSettings.secsMode) {
-    case SECS_BRIGHT:
+    case SECS_BRIGHT: //плавное угасание и появление
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
         _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
@@ -3971,7 +3971,7 @@ void flipSecs(void) //анимация секунд
         }
       }
       break;
-    case SECS_ORDER_OF_NUMBERS:
+    case SECS_ORDER_OF_NUMBERS: //перемотка по порядку числа
     case SECS_ORDER_OF_CATHODES: //перемотка по порядку катодов в лампе
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
@@ -4325,21 +4325,23 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         anim_buf[3] = RTC.m % 10; //минуты
 
         for (uint8_t c = 0; c < 2; c++) {
-          for (uint8_t i = 0; i < LAMP_NUM;) {
+          for (uint8_t i = LAMP_NUM; i ;) {
             dataUpdate(); //обработка данных
             dotFlash(); //мигаем точками
 
             if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-#if LAMP_NUM > 4
-              anim_buf[4] = RTC.s / 10; //секунды
-              anim_buf[5] = RTC.s % 10; //секунды
-#endif
+              i--; //убавляем цикл
               switch (c) {
                 case 0: indiClr(i); break; //очистка индикатора
-                case 1: indiPrintNum(anim_buf[i], i); break; //вывод часов
+                case 1:
+#if LAMP_NUM > 4
+                  anim_buf[4] = RTC.s / 10; //секунды
+                  anim_buf[5] = RTC.s % 10; //секунды
+#endif
+                  indiPrintNum(anim_buf[i], i);
+                  break; //вывод часов
               }
-              i++; //прибавляем цикл
               _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
             }
           }
