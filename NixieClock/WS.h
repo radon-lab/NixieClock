@@ -66,7 +66,7 @@ void showLeds(void)
         pallet -= 85;
         count++;
       }
-      pallet = (uint8_t)((((uint16_t)pallet * ledBright[f]) * 3) >> 8);
+      pallet = (uint8_t)(((uint8_t)(pallet * 3) * ledBright[f]) >> 8);
       switch (count) {
         case 0:
           *ledLink++ = pallet;
@@ -86,7 +86,7 @@ void showLeds(void)
       }
     }
     else {
-      pallet = (uint8_t)(((uint16_t)ledBright[f] * 86) >> 8);
+      pallet = (uint8_t)((ledBright[f] * 86) >> 8);
       *ledLink++ = pallet;
       *ledLink++ = pallet;
       *ledLink++ = pallet;
