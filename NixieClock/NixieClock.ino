@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.2 релиз от 30.10.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 03.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -43,6 +43,7 @@ enum {
   TMR_BURN,      //таймер антиотравления
   TMR_TEMP,      //таймер автопоказа температуры
   TMR_GLITCH,    //таймер глюков
+  TMR_SLEEP,     //таймер ухода в сон
   TIMERS_SEC_NUM //количество таймеров
 };
 uint16_t _timer_sec[TIMERS_SEC_NUM]; //таймер отсчета секунд
@@ -71,6 +72,7 @@ struct sensorData {
 //----------------Периферия----------------
 #include "WIRE.h"
 #include "EEPROM.h"
+#include "PLAYER.h"
 #include "RDA.h"
 #include "RTC.h"
 #include "BME.h"
@@ -78,7 +80,6 @@ struct sensorData {
 #include "DS.h"
 #include "IR.h"
 #include "WS.h"
-#include "PLAYER.h"
 #include "INDICATION.h"
 
 //-----------------Настройки----------------
@@ -157,6 +158,7 @@ struct backlightData {
 
 //переменные работы с индикаторами
 struct indiData {
+  boolean sleepMode; //флаг режима сна индикаторов
   uint8_t maxBright; //максимальная яркость индикаторов
 #if LAMP_NUM > 4
   uint8_t flipSeconds; //флаги анимации секунд
@@ -279,6 +281,7 @@ enum {
   FLIP_WAVE, //волна
   FLIP_HIGHLIGHTS, //блики
   FLIP_EVAPORATION, //испарение
+  FLIP_SLOT_MACHINE, //игровой автомат
   FLIP_EFFECT_NUM //максимум эффектов перелистывания
 };
 enum {
@@ -358,6 +361,13 @@ enum {
   ANIM_MINS  //запуск анимации минут
 };
 
+//перечисления режимов времени
+enum {
+  TIME_NIGHT, //ночной режим
+  TIME_DAY //дневной режим
+};
+
+//перечисления основных программ
 enum {
   INIT_PROGRAM,       //инициализация
   MAIN_PROGRAM,       //главный экран
@@ -367,6 +377,7 @@ enum {
   ALARM_PROGRAM,      //тревога будильника
   RADIO_PROGRAM,      //радиоприемник
   TIMER_PROGRAM,      //таймер-секундомер
+  SLEEP_PROGRAM,      //режим сна индикаторов
   FAST_SET_PROGRAM,   //быстрые настройки
   MAIN_SET_PROGRAM,   //основные настройки
   CLOCK_SET_PROGRAM,  //настройки времени
@@ -436,6 +447,10 @@ int main(void) //главный цикл программ
         break;
       case TIMER_PROGRAM: mainTask = timerStopwatch(); break; //таймер-секундомер
 #endif
+      case SLEEP_PROGRAM: //режим сна индикаторов
+        mainTask = sleepIndi(); //переход в программу
+        setAnimTimers(); //установка таймеров анимаций
+        break;
       case FAST_SET_PROGRAM: mainTask = fastSetSwitch(); break; //переключение настроек
       case MAIN_SET_PROGRAM: //основные настроки
         mainTask = settings_main(); //переход в программу
@@ -586,8 +601,9 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
-  _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер антиотравления
+  setAnimTimers(); //установка таймеров анимаций
   _timer_sec[TMR_SYNC] = (uint16_t)(RTC_SYNC_TIME * 60); //устанавливаем таймер синхронизации
+
 
 #if LIGHT_SENS_ENABLE
   _timer_ms[TMR_LIGHT] = LIGHT_SENS_TIME;
@@ -630,6 +646,23 @@ void SET_ERROR(uint8_t err) //установка ошибки
   EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
   EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
 }
+//--------------------------Установка таймеров анимаций-------------------------
+void setAnimTimers(void) //установка таймеров анимаций
+{
+  _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер антиотравления
+  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+}
+//-------------------------Разрешить анимации подсветки-------------------------
+void backlAnimEnable(void) //разрешить анимации подсветки
+{
+  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+}
+//-------------------------Запретить анимации подсветки-------------------------
+void backlAnimDisable(void) //запретить анимации подсветки
+{
+  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+}
 //-----------------------------Расчет шага яркости-----------------------------
 uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
 {
@@ -643,16 +676,6 @@ uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расч
   uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
   if (temp < _step) temp = _step; //если шаг слишком мал, устанавливаем минимум
   return temp;
-}
-//-------------------------Разрешить анимации подсветки-------------------------
-void backlAnimEnable(void) //разрешить анимации подсветки
-{
-  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
-}
-//-------------------------Запретить анимации подсветки-------------------------
-void backlAnimDisable(void) //запретить анимации подсветки
-{
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
 }
 //---------------------Установка яркости от времени суток-----------------------------
 boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
@@ -713,7 +736,7 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
   else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
   return 1;
 }
-//----------------Проверка контрольной суммы настроек отладки-----------------------
+//------------------Проверка контрольной суммы настроек отладки---------------------
 boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
 {
   uint8_t CRC = 0; //буфер контрольной суммы
@@ -724,7 +747,7 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
   else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
   return 1;
 }
-//---------------Проверка установленного датчика температуры-----------------------
+//-----------------Проверка установленного датчика температуры----------------------
 void checkTempSens(void) //проверка установленного датчика температуры
 {
   for (sens.type = (SENS_ALL - 1); sens.type; sens.type--) { //перебираем все датчики температуры
@@ -736,7 +759,7 @@ void checkTempSens(void) //проверка установленного дат�
   }
   SET_ERROR(TEMP_SENS_ERROR); //иначе выдаем ошибку
 }
-//--------------------------------Обновить показания температуры----------------------------------------
+//-------------------------Обновить показания температуры---------------------------
 void updateTemp(void) //обновить показания температуры
 {
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
@@ -757,7 +780,7 @@ void updateTresholdADC(void) //обновление предела удержа�
 {
   hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + constrain(debugSettings.hvCorrect, -25, 25);
 }
-//------------------------------Обработка аналоговых входов-----------------------------------------
+//------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
 {
   if (!(ADCSRA & (1 << ADSC))) { //ждем окончания преобразования
@@ -860,7 +883,7 @@ void checkVCC(void) //чтение напряжения питания
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
 }
-//---------------------Обработка сенсора яркости освещения-----------------------------
+//-------------------Обработка сенсора яркости освещения---------------------------
 void lightSensUpdate(void) //обработка сенсора яркости освещения
 {
   static boolean now_state_light;
@@ -1296,6 +1319,7 @@ void debug_menu(void) //отладка
       }
     }
 #endif
+
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
@@ -1471,7 +1495,7 @@ void debug_menu(void) //отладка
     }
   }
 }
-//------------------------------Генерация частот бузера------------------------------------------------
+//--------------------------------Генерация частот бузера----------------------------------------------
 void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
 {
   cnt_puls = ((uint32_t)freq * (uint32_t)time) / 500; //пересчитываем частоту и время в циклы таймера
@@ -1479,7 +1503,7 @@ void buzz_pulse(uint16_t freq, uint16_t time) //генерация частот�
   OCR2B = 255; //устанавливаем COMB в начало
   TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
 }
-//---------------------------------Воспроизведение мелодии-----------------------------------------------
+//--------------------------------Воспроизведение мелодии-----------------------------------------------
 void melodyUpdate(void) //воспроизведение мелодии
 {
   if (sound.replay && !_timer_ms[TMR_PLAYER]) { //если пришло время
@@ -1491,7 +1515,7 @@ void melodyUpdate(void) //воспроизведение мелодии
     }
   }
 }
-//-----------------------------Запуск воспроизведения мелодии--------------------------------------------
+//----------------------------Запуск воспроизведения мелодии---------------------------------------------
 void melodyPlay(uint8_t melody, uint16_t link, uint8_t replay) //запуск воспроизведения мелодии
 {
   sound.semp = 0; //сбросили позицию семпла
@@ -1515,7 +1539,17 @@ void alarmInit(void) //инициализация будильника
     updateByte(alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
-//----------------------------------Сброс будильника---------------------------------------------------------
+//-----------------------------------Отключение будильника------------------------------------------------
+void alarmDisable(void) //отключение будильника
+{
+#if PLAYER_TYPE
+  playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
+#else
+  melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
+#endif
+  alarmReset(); //сброс будильника
+}
+//--------------------------------------Сброс будильника--------------------------------------------------
 void alarmReset(void) //сброс будильника
 {
   if (alarmRead(alarm - 1, ALARM_MODE) == 1) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((alarm - 1) * ALARM_MAX_ARR) + ALARM_MODE, 0); //если был установлен режим одиночный то выключаем будильник
@@ -1526,25 +1560,25 @@ void alarmReset(void) //сброс будильника
   alarmWaint = 0; //сбрасываем флаг ожидания
   alarm = 0; //сбрасываем флаг тревоги
 }
-//----------------------------------Получить основные данные будильника---------------------------------------------------------
+//-----------------------------Получить основные данные будильника-----------------------------------------
 uint8_t alarmRead(uint8_t almNum, uint8_t almData) //получить основные данные будильника
 {
   return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * ALARM_MAX_ARR) + almData); //возвращаем запрошеный байт
 }
-//----------------------------------Получить блок основных данных будильника---------------------------------------------------------
+//--------------------------Получить блок основных данных будильника---------------------------------------
 void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
 {
   uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
   for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + curCell + i) : 0; //считываем блок данных
 }
-//----------------------------------Записать блок основных данных будильника---------------------------------------------------------
+//---------------------------Записать блок основных данных будильника--------------------------------------
 void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
 {
   if (!almNum) return; //если нет ни одного будильника то выходим
   uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
   for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + curCell + i, data[i]); //записываем блок данных
 }
-//---------------------Создать новый будильник---------------------------------------------------------
+//---------------------------------Создать новый будильник-------------------------------------------------
 void newAlarm(void) //создать новый будильник
 {
   if (alarmsNum < MAX_ALARMS) { //если новый будильник меньше максимума
@@ -1557,7 +1591,7 @@ void newAlarm(void) //создать новый будильник
     updateByte(++alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
-//---------------------Удалить будильник---------------------------------------------------------
+//-----------------------------------Удалить будильник-----------------------------------------------------
 void delAlarm(uint8_t alarm) //удалить будильник
 {
   if (alarmsNum) { //если будильник доступен
@@ -1569,7 +1603,7 @@ void delAlarm(uint8_t alarm) //удалить будильник
     updateByte(--alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
-//-----------------------------------Проверка будильников-------------------------------------------------
+//----------------------------------Проверка будильников----------------------------------------------------
 void checkAlarms(void) //проверка будильников
 {
   alarmEnabled = 0; //сбрасываем флаг включенного будильника
@@ -1676,26 +1710,14 @@ uint8_t alarmWarn(void) //тревога будильника
           melodyPlay(SOUND_ALARM_WAINT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
 #endif
         }
-        else {
-#if PLAYER_TYPE
-          playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
-#else
-          melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
-#endif
-          alarmReset(); //сброс будильника
-        }
+        else alarmDisable(); //отключение будильника
         return MAIN_PROGRAM; //выходим
 
       case LEFT_KEY_HOLD: //удержание левой кнопки
       case RIGHT_KEY_HOLD: //удержание правой кнопки
       case SET_KEY_HOLD: //удержание средней кнопки
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
-#if PLAYER_TYPE
-        playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
-#else
-        melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
-#endif
-        alarmReset(); //сброс будильника
+        alarmDisable(); //отключение будильника
         return MAIN_PROGRAM; //выходим
     }
   }
@@ -2378,24 +2400,24 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_HOUR_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[0], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[1], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[TIME_NIGHT], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[TIME_DAY], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
               break;
             case SET_BRIGHT_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[0], 0, 2, 0); //вывод часа начала ночной посветки
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[1], 2, 2, 0); //вывод часа окончания ночной посветки
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[TIME_NIGHT], 0, 2, 0); //вывод часа начала ночной посветки
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[TIME_DAY], 2, 2, 0); //вывод часа окончания ночной посветки
               break;
             case SET_INDI_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[0], 0, 2, 0); //яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[1], 2, 2, 0); //вывод яркости день
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[TIME_NIGHT], 0, 2, 0); //яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[TIME_DAY], 2, 2, 0); //вывод яркости день
               break;
             case SET_BACKL_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[0] / 10, 0, 2, 0); //яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[1] / 10, 2, 2, 0); //вывод яркости день
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[TIME_NIGHT] / 10, 0, 2, 0); //яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_DOT_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[0] / 10, 0, 2, 0); //вывод яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[1] / 10, 2, 2, 0); //вывод яркости день
+              if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[TIME_NIGHT] / 10, 0, 2, 0); //вывод яркости ночь
+              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
               break;
             case SET_TEMP_SENS:
               if (!blink_data) {
@@ -2436,6 +2458,7 @@ uint8_t settings_main(void) //настроки основные
           break;
       }
     }
+
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
@@ -2461,27 +2484,28 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeHour[0] > 0) mainSettings.timeHour[0]--; else mainSettings.timeHour[0] = 23; break;
-                  case 1: if (mainSettings.timeHour[1] > 0) mainSettings.timeHour[1]--; else mainSettings.timeHour[1] = 23; break;
+                  case 0: if (mainSettings.timeHour[TIME_NIGHT] > 0) mainSettings.timeHour[TIME_NIGHT]--; else mainSettings.timeHour[TIME_NIGHT] = 23; break;
+                  case 1: if (mainSettings.timeHour[TIME_DAY] > 0) mainSettings.timeHour[TIME_DAY]--; else mainSettings.timeHour[TIME_DAY] = 23; break;
                 }
                 break;
               case SET_BRIGHT_TIME: //время смены подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeBright[0] > 0) mainSettings.timeBright[0]--; else mainSettings.timeBright[0] = 23; break;
-                  case 1: if (mainSettings.timeBright[1] > 0) mainSettings.timeBright[1]--; else mainSettings.timeBright[1] = 23; break;
+                  case 0: if (mainSettings.timeBright[TIME_NIGHT] > 0) mainSettings.timeBright[TIME_NIGHT]--; else mainSettings.timeBright[TIME_NIGHT] = 23; break;
+                  case 1: if (mainSettings.timeBright[TIME_DAY] > 0) mainSettings.timeBright[TIME_DAY]--; else mainSettings.timeBright[TIME_DAY] = 23; break;
                 }
                 break;
               case SET_INDI_BRIGHT: //яркость индикаторов
                 switch (cur_indi) {
-                  case 0: if (mainSettings.indiBright[0] > 0) mainSettings.indiBright[0]--; else mainSettings.indiBright[0] = 30; break;
-                  case 1: if (mainSettings.indiBright[1] > 0) mainSettings.indiBright[1]--; else mainSettings.indiBright[1] = 30; break;
+                  case 0:
+                    if (mainSettings.indiBright[TIME_NIGHT] > INDI_MIN_BRIGHT) mainSettings.indiBright[TIME_NIGHT]--; else mainSettings.indiBright[TIME_NIGHT] = 0; break;
+                  case 1: if (mainSettings.indiBright[TIME_DAY] > INDI_MIN_BRIGHT) mainSettings.indiBright[TIME_DAY]--; break;
                 }
-                indiSetBright(mainSettings.indiBright[cur_indi]); //установка общей яркости индикаторов
+                indiSetBright((mainSettings.indiBright[cur_indi]) ? mainSettings.indiBright[cur_indi] : INDI_MIN_BRIGHT); //установка общей яркости индикаторо
                 break;
               case SET_BACKL_BRIGHT: //яркость подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.backlBright[0] > 0) mainSettings.backlBright[0] -= 10; else mainSettings.backlBright[0] = 250; break;
-                  case 1: if (mainSettings.backlBright[1] > 10) mainSettings.backlBright[1] -= 10; else mainSettings.backlBright[1] = 250; break;
+                  case 0: if (mainSettings.backlBright[TIME_NIGHT] > 0) mainSettings.backlBright[TIME_NIGHT] -= 10; break;
+                  case 1: if (mainSettings.backlBright[TIME_DAY] > 10) mainSettings.backlBright[TIME_DAY] -= 10; break;
                 }
 #if BACKL_TYPE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
@@ -2492,8 +2516,8 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_DOT_BRIGHT: //яркость точек
                 switch (cur_indi) {
-                  case 0: if (mainSettings.dotBright[0] > 0) mainSettings.dotBright[0] -= 10; else mainSettings.dotBright[0] = 250; break;
-                  case 1: if (mainSettings.dotBright[1] > 10) mainSettings.dotBright[1] -= 10; else mainSettings.dotBright[1] = 250; break;
+                  case 0: if (mainSettings.dotBright[TIME_NIGHT] > 0) mainSettings.dotBright[TIME_NIGHT] -= 10; break;
+                  case 1: if (mainSettings.dotBright[TIME_DAY] > 10) mainSettings.dotBright[TIME_DAY] -= 10; break;
                 }
                 dotSetBright(mainSettings.dotBright[cur_indi]); //включаем точки
                 break;
@@ -2548,27 +2572,27 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeHour[0] < 23) mainSettings.timeHour[0]++; else mainSettings.timeHour[0] = 0; break;
-                  case 1: if (mainSettings.timeHour[1] < 23) mainSettings.timeHour[1]++; else mainSettings.timeHour[1] = 0; break;
+                  case 0: if (mainSettings.timeHour[TIME_NIGHT] < 23) mainSettings.timeHour[TIME_NIGHT]++; else mainSettings.timeHour[TIME_NIGHT] = 0; break;
+                  case 1: if (mainSettings.timeHour[TIME_DAY] < 23) mainSettings.timeHour[TIME_DAY]++; else mainSettings.timeHour[TIME_DAY] = 0; break;
                 }
                 break;
               case SET_BRIGHT_TIME: //время смены подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeBright[0] < 23) mainSettings.timeBright[0]++; else mainSettings.timeBright[0] = 0; break;
-                  case 1: if (mainSettings.timeBright[1] < 23) mainSettings.timeBright[1]++; else mainSettings.timeBright[1] = 0; break;
+                  case 0: if (mainSettings.timeBright[TIME_NIGHT] < 23) mainSettings.timeBright[TIME_NIGHT]++; else mainSettings.timeBright[TIME_NIGHT] = 0; break;
+                  case 1: if (mainSettings.timeBright[TIME_DAY] < 23) mainSettings.timeBright[TIME_DAY]++; else mainSettings.timeBright[TIME_DAY] = 0; break;
                 }
                 break;
               case SET_INDI_BRIGHT: //яркость индикаторов
                 switch (cur_indi) {
-                  case 0: if (mainSettings.indiBright[0] < 30) mainSettings.indiBright[0]++; else mainSettings.indiBright[0] = 0; break;
-                  case 1: if (mainSettings.indiBright[1] < 30) mainSettings.indiBright[1]++; else mainSettings.indiBright[1] = 0; break;
+                  case 0: if (!mainSettings.indiBright[TIME_NIGHT]) mainSettings.indiBright[TIME_NIGHT] = INDI_MIN_BRIGHT; else if (mainSettings.indiBright[TIME_NIGHT] < 30) mainSettings.indiBright[TIME_NIGHT]++; break;
+                  case 1: if (mainSettings.indiBright[TIME_DAY] < 30) mainSettings.indiBright[TIME_DAY]++; break;
                 }
-                indiSetBright(mainSettings.indiBright[cur_indi]); //установка общей яркости индикаторов
+                indiSetBright(mainSettings.indiBright[cur_indi]); //установка общей яркости индикаторо
                 break;
               case SET_BACKL_BRIGHT: //яркость подсветки
                 switch (cur_indi) {
-                  case 0: if (mainSettings.backlBright[0] < 250) mainSettings.backlBright[0] += 10; else mainSettings.backlBright[0] = 0; break;
-                  case 1: if (mainSettings.backlBright[1] < 250) mainSettings.backlBright[1] += 10; else mainSettings.backlBright[1] = 10; break;
+                  case 0: if (mainSettings.backlBright[TIME_NIGHT] < 250) mainSettings.backlBright[TIME_NIGHT] += 10; break;
+                  case 1: if (mainSettings.backlBright[TIME_DAY] < 250) mainSettings.backlBright[TIME_DAY] += 10; break;
                 }
 #if BACKL_TYPE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
@@ -2579,8 +2603,8 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_DOT_BRIGHT: //яркость точек
                 switch (cur_indi) {
-                  case 0: if (mainSettings.dotBright[0] < 250) mainSettings.dotBright[0] += 10; else mainSettings.dotBright[0] = 0; break;
-                  case 1: if (mainSettings.dotBright[1] < 250) mainSettings.dotBright[1] += 10; else mainSettings.dotBright[1] = 10; break;
+                  case 0: if (mainSettings.dotBright[TIME_NIGHT] < 250) mainSettings.dotBright[TIME_NIGHT] += 10; break;
+                  case 1: if (mainSettings.dotBright[TIME_DAY] < 250) mainSettings.dotBright[TIME_DAY] += 10; break;
                 }
                 dotSetBright(mainSettings.dotBright[cur_indi]); //включаем точки
                 break;
@@ -2616,13 +2640,13 @@ uint8_t settings_main(void) //настроки основные
         set = !set;
         if (set) {
           switch (cur_mode) {
-            case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[0]); break; //установка общей яркости индикаторов
+            case SET_INDI_BRIGHT: indiSetBright((mainSettings.indiBright[TIME_NIGHT]) ? mainSettings.indiBright[TIME_NIGHT] : INDI_MIN_BRIGHT); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
 #if BACKL_TYPE == 2
-              setLedBright(mainSettings.backlBright[0]); //устанавливаем максимальную яркость
+              setLedBright(mainSettings.backlBright[TIME_NIGHT]); //устанавливаем максимальную яркость
 #else
               backlAnimDisable(); //запретили эффекты подсветки
-              backlSetBright(mainSettings.backlBright[0]); //если посветка статичная, устанавливаем яркость
+              backlSetBright(mainSettings.backlBright[TIME_NIGHT]); //если посветка статичная, устанавливаем яркость
 #endif
               break;
             case SET_TEMP_SENS: //настройка коррекции температуры
@@ -2631,7 +2655,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
           }
-          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.maxBright : mainSettings.dotBright[0]); //включаем точки
+          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.maxBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
         }
         else {
 #if BACKL_TYPE == 2
@@ -2651,17 +2675,17 @@ uint8_t settings_main(void) //настроки основные
 
       case LEFT_KEY_HOLD: //удержание левой кнопки
         if (set) {
-          cur_indi = 0;
+          cur_indi = TIME_NIGHT;
           switch (cur_mode) {
-            case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[0]); break; //установка общей яркости индикаторов
+            case SET_INDI_BRIGHT: indiSetBright((mainSettings.indiBright[TIME_NIGHT]) ? mainSettings.indiBright[TIME_NIGHT] : INDI_MIN_BRIGHT); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
 #if BACKL_TYPE == 2
-              setLedBright(mainSettings.backlBright[0]); //устанавливаем максимальную яркость
+              setLedBright(mainSettings.backlBright[TIME_NIGHT]); //устанавливаем максимальную яркость
 #else
-              backlSetBright(mainSettings.backlBright[0]); //если посветка статичная, устанавливаем яркость
+              backlSetBright(mainSettings.backlBright[TIME_NIGHT]); //если посветка статичная, устанавливаем яркость
 #endif
               break;
-            case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[0]); break;//яркость точек
+            case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_NIGHT]); break;//яркость точек
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
@@ -2670,17 +2694,17 @@ uint8_t settings_main(void) //настроки основные
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         if (set) {
-          cur_indi = 1;
+          cur_indi = TIME_DAY;
           switch (cur_mode) {
-            case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[1]); break; //установка общей яркости индикаторов
+            case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[TIME_DAY]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
 #if BACKL_TYPE == 2
-              setLedBright(mainSettings.backlBright[1]); //устанавливаем максимальную яркость
+              setLedBright(mainSettings.backlBright[TIME_DAY]); //устанавливаем максимальную яркость
 #else
-              backlSetBright(mainSettings.backlBright[1]); //если посветка статичная, устанавливаем яркость
+              backlSetBright(mainSettings.backlBright[TIME_DAY]); //если посветка статичная, устанавливаем яркость
 #endif
               break;
-            case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[1]); break;//яркость точек
+            case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_DAY]); break;//яркость точек
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
@@ -3608,17 +3632,27 @@ void hourSound(void) //звук смены часа
 //---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
 {
-  if ((mainSettings.timeBright[0] != mainSettings.timeBright[1]) ? (checkHourStrart(mainSettings.timeBright[0], mainSettings.timeBright[1])) : state_light) {
-    //ночной режим
-    dot.maxBright = mainSettings.dotBright[0]; //установка максимальной яркости точек
-    backl.maxBright = mainSettings.backlBright[0]; //установка максимальной яркости подсветки
-    indi.maxBright = mainSettings.indiBright[0]; //установка максимальной яркости индикаторов
+  indi.sleepMode = 0; //сбросили флаг режима сна индикаторов
+
+#if LIGHT_SENS_ENABLE
+  if ((mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY]) ? (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) : state_light)
+#else
+  if (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY]))
+#endif
+  { //ночной режим
+    dot.maxBright = mainSettings.dotBright[TIME_NIGHT]; //установка максимальной яркости точек
+    backl.maxBright = mainSettings.backlBright[TIME_NIGHT]; //установка максимальной яркости подсветки
+    if (!mainSettings.indiBright[TIME_NIGHT]) {
+      indi.sleepMode = 1; //установили флаг режима сна индикаторов
+      indi.maxBright = INDI_MIN_BRIGHT; //установка максимальной яркости индикаторов
+      _timer_sec[TMR_SLEEP] = SLEEP_WAKE_TIME; //установли время ожидания режима пробуждения
+    }
+    else indi.maxBright = mainSettings.indiBright[TIME_NIGHT]; //установка максимальной яркости индикаторов
   }
-  else {
-    //дневной режим
-    dot.maxBright = mainSettings.dotBright[1]; //установка максимальной яркости точек
-    backl.maxBright = mainSettings.backlBright[1]; //установка максимальной яркости подсветки
-    indi.maxBright = mainSettings.indiBright[1]; //установка максимальной яркости индикаторов
+  else { //дневной режим
+    dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
+    backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
+    indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
   }
   switch (fastSettings.dotMode) {
     case DOT_OFF: dotSetBright(0); break; //если точки выключены
@@ -3866,6 +3900,34 @@ void dotReset(void) //сброс анимации точек
   }
   else dot.update = 0; //сбросили флаг обновления точек
 }
+//---------------------------------Режим сна индикаторов---------------------------------
+uint8_t sleepIndi(void) //режим сна индикаторов
+{
+  indiClr(); //очистка индикаторов
+  backlAnimDisable(); //запретили эффекты подсветки
+#if BACKL_TYPE == 2
+  clrLeds(); //выключили светодиоды
+#else
+  backlSetBright(0); //выключили светодиоды
+#endif
+#if BTN_ADD_TYPE
+  radioPowerOff(); //выключить питание радиоприемника
+#endif
+  while (!buttonState()) { //если не нажата кнопка
+    dataUpdate(); //обработка данных
+    if (!secUpd) { //если пришло время обновить индикаторы
+      secUpd = 1; //сбрасываем флаг
+#if ALARM_TYPE
+      if (alarm && !alarmWaint) return ALARM_PROGRAM; //тревога будильника
+#endif
+#if BTN_ADD_TYPE || IR_PORT_ENABLE
+      if (timerMode == 2 && !timerCnt) return WARN_PROGRAM; //тревога таймера
+#endif
+      if (!indi.sleepMode) return MAIN_PROGRAM; //выход в режим часов
+    }
+  }
+  return MAIN_PROGRAM; //выход в режим часов
+}
 //------------------------------------Имитация глюков------------------------------------
 void glitchIndi(void) //имитация глюков
 {
@@ -3882,11 +3944,11 @@ void glitchIndi(void) //имитация глюков
         if (!indiState || mainSettings.secsMode == SECS_BRIGHT) flipSecs(); //анимация секунд
 #endif
 
-        if (!_timer_ms[TMR_MS]) { //если таймер истек
+        if (!_timer_ms[TMR_ANIM]) { //если таймер истек
           if (!indiState) indiClr(glitchIndic); //выключаем индикатор
           else indiSet(indiSave, glitchIndic); //включаем индикатор
           indiState = !indiState; //меняем состояние глюка лампы
-          _timer_ms[TMR_MS] = random(1, 6) * GLITCH_TIME; //перезапускаем таймер глюка
+          _timer_ms[TMR_ANIM] = random(1, 6) * GLITCH_TIME; //перезапускаем таймер глюка
           if (!glitchCounter--) break; //выходим если закончились глюки
         }
       }
@@ -3939,7 +4001,7 @@ void flipSecs(void) //анимация секунд
     case SECS_BRIGHT: //плавное угасание и появление
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
-        _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
+        _timer_ms[TMR_MS] = 0; //сбрасываем таймер
         indi.timeBright = SECONDS_ANIM_1_TIME / indi.maxBright; //расчёт шага яркости режима 2
         indi.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         indi.animSeconds[0] = indi.maxBright; //новые секунды
@@ -3950,8 +4012,8 @@ void flipSecs(void) //анимация секунд
         if (indi.animSeconds[2] != (RTC.s % 10)) indi.flipSeconds = 5;
         if (indi.animSeconds[3] != (RTC.s / 10)) indi.flipSeconds = 4;
       }
-      if (indi.flipSeconds && !_timer_ms[TMR_ANIM]) { //если анимация активна и пришло время
-        _timer_ms[TMR_ANIM] = indi.timeBright; //установили таймер
+      if (indi.flipSeconds && !_timer_ms[TMR_MS]) { //если анимация активна и пришло время
+        _timer_ms[TMR_MS] = indi.timeBright; //установили таймер
         if (!indi.animSeconds[1]) {
           if (indi.animSeconds[0] > 0) {
             indi.animSeconds[0]--;
@@ -3975,7 +4037,7 @@ void flipSecs(void) //анимация секунд
     case SECS_ORDER_OF_CATHODES: //перемотка по порядку катодов в лампе
       if (animShow == ANIM_SECS) { //если сменились секунды
         animShow = 0; //сбрасываем флаг анимации цифр
-        _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
+        _timer_ms[TMR_MS] = 0; //сбрасываем таймер
         indi.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         indi.animSeconds[0] = indi.flipSeconds % 10; //старые секунды
         indi.animSeconds[1] = indi.flipSeconds / 10; //старые секунды
@@ -3994,8 +4056,8 @@ void flipSecs(void) //анимация секунд
           }
         }
       }
-      if (indi.flipSeconds && !_timer_ms[TMR_ANIM]) { //если анимация активна и пришло время
-        _timer_ms[TMR_ANIM] = (mainSettings.secsMode == SECS_ORDER_OF_NUMBERS) ? SECONDS_ANIM_2_TIME : SECONDS_ANIM_3_TIME; //установили таймер
+      if (indi.flipSeconds && !_timer_ms[TMR_MS]) { //если анимация активна и пришло время
+        _timer_ms[TMR_MS] = (mainSettings.secsMode == SECS_ORDER_OF_NUMBERS) ? SECONDS_ANIM_2_TIME : SECONDS_ANIM_3_TIME; //установили таймер
         for (uint8_t i = 0; i < 2; i++) { //перебираем все цифры
           if (indi.animSeconds[i] != indi.animSeconds[i + 2]) { //если не достигли конца анимации разряда
             if (--indi.animSeconds[i] > 9) indi.animSeconds[i] = 9; //меняем цифру разряда
@@ -4020,7 +4082,7 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
   uint8_t anim_buf[12]; //буфер разрядов
   uint8_t changeIndi = 0; //флаги разрядов
   uint8_t timeHour = (mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h; //текущий час
-  uint8_t timeMins = RTC.m; //текущая минута 
+  uint8_t timeMins = RTC.m; //текущая минута
   uint8_t HH = (timeMins) ? timeHour : ((mainSettings.timeFormat) ? (((timeHour > 1) ? (timeHour - 1) : 12)) : (((timeHour) ? (timeHour - 1) : 23))); //предыдущий час
   uint8_t MM = (timeMins) ? (timeMins - 1) : 59; //предыдущая минута
 
@@ -4089,15 +4151,19 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         anim_buf[1] = HH % 10;
         anim_buf[2] = MM / 10;
         anim_buf[3] = MM % 10;
+#if LAMP_NUM > 4
         anim_buf[4] = 5;
         anim_buf[5] = 9;
+#endif
         //новое время
         anim_buf[6] = timeHour / 10;
         anim_buf[7] = timeHour % 10;
         anim_buf[8] = timeMins / 10;
         anim_buf[9] = timeMins % 10;
+#if LAMP_NUM > 4
         anim_buf[10] = 0;
         anim_buf[11] = 0;
+#endif
 
         while (!buttonState()) {
           dataUpdate(); //обработка данных
@@ -4125,15 +4191,19 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
           anim_buf[1] = HH % 10;
           anim_buf[2] = MM / 10;
           anim_buf[3] = MM % 10;
+#if LAMP_NUM > 4
           anim_buf[4] = 5;
           anim_buf[5] = 9;
+#endif
           //новое время
           anim_buf[6] = timeHour / 10;
           anim_buf[7] = timeHour % 10;
           anim_buf[8] = timeMins / 10;
           anim_buf[9] = timeMins % 10;
+#if LAMP_NUM > 4
           anim_buf[10] = 0;
           anim_buf[11] = 0;
+#endif
 
           for (uint8_t i = 0; i < 12; i++) {
             for (uint8_t c = 0; c < 10; c++) {
@@ -4429,6 +4499,48 @@ void flipIndi(uint8_t flipMode, boolean demo) //анимация цифр
         }
       }
       break;
+
+    case FLIP_SLOT_MACHINE: { //игровой автомат
+        //старое время
+        anim_buf[0] = HH / 10;
+        anim_buf[1] = HH % 10;
+        anim_buf[2] = MM / 10;
+        anim_buf[3] = MM % 10;
+#if LAMP_NUM > 4
+        anim_buf[4] = 5;
+        anim_buf[5] = 9;
+#endif
+        //новое время
+        anim_buf[6] = timeHour / 10;
+        anim_buf[7] = timeHour % 10;
+        anim_buf[8] = timeMins / 10;
+        anim_buf[9] = timeMins % 10;
+
+        changeIndi = 0;
+
+        for (uint8_t i = 0; i < LAMP_NUM;) {
+          dataUpdate(); //обработка данных
+          dotFlash(); //мигаем точками
+
+          if (buttonState()) return; //возврат если нажата кнопка
+          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+#if LAMP_NUM > 4
+            anim_buf[10] = RTC.s / 10; //секунды
+            anim_buf[11] = RTC.s % 10; //секунды
+#endif
+            for (uint8_t b = i; b < LAMP_NUM; b++) {
+              if (--anim_buf[b] > 9) anim_buf[b] = 9; //меняем цифру разряда
+              indiPrintNum(anim_buf[b], b); //выводим разряд
+            }
+            if (anim_buf[i] == anim_buf[i + 6]) { //если разряд совпал
+              changeIndi += FLIP_MODE_11_STEP; //добавили шаг
+              i++; //завершаем анимацию для разряда
+            }
+            _timer_ms[TMR_ANIM] = (uint16_t)FLIP_MODE_11_TIME + changeIndi; //устанавливаем таймер
+          }
+        }
+      }
+      break;
   }
 }
 //-----------------------------Главный экран------------------------------------------------
@@ -4437,8 +4549,9 @@ uint8_t mainScreen(void) //главный экран
 #if LAMP_NUM > 4
   indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
 #endif
-  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
-  if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  if (!_timer_sec[TMR_BURN]) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
+  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
+  if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
   animShow = 0; //сбрасываем флаг анимации цифр
 
   for (;;) { //основной цикл
@@ -4457,20 +4570,27 @@ uint8_t mainScreen(void) //главный экран
       if (timerMode == 2 && !timerCnt) return WARN_PROGRAM; //тревога таймера
 #endif
 
-      if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
-        flipIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр основная
+      if (!indi.sleepMode) { //если режим сна не активен
+        if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
+          flipIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр основная
+          animShow = 0; //сбрасываем флаг анимации
+        }
+
+        if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) { //если пришло время отобразить анимацию антиотравления
+          burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
+          _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер
+          return MAIN_PROGRAM;
+        }
+
+        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s > AUTO_TEMP_PHASE_MIN && RTC.s < AUTO_TEMP_PHASE_MAX) { //если пришло время отобразить температуру
+          autoShowTemp(); //автоматический показ температуры
+          _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+          return MAIN_PROGRAM;
+        }
+      }
+      else { //иначе сон активен
+        if (!_timer_sec[TMR_SLEEP]) return SLEEP_PROGRAM; //режим сна индикаторов
         animShow = 0; //сбрасываем флаг анимации
-      }
-
-      if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) { //если пришло время отобразить анимацию антиотравления
-        burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
-        _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер
-        return MAIN_PROGRAM;
-      }
-
-      if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s > AUTO_TEMP_PHASE_MIN && RTC.s < AUTO_TEMP_PHASE_MAX) { //если пришло время отобразить температуру
-        autoShowTemp(); //автоматический показ температуры
-        return MAIN_PROGRAM;
       }
 
       indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
@@ -4487,6 +4607,7 @@ uint8_t mainScreen(void) //главный экран
     flipSecs(); //анимация секунд
 #endif
 
+    //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         return TEMP_PROGRAM; //показать температуру
@@ -4508,12 +4629,7 @@ uint8_t mainScreen(void) //главный экран
       case SET_KEY_HOLD: //удержание средней кнопки
 #if ALARM_TYPE
         if (alarmWaint) {
-#if PLAYER_TYPE
-          playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER);
-#else
-          melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
-#endif
-          alarmReset(); //сброс будильника
+          alarmDisable(); //отключение будильника
           break;
         }
 #endif
@@ -4526,12 +4642,7 @@ uint8_t mainScreen(void) //главный экран
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
 #if ALARM_TYPE
         if (alarmWaint) {
-#if PLAYER_TYPE
-          playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER);
-#else
-          melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
-#endif
-          alarmReset(); //сброс будильника
+          alarmDisable(); //отключение будильника
           break;
         }
 #endif

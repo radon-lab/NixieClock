@@ -184,12 +184,12 @@ boolean incLedBright(uint8_t _step, uint8_t _max)
   return 0;
 }
 //--------------------------------------Установка яркости------------------------------------------
-void setLedBright(uint8_t _led, uint8_t brt)
+void setLedBright(uint8_t _led, uint8_t _brt)
 {
-  if (_led < LAMP_NUM) ledBright[_led] = brt;
+  if (_led < LAMP_NUM) ledBright[_led] = _brt;
 }
 //--------------------------------------Установка яркости------------------------------------------
-void setLedBright(uint8_t brt)
+void setLedBright(uint8_t _brt)
 {
-  for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = brt;
+  for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = _brt;
 }

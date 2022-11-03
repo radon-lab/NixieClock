@@ -97,7 +97,7 @@ void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
   for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = constrain(debugSettings.min_pwm + ((float)dimm_all * pwm_coef), 100, 200);
+  OCR1A = constrain(debugSettings.min_pwm + (uint8_t)((float)dimm_all * pwm_coef), 100, 200);
 }
 //--------------------------------Инициализация индикаторов---------------------------------------
 void indiInit(void) //инициализация индикаторов
@@ -245,6 +245,9 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
 {
   uint8_t buf[6]; //временный буфер
   uint8_t _count = 0; //счетчик символов
+#if GEN_ENABLE
+  boolean _change = 0; //флаг измениния разряда
+#endif
 
   if (!_num) { //если ноль
     buf[0] = digitMask[0]; //устанавливаем ноль
@@ -261,15 +264,23 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
 
   while (_count) { //расшивровка символов
     _count--; //убавили счетчик символов
-    uint8_t mergeBuf = 0; //временный буфер дешефратора
-    for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-      if ((buf[_count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
+    if ((uint8_t)_indi++ < LAMP_NUM) { //если число в поле индикатора
+      uint8_t mergeBuf = 0; //временный буфер дешефратора
+      for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
+        if ((buf[_count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
+      }
+#if GEN_ENABLE
+      if (indi_buf[_indi] != mergeBuf) { //если новое число
+        if (indi_buf[_indi] == indi_null || mergeBuf == indi_null) _change = 1; //установили флаг измениния разряда
+        indi_buf[_indi] = mergeBuf; //устанавливаем новое число
+      }
+#else
+      indi_buf[_indi] = mergeBuf; //устанавливаем новое число
+#endif
     }
-    if (_indi < 0) _indi++; //если число за гранью поля индикаторов
-    else if (_indi < LAMP_NUM) indi_buf[++_indi] = mergeBuf; //если число в поле индикатора то устанавливаем его
   }
 #if GEN_ENABLE
-  indiChangePwm(); //установка Linear Advance
+  if (_change) indiChangePwm(); //установка Linear Advance
 #endif
 }
 //-------------------------------Получить яркости подсветки---------------------------------------
