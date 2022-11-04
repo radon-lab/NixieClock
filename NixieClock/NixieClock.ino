@@ -1839,7 +1839,7 @@ void dataUpdate(void) //обработка данных
         hourSound(); //звук смены часа
         changeBright(); //установка яркости от времени суток
       }
-      animShow = ANIM_MINS; //показать анимацию переключения цифр
+      if (fastSettings.flipMode) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
       checkAlarms(); //проверяем будильники на совпадение
 #endif
