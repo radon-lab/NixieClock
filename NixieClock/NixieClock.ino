@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 03.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 04.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -2526,6 +2526,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
                 if (mainSettings.autoTempTime > 5) mainSettings.autoTempTime -= 5; else mainSettings.autoTempTime = 0;
+                _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
@@ -2613,6 +2614,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
                 if (mainSettings.autoTempTime < 240) mainSettings.autoTempTime += 5; else mainSettings.autoTempTime = 240;
+                _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
@@ -4550,8 +4552,8 @@ uint8_t mainScreen(void) //главный экран
   indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
 #endif
   if (!_timer_sec[TMR_BURN]) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
-  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
   if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
+  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
   animShow = 0; //сбрасываем флаг анимации цифр
 
   for (;;) { //основной цикл
@@ -4582,7 +4584,7 @@ uint8_t mainScreen(void) //главный экран
           return MAIN_PROGRAM;
         }
 
-        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s > AUTO_TEMP_PHASE_MIN && RTC.s < AUTO_TEMP_PHASE_MAX) { //если пришло время отобразить температуру
+        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s >= AUTO_TEMP_PHASE) { //если пришло время отобразить температуру
           autoShowTemp(); //автоматический показ температуры
           _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
           return MAIN_PROGRAM;
