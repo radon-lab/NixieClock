@@ -3674,58 +3674,63 @@ void changeBright(void) //установка яркости от времени 
     backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
     indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
   }
-  switch (fastSettings.dotMode) {
-    case DOT_OFF: dotSetBright(0); break; //если точки выключены
-    case DOT_STATIC: dotSetBright(dot.maxBright); break; //если точки статичные, устанавливаем яркость
-    default:
-      if (dot.maxBright) {
-        dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
-        dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
+
+  if (mainTask != SLEEP_PROGRAM) { //если не спим
+    if (mainTask == MAIN_PROGRAM) { //если основной режим
+      switch (fastSettings.dotMode) {
+        case DOT_OFF: dotSetBright(0); break; //если точки выключены
+        case DOT_STATIC: dotSetBright(dot.maxBright); break; //если точки статичные, устанавливаем яркость
+        default:
+          if (dot.maxBright) {
+            dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
+            dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
+          }
+          else dotSetBright(0); //если точки выключены
+          break;
       }
-      else dotSetBright(0); //если точки выключены
-      break;
-  }
-
-#if BACKL_TYPE == 2
-  if (backl.maxBright) {
-    switch (fastSettings.backlMode) {
-      case BACKL_OFF: clrLeds(); break; //выключили светодиоды
-      case BACKL_STATIC:
-        setLedBright(backl.maxBright); //устанавливаем максимальную яркость
-        setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
-        showLeds(); //отрисовка светодиодов
-        break;
-      case BACKL_SMOOTH_COLOR_CHANGE:
-      case BACKL_RAINBOW:
-      case BACKL_CONFETTI:
-        setLedBright(backl.maxBright); //устанавливаем максимальную яркость
-        showLeds(); //отрисовка светодиодов
-        break;
     }
-  }
-  else clrLeds(); //выключили светодиоды
-#else
-  switch (fastSettings.backlMode) {
-    case BACKL_OFF: backlSetBright(0); break; //если посветка выключена
-    case BACKL_STATIC: backlSetBright(backl.maxBright); break; //если посветка статичная, устанавливаем яркость
-    case BACKL_PULS: if (!backl.maxBright) backlSetBright(0); break; //иначе посветка выключена
-  }
-#endif
-  if (backl.maxBright) {
-    backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
-    uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
-
-    backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
-    backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_TYPE == 2
-    backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
-    if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-    backl.mode_6_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
-    backl.mode_6_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+    if (backl.maxBright) {
+      switch (fastSettings.backlMode) {
+        case BACKL_OFF: clrLeds(); break; //выключили светодиоды
+        case BACKL_STATIC:
+          setLedBright(backl.maxBright); //устанавливаем максимальную яркость
+          setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+          showLeds(); //отрисовка светодиодов
+          break;
+        case BACKL_SMOOTH_COLOR_CHANGE:
+        case BACKL_RAINBOW:
+        case BACKL_CONFETTI:
+          setLedBright(backl.maxBright); //устанавливаем максимальную яркость
+          showLeds(); //отрисовка светодиодов
+          break;
+      }
+    }
+    else clrLeds(); //выключили светодиоды
+#else
+    switch (fastSettings.backlMode) {
+      case BACKL_OFF: backlSetBright(0); break; //если посветка выключена
+      case BACKL_STATIC: backlSetBright(backl.maxBright); break; //если посветка статичная, устанавливаем яркость
+      case BACKL_PULS: if (!backl.maxBright) backlSetBright(0); break; //иначе посветка выключена
+    }
 #endif
+    if (backl.maxBright) {
+      backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
+      uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
+
+      backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+      backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+
+#if BACKL_TYPE == 2
+      backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
+      if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
+      backl.mode_6_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+      backl.mode_6_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+#endif
+    }
+    indiSetBright(indi.maxBright); //установка общей яркости индикаторов
   }
-  indiSetBright(indi.maxBright); //установка общей яркости индикаторов
 }
 //----------------------------------Анимация подсветки---------------------------------
 void backlEffect(void) //анимация подсветки
@@ -3855,8 +3860,6 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
 {
   if (dot.maxBright && !dot.update && !_timer_ms[TMR_DOT]) {
     switch (mode) {
-      case DOT_OFF: if (dotGetBright()) dotSetBright(0); dot.update = 1; break; //если точки включены, выключаем их
-      case DOT_STATIC: if (dotGetBright() != dot.maxBright) dotSetBright(dot.maxBright); dot.update = 1; break; //если яркость не совпадает, устанавливаем яркость
       case DOT_PULS:
         _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
         switch (dot.drive) {
@@ -3886,6 +3889,7 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
           dot.update = 1; //сбросили флаг обновления точек
         }
         break;
+        default: dot.update = 1; break; //сбросили флаг обновления точек
     }
   }
 }
