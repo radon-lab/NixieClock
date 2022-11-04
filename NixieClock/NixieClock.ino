@@ -649,7 +649,7 @@ void SET_ERROR(uint8_t err) //установка ошибки
 //--------------------------Установка таймеров анимаций-------------------------
 void setAnimTimers(void) //установка таймеров анимаций
 {
-  _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер антиотравления
+  _timer_sec[TMR_BURN] = ((uint16_t)BURN_PERIOD * 60) - RTC.s; //устанавливаем таймер антиотравления
   _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
   _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
 }
@@ -2525,7 +2525,7 @@ uint8_t settings_main(void) //настроки основные
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
-                if (mainSettings.autoTempTime > 5) mainSettings.autoTempTime -= 5; else mainSettings.autoTempTime = 0;
+                if (mainSettings.autoTempTime > 30) mainSettings.autoTempTime -= 30; else mainSettings.autoTempTime = 0;
                 _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
@@ -2613,7 +2613,7 @@ uint8_t settings_main(void) //настроки основные
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
-                if (mainSettings.autoTempTime < 240) mainSettings.autoTempTime += 5; else mainSettings.autoTempTime = 240;
+                if (mainSettings.autoTempTime < 240) mainSettings.autoTempTime += 30; else mainSettings.autoTempTime = 240;
                 _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
@@ -2775,7 +2775,7 @@ void autoShowTemp(void) //автоматический показ темпера
   dotSetBright(dot.maxBright); //включаем точки
 #endif
 
-  for (uint8_t mode = 0; mode < 3; mode++) {
+  for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
     switch (mode) {
       case 1:
         if (!sens.hum) {
@@ -2967,18 +2967,35 @@ uint8_t showDate(void) //показать дату
     if (!secUpd) {
       secUpd = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
+#if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
+#if SHOW_DATE_TYPE == 3
+      indiPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
+      indiPrintNum(RTC.DD, 2, 2, 0); //вывод даты
+#else
+      indiPrintNum(RTC.DD, 0, 2, 0); //вывод даты
+      indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
+#endif
+      indiPrintNum(RTC.YY - 2000, 4, 2, 0); break; //вывод года
+#else
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
         case 0:
+#if SHOW_DATE_TYPE == 1
+          indiPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
+          indiPrintNum(RTC.DD, 2, 2, 0); //вывод даты
+#else
           indiPrintNum(RTC.DD, 0, 2, 0); //вывод даты
           indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
+#endif
           break;
         case 1: indiPrintNum(RTC.YY, 0); break; //вывод года
       }
+#endif
     }
 
     switch (buttonState()) {
       case RIGHT_KEY_PRESS: //клик правой кнопкой
+#if (SHOW_DATE_TYPE < 2) || (LAMP_NUM < 6)
         if (++mode > 1) mode = 0;
         switch (mode) {
           case 0: //дата
@@ -2999,6 +3016,7 @@ uint8_t showDate(void) //показать дату
         _timer_ms[TMR_MS] = SHOW_DATE_TIME;
         secUpd = 0; //обновление экрана
         break;
+#endif
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
       case SET_KEY_PRESS: //клик средней кнопкой
@@ -3934,7 +3952,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 void glitchIndi(void) //имитация глюков
 {
   if (mainSettings.glitchMode) { //если глюки включены
-    if (!_timer_sec[TMR_GLITCH] && RTC.s > GLITCH_PHASE_MIN && RTC.s < GLITCH_PHASE_MAX) { //если пришло время
+    if (!_timer_sec[TMR_GLITCH] && RTC.s >= GLITCH_PHASE_MIN && RTC.s < GLITCH_PHASE_MAX) { //если пришло время
       boolean indiState = 0; //состояние индикатора
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
@@ -4573,21 +4591,21 @@ uint8_t mainScreen(void) //главный экран
 #endif
 
       if (!indi.sleepMode) { //если режим сна не активен
-        if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
-          flipIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр основная
-          animShow = 0; //сбрасываем флаг анимации
-        }
-
-        if (!_timer_sec[TMR_BURN] && RTC.s >= BURN_PHASE) { //если пришло время отобразить анимацию антиотравления
+        if (!_timer_sec[TMR_BURN]) { //если пришло время отобразить анимацию антиотравления
           burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
-          _timer_sec[TMR_BURN] = (uint16_t)(BURN_PERIOD * 60); //устанавливаем таймер
+          _timer_sec[TMR_BURN] = ((uint16_t)BURN_PERIOD * 60) - RTC.s; //устанавливаем таймер
           return MAIN_PROGRAM;
         }
 
-        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP] && RTC.s >= AUTO_TEMP_PHASE) { //если пришло время отобразить температуру
+        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP]) { //если пришло время отобразить температуру
           autoShowTemp(); //автоматический показ температуры
           _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
           return MAIN_PROGRAM;
+        }
+
+        if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
+          flipIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр основная
+          animShow = 0; //сбрасываем флаг анимации
         }
       }
       else { //иначе сон активен
