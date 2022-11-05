@@ -662,6 +662,13 @@ void backlAnimEnable(void) //разрешить анимации подсвет�
 void backlAnimDisable(void) //запретить анимации подсветки
 {
   fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+#if BACKL_TYPE == 2
+  backl.steps = 0; //сбросили шаги
+  backl.drive = 0; //сбросили направление
+  backl.position = 0; //сбросили позицию
+  _timer_ms[TMR_COLOR] = 0; //сбросили таймер смены цвета
+  _timer_ms[TMR_BACKL] = 0; //сбросили таймер анимации подсветки
+#endif
 }
 //-----------------------------Расчет шага яркости-----------------------------
 uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
@@ -2775,6 +2782,8 @@ void autoShowTemp(void) //автоматический показ темпера
   dotSetBright(dot.maxBright); //включаем точки
 #endif
 
+  _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
+
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
     switch (mode) {
       case 1:
@@ -3767,10 +3776,10 @@ void backlEffect(void) //анимация подсветки
             }
             else { //иначе двигаем голову
               if (backl.drive) { //если направление вправо
-                if (backl.position < LAMP_NUM + 1) backl.position++; else backl.drive = 0; //едем вправо
+                if (backl.position > 0) backl.position--; else backl.drive = 0; //едем влево
               }
               else { //иначе напрвление влево
-                if (backl.position > 0) backl.position--; else backl.drive = 1; //едем влево
+                if (backl.position < (LAMP_NUM + 1)) backl.position++; else backl.drive = 1; //едем вправо
               }
               setLedBright(backl.position - 1, backl.maxBright); //установили яркость
               backl.steps = BACKL_MODE_4_FADING; //установили шаги затухания
@@ -3840,18 +3849,16 @@ void backlEffect(void) //анимация подсветки
 //----------------------------------Мигание подсветки---------------------------------
 void backlFlash(void) //мигание подсветки
 {
-  if (fastSettings.backlMode == BACKL_PULS && backl.maxBright) {
+  if (backl.maxBright && fastSettings.backlMode == BACKL_PULS) {
     if (!_timer_ms[TMR_BACKL]) {
       _timer_ms[TMR_BACKL] = backl.mode_2_time;
-      switch (backl.drive) {
-        case 0: if (backlIncBright(backl.mode_2_step, backl.maxBright)) backl.drive = 1; break;
-        case 1:
-          if (backlDecBright(backl.mode_2_step, backl.minBright)) {
-            _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE;
-            backl.drive = 0;
-          }
-          break;
+      if (backl.drive) {
+        if (backlDecBright(backl.mode_2_step, backl.minBright)) {
+          _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE;
+          backl.drive = 0;
+        }
       }
+      else if (backlIncBright(backl.mode_2_step, backl.maxBright)) backl.drive = 1;
     }
   }
 }
@@ -3985,7 +3992,7 @@ void glitchIndi(void) //имитация глюков
 void burnIndi(uint8_t mode, boolean demo) //антиотравление индикаторов
 {
   uint8_t indi = 0;
-  
+
   if (mode != BURN_SINGLE_TIME) dotReset(); //сброс анимации точек
 #if BURN_BRIGHT
   indiSetBright(BURN_BRIGHT); //установка общей яркости индикаторов
