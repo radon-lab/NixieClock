@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 04.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 05.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3985,7 +3985,11 @@ void glitchIndi(void) //имитация глюков
 void burnIndi(uint8_t mode, boolean demo) //антиотравление индикаторов
 {
   uint8_t indi = 0;
+  
   if (mode != BURN_SINGLE_TIME) dotReset(); //сброс анимации точек
+#if BURN_BRIGHT
+  indiSetBright(BURN_BRIGHT); //установка общей яркости индикаторов
+#endif
 
   _timer_ms[TMR_MS] = 0; //сбрасываем таймер
 
