@@ -1,3 +1,4 @@
+boolean ledUpdate = 0; //флаг отрисовки светодиодов
 uint8_t ledColor[LAMP_NUM]; //массив цветов
 uint8_t ledBright[LAMP_NUM]; //массив яркости
 
@@ -55,45 +56,49 @@ void ledWrite(uint8_t* data, uint16_t size) {
 //-----------------------------------Отрисовка светодиодов------------------------------------------
 void showLeds(void)
 {
-  uint8_t ledBuff[LAMP_NUM * 3]; //массив светодиодов
-  uint8_t* ledLink = ledBuff; //ссылка на текущий элемент
-  
-  for (uint8_t f = 0; f < LAMP_NUM; f++) {
-    uint8_t count = 0;
-    uint8_t pallet = ledColor[f];
-    if (pallet != 255) {
-      while (pallet > 85) {
-        pallet -= 85;
-        count++;
+  if (ledUpdate) { //если что-то изменилось
+    ledUpdate = 0; //сбрасываем флаг обновления
+
+    uint8_t ledBuff[LAMP_NUM * 3]; //массив светодиодов
+    uint8_t* ledLink = ledBuff; //ссылка на текущий элемент
+
+    for (uint8_t f = 0; f < LAMP_NUM; f++) {
+      uint8_t count = 0;
+      uint8_t pallet = ledColor[f];
+      if (pallet != 255) {
+        while (pallet > 85) {
+          pallet -= 85;
+          count++;
+        }
+        pallet = (uint8_t)(((uint8_t)(pallet * 3) * ledBright[f]) >> 8);
+        switch (count) {
+          case 0:
+            *ledLink++ = pallet;
+            *ledLink++ = ledBright[f] - pallet;
+            *ledLink++ = 0;
+            break;
+          case 1:
+            *ledLink++ = ledBright[f] - pallet;
+            *ledLink++ = 0;
+            *ledLink++ = pallet;
+            break;
+          case 2:
+            *ledLink++ = 0;
+            *ledLink++ = pallet;
+            *ledLink++ = ledBright[f] - pallet;
+            break;
+        }
       }
-      pallet = (uint8_t)(((uint8_t)(pallet * 3) * ledBright[f]) >> 8);
-      switch (count) {
-        case 0:
-          *ledLink++ = pallet;
-          *ledLink++ = ledBright[f] - pallet;
-          *ledLink++ = 0;
-          break;
-        case 1:
-          *ledLink++ = ledBright[f] - pallet;
-          *ledLink++ = 0;
-          *ledLink++ = pallet;
-          break;
-        case 2:
-          *ledLink++ = 0;
-          *ledLink++ = pallet;
-          *ledLink++ = ledBright[f] - pallet;
-          break;
+      else {
+        pallet = (uint8_t)((ledBright[f] * 86) >> 8);
+        *ledLink++ = pallet;
+        *ledLink++ = pallet;
+        *ledLink++ = pallet;
       }
     }
-    else {
-      pallet = (uint8_t)((ledBright[f] * 86) >> 8);
-      *ledLink++ = pallet;
-      *ledLink++ = pallet;
-      *ledLink++ = pallet;
-    }
+
+    ledWrite(ledBuff, sizeof(ledBuff));
   }
-  
-  ledWrite(ledBuff, sizeof(ledBuff));
 }
 //--------------------------------------Очистка светодиодов-----------------------------------------
 void clrLeds(void)
@@ -106,6 +111,7 @@ void clrLeds(void)
 void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 {
   if (_led < LAMP_NUM) {
+    ledUpdate = 1; //устанавливаем флаг обновления
     if (_mode == WHITE_OFF && _color == 255) _color = 0;
     ledColor[_led] = _color;
   }
@@ -113,12 +119,14 @@ void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 //---------------------------------Установка цвета в формате HV-------------------------------------
 void setLedHue(uint8_t _color, boolean _mode)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   if (_mode == WHITE_OFF && _color == 255) _color = 0;
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledColor[f] = _color;
 }
 //---------------------------Установка цвета подсветки меню в формате HV----------------------------
 void setBacklHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LAMP_NUM; f++) {
     if (_count && f >= _start) {
       ledColor[f] = _color;
@@ -130,6 +138,7 @@ void setBacklHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_
 //--------------------------------------Уменьшение яркости------------------------------------------
 void decLedsBright(uint8_t _led, uint8_t _step)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LAMP_NUM; f++) {
     if (_led != f) {
       if (ledBright[f] > _step) ledBright[f] -= _step;
@@ -140,6 +149,7 @@ void decLedsBright(uint8_t _led, uint8_t _step)
 //--------------------------------------Уменьшение яркости------------------------------------------
 boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   if (((int16_t)ledBright[_led] - _step) > _min) ledBright[_led] -= _step;
   else {
     ledBright[_led] = _min;
@@ -150,6 +160,7 @@ boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
 //--------------------------------------Увеличение яркости------------------------------------------
 boolean incLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   if (((uint16_t)ledBright[_led] + _step) < _max) ledBright[_led] += _step;
   else {
     ledBright[_led] = _max;
@@ -160,6 +171,7 @@ boolean incLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
 //--------------------------------------Уменьшение яркости------------------------------------------
 boolean decLedBright(uint8_t _step, uint8_t _min)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   if (((int16_t)ledBright[0] - _step) > _min) {
     ledBright[0] -= _step;
     for (uint8_t f = 1; f < LAMP_NUM; f++) ledBright[f] = ledBright[0];
@@ -173,6 +185,7 @@ boolean decLedBright(uint8_t _step, uint8_t _min)
 //--------------------------------------Увеличение яркости------------------------------------------
 boolean incLedBright(uint8_t _step, uint8_t _max)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   if (((uint16_t)ledBright[0] + _step) < _max) {
     ledBright[0] += _step;
     for (uint8_t f = 1; f < LAMP_NUM; f++) ledBright[f] = ledBright[0];
@@ -186,10 +199,14 @@ boolean incLedBright(uint8_t _step, uint8_t _max)
 //--------------------------------------Установка яркости------------------------------------------
 void setLedBright(uint8_t _led, uint8_t _brt)
 {
-  if (_led < LAMP_NUM) ledBright[_led] = _brt;
+  if (_led < LAMP_NUM) {
+    ledUpdate = 1; //устанавливаем флаг обновления
+    ledBright[_led] = _brt;
+  }
 }
 //--------------------------------------Установка яркости------------------------------------------
 void setLedBright(uint8_t _brt)
 {
+  ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = _brt;
 }

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 05.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.3 релиз от 06.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1143,7 +1143,6 @@ void test_system(void) //проверка системы
 #else
         setLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
 #endif
-        showLeds(); //отрисовка светодиодов
 #endif
 #if !PLAYER_TYPE
         buzz_pulse(TEST_FREQ_STEP + (digit * TEST_FREQ_STEP), TEST_LAMP_TIME); //перебор частот
@@ -1738,6 +1737,7 @@ void dataUpdate(void) //обработка данных
   static uint16_t timerSQW = SQW_MIN_TIME; //таймер контроля сигнала SQW
 #if BACKL_TYPE == 2
   backlEffect(); //анимация подсветки
+  showLeds(); //отрисовка светодиодов
 #else
   backlFlash(); //"дыхание" подсветки
 #endif
@@ -1906,7 +1906,6 @@ uint8_t settings_time(void) //настройки времени
       }
 #if BACKL_TYPE == 2
       setBacklHue((cur_mode % 2) * 2, (cur_mode != 4) ? 2 : 4, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); //подсветка активных разрядов
-      showLeds(); //отрисовка светодиодов
 #endif
       blink_data = !blink_data; //мигание сигментами
     }
@@ -2390,7 +2389,6 @@ uint8_t settings_main(void) //настроки основные
           indiPrintNum(cur_mode + 1, (LAMP_NUM / 2 - 1), 2, 0); //вывод режима
 #if BACKL_TYPE == 2
           setBacklHue((LAMP_NUM / 2 - 1), 2, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); //подсветка активных разрядов
-          showLeds(); //отрисовка светодиодов
 #endif
           break;
         case 1:
@@ -2459,7 +2457,6 @@ uint8_t settings_main(void) //настроки основные
 #endif
             default: setBacklHue(cur_indi * 2, 2, BACKL_COLOR_1_MENU, BACKL_COLOR_2_MENU); break; //подсветка активных разрядов
           }
-          showLeds(); //отрисовка светодиодов
 #endif
           blink_data = !blink_data; //мигание сигментами
           break;
@@ -2516,7 +2513,6 @@ uint8_t settings_main(void) //настроки основные
                 }
 #if BACKL_TYPE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
-                showLeds(); //отрисовка светодиодов
 #else
                 backlSetBright(mainSettings.backlBright[cur_indi]); //если посветка статичная, устанавливаем яркость
 #endif
@@ -2604,7 +2600,6 @@ uint8_t settings_main(void) //настроки основные
                 }
 #if BACKL_TYPE == 2
                 setLedBright(mainSettings.backlBright[cur_indi]); //устанавливаем максимальную яркость
-                showLeds(); //отрисовка светодиодов
 #else
                 backlSetBright(mainSettings.backlBright[cur_indi]); //если посветка статичная, устанавливаем яркость
 #endif
@@ -2745,6 +2740,15 @@ void speakTemp(void) //воспроизвести температуру
     playerSetTrack(PLAYER_SENS_TEMP_START + playerGetSpeak(_ceil), PLAYER_END_NUMBERS_FOLDER);
   }
 }
+//------------------------Воспроизвести целую температуру------------------------------------
+void speakTempCeil(void) //воспроизвести целую температуру
+{
+  uint16_t _ceil = (sens.temp + mainSettings.tempCorrect) / 10;
+
+  playerSetTrack(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
+  playerSpeakNumber(_ceil);
+  playerSetTrack(PLAYER_SENS_TEMP_START + playerGetSpeak(_ceil), PLAYER_END_NUMBERS_FOLDER);
+}
 //------------------------------Воспроизвести влажность---------------------------------------
 void speakHum(void) //воспроизвести влажность
 {
@@ -2776,37 +2780,26 @@ void autoShowTemp(void) //автоматический показ темпера
   setLedBright(backl.maxBright); //установили максимальную яркость
 #endif
 
-#if DOTS_PORT_ENABLE
-  dotSetBright(0); //выключаем точки
-#else
-  dotSetBright(dot.maxBright); //включаем точки
-#endif
-
   _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
 
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
     switch (mode) {
+#if BACKL_TYPE == 2
+      case 0: setLedHue(BACKL_COLOR_TEMP, WHITE_ON); break; //установили цвет температуры
+#endif
       case 1:
-        if (!sens.hum) {
-          if (!sens.press) return; //выходим
-          else mode = 2; //отображаем давление
-        }
-#if DOTS_PORT_ENABLE
-        indiClrDots(); //выключаем разделительные точки
-#else
-        dotSetBright(0); //выключаем точки
+        if (!sens.hum) continue; //возвращаемся назад
+#if BACKL_TYPE == 2
+        setLedHue(BACKL_COLOR_HUM, WHITE_ON); //установили цвет влажности
 #endif
         break;
-      case 2: if (!sens.press) return; break; //выходим
-    }
+      case 2:
+        if (!sens.press) return; //выходим
 #if BACKL_TYPE == 2
-    switch (mode) {
-      case 0: setLedHue(BACKL_COLOR_TEMP, WHITE_ON); break; //установили цвет
-      case 1: setLedHue(BACKL_COLOR_HUM, WHITE_ON); break; //установили цвет
-      case 2: setLedHue(BACKL_COLOR_PRESS, WHITE_ON); break; //установили цвет
-    }
-    showLeds(); //отрисовка светодиодов
+        setLedHue(BACKL_COLOR_PRESS, WHITE_ON); //установили цвет давления
 #endif
+        break;
+    }
 
     while (1) { //анимация перехода
       dataUpdate(); //обработка данных
@@ -2814,6 +2807,9 @@ void autoShowTemp(void) //автоматический показ темпера
       if (!_timer_ms[TMR_ANIM]) { //если таймер истек
         _timer_ms[TMR_ANIM] = AUTO_TEMP_ANIM_TIME; //устанавливаем таймер
 
+#if !DOTS_PORT_ENABLE
+        dotSetBright(0); //выключаем точки
+#endif
         indiClr(); //очистка индикаторов
         switch (mode) {
           case 0:
@@ -2830,6 +2826,9 @@ void autoShowTemp(void) //автоматический показ темпера
           if (pos > 0) pos--;
           else {
             drv = 1;
+#if !DOTS_PORT_ENABLE
+            if (!mode) dotSetBright(dot.maxBright); //включаем точки
+#endif
             _timer_ms[TMR_ANIM] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
           }
         }
@@ -2877,18 +2876,25 @@ uint8_t showTemp(void) //показать температуру
       indiClr(); //очистка индикаторов
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
-        case 0: indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); break;
-        case 1: indiPrintNum(sens.hum, 0, 4, ' '); break;
-        case 2: indiPrintNum(sens.press, 0, 4, ' '); break;
-      }
+        case 0:
+          indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' ');
 #if BACKL_TYPE == 2
-      switch (mode) {
-        case 0: setLedHue(BACKL_COLOR_TEMP, WHITE_ON); break; //установили цвет
-        case 1: setLedHue(BACKL_COLOR_HUM, WHITE_ON); break; //установили цвет
-        case 2: setLedHue(BACKL_COLOR_PRESS, WHITE_ON); break; //установили цвет
-      }
-      showLeds(); //отрисовка светодиодов
+          setLedHue(BACKL_COLOR_TEMP, WHITE_ON); //установили цвет температуры
 #endif
+          break;
+        case 1:
+          indiPrintNum(sens.hum, 0, 4, ' ');
+#if BACKL_TYPE == 2
+          setLedHue(BACKL_COLOR_HUM, WHITE_ON); //установили цвет влажности
+#endif
+          break;
+        case 2:
+          indiPrintNum(sens.press, 0, 4, ' ');
+#if BACKL_TYPE == 2
+          setLedHue(BACKL_COLOR_PRESS, WHITE_ON); //установили цвет давления
+#endif
+          break;
+      }
     }
 
     switch (buttonState()) {
@@ -2898,21 +2904,7 @@ uint8_t showTemp(void) //показать температуру
           case 1:
             if (!sens.hum) {
               if (!sens.press) mode = 0;
-              else {
-                mode = 2;
-#if DOTS_PORT_ENABLE
-                indiClrDots(); //выключаем разделительные точки
-#else
-                dotSetBright(0); //выключаем точки
-#endif
-              }
-            }
-            else {
-#if DOTS_PORT_ENABLE
-              indiClrDots(); //выключаем разделительные точки
-#else
-              dotSetBright(0); //выключаем точки
-#endif
+              else mode = 2;
             }
             break;
           case 2: if (!sens.press) mode = 0; break;
@@ -2922,6 +2914,13 @@ uint8_t showTemp(void) //показать температуру
           indiSetDots(2); //включаем разделителную точку
 #else
           dotSetBright(dot.maxBright); //включаем точки
+#endif
+        }
+        else { //иначе давление или влажность
+#if DOTS_PORT_ENABLE
+          indiClrDots(); //выключаем разделительные точки
+#else
+          dotSetBright(0); //выключаем точки
 #endif
         }
 #if PLAYER_TYPE
@@ -3095,7 +3094,6 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
                 setLedBright(backl.maxBright); //устанавливаем максимальную яркость
                 break;
             }
-            showLeds(); //отрисовка светодиодов
           }
           else {
             clrLeds(); //выключили светодиоды
@@ -3136,7 +3134,6 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
         if (mode == FAST_BACKL_COLOR) {
           if (fastSettings.backlColor < 250) fastSettings.backlColor += 10; else if (fastSettings.backlColor == 250) fastSettings.backlColor = 255; else fastSettings.backlColor = 0;
           setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
-          showLeds(); //отрисовка светодиодов
           _timer_ms[TMR_MS] = FAST_BACKL_TIME;
         }
         else {
@@ -3156,7 +3153,6 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
         if (mode == FAST_BACKL_COLOR) {
           if (fastSettings.backlColor == 255) fastSettings.backlColor = 250; else if (fastSettings.backlColor > 0) fastSettings.backlColor -= 10; else fastSettings.backlColor = 255;
           setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
-          showLeds(); //отрисовка светодиодов
           _timer_ms[TMR_MS] = FAST_BACKL_TIME;
         }
         else {
@@ -3650,7 +3646,12 @@ void hourSound(void) //звук смены часа
   if (!alarm || alarmWaint) { //если будильник не работает
     if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
 #if PLAYER_TYPE
-      if (mainSettings.knockSound) speakTime(); //воспроизвести время
+      if (mainSettings.knockSound) {
+        speakTime(); //воспроизвести время
+#if HOUR_SOUND_SPEAK_TEMP
+        speakTempCeil(); //воспроизвести целую температуру
+#endif
+      }
       else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
 #else
       melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
@@ -3706,13 +3707,11 @@ void changeBright(void) //установка яркости от времени 
         case BACKL_STATIC:
           setLedBright(backl.maxBright); //устанавливаем максимальную яркость
           setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
-          showLeds(); //отрисовка светодиодов
           break;
         case BACKL_SMOOTH_COLOR_CHANGE:
         case BACKL_RAINBOW:
         case BACKL_CONFETTI:
           setLedBright(backl.maxBright); //устанавливаем максимальную яркость
-          showLeds(); //отрисовка светодиодов
           break;
       }
     }
@@ -3829,7 +3828,6 @@ void backlEffect(void) //анимация подсветки
           }
           break;
       }
-      showLeds(); //отрисовка светодиодов
     }
     if (!_timer_ms[TMR_COLOR]) { //если время пришло
       switch (fastSettings.backlMode) {
@@ -3839,7 +3837,6 @@ void backlEffect(void) //анимация подсветки
             _timer_ms[TMR_COLOR] = BACKL_MODE_8_TIME; //установили таймер
             backl.color += BACKL_MODE_8_COLOR;
             setLedHue(backl.color, WHITE_OFF); //установили цвет
-            showLeds(); //отрисовка светодиодов
           }
           break;
       }
