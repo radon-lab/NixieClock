@@ -2983,7 +2983,7 @@ uint8_t showDate(void) //показать дату
       indiPrintNum(RTC.DD, 0, 2, 0); //вывод даты
       indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
-      indiPrintNum(RTC.YY - 2000, 4, 2, 0); break; //вывод года
+      indiPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
 #else
       indiPrintNum(mode + 1, 5); //режим
       switch (mode) {
