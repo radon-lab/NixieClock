@@ -31,6 +31,7 @@
 #define SENS_PIN 1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
 #define DOTS_PIN 1  //пин разделительных точек в индикаторах(0..13)(pin D)
 #define AMP_PIN  8  //пин управления питанием усилителя(0..13)(pin D)
+#define MOV_PIN  8  //пин датчика движения(0..13)(pin D)
 #define IR_PIN   7  //пин инфракрасного приемника(0..13)(pin D)
 
 //DF плеер
@@ -311,6 +312,17 @@
 #define AMP_OUT     (BIT_SET(DDR_REG(AMP_PORT), AMP_BIT))
 
 #define AMP_INIT    AMP_DISABLE; AMP_OUT
+
+//Пин датчика движения
+#define MOV_BIT   DECODE_BIT(MOV_PIN)
+#define MOV_PORT  DECODE_PORT(MOV_PIN)
+
+#define MOV_CHK   (BIT_READ(PIN_REG(MOV_PORT), MOV_BIT))
+#define MOV_SET   (BIT_SET(MOV_PORT, MOV_BIT))
+#define MOV_CLEAR (BIT_CLEAR(MOV_PORT, MOV_BIT))
+#define MOV_INP   (BIT_CLEAR(DDR_REG(MOV_PORT), MOV_BIT))
+
+#define MOV_INIT  MOV_SET; MOV_INP
 
 //Пин инфракрасного приемника
 #define IR_BIT   DECODE_BIT(IR_PIN)

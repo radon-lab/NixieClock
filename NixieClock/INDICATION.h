@@ -108,7 +108,7 @@ void indiInit(void) //инициализация индикаторов
 
     if ((0x0A >> i) & 0x01) indi_null |= (0x01 << decoderMask[i]); //находим пустой символ
   }
-  for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем пины
+  for (uint8_t i = ((NEON_DOT == 2) && DOTS_PORT_ENABLE); i < (LAMP_NUM + 1); i++) { //инициализируем пины
     *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
     *(anodePort[i] - 1) |= anodeBit[i]; //устанавливаем анод как выход
 
@@ -236,6 +236,11 @@ void indiSetDots(uint8_t dot) //установка разделителной т
   if (dot < LAMP_NUM) indi_dot |= (0x02 << dot);
 }
 //-----------------------------Очистка разделителных точек----------------------------------------
+void indiClrDots(uint8_t dot) //очистка разделителных точек
+{
+  if (dot < LAMP_NUM) indi_dot &= ~(0x02 << dot);
+}
+//-----------------------------Очистка разделителных точек----------------------------------------
 void indiClrDots(void) //очистка разделителных точек
 {
   indi_dot = 0x00;
@@ -338,7 +343,15 @@ inline uint8_t dotGetBright(void) //получить яркость точек
 //---------------------------------Установка яркости точек---------------------------------------
 void dotSetBright(uint8_t _pwm) //установка яркости точек
 {
-#if NEON_DOT
+#if (NEON_DOT == 2) && DOTS_PORT_ENABLE
+  if (_pwm) {
+    indiSetDots(2); //установка разделителной точки
+#if LAMP_NUM > 4
+    indiSetDots(4); //установка разделителной точки
+#endif
+  }
+  else indiClrDots(); //очистка разделителных точек
+#elif NEON_DOT == 1
   dot_dimm = _pwm;
   indi_dimm[0] = map(_pwm, 0, 250, 0, LIGHT_MAX); //устанавливаем яркость точек
   if (_pwm) indi_buf[0] = 0; //разрешаем включать точки
