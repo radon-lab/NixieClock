@@ -151,8 +151,8 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 #define PLAYER_MENU_FOLDER 3         //папка с озвучкой меню(1..16)
 #define PLAYER_MAIN_MENU_START 1     //первый трек озвучки основного меню(1..255)
-#define PLAYER_FAST_MENU_START 12    //первый трек озвучки быстрого меню(1..255)
-#define PLAYER_DEBUG_MENU_START 16   //первый трек озвучки меню отладки(1..255)
+#define PLAYER_FAST_MENU_START 13    //первый трек озвучки быстрого меню(1..255)
+#define PLAYER_DEBUG_MENU_START 17   //первый трек озвучки меню отладки(1..255)
 
 #define PLAYER_GENERAL_FOLDER 4      //папка с основной озвучкой(1..16)
 #define PLAYER_ALARM_DISABLE_SOUND 1 //трек озвучки оповещения отключения будильника(1..255)("будильник отключен")

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.4 релиз от 10.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.4 релиз от 13.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -75,6 +75,7 @@ struct sensorData {
 #include "PLAYER.h"
 #include "RDA.h"
 #include "RTC.h"
+#include "SHT.h"
 #include "BME.h"
 #include "DHT.h"
 #include "DS.h"
@@ -336,6 +337,9 @@ enum {
 //перечисления датчиков температуры
 enum {
   SENS_DS3231, //датчик DS3231
+#if SENS_SHT_ENABLE
+  SENS_SHT,
+#endif
 #if SENS_BME_ENABLE
   SENS_BME, //датчики BME/BMP
 #endif
@@ -608,7 +612,7 @@ void INIT_SYSTEM(void) //инициализация
   backlAnimDisable(); //запретили эффекты подсветки
 
   checkRTC(); //проверка модуля часов
-#if SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #endif
 
@@ -800,6 +804,9 @@ void updateTemp(void) //обновить показания температур
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (sens.type) { //выбор датчика температуры
     default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
+#if SENS_SHT_ENABLE
+    case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
+#endif
 #if SENS_BME_ENABLE
     case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
