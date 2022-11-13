@@ -220,20 +220,20 @@ void readTempBME(void) //чтение температуры/давления/в
         sens.temp = (temp > 850) ? 0 : temp; //установили температуру
 
 
-        int64_t press_val_1 = ((int64_t)temp_raw) - 128000; //компенсация температуры
-        int64_t press_val_2 = press_val_1 * press_val_1 * (int64_t)CalibrationBME.PRESS_6;
-        press_val_2 = press_val_2 + ((press_val_1 * (int64_t)CalibrationBME.PRESS_5) << 17);
-        press_val_2 = press_val_2 + (((int64_t)CalibrationBME.PRESS_4) << 35);
-        press_val_1 = ((press_val_1 * press_val_1 * (int64_t)CalibrationBME.PRESS_3) >> 8) + ((press_val_1 * (int64_t)CalibrationBME.PRESS_2) << 12);
-        press_val_1 = (((((int64_t)1) << 47) + press_val_1)) * ((int64_t)CalibrationBME.PRESS_1) >> 33;
+        int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
+        int32_t press_val_2 = ((press_val_1 >> 2) * (press_val_1 >> 2) >> 11) * (int32_t)CalibrationBME.PRESS_6;
+        press_val_2 = press_val_2 + ((press_val_1 * (int32_t)CalibrationBME.PRESS_5) << 1);
+        press_val_2 = (press_val_2 >> 2) + (((int32_t)CalibrationBME.PRESS_4) << 16);
+        press_val_1 = (((CalibrationBME.PRESS_3 * (((press_val_1 >> 2) * (press_val_1 >> 2)) >> 13 )) >> 3) + ((((int32_t)CalibrationBME.PRESS_2) * press_val_1) >> 1)) >> 18;
+        press_val_1 = ((((32768 + press_val_1)) * ((int32_t)CalibrationBME.PRESS_1)) >> 15);
         if (press_val_1) { //если значение не нулевое
-          int64_t press_val_3 = 1048576 - press_raw;
-          press_val_3 = (((press_val_3 << 31) - press_val_2) * 3125) / press_val_1;
-          press_val_1 = (((int64_t)CalibrationBME.PRESS_9) * (press_val_3 >> 13) * (press_val_3 >> 13)) >> 25;
-          press_val_2 = (((int64_t)CalibrationBME.PRESS_8) * press_val_3) >> 19;
-          press_val_3 = ((press_val_3 + press_val_1 + press_val_2) >> 8) + (((int64_t)CalibrationBME.PRESS_7) << 4);
-
-          sens.press = ((float)press_val_3 / 256.0) * 0.00750062; //записываем давление в мм рт.ст.
+          press_raw = (((uint32_t)(((int32_t)1048576) - press_raw) - (press_val_2 >> 12))) * 3125;
+          if (press_raw < 0x80000000) press_raw = (press_raw << 1) / ((uint32_t)press_val_1);
+          else press_raw = (press_raw / (uint32_t)press_val_1) * 2;
+          press_val_1 = (((int32_t)CalibrationBME.PRESS_9) * ((int32_t)(((press_raw >> 3) * (press_raw >> 3)) >> 13))) >> 12;
+          press_val_2 = (((int32_t)(press_raw >> 2)) * ((int32_t)CalibrationBME.PRESS_8)) >> 13;
+          
+          sens.press = (uint32_t)((int32_t)press_raw + ((press_val_1 + press_val_2 + CalibrationBME.PRESS_7) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
         }
         else sens.press = 0; //иначе записываем 0
 
