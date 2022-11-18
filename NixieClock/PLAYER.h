@@ -323,7 +323,7 @@ void playerUpdate(void)
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
 #if AMP_PORT_ENABLE
-          case PLAYER_CMD_STOP: AMP_DISABLE; break;
+          case PLAYER_CMD_STOP: if (!player.playbackMute) AMP_DISABLE; break;
 #endif
         }
 
