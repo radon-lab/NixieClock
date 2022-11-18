@@ -14,11 +14,15 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
-#define PLAYER_MIN_VOL 0 //минимальная громкость
 #if PLAYER_TYPE == 2
+#define PLAYER_MIN_VOL 0 //минимальная громкость SD плеер
 #define PLAYER_MAX_VOL 9 //максимальная громкость SD плеер
-#else
+#elif PLAYER_TYPE == 1
+#define PLAYER_MIN_VOL 0 //минимальная громкость DF плеер
 #define PLAYER_MAX_VOL 30 //максимальная громкость DF плеер
+#else
+#define PLAYER_MIN_VOL 1 //минимальная громкость бузер
+#define PLAYER_MAX_VOL 8 //максимальная громкость бузер
 #endif
 
 enum {
@@ -42,6 +46,7 @@ enum {
 struct playerData { //буфер обмена
   boolean playbackMute; //флаг работы без звука
   boolean playbackNow; //флаг срочной отправки данных
+  uint8_t playbackVol; //флаг срочной отправки громкости
   uint8_t playbackEnd; //последний байт буфера
   uint8_t playbackStart; //первый байт буфера
   uint8_t playbackBuff[PLAYER_MAX_BUFFER * 3]; //буфер команд
@@ -220,7 +225,17 @@ void playerSetVol(uint8_t _vol)
 {
   uint8_t _buff = player.playbackEnd + 1;
   if (_buff >= sizeof(player.playbackBuff)) _buff = 0;
-  if (_buff != player.playbackStart) playerSendDataNow(PLAYER_CMD_SET_VOL, _vol);
+  if (_buff != player.playbackStart) playerSendData(PLAYER_CMD_SET_VOL, _vol);
+}
+//------------------------------Установить громкость  без очереди--------------------------------
+void playerSetVolNow(uint8_t _vol)
+{
+#if PLAYER_TYPE == 1 //DF плеер
+  player.playbackVol = _vol + 1;
+#else
+  buffer.dacVolume = 9 - _vol;
+  if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+#endif
 }
 //------------------------------------Установить приглушение-------------------------------------
 void playerSetMute(boolean _mute)
@@ -275,7 +290,14 @@ void playerUpdate(void)
       }
     }
 
-    if (playerWriteStatus()) {
+    if (player.playbackVol) { //если нужно отправить громкость
+      if (uartStatus()) { //если команда не отправляется
+        playerSendCommand(PLAYER_CMD_SET_VOL, player.playbackVol - 1, 0);
+        player.playbackVol = 0;
+        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
+      }
+    }
+    else if (playerWriteStatus()) { //иначе если есть команды в буфере
 #if AMP_PORT_ENABLE
       if (!AMP_CHK && !player.playbackMute && (player.playbackBuff[player.playbackStart] == PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) {
         AMP_ENABLE;
@@ -283,7 +305,7 @@ void playerUpdate(void)
         return;
       }
 #endif
-      if (uartStatus()) {
+      if (uartStatus()) { //если команда не отправляется
         if (playState && !player.playbackNow) return;
         if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
         player.playbackNow = 0;
@@ -296,14 +318,17 @@ void playerUpdate(void)
         playerGenCRC(player.transferBuff);
 
         if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
-        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
 
         switch (player.transferBuff[_COMMAND]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
+#if AMP_PORT_ENABLE
+          case PLAYER_CMD_STOP: AMP_DISABLE; break;
+#endif
         }
 
         uartSendData(); //отправляем команду в плеер
+        _timer_ms[TMR_PLAYER] = PLAYER_COMMAND_WAIT;
       }
     }
   }
@@ -360,7 +385,7 @@ void playerUpdate(void)
 #endif
 }
 //------------------------------------Инициализация DF плеера------------------------------------
-void dfPlayerInit(uint8_t _vol)
+void dfPlayerInit(void)
 {
   DF_BUSY_INIT; //инициализация busy
   DF_RX_INIT; //инициализация rx
@@ -372,11 +397,11 @@ void dfPlayerInit(uint8_t _vol)
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00)); //устанавливаем длинну посылки 8 бит
 #endif
 
-  playerSendCommand(PLAYER_CMD_SET_VOL, _vol);
+  playerSetVolNow((PLAYER_MAX_VOL / 2));
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
-void sdPlayerInit(uint8_t _vol)
+void sdPlayerInit(void)
 {
   for (uint8_t i = 0; i < DAC_INIT_ATTEMPTS; i++) { //инициализация карты памяти
     if (!cardMount()) { //если карта обнаружена
@@ -385,6 +410,5 @@ void sdPlayerInit(uint8_t _vol)
     }
     else buffer.cardType = 0; //иначе ошибка инициализации
   }
-  buffer.dacVolume = (9 - _vol); //устанавливаем громкость
-  if (buffer.dacVolume > 9) buffer.dacVolume = 0; //ограничиваем громкость
+  playerSetVolNow((PLAYER_MAX_VOL / 2));
 }

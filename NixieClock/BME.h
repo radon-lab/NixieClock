@@ -188,8 +188,7 @@ void readTempBME(void) //чтение температуры/давления/в
         uint32_t press_val_2 = ((uint32_t)press_raw - ((((CalibrationBMP.AC_1 * 4 + ((CalibrationBMP.B_2 * (((temp_val_1 - 4000) * (temp_val_1 - 4000)) >> 12)) >> 11) + ((CalibrationBMP.AC_2 * (temp_val_1 - 4000)) >> 11)) << BMP180_OVERSAMP) + 2) >> 2)) * (uint32_t)(50000UL >> BMP180_OVERSAMP);
         int32_t press_val_3 = (press_val_2 < 0x80000000) ? (press_val_2 * 2 / press_val_1) : (press_val_2 / press_val_1 * 2);
 
-        uint16_t temp = (temp_val_1 + 8) >> 4; //записываем знаковую температуру в беззнаковую переменную
-        sens.temp = (temp > 850) ? 0 : temp; //установили температуру
+        sens.temp = (temp_val_1 + 8) >> 4; //установили температуру
         sens.press = (float)(press_val_3 + (((((press_val_3 >> 8) * (press_val_3 >> 8) * 3038) >> 16) + ((-7357 * press_val_3) >> 16) + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
         sens.hum = 0; //сбросили влажность
       }
@@ -216,8 +215,8 @@ void readTempBME(void) //чтение температуры/давления/в
         int32_t temp_val_1 = ((((temp_raw >> 3) - ((int32_t)CalibrationBME.TEMP_1 << 1))) * ((int32_t)CalibrationBME.TEMP_2)) >> 11;
         int32_t temp_val_2 = (((((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1)) * ((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1))) >> 12) * ((int32_t)CalibrationBME.TEMP_3)) >> 14;
         temp_raw = temp_val_1 + temp_val_2; //цельночисленная температура
-        uint16_t temp = ((temp_raw * 5 + 128) >> 8) / 10; //записываем знаковую температуру в беззнаковую переменную
-        sens.temp = (temp > 850) ? 0 : temp; //установили температуру
+
+        sens.temp = ((temp_raw * 5 + 128) >> 8) / 10; //установили температуру
 
 
         int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
@@ -251,5 +250,6 @@ void readTempBME(void) //чтение температуры/давления/в
       break;
 #endif
   }
+  if (sens.temp > 850) sens.temp = 0; //если вышли за предел
   sens.err = 0; //сбросили ошибку датчика температуры
 }

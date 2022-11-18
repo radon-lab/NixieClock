@@ -27,9 +27,10 @@
 #define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 10)(pin D)
 
 //Дополнительная периферия
-#define SQW_PIN  2  //пин SQW(только пин 2)(pin D)
+#define DOTL_PIN 1  //пин левых(основных) разделительных точек в индикаторах(0..13)(pin D)
+#define DOTR_PIN 1  //пин правых(дополнительных) разделительных точек в индикаторах(0..13)(pin D)
 #define SENS_PIN 1  //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
-#define DOTS_PIN 1  //пин разделительных точек в индикаторах(0..13)(pin D)
+#define SQW_PIN  2  //пин SQW(только пин 2)(pin D)
 #define AMP_PIN  8  //пин управления питанием усилителя(0..13)(pin D)
 #define MOV_PIN  8  //пин датчика движения(0..13)(pin D)
 #define IR_PIN   7  //пин инфракрасного приемника(0..13)(pin D)
@@ -98,15 +99,25 @@
 
 #define DOT_CLEAR (BIT_CLEAR(DOT_PORT, DOT_BIT))
 
-//Пин точек индикаторов
-#define INDI_DOTS_BIT   DECODE_BIT(DOTS_PIN)
-#define INDI_DOTS_PORT  DECODE_PORT(DOTS_PIN)
+//Пин левых точек индикаторов
+#define INDI_DOTL_BIT   DECODE_BIT(DOTL_PIN)
+#define INDI_DOTL_PORT  DECODE_PORT(DOTL_PIN)
 
-#define INDI_DOTS_OFF   (BIT_CLEAR(INDI_DOTS_PORT, INDI_DOTS_BIT))
-#define INDI_DOTS_ON    (BIT_SET(INDI_DOTS_PORT, INDI_DOTS_BIT))
-#define INDI_DOTS_OUT   (BIT_SET(DDR_REG(INDI_DOTS_PORT), INDI_DOTS_BIT))
+#define INDI_DOTL_OFF   (BIT_CLEAR(INDI_DOTL_PORT, INDI_DOTL_BIT))
+#define INDI_DOTL_ON    (BIT_SET(INDI_DOTL_PORT, INDI_DOTL_BIT))
+#define INDI_DOTL_OUT   (BIT_SET(DDR_REG(INDI_DOTL_PORT), INDI_DOTL_BIT))
 
-#define INDI_DOTS_INIT  INDI_DOTS_OFF; INDI_DOTS_OUT
+#define INDI_DOTL_INIT  INDI_DOTL_OFF; INDI_DOTL_OUT
+
+//Пин правых точек индикаторов
+#define INDI_DOTR_BIT   DECODE_BIT(DOTR_PIN)
+#define INDI_DOTR_PORT  DECODE_PORT(DOTR_PIN)
+
+#define INDI_DOTR_OFF   (BIT_CLEAR(INDI_DOTR_PORT, INDI_DOTR_BIT))
+#define INDI_DOTR_ON    (BIT_SET(INDI_DOTR_PORT, INDI_DOTR_BIT))
+#define INDI_DOTR_OUT   (BIT_SET(DDR_REG(INDI_DOTR_PORT), INDI_DOTR_BIT))
+
+#define INDI_DOTR_INIT  INDI_DOTR_OFF; INDI_DOTR_OUT
 
 #if !BTN_TYPE
 //Пин кнопки ОК
@@ -230,7 +241,7 @@
 #define BUZZ_PORT  DECODE_PORT(BUZZ_PIN)
 
 #define BUZZ_OFF   (BIT_CLEAR(BUZZ_PORT, BUZZ_BIT))
-#define BUZZ_INV   (BUZZ_PORT ^= (1 << BUZZ_BIT))
+#define BUZZ_INV   (BUZZ_PORT ^= (0x01 << BUZZ_BIT))
 #define BUZZ_OUT   (BIT_SET(DDR_REG(BUZZ_PORT), BUZZ_BIT))
 #define BUZZ_INP   (BIT_CLEAR(DDR_REG(BUZZ_PORT), BUZZ_BIT))
 
