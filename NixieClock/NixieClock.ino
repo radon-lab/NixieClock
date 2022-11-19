@@ -2324,7 +2324,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
       switch (cur_mode) {
         case 0:
           if (!blink_data) indiPrintNum(curAlarm, 0, 2, 0); //вывод номера будильника
-          indiPrintNum((curAlarm) ? alarm[ALARM_MODE] : 0, 3); //вывод режима
+          if (curAlarm) indiPrintNum(alarm[ALARM_MODE], 3); //вывод режима
           break;
         case 1:
           if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_HOURS], 0, 2, 0); //вывод часов
