@@ -2228,7 +2228,6 @@ uint8_t settings_singleAlarm(void) //настройка будильника
       case LEFT_KEY_HOLD: //удержание левой кнопки
         if (cur_mode > 0) cur_mode--; else cur_mode = 3; //переключение пунктов
 
-        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
         switch (cur_mode) {
           case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 1; break; //если нет дней недели
           case 3:
@@ -2239,6 +2238,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #endif
             break;
         }
+        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
 
         cur_indi = 0; //сбрасываем текущий индикатор
         blink_data = 0; //сбрасываем флаги
@@ -2248,11 +2248,17 @@ uint8_t settings_singleAlarm(void) //настройка будильника
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         if (cur_mode < 3) cur_mode++; else cur_mode = 0; //переключение пунктов
 
-        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
-        if (cur_mode == 2 && alarm[ALARM_MODE] < 4) cur_mode = 3; //если нет дней недели
-#if !PLAYER_TYPE
-        if (cur_mode == 3) melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+        switch (cur_mode) {
+          case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 3; break; //если нет дней недели
+          case 3:
+#if PLAYER_TYPE
+            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+            melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
+            break;
+        }
+        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
 
         cur_indi = 0; //сбрасываем текущий индикатор
         blink_data = 0; //сбрасываем флаги
@@ -2317,18 +2323,22 @@ uint8_t settings_multiAlarm(void) //настройка будильников
       indiPrintNum(cur_mode + 1, 5); //режим
       switch (cur_mode) {
         case 0:
-          if (!blink_data || cur_indi) indiPrintNum(curAlarm, 0, 2, 0); //вывод номера будильника
-          if ((!blink_data || !cur_indi) && curAlarm) indiPrintNum(alarm[ALARM_MODE], 3); //вывод режима
+          if (!blink_data) indiPrintNum(curAlarm, 0, 2, 0); //вывод номера будильника
+          indiPrintNum((curAlarm) ? alarm[ALARM_MODE] : 0, 3); //вывод режима
           break;
         case 1:
           if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_HOURS], 0, 2, 0); //вывод часов
           if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_MINS], 2, 2, 0); //вывод минут
           break;
         case 2:
-          if (!blink_data || cur_indi) indiPrintNum(cur_day, 0); //вывод дня недели
-          if (!blink_data || !cur_indi) indiPrintNum((alarm[ALARM_DAYS] >> cur_day) & 0x01, 1); //вывод установки
-          break;
         case 3:
+          if (!blink_data || cur_mode != 1) indiPrintNum(alarm[ALARM_MODE], 0); //вывод режима
+          if (alarm[ALARM_MODE] > 3) {
+            if (!blink_data || cur_mode != 2 || cur_indi) indiPrintNum(cur_day, 2); //вывод дня недели
+            if (!blink_data || cur_mode != 2 || !cur_indi) indiPrintNum((alarm[ALARM_DAYS] >> cur_day) & 0x01, 3); //вывод установки
+          }
+          break;
+        case 4:
 #if PLAYER_TYPE
           if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
           if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
@@ -2354,12 +2364,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
         switch (cur_mode) {
-          case 0:
-            switch (cur_indi) {
-              case 0: if (curAlarm > (alarmsNum > 0)) curAlarm--; else curAlarm = alarmsNum; alarmReadBlock(curAlarm, alarm); break; //будильник
-              case 1: if (alarm[ALARM_MODE] > 0) alarm[ALARM_MODE]--; else alarm[ALARM_MODE] = 4; break; //режим
-            }
-            break;
+          case 0: if (curAlarm > (alarmsNum > 0)) curAlarm--; else curAlarm = alarmsNum; alarmReadBlock(curAlarm, alarm); break; //будильник
 
           //настройка времени будильника
           case 1:
@@ -2370,14 +2375,16 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             break;
 
           //настройка режима будильника
-          case 2:
+          case 2: if (alarm[ALARM_MODE] > 0) alarm[ALARM_MODE]--; else alarm[ALARM_MODE] = 4; break; //режим
+          case 3:
             switch (cur_indi) {
               case 0: if (cur_day > 1) cur_day--; else cur_day = 7; break; //день недели
               case 1: alarm[ALARM_DAYS] &= ~(0x01 << cur_day); break; //установка
             }
             break;
+
           //настройка мелодии будильника
-          case 3:
+          case 4:
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
@@ -2400,12 +2407,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         switch (cur_mode) {
-          case 0:
-            switch (cur_indi) {
-              case 0: if (curAlarm < alarmsNum) curAlarm++; else curAlarm = (alarmsNum > 0); alarmReadBlock(curAlarm, alarm); break; //будильник
-              case 1: if (alarm[ALARM_MODE] < 4) alarm[ALARM_MODE]++; else alarm[ALARM_MODE] = 0; break; //режим
-            }
-            break;
+          case 0: if (curAlarm < alarmsNum) curAlarm++; else curAlarm = (alarmsNum > 0); alarmReadBlock(curAlarm, alarm); break; //будильник
 
           //настройка времени будильника
           case 1:
@@ -2416,7 +2418,8 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             break;
 
           //настройка режима будильника
-          case 2:
+          case 2: if (alarm[ALARM_MODE] < 4) alarm[ALARM_MODE]++; else alarm[ALARM_MODE] = 0; break; //режим
+          case 3:
             switch (cur_indi) {
               case 0: if (cur_day < 7) cur_day++; else cur_day = 1; break; //день недели
               case 1: alarm[ALARM_DAYS] |= (0x01 << cur_day); break; //установка
@@ -2424,7 +2427,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             break;
 
           //настройка мелодии будильника
-          case 3:
+          case 4:
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
@@ -2446,29 +2449,42 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
-        if (!cur_mode && cur_indi) alarmWriteBlock(curAlarm, alarm); //записать блок основных данных будильника и выйти
-        if (curAlarm) cur_indi = !cur_indi;
+        if (!cur_mode && curAlarm) {
+          cur_mode = 1;
+          cur_indi = 0;
+          dotSetBright(dot.maxBright); //включаем точки
+        }
+        else cur_indi = !cur_indi;
         blink_data = 0; //сбрасываем флаги
         _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         break;
 
       case LEFT_KEY_HOLD: //удержание левой кнопки
         if (!cur_mode) {
-          if (!cur_indi) {
-            if (curAlarm) { //если есть будильники в памяти
-              delAlarm(curAlarm - 1); //удалить текущий будильник
-              dotSetBright(dot.maxBright); //включаем точки
-              for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-              dotSetBright(0); //выключаем точки
-              if (curAlarm > (alarmsNum > 0)) curAlarm--; //убавляем номер текущего будильника
-              else curAlarm = (alarmsNum > 0);
-              alarmReadBlock(curAlarm, alarm); //читаем блок данных
-            }
-          }
-          else {
-            cur_mode = 1; //режим настройки времени
+          if (curAlarm) { //если есть будильники в памяти
+            delAlarm(curAlarm - 1); //удалить текущий будильник
             dotSetBright(dot.maxBright); //включаем точки
+            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+            dotSetBright(0); //выключаем точки
+            if (curAlarm > (alarmsNum > 0)) curAlarm--; //убавляем номер текущего будильника
+            else curAlarm = (alarmsNum > 0);
+            alarmReadBlock(curAlarm, alarm); //читаем блок данных
           }
+        }
+        else {
+          if (cur_mode > 1) cur_mode--; else cur_mode = 4; //переключение пунктов
+
+          switch (cur_mode) {
+            case 3: if (alarm[ALARM_MODE] < 4) cur_mode = 2; break; //если нет дней недели
+            case 4:
+#if PLAYER_TYPE
+              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+              melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+              break;
+          }
+          dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
         }
 
         cur_indi = 0;
@@ -2478,24 +2494,29 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         if (!cur_mode) {
-          if (!cur_indi) {
-            newAlarm(); //создать новый будильник
-            dotSetBright(dot.maxBright); //включаем точки
-            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-            dotSetBright(0); //выключаем точки
-            curAlarm = alarmsNum;
-            alarmReadBlock(curAlarm, alarm); //читаем блок данных
-          }
-          else {
-            cur_mode = 3; //режим настройки функций
-#if PLAYER_TYPE
-            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
-#else
-            melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
-#endif
-            dotSetBright(dot.maxBright); //включаем точки
-          }
+          newAlarm(); //создать новый будильник
+          dotSetBright(dot.maxBright); //включаем точки
+          for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+          dotSetBright(0); //выключаем точки
+          curAlarm = alarmsNum;
+          alarmReadBlock(curAlarm, alarm); //читаем блок данных
         }
+        else {
+          if (cur_mode < 4) cur_mode++; else cur_mode = 1; //переключение пунктов
+
+          switch (cur_mode) {
+            case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 4; break; //если нет дней недели
+            case 3:
+#if PLAYER_TYPE
+              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+              melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+              break;
+          }
+          dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
+        }
+
 
         cur_indi = 0;
         blink_data = 0; //сбрасываем флаги
@@ -2503,22 +2524,11 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (!cur_mode) {
-          switch (cur_indi) {
-            case 0: return MAIN_PROGRAM; //выход
-            case 1: //настройка дня недели
-              if (alarm[ALARM_MODE] > 3) {
-                dotSetBright(dot.maxBright);
-                cur_mode = 2;
-                cur_indi = 0;
-              }
-              break;
-          }
-        }
+        if (!cur_mode) return MAIN_PROGRAM; //выход
         else {
+          alarmWriteBlock(curAlarm, alarm); //записать блок основных данных будильника
           dotSetBright(0); //выключаем точки
           cur_mode = 0; //выбор будильника
-          cur_indi = 1;
           blink_data = 0; //сбрасываем флаги
           _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         }
