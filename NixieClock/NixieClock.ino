@@ -3016,7 +3016,7 @@ void autoShowTemp(void) //автоматический показ темпера
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
     switch (mode) {
       case 0:
-#if AUTO_TEMP_SHOW_HUM && (LANP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
+#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
         if (sens.hum) continue; //возвращаемся назад
 #endif
 #if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
@@ -3025,7 +3025,7 @@ void autoShowTemp(void) //автоматический показ темпера
         break;
       case 1:
         if (!sens.hum) continue; //возвращаемся назад
-#if !AUTO_TEMP_SHOW_HUM || (LANP_NUM < 6)
+#if !AUTO_TEMP_SHOW_HUM || (LAMP_NUM < 6)
 #if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
@@ -3051,17 +3051,19 @@ void autoShowTemp(void) //автоматический показ темпера
         indiClr(); //очистка индикаторов
         switch (mode) {
           case 0:
-#if AUTO_TEMP_SHOW_HUM && (LANP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
+#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
           case 1:
             indiPrintNum(sens.temp + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
-            if (mode) indiPrintNum(sens.hum, pos + 4, 2, ' '); //вывод влажности
+            if (mode) { //если режим отображения температуры и влажности
+              indiPrintNum(sens.hum, pos + 4, 2, ' '); //вывод влажности
+#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
+              setBacklHue(pos + 4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T);  //установили цвет температуры и влажности
+              setLedHue(pos + 3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
+#endif
+            }
 #if DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
             indiSetDotL(pos + 2); //включаем разделителную точку
-#endif
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-            setBacklHue(pos + 4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T);  //установили цвет температуры и влажности
-            setLedHue(pos + 3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
 #endif
 #else
             indiPrintNum(sens.temp + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
