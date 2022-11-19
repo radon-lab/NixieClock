@@ -154,8 +154,8 @@ struct backlightData {
   uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_2_step; //шаг эффекта номер 2
   uint8_t mode_4_step; //шаг эффекта номер 4
-  uint16_t mode_6_time; //время эффекта номер 6
-  uint8_t mode_6_step; //шаг эффекта номер 6
+  uint16_t mode_8_time; //время эффекта номер 6
+  uint8_t mode_8_step; //шаг эффекта номер 6
 } backl;
 
 //переменные работы с индикаторами
@@ -300,8 +300,12 @@ enum {
   BACKL_PULS_COLOR, //дыхание со сменой цвета при затухании
   BACKL_RUNNING_FIRE, //бегущий огонь
   BACKL_RUNNING_FIRE_COLOR, //бегущий огонь со сменой цвета
+  BACKL_RUNNING_FIRE_RAINBOW, //бегущий огонь с радугой
+  BACKL_RUNNING_FIRE_CONFETTI, //бегущий огонь с конфетти
   BACKL_WAVE, //волна
   BACKL_WAVE_COLOR, //волна со сменой цвета
+  BACKL_WAVE_RAINBOW, //волна с радугой
+  BACKL_WAVE_CONFETTI, //волна с конфетти
   BACKL_SMOOTH_COLOR_CHANGE, //плавная смена цвета
   BACKL_RAINBOW, //радуга
   BACKL_CONFETTI, //конфетти
@@ -4086,8 +4090,8 @@ void changeBright(void) //установка яркости от времени 
 #if BACKL_TYPE == 3
       backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
       if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-      backl.mode_6_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
-      backl.mode_6_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_6_STEP_TIME, BACKL_MODE_6_TIME); //расчёт шага яркости
+      backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+      backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
 #endif
     }
 #endif
@@ -4121,7 +4125,9 @@ void backlEffect(void) //анимация подсветки
           }
           break;
         case BACKL_RUNNING_FIRE:
-        case BACKL_RUNNING_FIRE_COLOR: { //бегущий огонь
+        case BACKL_RUNNING_FIRE_COLOR:
+        case BACKL_RUNNING_FIRE_RAINBOW:
+        case BACKL_RUNNING_FIRE_CONFETTI: { //бегущий огонь
             _timer_ms[TMR_BACKL] = BACKL_MODE_4_TIME / LAMP_NUM / BACKL_MODE_4_FADING; //установили таймер
             if (backl.steps) { //если есть шаги затухания
               decLedsBright(backl.position - 1, backl.mode_4_step); //уменьшаем яркость
@@ -4137,17 +4143,19 @@ void backlEffect(void) //анимация подсветки
               setLedBright(backl.position - 1, backl.maxBright); //установили яркость
               backl.steps = BACKL_MODE_4_FADING; //установили шаги затухания
             }
-            if (fastSettings.backlMode != BACKL_RUNNING_FIRE_COLOR) {
+            if (fastSettings.backlMode == BACKL_RUNNING_FIRE) {
               backl.color = fastSettings.backlColor; //статичный цвет
               setLedHue(backl.color, WHITE_ON); //установили цвет
             }
           }
           break;
         case BACKL_WAVE:
-        case BACKL_WAVE_COLOR: { //волна
-            _timer_ms[TMR_BACKL] = backl.mode_6_time; //установили таймер
+        case BACKL_WAVE_COLOR:
+        case BACKL_WAVE_RAINBOW:
+        case BACKL_WAVE_CONFETTI: { //волна
+            _timer_ms[TMR_BACKL] = backl.mode_8_time; //установили таймер
             if (backl.drive) {
-              if (incLedBright(backl.position, backl.mode_6_step, backl.maxBright)) { //прибавили шаг яркости
+              if (incLedBright(backl.position, backl.mode_8_step, backl.maxBright)) { //прибавили шаг яркости
                 if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
                 else {
                   backl.position = 0; //сбросили позицию
@@ -4156,7 +4164,7 @@ void backlEffect(void) //анимация подсветки
               }
             }
             else {
-              if (decLedBright(backl.position, backl.mode_6_step, backl.minBright)) { //иначе убавляем яркость
+              if (decLedBright(backl.position, backl.mode_8_step, backl.minBright)) { //иначе убавляем яркость
                 if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
                 else {
                   backl.position = 0; //сбросили позицию
@@ -4164,32 +4172,36 @@ void backlEffect(void) //анимация подсветки
                 }
               }
             }
-            if (fastSettings.backlMode != BACKL_WAVE_COLOR) {
+            if (fastSettings.backlMode == BACKL_WAVE) {
               backl.color = fastSettings.backlColor; //статичный цвет
               setLedHue(backl.color, WHITE_ON); //установили цвет
             }
-          }
-          break;
-        case BACKL_RAINBOW: { //радуга
-            _timer_ms[TMR_BACKL] = BACKL_MODE_9_TIME; //установили таймер
-            backl.color += BACKL_MODE_9_STEP; //прибавили шаг
-            for (uint8_t f = 0; f < LAMP_NUM; f++) setLedHue(f, backl.color + (f * BACKL_MODE_9_STEP), WHITE_OFF); //установили цвет
-          }
-          break;
-        case BACKL_CONFETTI: { //рандомный цвет
-            _timer_ms[TMR_BACKL] = BACKL_MODE_10_TIME; //установили таймер
-            setLedHue(random(0, LAMP_NUM), random(0, 256), WHITE_ON); //установили цвет
           }
           break;
       }
     }
     if (!_timer_ms[TMR_COLOR]) { //если время пришло
       switch (fastSettings.backlMode) {
+        case BACKL_RUNNING_FIRE_RAINBOW:
+        case BACKL_WAVE_RAINBOW:
+        case BACKL_RAINBOW: { //радуга
+            _timer_ms[TMR_COLOR] = BACKL_MODE_13_TIME; //установили таймер
+            backl.color += BACKL_MODE_13_STEP; //прибавили шаг
+            for (uint8_t f = 0; f < LAMP_NUM; f++) setLedHue(f, backl.color + (f * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
+          }
+          break;
+        case BACKL_RUNNING_FIRE_CONFETTI:
+        case BACKL_WAVE_CONFETTI:
+        case BACKL_CONFETTI: { //рандомный цвет
+            _timer_ms[TMR_COLOR] = BACKL_MODE_14_TIME; //установили таймер
+            setLedHue(random(0, LAMP_NUM), random(0, 256), WHITE_ON); //установили цвет
+          }
+          break;
         case BACKL_RUNNING_FIRE_COLOR:
         case BACKL_WAVE_COLOR:
         case BACKL_SMOOTH_COLOR_CHANGE: { //плавная смена цвета
-            _timer_ms[TMR_COLOR] = BACKL_MODE_8_TIME; //установили таймер
-            backl.color += BACKL_MODE_8_COLOR;
+            _timer_ms[TMR_COLOR] = BACKL_MODE_12_TIME; //установили таймер
+            backl.color += BACKL_MODE_12_COLOR;
             setLedHue(backl.color, WHITE_OFF); //установили цвет
           }
           break;
