@@ -3082,7 +3082,11 @@ void autoShowTemp(void) //автоматический показ темпера
           else {
             drv = 1;
 #if !DOTS_PORT_ENABLE
+#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
+            if (mode < 2) dotSetBright(dot.maxBright); //включаем точки
+#else
             if (!mode) dotSetBright(dot.maxBright); //включаем точки
+#endif
 #endif
             _timer_ms[TMR_ANIM] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
           }
