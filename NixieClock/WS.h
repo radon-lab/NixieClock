@@ -62,7 +62,12 @@ void showLeds(void)
     uint8_t ledBuff[LAMP_NUM * 3]; //массив светодиодов
     uint8_t* ledLink = ledBuff; //ссылка на текущий элемент
 
+#if BACKL_REVERSE
+    for (uint8_t f = LAMP_NUM; f;) {
+      f--; //сместили номер светодиода
+#else
     for (uint8_t f = 0; f < LAMP_NUM; f++) {
+#endif
       uint8_t count = 0;
       uint8_t pallet = ledColor[f];
       if (pallet != 255) {

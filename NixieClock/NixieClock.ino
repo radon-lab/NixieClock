@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 18.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 19.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1183,20 +1183,12 @@ void test_system(void) //проверка системы
       indiSetDotL(indi); //включаем разделителную точку
 #endif
 #if BACKL_TYPE == 3
-#if TEST_BACKL_REVERSE
-      setLedBright((LAMP_NUM - 1) - indi, TEST_BACKL_BRIGHT); //включаем светодиод
-#else
       setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
-#endif
 #endif
       for (uint8_t digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_TYPE == 3
-#if TEST_BACKL_REVERSE
-        setLedHue((LAMP_NUM - 1) - indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
-#else
         setLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
-#endif
 #endif
 #if !PLAYER_TYPE
         buzz_pulse(TEST_FREQ_STEP + (digit * TEST_FREQ_STEP), TEST_LAMP_TIME); //перебор частот
