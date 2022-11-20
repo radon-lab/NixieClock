@@ -4264,8 +4264,8 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
       case DOT_RUNNING: //бегущая
         indiClrDots(); //очистка разделителных точек
 #if DOTS_TYPE
-        if (dot.count & 0xFE) indiSetDotL(dot.count >> 1); //включаем левую точку
-        else indiSetDotR(dot.count >> 1); //включаем правую точку
+        if (dot.count & 0x01) indiSetDotR(dot.count >> 1); //включаем правую точку
+        else indiSetDotL(dot.count >> 1); //включаем левую точку
 #else
         indiSetDotL(dot.count); //включаем точку
 #endif
@@ -4290,8 +4290,6 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
           }
         }
         break;
-
-
 #if LAMP_NUM > 4
       case DOT_TURN_BLINK: //мигание по очереди
         switch (dot.drive) {
