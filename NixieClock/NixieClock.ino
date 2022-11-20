@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 19.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 20.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -2506,8 +2506,8 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           if (cur_mode < 4) cur_mode++; else cur_mode = 1; //переключение пунктов
 
           switch (cur_mode) {
-            case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 4; break; //если нет дней недели
-            case 3:
+            case 3: if (alarm[ALARM_MODE] < 4) cur_mode = 4; break; //если нет дней недели
+            case 4:
 #if PLAYER_TYPE
               playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
 #else
