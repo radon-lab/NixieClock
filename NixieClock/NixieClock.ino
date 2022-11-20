@@ -4057,8 +4057,8 @@ void changeBright(void) //установка яркости от времени 
 #if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
           if (!dot.maxBright) dotSetBright(0); //если точки выключены
           else {
-            dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
-            dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_STEP_TIME, DOT_TIME); //расчёт шага яркости точки
+            dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
+            dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
           }
 #endif
 #if DOTS_PORT_ENABLE
@@ -4244,8 +4244,14 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
       case DOT_PULS:
 #if (NEON_DOT == 2) && DOTS_PORT_ENABLE
         switch (dot.drive) {
-          case 0: dotSetBright(dot.maxBright); dot.drive = 1; _timer_ms[TMR_DOT] = DOT_TIME; break; //установили таймер
-          case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //сбросили флаг обновления точек
+          case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
+#if DOT_PULS_TIME != 1000
+            _timer_ms[TMR_DOT] = DOT_PULS_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+            break;
+          case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
         }
 #else
         switch (dot.drive) {
@@ -4272,7 +4278,7 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
         if (dot.drive) {
           if (dot.count > 0) {
             dot.count--; //сместили точку
-            _timer_ms[TMR_DOT] = (1000 / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
+            _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
           }
           else {
             dot.drive = 0; //сменили направление
@@ -4282,7 +4288,7 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
         else {
           if (dot.count < ((LAMP_NUM * (DOTS_TYPE + 1)) - 1)) {
             dot.count++; //сместили точку
-            _timer_ms[TMR_DOT] = (1000 / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
+            _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
           }
           else {
             dot.drive = 1; //сменили направление
@@ -4294,10 +4300,22 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
       case DOT_TURN_BLINK: //мигание по очереди
         switch (dot.drive) {
 #if DOTS_TYPE
-          case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; _timer_ms[TMR_DOT] = 500; break; //включаем точки
+          case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; //включаем точки
+#if DOT_TURN_TIME != 1000
+            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+            break;
           case 1: indiSetDotR(3); indiClrDotL(2); dot.drive = 0; dot.update = 1; break; //включаем точки
 #else
-          case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; _timer_ms[TMR_DOT] = 500; break; //включаем точки
+          case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; //включаем точки
+#if DOT_TURN_TIME != 1000
+            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+            break;
           case 1: indiSetDotL(4); indiClrDotL(2); dot.drive = 0; dot.update = 1; break; //включаем точки
 #endif
         }
@@ -4305,7 +4323,13 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
 #elif DOTS_TYPE
       case DOT_TURN_BLINK: //мигание по очереди
         switch (dot.drive) {
-          case 0: indiSetDotR(1); indiClrDotL(2); dot.drive = 1; _timer_ms[TMR_DOT] = 500; break; //включаем точки
+          case 0: indiSetDotR(1); indiClrDotL(2); dot.drive = 1; //включаем точки
+#if DOT_TURN_TIME != 1000
+            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+            break;
           case 1: indiSetDotL(2); indiClrDotR(1); dot.drive = 0; dot.update = 1; break; //включаем точки
         }
         break;
@@ -4313,20 +4337,25 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
 #endif
       case DOT_BLINK:
         switch (dot.drive) {
-          case 0: dotSetBright(dot.maxBright); dot.drive = 1; _timer_ms[TMR_DOT] = 500; break; //включаем точки
+          case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
+#if DOT_BLINK_TIME != 1000
+            _timer_ms[TMR_DOT] = DOT_BLINK_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+            break;
           case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
         }
         break;
       case DOT_DOOBLE_BLINK:
-        switch (dot.count % 2) {
-          case 0: dotSetBright(dot.maxBright); break; //включаем точки
-          case 1: dotSetBright(0); break; //выключаем точки
-        }
+        if (dot.count & 0x01) dotSetBright(0); //выключаем точки
+        else dotSetBright(dot.maxBright); //включаем точки
+
         if (++dot.count > 3) {
           dot.count = 0;  //сбрасываем счетчик
           dot.update = 1; //сбросили флаг обновления точек
         }
-        else _timer_ms[TMR_DOT] = 150; //установили таймер
+        else _timer_ms[TMR_DOT] = DOT_DOOBLE_TIME; //установили таймер
         break;
       default: dot.update = 1; break; //сбросили флаг обновления точек
     }
