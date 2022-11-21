@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 20.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 21.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -4296,41 +4296,33 @@ void dotFlashMode(uint8_t mode) //режим мигания точек
           }
         }
         break;
-#if LAMP_NUM > 4
+#if (LAMP_NUM > 4) || DOTS_TYPE
       case DOT_TURN_BLINK: //мигание по очереди
-        switch (dot.drive) {
-#if DOTS_TYPE
-          case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; //включаем точки
-#if DOT_TURN_TIME != 1000
-            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
-#else
-            dot.update = 1; //сбросили флаг секунд
-#endif
-            break;
-          case 1: indiSetDotR(3); indiClrDotL(2); dot.drive = 0; dot.update = 1; break; //включаем точки
-#else
-          case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; //включаем точки
-#if DOT_TURN_TIME != 1000
-            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
-#else
-            dot.update = 1; //сбросили флаг секунд
-#endif
-            break;
-          case 1: indiSetDotL(4); indiClrDotL(2); dot.drive = 0; dot.update = 1; break; //включаем точки
-#endif
+#if DOT_TURN_TIME
+        if (dot.count < ((1000 / DOT_TURN_TIME) - 1)) {
+          dot.count++; //прибавили шаг
+          _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
         }
-        break;
-#elif DOTS_TYPE
-      case DOT_TURN_BLINK: //мигание по очереди
-        switch (dot.drive) {
-          case 0: indiSetDotR(1); indiClrDotL(2); dot.drive = 1; //включаем точки
-#if DOT_TURN_TIME != 1000
-            _timer_ms[TMR_DOT] = DOT_TURN_TIME; //установили таймер
+        else {
+          dot.count = 0; //сбросили счетчик
+          dot.update = 1; //сбросили флаг секунд
+        }
 #else
-            dot.update = 1; //сбросили флаг секунд
+        dot.update = 1; //сбросили флаг секунд
 #endif
-            break;
-          case 1: indiSetDotL(2); indiClrDotR(1); dot.drive = 0; dot.update = 1; break; //включаем точки
+        switch (dot.drive) {
+#if LAMP_NUM > 4
+#if DOTS_TYPE
+          case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
+          case 1: indiSetDotR(3); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
+#else
+          case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; break; //включаем левую точку
+          case 1: indiSetDotL(4); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
+#endif
+#elif DOTS_TYPE
+          case 0: indiSetDotR(1); indiClrDotL(2); dot.drive = 1; break; //включаем левую точку
+          case 1: indiSetDotL(2); indiClrDotR(1); dot.drive = 0; break; //включаем правую точку
+#endif
         }
         break;
 #endif
