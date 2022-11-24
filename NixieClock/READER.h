@@ -258,7 +258,7 @@ void readerUpdate(void)
       case READER_SOUND_END:
         if (buffer.dacStart == buffer.dacEnd) {
 #if AMP_PORT_ENABLE
-          if (!playerWriteStatus()) AMP_DISABLE;
+          if (!playerPlaybackStatus()) AMP_DISABLE;
 #endif
           TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
           OCR1B = 128; //выключаем dac

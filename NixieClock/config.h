@@ -182,7 +182,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки плеера
-#define PLAYER_MAX_BUFFER 10         //максимальное количество команд в буфере(1..25)
+#define PLAYER_MAX_BUFFER 10         //максимальное количество ячеек в буфере воспроизведения(1..25)
 #define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
 #define PLAYER_START_WAIT 500        //ожидание инициализации плеера(500..1000)(мс)
 #define PLAYER_BUSY_WAIT 200         //ожидание сигнала занятости плеера(50..300)(мс)
@@ -299,4 +299,4 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "1.7.5"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "1.7.6"     //версия прошивки для отображения и озвучки

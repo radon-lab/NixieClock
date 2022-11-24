@@ -107,7 +107,8 @@ void setPowerRDA(boolean _pwr)
 //-------------------------------------Установить частоту радиостанции----------------------------------------
 void setFreqRDA(uint16_t _freq)
 {
-  _freq = ((_freq - 870) << 6) | 0x10; //устанавливаем биты CHAN
+  if (_freq < RADIO_MIN_FREQ) _freq = RADIO_MIN_FREQ; //если частота меньше минимальной
+  _freq = ((_freq - RADIO_MIN_FREQ) << 6) | 0x10; //устанавливаем биты CHAN
   rda.highReg = (uint8_t)(_freq >> 8); //записываем настройку
   rda.lowReg = (uint8_t)_freq; //записываем настройку
   writeRegRDA(RDA_TUNING_REG); //отправляем данные

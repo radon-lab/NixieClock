@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.5 релиз от 21.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.6 релиз от 24.11.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -113,6 +113,7 @@ struct Settings_3 { //настройки радио
   uint16_t stationsFreq = RADIO_MIN_FREQ;
   uint8_t volume = DEFAULT_RADIO_VOLUME;
   uint8_t stationNum;
+  boolean powerState;
 } radioSettings;
 
 
@@ -201,6 +202,13 @@ uint16_t vcc_adc; //напряжение питания
 
 #define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
 #define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
+
+#define ALARM_PLAYER_VOL_MIN (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MIN / 100.0))
+#define ALARM_PLAYER_VOL_MAX (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MAX / 100.0))
+#define ALARM_PLAYER_VOL_TIME (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_PLAYER_VOL_MAX - ALARM_PLAYER_VOL_MIN))
+#define ALARM_RADIO_VOL_MIN (uint8_t)(RADIO_MAX_VOL * (ALARM_AUTO_VOL_MIN / 100.0))
+#define ALARM_RADIO_VOL_MAX (uint8_t)(RADIO_MAX_VOL * (ALARM_AUTO_VOL_MAX / 100.0))
+#define ALARM_RADIO_VOL_TIME (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_RADIO_VOL_MAX - ALARM_RADIO_VOL_MIN))
 
 //перечисления кнопок
 enum {
@@ -336,6 +344,7 @@ enum {
   ALARM_DAYS, //день недели будильника
   ALARM_SOUND, //мелодия будильника
   ALARM_VOLUME, //громкость будильника
+  ALARM_RADIO, //радиобудильник
   ALARM_MAX_ARR //максимальное количество данных
 };
 
@@ -467,6 +476,9 @@ int main(void) //главный цикл программ
 #if ALARM_TYPE
       case ALARM_PROGRAM: //тревога будильника
         mainTask = alarmWarn(); //переход в программу
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        radioPowerOff(); //выключить питание радиоприемника
+#endif
 #if PLAYER_TYPE
         playerSetVolNow(mainSettings.volumeSound); //установили громкость
 #endif
@@ -484,9 +496,6 @@ int main(void) //главный цикл программ
       case SLEEP_PROGRAM: //режим сна индикаторов
         mainTask = sleepIndi(); //переход в программу
         setAnimTimers(); //установка таймеров анимаций
-#if !MOV_PORT_ENABLE
-        if (indi.sleepMode) _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
-#endif
         break;
       case FAST_SET_PROGRAM: mainTask = fastSetSwitch(); break; //переключение настроек
       case MAIN_SET_PROGRAM: //основные настроки
@@ -498,17 +507,13 @@ int main(void) //главный цикл программ
         sendTime(); //отправить время в RTC
         updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
         break;
-#if ALARM_TYPE == 1
+#if ALARM_TYPE
       case ALARM_SET_PROGRAM: //настройка будильника
+#if ALARM_TYPE == 1
         mainTask = settings_singleAlarm(); //переход в программу
-#if PLAYER_TYPE
-        playerSetVolNow(mainSettings.volumeSound); //установили громкость
-#endif
-        checkAlarms(); //проверка будильников
-        break;
 #elif ALARM_TYPE == 2
-      case ALARM_SET_PROGRAM: //настройка будильников
         mainTask = settings_multiAlarm(); //переход в программу
+#endif
 #if PLAYER_TYPE
         playerSetVolNow(mainSettings.volumeSound); //установили громкость
 #endif
@@ -522,12 +527,16 @@ int main(void) //главный цикл программ
 //--------------------------------------Инициализация---------------------------------------------------
 void INIT_SYSTEM(void) //инициализация
 {
-#if AMP_PORT_ENABLE
-  AMP_INIT; //инициализация питания усилителя
+#if GEN_ENABLE
+  CONV_INIT; //инициализация преобразователя
 #endif
 
 #if (PLAYER_TYPE != 1) || PLAYER_UART_MODE
   uartDisable(); //отключение uart
+#endif
+
+#if AMP_PORT_ENABLE
+  AMP_INIT; //инициализация питания усилителя
 #endif
 
 #if !PLAYER_TYPE
@@ -544,12 +553,10 @@ void INIT_SYSTEM(void) //инициализация
   ADD_INIT; //инициализация дополнительной кнопки
 #endif
 
-#if GEN_ENABLE
-  CONV_INIT; //инициализация преобразователя
-#endif
 #if SQW_PORT_ENABLE
   SQW_INIT; //инициализация счета секунд
 #endif
+
 #if BACKL_TYPE
   BACKL_INIT; //инициализация подсветки
 #endif
@@ -654,7 +661,6 @@ void INIT_SYSTEM(void) //инициализация
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   setAnimTimers(); //установка таймеров анимаций
   _timer_sec[TMR_SYNC] = (uint16_t)(RTC_SYNC_TIME * 60); //устанавливаем таймер синхронизации
-  _timer_sec[TMR_SLEEP] = SLEEP_START_TIME; //установли время ожидания режима пробуждения
 
 
 #if LIGHT_SENS_ENABLE
@@ -708,15 +714,18 @@ void setAnimTimers(void) //установка таймеров анимаций
 void backlAnimEnable(void) //разрешить анимации подсветки
 {
 #if BACKL_TYPE == 3
-  if (fastSettings.backlMode & 0x80) {
+  if (fastSettings.backlMode & 0x80) { //если эффекты подсветки были запрещены
+    fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
     backl.steps = 0; //сбросили шаги
     backl.drive = 0; //сбросили направление
     backl.position = 0; //сбросили позицию
     _timer_ms[TMR_COLOR] = 0; //сбросили таймер смены цвета
     _timer_ms[TMR_BACKL] = 0; //сбросили таймер анимации подсветки
+    if (fastSettings.backlMode) setLedBright(backl.maxBright); //установили максимальную яркость
   }
-#endif
+#else
   fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+#endif
 }
 //-------------------------Запретить анимации подсветки-------------------------
 void backlAnimDisable(void) //запретить анимации подсветки
@@ -1655,8 +1664,9 @@ void newAlarm(void) //создать новый будильник
     EEPROM_UpdateByte(newCell + ALARM_MINS, DEFAULT_ALARM_TIME_MM); //устанавливаем минуты по умолчанию
     EEPROM_UpdateByte(newCell + ALARM_MODE, DEFAULT_ALARM_MODE); //устанавливаем режим по умолчанию
     EEPROM_UpdateByte(newCell + ALARM_DAYS, 0); //устанавливаем дни недели по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_SOUND, DEFAULT_ALARM_SOUND); //устанавливаем мелодию по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_VOLUME, constrain(DEFAULT_ALARM_VOLUME, PLAYER_MIN_VOL, PLAYER_MAX_VOL)); //устанавливаем мелодию по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_SOUND, 0); //устанавливаем мелодию по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_VOLUME, 0); //устанавливаем громкость по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_RADIO, 0); //устанавливаем радиобудильник по умолчанию
     updateByte(++alarmsNum, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
@@ -1720,24 +1730,52 @@ void alarmDataUpdate(void) //обновление данных будильни�
 uint8_t alarmWarn(void) //тревога будильника
 {
   boolean blink_data = 0; //флаг мигания индикаторами
-
-#if PLAYER_TYPE
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+  uint8_t radio_mode = alarmRead(alarm - 1, ALARM_RADIO); //текущий режим звука
+#endif
+#if PLAYER_TYPE || (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE))
   boolean auto_vol = 0; //флаг автогромкости
   uint8_t cur_vol = alarmRead(alarm - 1, ALARM_VOLUME); //текущая громкость
+#endif
 
-  if (!cur_vol) { //если автогромкость
-    cur_vol = ALARM_AUTO_VOL_MIN; //установили минимальную громкость
-    auto_vol = 1; //установили флаг автогромкости
-    _timer_ms[TMR_ANIM] = ((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN); //устанавливаем таймер
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+  if (radio_mode) { //если режим радио
+    if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
+      if (!cur_vol) { //если автогромкость
+        auto_vol = 1; //установили флаг автогромкости
+        cur_vol = ALARM_RADIO_VOL_MIN; //установили минимальную громкость
+      }
+      setPowerRDA(RDA_ON); //включаем радио
+      setVolumeRDA(cur_vol); //устанавливаем громкость
+      setFreqRDA(radioSettings.stationsSave[alarmRead(alarm - 1, ALARM_SOUND)]); //устанавливаем частоту
+      _timer_ms[TMR_ANIM] = ALARM_RADIO_VOL_TIME; //устанавливаем таймер
+    }
+    else radio_mode = 0; //отключили режим радио
   }
+  else radioPowerOff(); //выключить питание радиоприемника
+#endif
 
-  playerStop(); //сброс позиции мелодии
-  playerSetVolNow(cur_vol); //установка громкости
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+  if (!radio_mode) {
+#endif
+#if PLAYER_TYPE
+    if (!cur_vol) { //если автогромкость
+      auto_vol = 1; //установили флаг автогромкости
+      cur_vol = ALARM_RADIO_VOL_MIN; //установили минимальную громкость
+    }
+    playerStop(); //сброс позиции мелодии
+    playerSetVolNow(cur_vol); //установка громкости
+    _timer_ms[TMR_ANIM] = ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
 #else
-  melodyPlay(alarmRead(alarm - 1, ALARM_SOUND), SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+    melodyPlay(alarmRead(alarm - 1, ALARM_SOUND), SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
-  radioPowerOff(); //выключить питание радиоприемника
+  }
+#endif
+
+#if BACKL_TYPE == 3
+  backlAnimDisable(); //запретили эффекты подсветки
+  setLedHue(ALARM_BACKL_COLOR, WHITE_ON); //установили цвет будильника
 #endif
 
   _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -1754,12 +1792,29 @@ uint8_t alarmWarn(void) //тревога будильника
       return MAIN_PROGRAM; //выходим
     }
 
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
 #if PLAYER_TYPE
-    if (!playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER); //воспроизводим мелодию
-
+    if (!radio_mode && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER); //воспроизводим мелодию
     if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
-      _timer_ms[TMR_ANIM] = ((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN); //устанавливаем таймер
-      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
+      _timer_ms[TMR_ANIM] = (radio_mode) ? ALARM_RADIO_VOL_TIME : ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
+      if (cur_vol < ((radio_mode) ? ALARM_RADIO_VOL_MAX : ALARM_PLAYER_VOL_MAX)) cur_vol++;
+      else auto_vol = 0; //сбросили флаг автогромкости
+      if (radio_mode) setVolumeRDA(cur_vol); //устанавливаем громкость
+      else playerSetVolNow(cur_vol); //установка громкости
+    }
+#else
+    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
+      _timer_ms[TMR_ANIM] = ALARM_RADIO_VOL_TIME; //устанавливаем таймер
+      if (cur_vol < ALARM_RADIO_VOL_MAX) cur_vol++;
+      else auto_vol = 0; //сбросили флаг автогромкости
+      setVolumeRDA(cur_vol); //устанавливаем громкость
+    }
+#endif
+#elif PLAYER_TYPE
+    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarmRead(alarm - 1, ALARM_SOUND), PLAYER_ALARM_FOLDER); //воспроизводим мелодию
+    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
+      _timer_ms[TMR_ANIM] = ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
+      if (cur_vol < ALARM_PLAYER_VOL_MAX) cur_vol++;
       else auto_vol = 0; //сбросили флаг автогромкости
       playerSetVolNow(cur_vol); //установка громкости
     }
@@ -1769,17 +1824,17 @@ uint8_t alarmWarn(void) //тревога будильника
       _timer_ms[TMR_MS] = ALARM_BLINK_TIME; //устанавливаем таймер
 
       switch (blink_data) {
-        case 0:
-          indiClr(); //очистка индикаторов
-          dotSetBright(0); //выключаем точки
-          break;
+        case 0: indiClr(); break; //очистка индикаторов
         case 1:
           indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
           indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
           indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-          dotSetBright(dot.maxBright); //включаем точки
           break;
       }
+      dotSetBright((blink_data) ? dot.maxBright : 0); //установили точки
+#if BACKL_TYPE == 3
+      setLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
+#endif
       blink_data = !blink_data; //мигаем временем
     }
 
@@ -1925,8 +1980,8 @@ void dataUpdate(void) //обработка данных
             }
           }
         }
-        hourSound(); //звук смены часа
         changeBright(); //установка яркости от времени суток
+        if (mainTask == MAIN_PROGRAM || mainTask == SLEEP_PROGRAM) hourSound(); //звук смены часа
       }
       if (fastSettings.flipMode) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
@@ -2084,12 +2139,19 @@ uint8_t settings_singleAlarm(void) //настройка будильника
     dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-    if (cur_mode == 3 && !playerWriteStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+    if (cur_mode == 3 && !alarm[ALARM_RADIO] && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#else
+    if (cur_mode == 3 && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#endif
 #endif
 
     if (!secUpd) {
       secUpd = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения мелодии
 #else
@@ -2118,11 +2180,24 @@ uint8_t settings_singleAlarm(void) //настройка будильника
           }
           break;
         case 3:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+          if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
+          if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND] + !alarm[ALARM_RADIO], 2, 2, 0); //вывод номера мелодии
+#else
+          if (alarm[ALARM_RADIO]) {
+            if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
+            if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND], 2, 2, 0); //вывод номера мелодии
+          }
+          else if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
+#endif
+#else
 #if PLAYER_TYPE
           if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
           if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
 #else
           if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
+#endif
 #endif
           break;
       }
@@ -2131,7 +2206,14 @@ uint8_t settings_singleAlarm(void) //настройка будильника
         case 1: setBacklHue(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
         case 2: setBacklHue((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if !PLAYER_TYPE
-        case 3: setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 3:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if (alarm[ALARM_RADIO]) setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+          else setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+#else
+          setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+#endif
+          break;
 #endif
         default: setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
       }
@@ -2160,11 +2242,30 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             break;
           //настройка мелодии будильника
           case 3:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+            switch (cur_indi) {
+              case 0:
+                if (alarm[ALARM_VOLUME] > 0) alarm[ALARM_VOLUME]--; else alarm[ALARM_VOLUME] = (alarm[ALARM_RADIO]) ? RADIO_MAX_VOL : PLAYER_MAX_VOL; //громкость
+                if (alarm[ALARM_RADIO]) setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+                else playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
+                break;
+              case 1:
+                if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = (alarm[ALARM_RADIO]) ? 9 : (PLAYER_ALARM_MAX - 1); //мелодия
+                if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+                break;
+            }
+#else
+            if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = (alarm[ALARM_RADIO]) ? 9 : (SOUND_MAX(alarm_sound) - 1); //мелодия
+            if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+            else melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#else
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
                 if (alarm[ALARM_VOLUME] > 0) alarm[ALARM_VOLUME]--; else alarm[ALARM_VOLUME] = PLAYER_MAX_VOL; //громкость
-                playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+                playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
                 break;
               case 1:
                 if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = PLAYER_ALARM_MAX - 1; //мелодия
@@ -2173,6 +2274,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #else
             if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = SOUND_MAX(alarm_sound) - 1; //мелодия
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
 #endif
             break;
         }
@@ -2199,11 +2301,30 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             break;
           //настройка мелодии будильника
           case 3:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+            switch (cur_indi) {
+              case 0:
+                if (alarm[ALARM_VOLUME] < ((alarm[ALARM_RADIO]) ? RADIO_MAX_VOL : PLAYER_MAX_VOL)) alarm[ALARM_VOLUME]++; else alarm[ALARM_VOLUME] = 0; //громкость
+                if (alarm[ALARM_RADIO]) setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+                else playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
+                break;
+              case 1:
+                if (alarm[ALARM_SOUND] < ((alarm[ALARM_RADIO]) ? 9 : (PLAYER_ALARM_MAX - 1))) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
+                if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+                break;
+            }
+#else
+            if (alarm[ALARM_SOUND] < ((alarm[ALARM_RADIO]) ? 9 : (SOUND_MAX(alarm_sound) - 1))) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
+            if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+            else melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#else
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
                 if (alarm[ALARM_VOLUME] < PLAYER_MAX_VOL) alarm[ALARM_VOLUME]++; else alarm[ALARM_VOLUME] = 0; //громкость
-                playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+                playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
                 break;
               case 1:
                 if (alarm[ALARM_SOUND] < (PLAYER_ALARM_MAX - 1)) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
@@ -2212,6 +2333,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #else
             if (alarm[ALARM_SOUND] < (SOUND_MAX(alarm_sound) - 1)) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
 #endif
             break;
         }
@@ -2226,17 +2348,39 @@ uint8_t settings_singleAlarm(void) //настройка будильника
         break;
 
       case LEFT_KEY_HOLD: //удержание левой кнопки
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
         if (cur_mode > 0) cur_mode--; else cur_mode = 3; //переключение пунктов
 
-        switch (cur_mode) {
-          case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 1; break; //если нет дней недели
-          case 3:
+        if ((cur_mode == 2) && (alarm[ALARM_MODE] < 4)) cur_mode = 1; //если нет дней недели
+        if (cur_mode == 3) { //если режим настройки мелодии
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if (alarm[ALARM_RADIO] && (getPowerStatusRDA() != RDA_ERROR)) { //если режим радиобудильника
+            setPowerRDA(RDA_ON); //включаем радио
+            setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+            setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
 #if PLAYER_TYPE
-            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+          }
+          else { //иначе обычный режим
+            alarm[ALARM_RADIO] = 0; //обычный режим
+            setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
-            break;
+          }
+#else
+#if PLAYER_TYPE
+          playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+          melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#endif
         }
         dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
 
@@ -2246,17 +2390,39 @@ uint8_t settings_singleAlarm(void) //настройка будильника
         break;
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
         if (cur_mode < 3) cur_mode++; else cur_mode = 0; //переключение пунктов
 
-        switch (cur_mode) {
-          case 2: if (alarm[ALARM_MODE] < 4) cur_mode = 3; break; //если нет дней недели
-          case 3:
+        if ((cur_mode == 2) && (alarm[ALARM_MODE] < 4)) cur_mode = 3; //если нет дней недели
+        if (cur_mode == 3) { //если режим настройки мелодии
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if (alarm[ALARM_RADIO] && (getPowerStatusRDA() != RDA_ERROR)) { //если режим радиобудильника
+            setPowerRDA(RDA_ON); //включаем радио
+            setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+            setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
 #if PLAYER_TYPE
-            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+          }
+          else { //иначе обычный режим
+            alarm[ALARM_RADIO] = 0; //обычный режим
+            setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
-            break;
+          }
+#else
+#if PLAYER_TYPE
+          playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+          melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#endif
         }
         dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
 
@@ -2266,8 +2432,41 @@ uint8_t settings_singleAlarm(void) //настройка будильника
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
         alarmWriteBlock(1, alarm); //записать блок основных данных будильника и выйти
         return MAIN_PROGRAM;
+
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+      case ADD_KEY_HOLD: //удержание дополнительной кнопки
+        if (cur_mode == 3) {
+          if (alarm[ALARM_RADIO]) { //если режим радиобудильника
+            alarm[ALARM_RADIO] = 0;
+            alarm[ALARM_SOUND] = 0;
+            setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+            alarm[ALARM_VOLUME] = (PLAYER_MAX_VOL / 2);
+            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+            playerSetVolNow(alarm[ALARM_VOLUME]); //установка громкости
+#endif
+          }
+          else if (getPowerStatusRDA() != RDA_ERROR) { //иначе если радиоприемник доступен
+            alarm[ALARM_RADIO] = 1;
+            alarm[ALARM_SOUND] = 0;
+            alarm[ALARM_VOLUME] = (RADIO_MAX_VOL / 2);
+            setPowerRDA(RDA_ON); //включаем радио
+            setVolumeRDA(alarm[ALARM_VOLUME]); //устанавливаем громкость
+            setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+#if PLAYER_TYPE
+            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+          }
+          blink_data = 0; //сбрасываем флаги
+          _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        }
+        break;
+#endif
     }
   }
   return INIT_PROGRAM;
@@ -2301,12 +2500,19 @@ uint8_t settings_multiAlarm(void) //настройка будильников
     dataUpdate(); //обработка данных
 
 #if PLAYER_TYPE
-    if (cur_mode == 3 && !playerWriteStatus()) playerSetTrackNow(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+    if (cur_mode == 4 && !alarm[ALARM_RADIO] && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#else
+    if (cur_mode == 4 && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarm[ALARM_SOUND], PLAYER_ALARM_FOLDER); //воспроизводим мелодию будильника
+#endif
 #endif
 
     if (!secUpd) {
       secUpd = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения мелодии
 #else
@@ -2339,11 +2545,24 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           }
           break;
         case 4:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+          if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
+          if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND] + !alarm[ALARM_RADIO], 2, 2, 0); //вывод номера мелодии
+#else
+          if (alarm[ALARM_RADIO]) {
+            if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
+            if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND], 2, 2, 0); //вывод номера мелодии
+          }
+          else if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
+#endif
+#else
 #if PLAYER_TYPE
           if (!blink_data || cur_indi) indiPrintNum(alarm[ALARM_VOLUME], 0, 2, 0); //вывод громкости мелодии
           if (!blink_data || !cur_indi) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
 #else
           if (!blink_data) indiPrintNum(alarm[ALARM_SOUND] + 1, 2, 2, 0); //вывод номера мелодии
+#endif
 #endif
           break;
       }
@@ -2353,7 +2572,14 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         case 2: setBacklHue(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
         case 3: setBacklHue((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if !PLAYER_TYPE
-        case 4: setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 4:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if (alarm[ALARM_RADIO]) setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+          else setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+#else
+          setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+#endif
+          break;
 #endif
         default: setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
       }
@@ -2386,11 +2612,30 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
           //настройка мелодии будильника
           case 4:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+            switch (cur_indi) {
+              case 0:
+                if (alarm[ALARM_VOLUME] > 0) alarm[ALARM_VOLUME]--; else alarm[ALARM_VOLUME] = (alarm[ALARM_RADIO]) ? RADIO_MAX_VOL : PLAYER_MAX_VOL; //громкость
+                if (alarm[ALARM_RADIO]) setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+                else playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
+                break;
+              case 1:
+                if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = (alarm[ALARM_RADIO]) ? 9 : (PLAYER_ALARM_MAX - 1); //мелодия
+                if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+                break;
+            }
+#else
+            if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = (alarm[ALARM_RADIO]) ? 9 : (SOUND_MAX(alarm_sound) - 1); //мелодия
+            if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+            else melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#else
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
                 if (alarm[ALARM_VOLUME] > 0) alarm[ALARM_VOLUME]--; else alarm[ALARM_VOLUME] = PLAYER_MAX_VOL; //громкость
-                playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+                playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
                 break;
               case 1:
                 if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = PLAYER_ALARM_MAX - 1; //мелодия
@@ -2399,6 +2644,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #else
             if (alarm[ALARM_SOUND] > 0) alarm[ALARM_SOUND]--; else alarm[ALARM_SOUND] = SOUND_MAX(alarm_sound) - 1; //мелодия
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
 #endif
             break;
         }
@@ -2429,11 +2675,30 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
           //настройка мелодии будильника
           case 4:
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if PLAYER_TYPE
+            switch (cur_indi) {
+              case 0:
+                if (alarm[ALARM_VOLUME] < ((alarm[ALARM_RADIO]) ? RADIO_MAX_VOL : PLAYER_MAX_VOL)) alarm[ALARM_VOLUME]++; else alarm[ALARM_VOLUME] = 0; //громкость
+                if (alarm[ALARM_RADIO]) setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+                else playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
+                break;
+              case 1:
+                if (alarm[ALARM_SOUND] < ((alarm[ALARM_RADIO]) ? 9 : (PLAYER_ALARM_MAX - 1))) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
+                if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+                break;
+            }
+#else
+            if (alarm[ALARM_SOUND] < ((alarm[ALARM_RADIO]) ? 9 : (SOUND_MAX(alarm_sound) - 1))) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
+            if (alarm[ALARM_RADIO]) setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+            else melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#else
 #if PLAYER_TYPE
             switch (cur_indi) {
               case 0:
                 if (alarm[ALARM_VOLUME] < PLAYER_MAX_VOL) alarm[ALARM_VOLUME]++; else alarm[ALARM_VOLUME] = 0; //громкость
-                playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+                playerSetVol((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
                 break;
               case 1:
                 if (alarm[ALARM_SOUND] < (PLAYER_ALARM_MAX - 1)) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
@@ -2442,6 +2707,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #else
             if (alarm[ALARM_SOUND] < (SOUND_MAX(alarm_sound) - 1)) alarm[ALARM_SOUND]++; else alarm[ALARM_SOUND] = 0; //мелодия
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
 #endif
             break;
         }
@@ -2473,17 +2739,39 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           }
         }
         else {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
           if (cur_mode > 1) cur_mode--; else cur_mode = 4; //переключение пунктов
 
-          switch (cur_mode) {
-            case 3: if (alarm[ALARM_MODE] < 4) cur_mode = 2; break; //если нет дней недели
-            case 4:
+          if ((cur_mode == 3) && (alarm[ALARM_MODE] < 4)) cur_mode = 2; //если нет дней недели
+          if (cur_mode == 4) { //если режим настройки мелодии
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+            if (alarm[ALARM_RADIO] && (getPowerStatusRDA() != RDA_ERROR)) { //если режим радиобудильника
+              setPowerRDA(RDA_ON); //включаем радио
+              setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+              setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
 #if PLAYER_TYPE
-              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+              playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+            }
+            else { //иначе обычный режим
+              alarm[ALARM_RADIO] = 0; //обычный режим
+              setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+              playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
               melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
-              break;
+            }
+#else
+#if PLAYER_TYPE
+            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+            melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#endif
           }
           dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
         }
@@ -2503,17 +2791,39 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           alarmReadBlock(curAlarm, alarm); //читаем блок данных
         }
         else {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
           if (cur_mode < 4) cur_mode++; else cur_mode = 1; //переключение пунктов
 
-          switch (cur_mode) {
-            case 3: if (alarm[ALARM_MODE] < 4) cur_mode = 4; break; //если нет дней недели
-            case 4:
+          if ((cur_mode == 3) && (alarm[ALARM_MODE] < 4)) cur_mode = 4; //если нет дней недели
+          if (cur_mode == 4) { //если режим настройки мелодии
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+            if (alarm[ALARM_RADIO] && (getPowerStatusRDA() != RDA_ERROR)) { //если режим радиобудильника
+              setPowerRDA(RDA_ON); //включаем радио
+              setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
+              setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
 #if PLAYER_TYPE
-              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+              playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+            }
+            else { //иначе обычный режим
+              alarm[ALARM_RADIO] = 0; //обычный режим
+              setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+              playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+              playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
               melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
-              break;
+            }
+#else
+#if PLAYER_TYPE
+            playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_AUTO_VOL_MAX); //установка громкости
+#else
+            melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#endif
           }
           dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
         }
@@ -2527,6 +2837,9 @@ uint8_t settings_multiAlarm(void) //настройка будильников
       case SET_KEY_HOLD: //удержание средней кнопки
         if (!cur_mode) return MAIN_PROGRAM; //выход
         else {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
+#endif
           alarmWriteBlock(curAlarm, alarm); //записать блок основных данных будильника
           dotSetBright(0); //выключаем точки
           cur_mode = 0; //выбор будильника
@@ -2534,6 +2847,36 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
         }
         break;
+
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+      case ADD_KEY_HOLD: //удержание дополнительной кнопки
+        if (cur_mode == 4) {
+          if (alarm[ALARM_RADIO]) { //если режим радиобудильника
+            alarm[ALARM_RADIO] = 0;
+            alarm[ALARM_SOUND] = 0;
+            setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+            alarm[ALARM_VOLUME] = (PLAYER_MAX_VOL / 2);
+            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+            playerSetVolNow(alarm[ALARM_VOLUME]); //установка громкости
+#endif
+          }
+          else if (getPowerStatusRDA() != RDA_ERROR) { //иначе если радиоприемник доступен
+            alarm[ALARM_RADIO] = 1;
+            alarm[ALARM_SOUND] = 0;
+            alarm[ALARM_VOLUME] = (RADIO_MAX_VOL / 2);
+            setPowerRDA(RDA_ON); //включаем радио
+            setVolumeRDA(alarm[ALARM_VOLUME]); //устанавливаем громкость
+            setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
+#if PLAYER_TYPE
+            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+          }
+          blink_data = 0; //сбрасываем флаги
+          _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
+        }
+        break;
+#endif
     }
   }
   return INIT_PROGRAM;
@@ -3482,6 +3825,42 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
   updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
   return MAIN_PROGRAM; //выходим
 }
+//------------------------Остановка автопоиска радиостанции-----------------------------
+void radioSeekStop(void) //остановка автопоиска радиостанции
+{
+  stopSeekRDA(); //остановили поиск радио
+  clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
+  setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
+  setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
+}
+//-------------------------Включить питание радиоприемника------------------------------
+void radioPowerOn(void) //включить питание радиоприемника
+{
+  setPowerRDA(RDA_ON); //включаем радио
+  setVolumeRDA(radioSettings.volume); //устанавливаем громкость
+  setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
+}
+//------------------------Выключить питание радиоприемника------------------------------
+void radioPowerOff(void) //выключить питание радиоприемника
+{
+  if (getPowerStatusRDA() == RDA_ON) { //если радио включено
+    setPowerRDA(RDA_OFF); //выключаем радио
+#if PLAYER_TYPE
+    playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+#endif
+  }
+}
+//--------------------------Вернуть питание радиоприемника------------------------------
+void radioPowerRet(void) //вернуть питание радиоприемника
+{
+  if (radioSettings.powerState == RDA_ON) { //если радио было включено
+    radioPowerOn(); //включить питание радиоприемника
+#if PLAYER_TYPE
+    playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+#endif
+  }
+  else radioPowerOff(); // иначе выключить питание радиоприемника
+}
 //---------------------------Настройка громкости радио----------------------------------
 boolean radioVolSettings(void) //настройка громкости радио
 {
@@ -3523,31 +3902,6 @@ boolean radioVolSettings(void) //настройка громкости ради�
     }
   }
 }
-//------------------------Остановка автопоиска радиостанции-----------------------------
-void radioSeekStop(void) //остановка автопоиска радиостанции
-{
-  stopSeekRDA(); //остановили поиск радио
-  clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
-  setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
-  setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
-}
-//-------------------------Включить питание радиоприемника------------------------------
-void radioPowerOn(void) //включить питание радиоприемника
-{
-  setPowerRDA(RDA_ON); //включаем радио
-  setVolumeRDA(radioSettings.volume); //устанавливаем громкость
-  setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
-}
-//------------------------Выключить питание радиоприемника------------------------------
-void radioPowerOff(void) //выключить питание радиоприемника
-{
-  if (getPowerStatusRDA() == RDA_ON) {
-    setPowerRDA(RDA_OFF); //включаем радио
-#if PLAYER_TYPE
-    playerSetMute(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
-#endif
-  }
-}
 //---------------------------------Радиоприемник----------------------------------------
 uint8_t radioMenu(void) //радиоприемник
 {
@@ -3556,9 +3910,6 @@ uint8_t radioMenu(void) //радиоприемник
     uint8_t seek_run = 0; //флаг поиска
     uint16_t seek_freq = 0; //частота поиска
     boolean station_show = 0; //флаг анимации номера станции
-#if PLAYER_TYPE
-    boolean power_state = 1; //флаг состояния питания радио
-#endif
 
 #if BACKL_TYPE == 3
     uint8_t seek_anim = 0; //анимация поиска
@@ -3570,9 +3921,10 @@ uint8_t radioMenu(void) //радиоприемник
 #if PLAYER_TYPE
       if (mainSettings.knockSound) playerSetTrackNow(PLAYER_RADIO_SOUND, PLAYER_GENERAL_FOLDER);
       playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-      power_state = 0; //сбросили флаг питания радио
+      radioSettings.powerState = RDA_OFF; //сбросили флаг питания радио
 #else
       radioPowerOn(); //включить питание радиоприемника
+      radioSettings.powerState = RDA_ON; //установили флаг питания радио
 #endif
     }
 
@@ -3667,13 +4019,11 @@ uint8_t radioMenu(void) //радиоприемник
       }
 
 #if PLAYER_TYPE
-      if (!power_state) { //если питание выключено
-        if (!playerWriteStatus()) { //если все команды отправлены
-          if (playerMuteStatus()) { //если приглушение плеера установлено
-            power_state = 1; //установили флаг питания радио
-            radioPowerOn(); //включить питание радиоприемника
-          }
-          else playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+      if (!radioSettings.powerState) { //если питание выключено
+        if (!playerPlaybackStatus()) { //если все команды отправлены
+          if (playerMuteStatus()) playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
+          radioSettings.powerState = RDA_ON; //установили флаг питания радио
+          radioPowerOn(); //включить питание радиоприемника
         }
       }
 #endif
@@ -3779,9 +4129,10 @@ uint8_t radioMenu(void) //радиоприемник
           break;
 
         case SET_KEY_HOLD: //удержание средней кнопк
+          radioSettings.powerState = RDA_OFF; //сбросили флаг питания радио
           setPowerRDA(RDA_OFF); //включаем радио
 #if PLAYER_TYPE
-          playerSetMute(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
+          playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
 #endif
           return MAIN_PROGRAM; //выходим
       }
@@ -3803,27 +4154,33 @@ uint8_t timerWarn(void) //тревога таймера
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
   radioPowerOff(); //выключить питание радиоприемника
 #endif
+#if BACKL_TYPE == 3
+  backlAnimDisable(); //запретили эффекты подсветки
+  setLedHue(TIMER_WARN_COLOR, WHITE_ON); //установили цвет
+#endif
   while (!buttonState()) { //ждем
     dataUpdate(); //обработка данных
 #if PLAYER_TYPE
-    if (!playerWriteStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
+    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
     if (!_timer_ms[TMR_ANIM]) {
       _timer_ms[TMR_ANIM] = TIMER_BLINK_TIME;
       switch (blink_data) {
-        case 0: indiClr(); dotSetBright(0); break; //очищаем индикаторы и выключаем точки
-        case 1:
-          indiPrintNum((timerTime < 3600) ? ((timerTime / 60) % 60) : (timerTime / 3600), 0, 2, 0); //вывод минут/часов
-          indiPrintNum((timerTime < 3600) ? (timerTime % 60) : ((timerTime / 60) % 60), 2, 2, 0); //вывод секунд/минут
-          indiPrintNum((timerTime < 3600) ? 0 : (timerTime % 60), 4, 2, 0); //вывод секунд
-          dotSetBright(dot.maxBright); //включаем точки
-          break;
+        case 0: indiClr(); break; //очищаем индикаторы
+        case 1: indiPrintNum(0, 0, 6, 0); break; //вывод минут/часов/секунд
       }
+      dotSetBright((blink_data) ? dot.maxBright : 0); //установили точки
+#if BACKL_TYPE == 3
+      setLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
+#endif
       blink_data = !blink_data; //мигаем временем
     }
   }
   timerMode = 0; //деактивируем таймер
   timerCnt = timerTime; //сбрасываем таймер
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+  radioPowerRet(); //вернуть питание радиоприемника
+#endif
   return TIMER_PROGRAM;
 }
 //----------------------------Настройки таймера----------------------------------
@@ -3848,6 +4205,10 @@ void timerSettings(void) //настройки таймера
 
       if (!blink_data || mode) indiPrintNum(timerTime / 60, 0, 2, 0); //вывод минут
       if (!blink_data || !mode) indiPrintNum(timerTime % 60, 2, 2, 0); //вывод секунд
+
+#if BACKL_TYPE == 3
+      setBacklHue(mode * 2, 2, TIMER_MENU_COLOR_1, TIMER_MENU_COLOR_2);
+#endif
       blink_data = !blink_data;
     }
 
@@ -3895,6 +4256,11 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   if (mainSettings.knockSound) playerSetTrackNow((mode) ? PLAYER_TIMER_SOUND : PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
 
+#if BACKL_TYPE == 3
+  backlAnimDisable(); //запретили эффекты подсветки
+  setLedBright(backl.maxBright); //установили яркость
+#endif
+
   while (1) {
     dataUpdate(); //обработка данных
 
@@ -3911,12 +4277,25 @@ uint8_t timerStopwatch(void) //таймер-секундомер
 
       indiClr(); //очистка индикаторов
       switch (timerMode) {
-        case 0: indiPrintNum(mode + 1, 5); break; //вывод режима
+        case 0:
+          indiPrintNum(mode + 1, 5); //вывод режима
+          break;
         default:
           if (!(timerMode & 0x80)) millisCnt = 0; //сбрасываем счетчик миллисекунд
           indiPrintNum((timerCnt < 3600) ? ((mode) ? (100 - millisCnt) : millisCnt) : (timerCnt % 60), 4, 2, 0); //вывод милиекунд/секунд
           break;
       }
+
+#if BACKL_TYPE == 3
+      if (timerMode & 0x80) setLedHue(TIMER_PAUSE_COLOR, WHITE_ON); //установили цвет паузы
+      else {
+        switch (timerMode) {
+          case 0: setLedHue(TIMER_STOP_COLOR, WHITE_ON); break; //установили цвет остановки
+          case 1: setLedHue(TIMER_RUN_COLOR_1, WHITE_ON); break; //установили цвет секундомера
+          case 2: setLedHue(TIMER_RUN_COLOR_2, WHITE_ON); break; //установили цвет таймера
+        }
+      }
+#endif
 
       indiPrintNum((timerCnt < 3600) ? ((timerCnt / 60) % 60) : (timerCnt / 3600), 0, 2, 0); //вывод минут/часов
       indiPrintNum((timerCnt < 3600) ? (timerCnt % 60) : ((timerCnt / 60) % 60), 2, 2, 0); //вывод секунд/минут
@@ -4068,42 +4447,44 @@ void changeBright(void) //установка яркости от времени 
       }
     }
 #if BACKL_TYPE
+    if (!(fastSettings.backlMode & 0x80)) { //если подсветка не заблокирована
 #if BACKL_TYPE == 3
-    if (backl.maxBright) {
-      switch (fastSettings.backlMode) {
-        case BACKL_OFF: clrLeds(); break; //выключили светодиоды
-        case BACKL_STATIC:
-          setLedBright(backl.maxBright); //устанавливаем максимальную яркость
-          setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
-          break;
-        case BACKL_SMOOTH_COLOR_CHANGE:
-        case BACKL_RAINBOW:
-        case BACKL_CONFETTI:
-          setLedBright(backl.maxBright); //устанавливаем максимальную яркость
-          break;
+      if (backl.maxBright) {
+        switch (fastSettings.backlMode) {
+          case BACKL_OFF: clrLeds(); break; //выключили светодиоды
+          case BACKL_STATIC:
+            setLedBright(backl.maxBright); //устанавливаем максимальную яркость
+            setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+            break;
+          case BACKL_SMOOTH_COLOR_CHANGE:
+          case BACKL_RAINBOW:
+          case BACKL_CONFETTI:
+            setLedBright(backl.maxBright); //устанавливаем максимальную яркость
+            break;
+        }
       }
-    }
-    else clrLeds(); //выключили светодиоды
+      else clrLeds(); //выключили светодиоды
 #else
-    switch (fastSettings.backlMode) {
-      case BACKL_OFF: backlSetBright(0); break; //если посветка выключена
-      case BACKL_STATIC: backlSetBright(backl.maxBright); break; //если посветка статичная, устанавливаем яркость
-      case BACKL_PULS: if (!backl.maxBright) backlSetBright(0); break; //иначе посветка выключена
-    }
+      switch (fastSettings.backlMode) {
+        case BACKL_OFF: backlSetBright(0); break; //если посветка выключена
+        case BACKL_STATIC: backlSetBright(backl.maxBright); break; //если посветка статичная, устанавливаем яркость
+        case BACKL_PULS: if (!backl.maxBright) backlSetBright(0); break; //иначе посветка выключена
+      }
 #endif
-    if (backl.maxBright) {
-      backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
-      uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
+      if (backl.maxBright) {
+        backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
+        uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
 
-      backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
-      backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+        backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+        backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_TYPE == 3
-      backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
-      if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-      backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
-      backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
+        if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
+        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
 #endif
+      }
     }
 #endif
     indiSetBright(indi.maxBright); //установка общей яркости индикаторов
@@ -4395,8 +4776,12 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 #elif BACKL_TYPE
   backlSetBright(0); //выключили светодиоды
 #endif
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+#if (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)) && !RADIO_SLEEP_ENABLE
+#if RADIO_SLEEP_ENABLE == 1
+  if (indi.sleepMode != SLEEP_DAY) radioPowerOff(); //выключить питание радиоприемника
+#else
   radioPowerOff(); //выключить питание радиоприемника
+#endif
 #endif
   while (!buttonState()) { //если не нажата кнопка
     dataUpdate(); //обработка данных
@@ -5041,6 +5426,7 @@ uint8_t mainScreen(void) //главный экран
 #if LAMP_NUM > 4
   indi.flipSeconds = 0; //сбрасываем флаги анимации секунд
 #endif
+  if (indi.sleepMode) _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
   if (!_timer_sec[TMR_BURN]) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
   if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
   if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время

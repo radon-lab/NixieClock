@@ -108,9 +108,8 @@ void showLeds(void)
 //--------------------------------------Очистка светодиодов-----------------------------------------
 void clrLeds(void)
 {
-  uint8_t ledBuff[LAMP_NUM * 3];
-  for (uint8_t f = 0; f < sizeof(ledBuff); f++) ledBuff[f] = 0;
-  ledWrite(ledBuff, sizeof(ledBuff));
+  ledUpdate = 1; //устанавливаем флаг обновления
+  for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = 0;
 }
 //---------------------------------Установка цвета в формате HV-------------------------------------
 void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
