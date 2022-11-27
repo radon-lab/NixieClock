@@ -1,15 +1,15 @@
-#define PLAYER_START_BYTE 0x7E
-#define PLAYER_END_BYTE 0xEF
-#define PLAYER_VERSION 0xFF
-#define PLAYER_LENGTH 0x06
+#define PLAYER_START_BYTE 0x7E //первый байт посылки
+#define PLAYER_END_BYTE 0xEF //последний байт посылки
+#define PLAYER_VERSION 0xFF //версия плеера
+#define PLAYER_LENGTH 0x06 //длинна команды
 
-#define PLAYER_RECEIVE 0x01
-#define PLAYER_NO_RECEIVE 0x00
+#define PLAYER_RECEIVE 0x01 //отправлять ответ на команду
+#define PLAYER_NO_RECEIVE 0x00 //не отправлять ответ на команду
 
-#define PLAYER_CMD_STOP 0x16
-#define PLAYER_CMD_MUTE 0x1A
-#define PLAYER_CMD_PLAY_TRACK_IN_FOLDER 0x0F
-#define PLAYER_CMD_SET_VOL 0x06
+#define PLAYER_CMD_STOP 0x16 //команда стоп
+#define PLAYER_CMD_MUTE 0x1A //команда приглушения звука
+#define PLAYER_CMD_PLAY_TRACK_IN_FOLDER 0x0F //команда запустить трек в папке
+#define PLAYER_CMD_SET_VOL 0x06 //команда установить громкость
 
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука

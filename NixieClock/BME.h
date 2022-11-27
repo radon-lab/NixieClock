@@ -24,7 +24,7 @@
 #define BME280_TEMP_OVERSAMP 0x03 //разрешение датчика температуры
 #define BME280_HUM_OVERSAMP 0x01 //разрешение датчика влажности
 
-#define BME_CHECK_TIMEOUT 120 //таймаут ожидания(50..150)(мс)
+#define BME_CHECK_TIMEOUT 50 //таймаут ожидания(50..150)(мс)
 
 //структура калибровок датчика BME280
 struct CalibrationDataBME280 {

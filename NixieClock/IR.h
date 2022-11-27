@@ -1,9 +1,9 @@
 #define IR_COMMAND_START_TIME 26 //сингнал начала команды
-#define IR_REPEAT_START_TIME 10  //сигнал начала повтора команды
-#define IR_DATA_TIME 5           //сигнал бита команды
+#define IR_REPEAT_START_TIME 10 //сигнал начала повтора команды
+#define IR_DATA_TIME 5 //сигнал бита команды
 
-#define IR_READY 0x01            //флаг новой команды
-#define IR_DISABLE 0x02          //флаг запрета чтения команды
+#define IR_READY 0x01 //флаг новой команды
+#define IR_DISABLE 0x02 //флаг запрета чтения команды
 
 volatile uint8_t irTime; //время сигнала от ИК приемника
 volatile uint8_t irState; //текущее состояние ИК приемника
