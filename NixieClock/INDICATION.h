@@ -1,7 +1,7 @@
 #define FREQ_TICK (uint8_t)(constrain((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
-#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5), 0, 255))
-#define INDI_LIGHT_MAX (uint16_t)((LIGHT_MAX * 8) + (LIGHT_MAX >> 1))
+#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5), 0, 255)) //расчет максимального шага яркости для точек
+#define INDI_LIGHT_MAX (uint16_t)((LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
@@ -27,8 +27,8 @@ struct Settings_4 {
   int8_t hvCorrect; //коррекция напряжения
 } debugSettings;
 
+uint8_t pwm_coef; //коэффициент Linear Advance
 uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
-float pwm_coef; //коэффициент Linear Advance
 
 uint8_t adc_light; //значение АЦП сенсора яркости освещения
 boolean state_light = 1; //состояние сенсора яркости освещения
@@ -99,14 +99,14 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
 //---------------------------Обновление коэффициента Linear Advance-------------------------------
 void indiChangeCoef(void) //обновление коэффициента Linear Advance
 {
-  pwm_coef = ((float)(debugSettings.max_pwm - debugSettings.min_pwm) / (120.0 * LAMP_NUM));
+  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / (debugSettings.max_pwm - debugSettings.min_pwm));
 }
 //---------------------------------Установка Linear Advance---------------------------------------
 void indiChangePwm(void) //установка Linear Advance
 {
   uint16_t dimm_all = 0;
   for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
-  OCR1A = constrain(debugSettings.min_pwm + (uint8_t)((float)dimm_all * pwm_coef), 100, 200);
+  OCR1A = constrain(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
 }
 //--------------------------------Инициализация индикаторов---------------------------------------
 void indiInit(void) //инициализация индикаторов
