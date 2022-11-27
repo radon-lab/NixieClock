@@ -99,7 +99,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
 //---------------------------Обновление коэффициента Linear Advance-------------------------------
 void indiChangeCoef(void) //обновление коэффициента Linear Advance
 {
-  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / (debugSettings.max_pwm - debugSettings.min_pwm));
+  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / constrain(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
 }
 //---------------------------------Установка Linear Advance---------------------------------------
 void indiChangePwm(void) //установка Linear Advance
