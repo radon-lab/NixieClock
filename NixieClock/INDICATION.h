@@ -1,5 +1,7 @@
 #define FREQ_TICK (uint8_t)(constrain((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
+#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5), 0, 255))
+#define INDI_LIGHT_MAX (uint16_t)((LIGHT_MAX * 8) + (LIGHT_MAX >> 1))
 
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
@@ -228,7 +230,7 @@ void indiDisable(void) //выключение индикаторов
 void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркости индикатора
 {
   if (pwm > 30) pwm = 30;
-  indi_dimm[indi + 1] = map(pwm, 0, 30, 0, LIGHT_MAX);
+  indi_dimm[indi + 1] = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
 #if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
 #endif
@@ -237,7 +239,7 @@ void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркост�
 void indiSetBright(uint8_t pwm) //установка общей яркости
 {
   if (pwm > 30) pwm = 30;
-  pwm = map(pwm, 0, 30, 0, LIGHT_MAX);
+  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
   for (uint8_t i = 0; i < LAMP_NUM; i++) indi_dimm[i + 1] = pwm;
 #if GEN_ENABLE
   indiChangePwm(); //установка Linear Advance
@@ -383,8 +385,9 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
   }
   else indiClrDots(); //очистка разделителных точек
 #elif NEON_DOT == 1
+  if (pwm > 250) pwm = 250;
   dot_dimm = _pwm;
-  indi_dimm[0] = map(_pwm, 0, 250, 0, LIGHT_MAX); //устанавливаем яркость точек
+  indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
   if (_pwm) indi_buf[0] = 0; //разрешаем включать точки
   else indi_buf[0] = indi_null; //запрещаем включать точки
 #else
