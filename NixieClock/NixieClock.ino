@@ -1410,7 +1410,7 @@ void debug_menu(void) //отладка
                 indiChangePwm(); //установка Linear Advance
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
-                if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
+                if (debugSettings.max_pwm > 160) debugSettings.max_pwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента Linear Advance
                 indiChangePwm(); //установка Linear Advance
                 break;
