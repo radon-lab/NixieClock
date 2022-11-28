@@ -4785,6 +4785,11 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 #endif
   while (!buttonState()) { //если не нажата кнопка
     dataUpdate(); //обработка данных
+
+#if LIGHT_SENS_ENABLE
+    lightSensUpdate(); //обработка сенсора яркости освещения
+#endif
+
     if (!secUpd) { //если пришло время обновить индикаторы
       secUpd = 1; //сбрасываем флаг
 #if ALARM_TYPE
