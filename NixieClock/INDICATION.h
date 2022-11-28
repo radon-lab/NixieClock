@@ -389,7 +389,7 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
   }
   else indiClrDots(); //очистка разделителных точек
 #elif NEON_DOT == 1
-  if (pwm > 250) pwm = 250;
+  if (_pwm > 250) _pwm = 250;
   dot_dimm = _pwm;
   indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
   if (_pwm) indi_buf[0] = 0; //разрешаем включать точки
