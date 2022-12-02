@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.6 релиз от 27.11.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.7 релиз от 01.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -121,18 +121,9 @@ struct Settings_3 { //настройки радио
 struct buttonData {
   uint8_t state; //текущее состояние кнопок
   uint8_t adc; //результат опроса аналоговых кнопок
-  uint8_t leftMax; //максимальное значение левой клавиши
-  uint8_t leftMin; //минимальное значение левой клавиши
-  uint8_t rightMax; //максимальное значение правой клавиши
-  uint8_t rightMin; //минимальное значение правой клавиши
-  uint8_t setMax; //максимальное значение клавиши ок
-  uint8_t setMin; //минимальное значение клавиши ок
-#if (BTN_ADD_TYPE == 2)
-  uint8_t addMax; //максимальное значение дополнитнльной клавиши
-  uint8_t addMin; //минимальное значение дополнитнльной клавиши
-#endif
 } btn;
 uint8_t analogState; //флаги обновления аналоговых портов
+uint16_t vcc_adc; //напряжение питания
 
 //переменные работы с точками
 struct dotData {
@@ -141,7 +132,8 @@ struct dotData {
   uint8_t count; //счетчик мигания точки
   uint8_t brightStep; //шаг мигания точек
   uint8_t brightTime; //период шага мигания точек
-  uint8_t maxBright;  //максимальная яркость точек
+  uint8_t maxBright; //максимальная яркость точек
+  uint8_t menuBright; //максимальная яркость точек в меню
 } dot;
 
 //переменные работы с подсветкой
@@ -152,6 +144,7 @@ struct backlightData {
   uint8_t position; //положение огня
   uint8_t maxBright; //максимальная яркость подсветки
   uint8_t minBright; //минимальная яркость подсветки
+  uint8_t menuBright; //максимальная яркость подсветки в меню
   uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_2_step; //шаг эффекта номер 2
   uint8_t mode_4_step; //шаг эффекта номер 4
@@ -171,6 +164,7 @@ struct indiData {
 } indi;
 
 //флаги анимаций
+uint8_t changeBrightState; //флаг состояния смены яркости подсветки
 uint8_t animShow; //флаг анимации смены времени
 boolean secUpd; //флаг обновления секунды
 
@@ -196,19 +190,39 @@ volatile uint16_t buzz_cnt_puls; //счетчик циклов длительн�
 volatile uint16_t buzz_cnt_time; //счетчик циклов полуволны
 uint16_t buzz_time; //циклы полуволны для работы пищалки
 
-uint16_t vcc_adc; //напряжение питания
-#define GET_VCC(ref, adc) (float)((ref * 1023.0) / (float)adc) //расчет напряжения питания
-#define GET_ADC(vcc, coef) (int16_t)((255.0 / (float)vcc) * ((float)vcc / (float)coef)) //рассчет значения ацп кнопок
-
-#define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
-#define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
-
 #define ALARM_PLAYER_VOL_MIN (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MIN / 100.0))
 #define ALARM_PLAYER_VOL_MAX (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MAX / 100.0))
 #define ALARM_PLAYER_VOL_TIME (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_PLAYER_VOL_MAX - ALARM_PLAYER_VOL_MIN))
 #define ALARM_RADIO_VOL_MIN (uint8_t)(RADIO_MAX_VOL * (ALARM_AUTO_VOL_MIN / 100.0))
 #define ALARM_RADIO_VOL_MAX (uint8_t)(RADIO_MAX_VOL * (ALARM_AUTO_VOL_MAX / 100.0))
 #define ALARM_RADIO_VOL_TIME (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_RADIO_VOL_MAX - ALARM_RADIO_VOL_MIN))
+
+#define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
+#define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
+
+#if BTN_TYPE
+#define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
+
+#define SET_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define SET_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+
+#define LEFT_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define LEFT_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+
+#define RIGHT_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define RIGHT_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+
+#define SET_CHK buttonCheckADC(SET_MIN_ADC, SET_MAX_ADC) //чтение средней аналоговой кнопки
+#define LEFT_CHK buttonCheckADC(LEFT_MIN_ADC, LEFT_MAX_ADC) //чтение левой аналоговой кнопки
+#define RIGHT_CHK buttonCheckADC(RIGHT_MIN_ADC, RIGHT_MAX_ADC) //чтение правой аналоговой кнопки
+
+#if (BTN_ADD_TYPE == 2)
+#define ADD_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define ADD_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+
+#define ADD_CHK buttonCheckADC(ADD_MIN_ADC, ADD_MAX_ADC) //чтение правой аналоговой кнопки
+#endif
+#endif
 
 //перечисления кнопок
 enum {
@@ -401,6 +415,14 @@ enum {
   SLEEP_DAY //дневной режим сна
 };
 
+//перечисления режимов смены яркости
+enum {
+  CHANGE_DISABLE, //смена яркости запрещена
+  CHANGE_STATIC_BACKL, //разрешено управления яркостью статичной подсветки
+  CHANGE_DYNAMIC_BACKL, //разрешено управления яркостью динамичной подсветки
+  CHANGE_ENABLE //смена яркости разрешена
+};
+
 //перечисления основных программ
 enum {
   INIT_PROGRAM,       //инициализация
@@ -443,16 +465,6 @@ uint8_t mainTask = MAIN_PROGRAM; //переключать подпрограмм
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
 
-#if BTN_TYPE
-#define SET_CHK buttonCheckADC(btn.setMin, btn.setMax) //чтение средней аналоговой кнопки
-#define LEFT_CHK buttonCheckADC(btn.leftMin, btn.leftMax) //чтение левой аналоговой кнопки
-#define RIGHT_CHK buttonCheckADC(btn.rightMin, btn.rightMax) //чтение правой аналоговой кнопки
-
-#if (BTN_ADD_TYPE == 2)
-#define ADD_CHK buttonCheckADC(btn.addMin, btn.addMax) //чтение правой аналоговой кнопки
-#endif
-#endif
-
 //--------------------------------------Главный цикл программ---------------------------------------------------
 int main(void) //главный цикл программ
 {
@@ -463,6 +475,7 @@ int main(void) //главный цикл программ
 #if BACKL_TYPE
     backlAnimEnable(); //разрешили эффекты подсветки
 #endif
+    changeBrightEnable(); //разрешить смену яркости
     changeBright(); //установка яркости от времени суток
     secUpd = 0; //обновление экрана
     switch (mainTask) {
@@ -635,6 +648,7 @@ void INIT_SYSTEM(void) //инициализация
   indiInit(); //инициализация индикаторов
 
   backlAnimDisable(); //запретили эффекты подсветки
+  changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
 
   checkRTC(); //проверка модуля часов
 #if SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
@@ -731,6 +745,16 @@ void backlAnimEnable(void) //разрешить анимации подсвет�
 void backlAnimDisable(void) //запретить анимации подсветки
 {
   fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+}
+//----------------------------Разрешить смену яркости---------------------------
+void changeBrightEnable(void) //разрешить смену яркости
+{
+  changeBrightState = CHANGE_ENABLE; //разрешили смену яркости
+}
+//----------------------------Запретить смену яркости---------------------------
+void changeBrightDisable(uint8_t _state) //запретить смену яркости
+{
+  changeBrightState = _state; //запретили смену яркости
 }
 //-----------------------------Расчет шага яркости-----------------------------
 uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
@@ -939,8 +963,6 @@ void checkVCC(void) //чтение напряжения питания
   if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
 
 #if BTN_TYPE
-  buttonUpdateADC(); //обновление пределов аналоговых кнопок
-
   ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
   ADCSRA |= (1 << ADSC); //запускаем преобразование
   while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
@@ -972,27 +994,6 @@ void lightSensUpdate(void) //обработка сенсора яркости о
       changeBright(); //установка яркости
     }
   }
-}
-//-----------------Обновление пределов аналоговых кнопок----------------------------
-void buttonUpdateADC(void) //обновление пределов аналоговых кнопок
-{
-  int16_t temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_SET_R_HIGH));
-  btn.setMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  btn.setMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-
-  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_LEFT_R_HIGH));
-  btn.leftMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  btn.leftMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-
-  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_RIGHT_R_HIGH));
-  btn.rightMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  btn.rightMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-
-#if (BTN_ADD_TYPE == 2)
-  temp = GET_ADC(GET_VCC(REFERENCE, vcc_adc), R_COEF(BTN_R_LOW, BTN_ADD_R_HIGH));
-  btn.addMin = constrain(temp - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-  btn.addMax = constrain(temp + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE);
-#endif
 }
 //-----------------------Проверка аналоговой кнопки--------------------------------
 inline boolean buttonCheckADC(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
@@ -1773,8 +1774,11 @@ uint8_t alarmWarn(void) //тревога будильника
   }
 #endif
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
+#if ALARM_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
+#endif
   setLedHue(ALARM_BACKL_COLOR, WHITE_ON); //установили цвет будильника
 #endif
 
@@ -1831,9 +1835,13 @@ uint8_t alarmWarn(void) //тревога будильника
           indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
           break;
       }
-      dotSetBright((blink_data) ? dot.maxBright : 0); //установили точки
-#if BACKL_TYPE == 3
+      dotSetBright((blink_data) ? dot.menuBright : 0); //установили точки
+#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
+#if ALARM_BACKL_TYPE == 1
       setLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
+#else
+      setLedBright((blink_data) ? backl.menuBright : 0); //установили яркость
+#endif
 #endif
       blink_data = !blink_data; //мигаем временем
     }
@@ -1893,6 +1901,10 @@ void dataUpdate(void) //обработка данных
 
 #if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE || LIGHT_SENS_ENABLE
   analogUpdate(); //обработка аналоговых входов
+#endif
+
+#if LIGHT_SENS_ENABLE
+  lightSensUpdate(); //обработка сенсора яркости освещения
 #endif
 
   for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
@@ -2005,13 +2017,13 @@ uint8_t settings_time(void) //настройки времени
   uint8_t time_out = 0; //таймаут автовыхода
 
   indiClr(); //очищаем индикаторы
-  dotSetBright(dot.maxBright); //включаем точки
+  dotSetBright(dot.menuBright); //включаем точки
 
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
 #if BACKL_TYPE == 3
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+  setLedBright(backl.menuBright); //установили максимальную яркость
 #endif
 
 #if PLAYER_TYPE
@@ -2097,7 +2109,7 @@ uint8_t settings_time(void) //настройки времени
 
       case SET_KEY_PRESS: //клик средней кнопкой
         if (cur_mode < 4) cur_mode++; else cur_mode = 0;
-        if (cur_mode != 4) dotSetBright(dot.maxBright); //включаем точки
+        if (cur_mode != 4) dotSetBright(dot.menuBright); //включаем точки
         else dotSetBright(0); //выключаем точки
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
@@ -2119,7 +2131,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
   uint8_t cur_day = 1; //текущий день недели
   uint8_t time_out = 0; //таймаут автовыхода
 
-  dotSetBright(dot.maxBright); //включаем точки
+  dotSetBright(dot.menuBright); //включаем точки
 
   alarmReset(); //сброс будильника
   alarmReadBlock(1, alarm); //читаем блок данных
@@ -2128,7 +2140,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 
 #if BACKL_TYPE == 3
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+  setLedBright(backl.menuBright); //установили максимальную яркость
 #endif
 
 #if PLAYER_TYPE
@@ -2382,7 +2394,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #endif
 #endif
         }
-        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
+        dotSetBright((cur_mode) ? 0 : dot.menuBright); //включаем точки
 
         cur_indi = 0; //сбрасываем текущий индикатор
         blink_data = 0; //сбрасываем флаги
@@ -2424,7 +2436,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #endif
 #endif
         }
-        dotSetBright((cur_mode) ? 0 : dot.maxBright); //включаем точки
+        dotSetBright((cur_mode) ? 0 : dot.menuBright); //включаем точки
 
         cur_indi = 0; //сбрасываем текущий индикатор
         blink_data = 0; //сбрасываем флаги
@@ -2489,7 +2501,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
 #if BACKL_TYPE == 3
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+  setLedBright(backl.menuBright); //установили максимальную яркость
 #endif
 
 #if PLAYER_TYPE
@@ -2719,7 +2731,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         if (!cur_mode && curAlarm) {
           cur_mode = 1;
           cur_indi = 0;
-          dotSetBright(dot.maxBright); //включаем точки
+          dotSetBright(dot.menuBright); //включаем точки
         }
         else cur_indi = !cur_indi;
         blink_data = 0; //сбрасываем флаги
@@ -2730,7 +2742,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         if (!cur_mode) {
           if (curAlarm) { //если есть будильники в памяти
             delAlarm(curAlarm - 1); //удалить текущий будильник
-            dotSetBright(dot.maxBright); //включаем точки
+            dotSetBright(dot.menuBright); //включаем точки
             for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
             dotSetBright(0); //выключаем точки
             if (curAlarm > (alarmsNum > 0)) curAlarm--; //убавляем номер текущего будильника
@@ -2773,7 +2785,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #endif
 #endif
           }
-          dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
+          dotSetBright((cur_mode == 1) ? 0 : dot.menuBright); //включаем точки
         }
 
         cur_indi = 0;
@@ -2784,7 +2796,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         if (!cur_mode) {
           newAlarm(); //создать новый будильник
-          dotSetBright(dot.maxBright); //включаем точки
+          dotSetBright(dot.menuBright); //включаем точки
           for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
           dotSetBright(0); //выключаем точки
           curAlarm = alarmsNum;
@@ -2825,7 +2837,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #endif
 #endif
           }
-          dotSetBright((cur_mode == 1) ? 0 : dot.maxBright); //включаем точки
+          dotSetBright((cur_mode == 1) ? 0 : dot.menuBright); //включаем точки
         }
 
 
@@ -2894,7 +2906,7 @@ uint8_t settings_main(void) //настроки основные
 
 #if BACKL_TYPE == 3
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+  setLedBright(backl.menuBright); //установили максимальную яркость
 #endif
 
 #if PLAYER_TYPE
@@ -3092,14 +3104,14 @@ uint8_t settings_main(void) //настроки основные
                   case 0:
                     if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
                     burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                    dotSetBright(dot.maxBright); //включаем точки
+                    dotSetBright(dot.menuBright); //включаем точки
                     break;
                   case 1: if (mainSettings.secsMode) mainSettings.secsMode--; else mainSettings.secsMode = (SECS_EFFECT_NUM - 1); break;
                 }
 #else
                 if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
                 burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                dotSetBright(dot.maxBright); //включаем точки
+                dotSetBright(dot.menuBright); //включаем точки
 #endif
                 break;
               case SET_SLEEP_TIME: //время ухода в сон
@@ -3193,14 +3205,14 @@ uint8_t settings_main(void) //настроки основные
                   case 0:
                     if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
                     burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                    dotSetBright(dot.maxBright); //включаем точки
+                    dotSetBright(dot.menuBright); //включаем точки
                     break;
                   case 1: if (mainSettings.secsMode < (SECS_EFFECT_NUM - 1)) mainSettings.secsMode++; else mainSettings.secsMode = 0; break;
                 }
 #else
                 if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
                 burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                dotSetBright(dot.maxBright); //включаем точки
+                dotSetBright(dot.menuBright); //включаем точки
 #endif
                 break;
               case SET_SLEEP_TIME: //время ухода в сон
@@ -3218,6 +3230,7 @@ uint8_t settings_main(void) //настроки основные
       case SET_KEY_PRESS: //клик средней кнопкой
         set = !set;
         if (set) {
+          changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[TIME_NIGHT]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
@@ -3236,14 +3249,15 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
           }
-          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.maxBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
+          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
         }
         else {
 #if BACKL_TYPE == 3
-          setLedBright(backl.maxBright); //устанавливаем максимальную яркость
+          setLedBright(backl.menuBright); //устанавливаем максимальную яркость
 #elif BACKL_TYPE
           backlAnimEnable(); //разрешили эффекты подсветки
 #endif
+          changeBrightEnable(); //разрешить смену яркости
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
 #if DOTS_PORT_ENABLE
@@ -3355,9 +3369,10 @@ void autoShowTemp(void) //автоматический показ темпера
 #if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
 #if AUTO_TEMP_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
   setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
 #else
-  setLedBright(backl.maxBright); //установили максимальную яркость
+  setLedBright(backl.menuBright); //установили максимальную яркость
 #endif
 #endif
 
@@ -3433,9 +3448,9 @@ void autoShowTemp(void) //автоматический показ темпера
             drv = 1;
 #if !DOTS_PORT_ENABLE
 #if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
-            if (mode < 2) dotSetBright(dot.maxBright); //включаем точки
+            if (mode < 2) dotSetBright(dot.menuBright); //включаем точки
 #else
-            if (!mode) dotSetBright(dot.maxBright); //включаем точки
+            if (!mode) dotSetBright(dot.menuBright); //включаем точки
 #endif
 #endif
             _timer_ms[TMR_ANIM] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
@@ -3462,15 +3477,20 @@ uint8_t showTemp(void) //показать температуру
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+#if SHOW_TEMP_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+  setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+  setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
 #endif
 
 #if DOTS_PORT_ENABLE
   indiSetDotL(2); //включаем разделителную точку
 #else
-  dotSetBright(dot.maxBright); //включаем точки
+  dotSetBright(dot.menuBright); //включаем точки
 #endif
 
 #if PLAYER_TYPE
@@ -3487,19 +3507,19 @@ uint8_t showTemp(void) //показать температуру
       switch (mode) {
         case 0:
           indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' ');
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
 #endif
           break;
         case 1:
           indiPrintNum(sens.hum, 0, 4, ' ');
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
           break;
         case 2:
           indiPrintNum(sens.press, 0, 4, ' ');
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
           break;
@@ -3522,7 +3542,7 @@ uint8_t showTemp(void) //показать температуру
 #if DOTS_PORT_ENABLE
           indiSetDotL(2); //включаем разделителную точку
 #else
-          dotSetBright(dot.maxBright); //включаем точки
+          dotSetBright(dot.menuBright); //включаем точки
 #endif
         }
         else { //иначе давление или влажность
@@ -3574,12 +3594,17 @@ uint8_t showDate(void) //показать дату
   indiSetDotL(4); //включаем разделителную точку
 #endif
 #else
-  dotSetBright(dot.maxBright); //включаем точки
+  dotSetBright(dot.menuBright); //включаем точки
 #endif
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили максимальную яркость
+#if SHOW_DATE_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+  setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+  setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
 #endif
 
 #if PLAYER_TYPE
@@ -3601,7 +3626,7 @@ uint8_t showDate(void) //показать дату
       indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
       indiPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
       setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
 #endif
 #else
@@ -3615,13 +3640,13 @@ uint8_t showDate(void) //показать дату
           indiPrintNum(RTC.DD, 0, 2, 0); //вывод даты
           indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
           setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
 #endif
           break;
         case 1:
           indiPrintNum(RTC.YY, 0); //вывод года
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
           setBacklHue(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
 #endif
           break;
@@ -3638,7 +3663,7 @@ uint8_t showDate(void) //показать дату
 #if DOTS_PORT_ENABLE
             indiSetDotL(2); //включаем разделителную точку
 #else
-            dotSetBright(dot.maxBright); //включаем точки
+            dotSetBright(dot.menuBright); //включаем точки
 #endif
             break;
           case 1: //год
@@ -3875,7 +3900,7 @@ boolean radioVolSettings(void) //настройка громкости ради�
       if (_state) return 0;
       indiClr(); //очистка индикаторов
       indiPrintNum(radioSettings.volume, ((LAMP_NUM / 2) - 1), 2, 0); //номер станции
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
       setBacklHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
 #endif
       _state = 1;
@@ -3911,10 +3936,15 @@ uint8_t radioMenu(void) //радиоприемник
     uint16_t seek_freq = 0; //частота поиска
     boolean station_show = 0; //флаг анимации номера станции
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
     uint8_t seek_anim = 0; //анимация поиска
     backlAnimDisable(); //запретили эффекты подсветки
-    setLedBright(backl.maxBright); //установили максимальную яркость
+#if RADIO_BACKL_TYPE == 1
+    changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+    setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+    setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
 #endif
 
     if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
@@ -3958,7 +3988,7 @@ uint8_t radioMenu(void) //радиоприемник
 
         if (!seek_run) { //если не идет поиск
 #if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
-          dotSetBright((getStationStatusRDA()) ? dot.maxBright : 0); //управление точками в зависимости от устойчивости сигнала
+          dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #else
           if (getStationStatusRDA()) indiSetDotL(0); //включаем разделителную точку
           else indiClrDotL(0); //выключаем разделителную точку
@@ -3972,13 +4002,13 @@ uint8_t radioMenu(void) //радиоприемник
           switch (seek_run) {
             case 1:
               if (radioSettings.stationsFreq > seek_freq) radioSettings.stationsFreq--; else seek_run = 0;
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               if (seek_anim > 0) seek_anim--; else seek_anim = ((LAMP_NUM + 1) * 2);
 #endif
               break;
             case 2:
               if (radioSettings.stationsFreq < seek_freq) radioSettings.stationsFreq++; else seek_run = 0;
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               if (seek_anim < ((LAMP_NUM + 1) * 2)) seek_anim++; else seek_anim = 0;
 #endif
               break;
@@ -3995,7 +4025,7 @@ uint8_t radioMenu(void) //радиоприемник
           station_show = 0; //сбросили флага показа номера станции
           _timer_ms[TMR_MS] = RADIO_SHOW_TIME; //устанавливаем таймер
           indiPrintNum(radioSettings.stationNum, ((LAMP_NUM / 2) - 1), 2, 0); //номер станции
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
           setBacklHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
 #endif
         }
@@ -4005,7 +4035,7 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
           indiPrintNum(radioSettings.stationNum, 5); //номер станции
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
           if (!seek_run) { //если не идет поиск
             setBacklHue(0, 3, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
             setLedHue(3, RADIO_BACKL_COLOR_3, WHITE_ON);
@@ -4080,7 +4110,7 @@ uint8_t radioMenu(void) //радиоприемник
 
         case RIGHT_KEY_HOLD: //удержание правой кнопки
           if (!seek_run) { //если не идет поиск
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
             seek_anim = 0; //сбросили анимацию поиска
 #endif
             seek_run = 2; //включили поиск
@@ -4099,7 +4129,7 @@ uint8_t radioMenu(void) //радиоприемник
 
         case LEFT_KEY_HOLD: //удержание левой кнопки
           if (!seek_run) { //если не идет поиск
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
             seek_anim = ((LAMP_NUM + 1) * 2); //сбросили анимацию поиска
 #endif
             seek_run = 1; //включили поиск
@@ -4154,8 +4184,11 @@ uint8_t timerWarn(void) //тревога таймера
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
   radioPowerOff(); //выключить питание радиоприемника
 #endif
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && TIMER_WARN_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
+#if TIMER_WARN_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
+#endif
   setLedHue(TIMER_WARN_COLOR, WHITE_ON); //установили цвет
 #endif
   while (!buttonState()) { //ждем
@@ -4169,9 +4202,13 @@ uint8_t timerWarn(void) //тревога таймера
         case 0: indiClr(); break; //очищаем индикаторы
         case 1: indiPrintNum(0, 0, 6, 0); break; //вывод минут/часов/секунд
       }
-      dotSetBright((blink_data) ? dot.maxBright : 0); //установили точки
-#if BACKL_TYPE == 3
+      dotSetBright((blink_data) ? dot.menuBright : 0); //установили точки
+#if (BACKL_TYPE == 3) && TIMER_WARN_BACKL_TYPE
+#if TIMER_WARN_BACKL_TYPE == 1
       setLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
+#else
+      setLedBright((blink_data) ? backl.menuBright : 0); //установили яркость
+#endif
 #endif
       blink_data = !blink_data; //мигаем временем
     }
@@ -4206,7 +4243,7 @@ void timerSettings(void) //настройки таймера
       if (!blink_data || mode) indiPrintNum(timerTime / 60, 0, 2, 0); //вывод минут
       if (!blink_data || !mode) indiPrintNum(timerTime % 60, 2, 2, 0); //вывод секунд
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && TIMER_BACKL_TYPE
       setBacklHue(mode * 2, 2, TIMER_MENU_COLOR_1, TIMER_MENU_COLOR_2);
 #endif
       blink_data = !blink_data;
@@ -4256,9 +4293,14 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   if (mainSettings.knockSound) playerSetTrackNow((mode) ? PLAYER_TIMER_SOUND : PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && TIMER_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
-  setLedBright(backl.maxBright); //установили яркость
+#if TIMER_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+  setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+  setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
 #endif
 
   while (1) {
@@ -4286,7 +4328,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
           break;
       }
 
-#if BACKL_TYPE == 3
+#if (BACKL_TYPE == 3) && TIMER_BACKL_TYPE
       if (timerMode & 0x80) setLedHue(TIMER_PAUSE_COLOR, WHITE_ON); //установили цвет паузы
       else {
         switch (timerMode) {
@@ -4408,26 +4450,28 @@ void changeBright(void) //установка яркости от времени 
 #endif
   { //ночной режим
     dot.maxBright = mainSettings.dotBright[TIME_NIGHT]; //установка максимальной яркости точек
+    dot.menuBright = (dot.maxBright) ? dot.maxBright : 10; //установка максимальной яркости точек в меню
 #if BACKL_TYPE
     backl.maxBright = mainSettings.backlBright[TIME_NIGHT]; //установка максимальной яркости подсветки
+    backl.menuBright = (backl.maxBright) ? backl.maxBright : 10; //установка максимальной яркости подсветки в меню
 #endif
     indi.maxBright = mainSettings.indiBright[TIME_NIGHT]; //установка максимальной яркости индикаторов
     if (mainSettings.timeSleep[TIME_NIGHT]) indi.sleepMode = SLEEP_NIGHT; //установили флаг режима сна индикаторов
   }
   else { //дневной режим
 #if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
-    dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
+    dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
     dot.maxBright = 1; //установка максимальной яркости точек
 #endif
 #if BACKL_TYPE
-    backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
+    backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
 #endif
     indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
     if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
   }
 
-  if (mainTask != SLEEP_PROGRAM) { //если не спим
+  if (changeBrightState) { //если разрешено менять яркость
     if (mainTask == MAIN_PROGRAM) { //если основной режим
       switch (fastSettings.dotMode) {
         case DOT_OFF: dotSetBright(0); break; //если точки выключены
@@ -4446,8 +4490,21 @@ void changeBright(void) //установка яркости от времени 
           break;
       }
     }
+    else if (dotGetBright()) dotSetBright(dot.menuBright); //установка яркости точек в меню
+
 #if BACKL_TYPE
-    if (!(fastSettings.backlMode & 0x80)) { //если подсветка не заблокирована
+    if (fastSettings.backlMode & 0x80) { //если подсветка заблокирована
+#if BACKL_TYPE == 3
+      switch (changeBrightState) { //режим управления яркостью
+        case CHANGE_STATIC_BACKL: if (fastSettings.backlMode & 0x7F) setLedBright(backl.maxBright); break; //устанавливаем максимальную яркость
+        case CHANGE_DYNAMIC_BACKL: setOnLedBright(backl.maxBright); break; //устанавливаем максимальную яркость
+        default: setOnLedBright(backl.menuBright); break; //установка яркости подсветки в меню
+      }
+#else
+      if (backGetBright()) backlSetBright(backl.menuBright); //установили яркость если она была включена
+#endif
+    }
+    else { //иначе устанавливаем яркость
 #if BACKL_TYPE == 3
       if (backl.maxBright) {
         switch (fastSettings.backlMode) {
@@ -4771,6 +4828,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 {
   indiClr(); //очистка индикаторов
   backlAnimDisable(); //запретили эффекты подсветки
+  changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
 #if BACKL_TYPE == 3
   clrLeds(); //выключили светодиоды
 #elif BACKL_TYPE
@@ -4785,10 +4843,6 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 #endif
   while (!buttonState()) { //если не нажата кнопка
     dataUpdate(); //обработка данных
-
-#if LIGHT_SENS_ENABLE
-    lightSensUpdate(); //обработка сенсора яркости освещения
-#endif
 
     if (!secUpd) { //если пришло время обновить индикаторы
       secUpd = 1; //сбрасываем флаг
@@ -5440,10 +5494,6 @@ uint8_t mainScreen(void) //главный экран
   for (;;) { //основной цикл
     dataUpdate(); //обработка данных
     dotFlash(); //мигаем точками
-
-#if LIGHT_SENS_ENABLE
-    lightSensUpdate(); //обработка сенсора яркости освещения
-#endif
 
     if (!secUpd) { //если пришло время обновить индикаторы
 #if ALARM_TYPE

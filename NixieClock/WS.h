@@ -214,3 +214,13 @@ void setLedBright(uint8_t _brt)
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledBright[f] = _brt;
 }
+//--------------------------Установка яркости только во включенные диоды---------------------------
+void setOnLedBright(uint8_t _brt)
+{
+  for (uint8_t f = 0; f < LAMP_NUM; f++) {
+    if (ledBright[f]) {
+      ledUpdate = 1; //устанавливаем флаг обновления
+      ledBright[f] = _brt;
+    }
+  }
+}
