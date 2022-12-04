@@ -421,6 +421,7 @@ enum {
   CHANGE_DISABLE, //смена яркости запрещена
   CHANGE_STATIC_BACKL, //разрешено управления яркостью статичной подсветки
   CHANGE_DYNAMIC_BACKL, //разрешено управления яркостью динамичной подсветки
+  CHANGE_INDI_BLOCK, //запрещена смена яркости индикаторов
   CHANGE_ENABLE //смена яркости разрешена
 };
 
@@ -4553,7 +4554,11 @@ void changeBright(void) //установка яркости от времени 
       }
     }
 #endif
+#if BURN_BRIGHT
+    if (changeBrightState != CHANGE_INDI_BLOCK) indiSetBright(indi.maxBright); //установка общей яркости индикаторов
+#else
     indiSetBright(indi.maxBright); //установка общей яркости индикаторов
+#endif
   }
 }
 //----------------------------------Анимация подсветки---------------------------------
@@ -5526,6 +5531,10 @@ uint8_t mainScreen(void) //главный экран
 
       if (indi.sleepMode != SLEEP_NIGHT) { //если режим сна не ночной
         if (!_timer_sec[TMR_BURN]) { //если пришло время отобразить анимацию антиотравления
+#if BURN_BRIGHT
+          changeBrightDisable(CHANGE_INDI_BLOCK); //разрешить смену яркости динамичной подсветки
+          indiSetBright(BURN_BRIGHT); //установка общей яркости индикаторов
+#endif
           if (mainSettings.burnMode != BURN_SINGLE_TIME) mainTask = SLEEP_PROGRAM; //подмена текущей программы
           burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
           _timer_sec[TMR_BURN] = ((uint16_t)BURN_PERIOD * 60) - RTC.s; //устанавливаем таймер
