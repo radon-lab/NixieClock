@@ -1,13 +1,17 @@
 #define RTC_ADDR 0x68 //адрес RTC DS3231
 
-struct time { //структура времени
-  uint8_t s = 0;
-  uint8_t m = 0;
-  uint8_t h = 8;
-  uint8_t DD = 1;
-  uint8_t MM = 1;
-  uint16_t YY = 2021;
-  uint8_t DW = 5;
+#define RTC_CHECK_OSF 0x00 //проверить флаг OSF
+#define RTC_CLEAR_OSF 0x01 //проверить и очистить флаг OSF
+
+//структура времени
+struct time { 
+  uint8_t s = 0; //секунды
+  uint8_t m = 0; //минуты
+  uint8_t h = 8; //часы
+  uint8_t DD = 1; //день
+  uint8_t MM = 1; //месяц
+  uint16_t YY = 2021; //год
+  uint8_t DW = 5; //день недели
 } RTC;
 
 const uint8_t daysInMonth[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
@@ -52,7 +56,7 @@ void writeAgingRTC(int8_t data) //запись коррекции хода
   wireEnd(); //остановка шины wire
 }
 //--------------------------------Проверка флага OSF--------------------------------------
-boolean getOSF(void) //проверка флага OSF
+boolean getOSF(boolean mode) //проверка флага OSF
 {
   if (wireRequestFrom(RTC_ADDR, 0x0F)) { //запрашиваем чтение данных, если нет ответа то
     SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
@@ -61,14 +65,16 @@ boolean getOSF(void) //проверка флага OSF
   uint8_t ctrlReg = wireReadEndByte(); //прочитали регистр статуса
 
   if (ctrlReg & 0x80) { //проверяем установлен ли флаг OSF
-    ctrlReg &= 0x7F; //очистили флаг OSF
-    if (wireBeginTransmission(RTC_ADDR)) SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
-    else { //иначе отправляем данные
-      wireWrite(0x0F); //устанавливаем адрес записи
-      wireWrite(ctrlReg); //отправляем настройку OSF
-      wireEnd(); //конец передачи
-      SET_ERROR(DS3231_OSF_ERROR); //установили ошибку осцилятора модуля RTC
+    if (mode) { //если нужно очистить флаг OSF
+      if (wireBeginTransmission(RTC_ADDR)) SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
+      else { //иначе отправляем данные
+        ctrlReg &= 0x7F; //очистили флаг OSF
+        wireWrite(0x0F); //устанавливаем адрес записи
+        wireWrite(ctrlReg); //отправляем настройку OSF
+        wireEnd(); //конец передачи
+      }
     }
+    SET_ERROR(DS3231_OSF_ERROR); //установили ошибку осцилятора модуля RTC
     return 0;
   }
   return 1;
@@ -137,9 +143,9 @@ void sendTime(void) //отправить время в RTC
   }
 }
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
-boolean getTime(void) //запрашиваем время из RTC
+boolean getTime(boolean mode) //запрашиваем время из RTC
 {
-  if (getOSF()) { //проверка флага OSF
+  if (getOSF(mode)) { //проверка флага OSF
     if (wireRequestFrom(RTC_ADDR, 0x00)) { //запрашиваем чтение данных, если нет ответа выходим
       SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
       return 0; //выходим
