@@ -334,7 +334,7 @@
 #define MOV_CLEAR (BIT_CLEAR(MOV_PORT, MOV_BIT))
 #define MOV_INP   (BIT_CLEAR(DDR_REG(MOV_PORT), MOV_BIT))
 
-#define MOV_INIT  MOV_SET; MOV_INP
+#define MOV_INIT  MOV_CLEAR; MOV_INP
 
 //Пин инфракрасного приемника
 #define IR_BIT   DECODE_BIT(IR_PIN)

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.7.7 релиз от 04.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.7.8 релиз от 08.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -257,7 +257,8 @@ enum {
 
 //перечисления меню отладки
 enum {
-  DEB_TIME_CORRECT, //корректировка хода времени
+  DEB_AGING_CORRECT, //корректировка регистра стариния часов
+  DEB_TIME_CORRECT, //корректировка хода внутреннего таймера
   DEB_DEFAULT_MIN_PWM, //минимальное значение шим
   DEB_DEFAULT_MAX_PWM, //максимальное значение шим
   DEB_HV_ADC, //значение ацп преобразователя
@@ -576,6 +577,10 @@ void INIT_SYSTEM(void) //инициализация
   BACKL_INIT; //инициализация подсветки
 #endif
 
+#if MOV_PORT_ENABLE
+  MOV_INIT; //инициализация датчика движения
+#endif
+
 #if IR_PORT_ENABLE
   irInit();
 #endif
@@ -603,6 +608,7 @@ void INIT_SYSTEM(void) //инициализация
       updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
       SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
     }
+    else EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
     if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) { //проверяем быстрые настройки
       updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем быстрые настройки в память
       SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
@@ -677,7 +683,6 @@ void INIT_SYSTEM(void) //инициализация
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   setAnimTimers(); //установка таймеров анимаций
   _timer_sec[TMR_SYNC] = (uint16_t)(RTC_SYNC_TIME * 60); //устанавливаем таймер синхронизации
-
 
 #if LIGHT_SENS_ENABLE
   _timer_ms[TMR_LIGHT] = LIGHT_SENS_TIME;
@@ -1132,10 +1137,10 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 //------------------Проверка модуля часов реального времени-------------------------
 void checkRTC(void) //проверка модуля часов реального времени
 {
-  disable32K(); //отключение вывода 32K
+  if (!disable32K()) return; //отключение вывода 32K
 
 #if SQW_PORT_ENABLE
-  setSQW(); //установка SQW на 1Гц
+  if (!setSQW()) return; //установка SQW на 1Гц
 
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
@@ -1148,9 +1153,9 @@ void checkRTC(void) //проверка модуля часов реальног�
   }
 #endif
 
-  if (getTime()) { //считываем время из RTC
-    EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
-    sendTime(); //отправить время в RTC
+  if (!getTime()) { //считываем время из RTC
+    writeAgingRTC(debugSettings.aging); //восстанавливаем коррекцию хода
+    sendTime(); //отправляем последнее сохраненное время в RTC
   }
 
 #if SQW_PORT_ENABLE
@@ -1305,16 +1310,10 @@ boolean check_pass(void) //проверка пароля
   }
   return 0;
 }
-//---------------------Воспроизвести пункт отладки-------------------------
-void debugPlayItem(uint8_t _menu) //воспроизвести пункт отладки
-{
-  playerSetTrackNow(PLAYER_DEBUG_MENU_START + ((!_menu && EIMSK) ? 0 : _menu + 1), PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
-}
 //-----------------------------Отладка------------------------------------
 void debug_menu(void) //отладка
 {
   boolean set = 0; //режим настройки
-  int8_t aging = 0; //буфер регистра старения
   uint8_t cur_mode = 0; //текущий режим
 #if IR_PORT_ENABLE
   uint8_t cur_button = 0; //текущая кнопка пульта
@@ -1325,7 +1324,7 @@ void debug_menu(void) //отладка
 #endif
 
 #if PLAYER_TYPE
-  debugPlayItem(0);
+  playerSetTrackNow(PLAYER_DEBUG_MENU_START, PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
 #endif
 
   dotSetBright(0); //выключаем точки
@@ -1346,10 +1345,8 @@ void debug_menu(void) //отладка
         case 1:
           indiPrintNum(cur_mode + 1, 5); //режим
           switch (cur_mode) {
-            case DEB_TIME_CORRECT:
-              if (EIMSK) indiPrintNum((aging < 0) ? (uint8_t) - aging : (uint8_t)aging, 0, (aging > 0) ? 4 : 0); //выводим коррекцию DS3231
-              else indiPrintNum(debugSettings.timePeriod, 0); //выводим коррекцию внутреннего таймера
-              break;
+            case DEB_AGING_CORRECT: indiPrintNum(debugSettings.aging + 128, 0); break; //выводим коррекцию DS3231
+            case DEB_TIME_CORRECT: indiPrintNum(debugSettings.timePeriod, 0); break; //выводим коррекцию внутреннего таймера
             case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
             case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break; //выводим максимальный шим
 #if GEN_ENABLE && GEN_FEEDBACK
@@ -1406,26 +1403,22 @@ void debug_menu(void) //отладка
             if (cur_mode > 0) cur_mode--;
             else cur_mode = DEB_MAX_ITEMS - 1;
 #if PLAYER_TYPE
-            debugPlayItem(cur_mode);
+            playerSetTrackNow(PLAYER_DEBUG_MENU_START + cur_mode, PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
 #endif
             break;
           case 1:
             switch (cur_mode) {
-              case DEB_TIME_CORRECT: //коррекция хода
-                switch (EIMSK) {
-                  case 0: if (debugSettings.timePeriod > US_PERIOD_MIN) debugSettings.timePeriod--; else debugSettings.timePeriod = US_PERIOD_MAX; break;
-                  case 1: if (aging > -127) aging--; else aging = 127; break;
-                }
-                break;
+              case DEB_AGING_CORRECT: if (debugSettings.aging > -127) debugSettings.aging--; else debugSettings.aging = 127; break; //коррекция хода
+              case DEB_TIME_CORRECT: if (debugSettings.timePeriod > US_PERIOD_MIN) debugSettings.timePeriod--; else debugSettings.timePeriod = US_PERIOD_MAX; break; //коррекция хода
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
                 if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; //минимальное значение шим
-                indiChangeCoef(); //обновление коэффициента Linear Advance
-                indiChangePwm(); //установка Linear Advance
+                indiChangeCoef(); //обновление коэффициента линейного регулирования
+                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
                 if (debugSettings.max_pwm > 160) debugSettings.max_pwm -= 5; //максимальное значение шим
-                indiChangeCoef(); //обновление коэффициента Linear Advance
-                indiChangePwm(); //установка Linear Advance
+                indiChangeCoef(); //обновление коэффициента линейного регулирования
+                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
 #if GEN_ENABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
@@ -1450,26 +1443,22 @@ void debug_menu(void) //отладка
             if (cur_mode < (DEB_MAX_ITEMS - 1)) cur_mode++;
             else cur_mode = 0;
 #if PLAYER_TYPE
-            debugPlayItem(cur_mode);
+            playerSetTrackNow(PLAYER_DEBUG_MENU_START + cur_mode, PLAYER_MENU_FOLDER); //воспроизводим название пункта отладки
 #endif
             break;
           case 1:
             switch (cur_mode) {
-              case DEB_TIME_CORRECT: //коррекция хода
-                switch (EIMSK) {
-                  case 0: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break;
-                  case 1: if (aging < 127) aging++; else aging = -127; break;
-                }
-                break;
+              case DEB_AGING_CORRECT: if (debugSettings.aging < 127) debugSettings.aging++; else debugSettings.aging = -127; break; //коррекция хода
+              case DEB_TIME_CORRECT: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break; //коррекция хода
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
                 if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; //минимальное значение шим
-                indiChangeCoef(); //обновление коэффициента Linear Advance
-                indiChangePwm(); //установка Linear Advance
+                indiChangeCoef(); //обновление коэффициента линейного регулирования
+                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
                 if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
-                indiChangeCoef(); //обновление коэффициента Linear Advance
-                indiChangePwm(); //установка Linear Advance
+                indiChangeCoef(); //обновление коэффициента линейного регулирования
+                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
 #if GEN_ENABLE && GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
@@ -1489,53 +1478,49 @@ void debug_menu(void) //отладка
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
-        switch (cur_mode) {
-#if !GEN_ENABLE || !GEN_FEEDBACK
-          case DEB_HV_ADC: break; //коррекция значения ацп преобразователя
-#endif
-#if !IR_PORT_ENABLE
-          case DEB_IR_BUTTONS: break; //програмирование кнопок
-#endif
-#if !LIGHT_SENS_ENABLE
-          case DEB_LIGHT_SENS: break; //калибровка датчика освещения
-#endif
-          default: set = !set; break;
-        }
-        if (set) {
-          dotSetBright(DEFAULT_DOT_BRIGHT); //включаем точки
+        set = !set; //сменили сотояние подрежима меню
+
+        if (set) { //если в режиме настройки
           switch (cur_mode) {
-            case DEB_TIME_CORRECT:
-              if (EIMSK) aging = readAgingRTC(); //чтение коррекции хода
-              break;
+            case DEB_AGING_CORRECT: if (!readAgingRTC(&debugSettings.aging)) set = 0; break; //чтение коррекции хода
             case DEB_DEFAULT_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
             case DEB_DEFAULT_MAX_PWM: indiSetBright(30); break; //максимальное значение шим
-#if IR_PORT_ENABLE
+#if !GEN_ENABLE || !GEN_FEEDBACK
+            case DEB_HV_ADC: set = 0; break; //коррекция значения ацп преобразователя
+#endif
             case DEB_IR_BUTTONS: //програмирование кнопок
+#if IR_PORT_ENABLE
               irState = IR_DISABLE; //установили флаг запрета
-              cur_button = 0;
-              break;
+              cur_button = 0; //сбросили номер текущей кнопки
+#else
+              set = 0; //запретили войти в пункт меню
 #endif
-#if LIGHT_SENS_ENABLE
+              break;
             case DEB_LIGHT_SENS: //калибровка датчика освещения
-              temp_min = 255;
-              temp_max = 0;
-              break;
+#if LIGHT_SENS_ENABLE
+              temp_min = 255; //установили минимальное значение
+              temp_max = 0; //установили максимальное значение
+#else
+              set = 0; //запретили войти в пункт меню
 #endif
+              break;
             case DEB_RESET:
-              set = 0; //сбросили на начальный уровень меню
+              set = 0; //вышли из подпункта меню
               cur_mode = 0; //перешли на первый пункт меню
 #if DEBUG_PASS_ENABLE
               if (check_pass()) { //подтверждение паролем
 #endif
+                debugSettings.aging = 0; //коррекции хода модуля часов
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
                 debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
-                indiChangeCoef(); //обновление коэффициента Linear Advance
-                indiChangePwm(); //установка Linear Advance
+                indiChangeCoef(); //обновление коэффициента линейного регулирования
+                indiChangePwm(); //установка коэффициента линейного регулирования
 #if GEN_ENABLE && GEN_FEEDBACK
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
 #endif
+                writeAgingRTC(debugSettings.aging); //запись коррекции хода
 #if PLAYER_TYPE
                 playerSetTrack(PLAYER_RESET_SOUND, PLAYER_GENERAL_FOLDER);
 #else
@@ -1547,9 +1532,11 @@ void debug_menu(void) //отладка
               break;
           }
         }
-        else {
-#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
+        else { //иначе режим выбора пункта меню
           switch (cur_mode) {
+            case DEB_AGING_CORRECT: writeAgingRTC(debugSettings.aging); break; //запись коррекции хода
+            case DEB_DEFAULT_MIN_PWM: indiSetBright(30); break; //устанавливаем максимальную яркость индикаторов
+#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               irState = 0; //сбросили состояние
@@ -1563,18 +1550,15 @@ void debug_menu(void) //отладка
               }
               break;
 #endif
-          }
 #endif
-
-          dotSetBright(0); //выключаем точки
-          indiSetBright(30); //устанавливаем максимальную яркость индикаторов
+          }
         }
+        dotSetBright((set) ? DEFAULT_DOT_BRIGHT : 0); //включаем точки
         secUpd = 0; //обновление экрана
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
         if (!set) { //если не в режиме настройки
-          if (EIMSK) writeAgingRTC((uint8_t)aging); //запись коррекции хода
           updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
           return;
         }
