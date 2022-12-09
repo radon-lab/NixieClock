@@ -326,7 +326,7 @@ void playerUpdate(void)
         for (uint8_t i = 0; i < (sizeof(player.commandBuff) / 2); i++) {
           if (player.commandStatus & _reg) {
             player.commandStatus &= ~_reg;
-            
+
             player.transferBuff[_COMMAND] = player.commandBuff[i][0];
             player.transferBuff[_DATA_L] = player.commandBuff[i][1];
             player.transferBuff[_DATA_H] = 0;
@@ -340,18 +340,16 @@ void playerUpdate(void)
       }
     }
     else if (playerPlaybackStatus()) { //иначе если есть команды в буфере
-#if AMP_PORT_ENABLE
-      if (!AMP_CHK && !player.playbackMute && (player.playbackBuff[player.playbackStart] == PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) {
-        AMP_ENABLE;
-        _timer_ms[TMR_PLAYER] = AMP_WAIT_TIME;
-        return;
-      }
-#endif
       if (uartStatus()) { //если команда не отправляется
         if (playState && !player.playbackNow) return;
-        if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
+#if AMP_PORT_ENABLE
+        if (!AMP_CHK && !player.playbackMute && (player.playbackBuff[player.playbackStart] == PLAYER_CMD_PLAY_TRACK_IN_FOLDER)) {
+          AMP_ENABLE;
+          _timer_ms[TMR_PLAYER] = AMP_WAIT_TIME;
+          return;
+        }
+#endif
         player.playbackNow = 0;
-        playState = 0;
 
         player.transferBuff[_COMMAND] = player.playbackBuff[player.playbackStart++];
         player.transferBuff[_DATA_L] = player.playbackBuff[player.playbackStart++];
@@ -360,13 +358,17 @@ void playerUpdate(void)
         playerGenCRC(player.transferBuff);
 
         if ((player.playbackEnd + 1) == player.playbackStart) player.playbackEnd = player.playbackStart = 0;
+        if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
 
         switch (player.transferBuff[_COMMAND]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
+          case PLAYER_CMD_STOP:
 #if AMP_PORT_ENABLE
-          case PLAYER_CMD_STOP: if (!player.playbackMute) AMP_DISABLE; break;
+            if (!player.playbackMute) AMP_DISABLE;
 #endif
+            playState = 0;
+            break;
         }
         uartSendData(); //отправляем команду в плеер
       }

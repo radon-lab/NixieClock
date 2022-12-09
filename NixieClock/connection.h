@@ -62,7 +62,8 @@
 
 #define DDR_REG(portx)  (*(&portx - 1))
 #define PIN_REG(portx)  (*(&portx - 2))
-#define BIT_READ(value, bit) (((value) >> (bit)) & 0x01)
+#define BIT_READ_INV(value, bit) (((value) ^ (0x01 << (bit))) & (0x01 << (bit)))
+#define BIT_READ(value, bit) ((value) & (0x01 << (bit)))
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
@@ -131,7 +132,7 @@
 
 #define SET_INIT  SET_SET; SET_INP
 #else
-#define SET_CHK   (BIT_READ(PIN_REG(SET_PORT), SET_BIT) ^ 0x01)
+#define SET_CHK   (BIT_READ_INV(PIN_REG(SET_PORT), SET_BIT))
 #define SET_CLR   (BIT_CLEAR(SET_PORT, SET_BIT))
 #define SET_INP   (BIT_CLEAR(DDR_REG(SET_PORT), SET_BIT))
 
@@ -149,7 +150,7 @@
 
 #define LEFT_INIT  LEFT_SET; LEFT_INP
 #else
-#define LEFT_CHK   (BIT_READ(PIN_REG(LEFT_PORT), LEFT_BIT) ^ 0x01)
+#define LEFT_CHK   (BIT_READ_INV(PIN_REG(LEFT_PORT), LEFT_BIT))
 #define LEFT_CLR   (BIT_CLEAR(LEFT_PORT, LEFT_BIT))
 #define LEFT_INP   (BIT_CLEAR(DDR_REG(LEFT_PORT), LEFT_BIT))
 
@@ -167,7 +168,7 @@
 
 #define RIGHT_INIT  RIGHT_SET; RIGHT_INP
 #else
-#define RIGHT_CHK   (BIT_READ(PIN_REG(RIGHT_PORT), RIGHT_BIT) ^ 0x01)
+#define RIGHT_CHK   (BIT_READ_INV(PIN_REG(RIGHT_PORT), RIGHT_BIT))
 #define RIGHT_CLR   (BIT_CLEAR(RIGHT_PORT, RIGHT_BIT))
 #define RIGHT_INP   (BIT_CLEAR(DDR_REG(RIGHT_PORT), RIGHT_BIT))
 
@@ -187,7 +188,7 @@
 
 #define ADD_INIT  ADD_SET; ADD_INP
 #else
-#define ADD_CHK   (BIT_READ(PIN_REG(ADD_PORT), ADD_BIT) ^ 0x01)
+#define ADD_CHK   (BIT_READ_INV(PIN_REG(ADD_PORT), ADD_BIT))
 #define ADD_CLR   (BIT_CLEAR(ADD_PORT, ADD_BIT))
 #define ADD_INP   (BIT_CLEAR(DDR_REG(ADD_PORT), ADD_BIT))
 
@@ -316,11 +317,12 @@
 #if AMP_POWER_MODE
 #define AMP_DISABLE (BIT_CLEAR(AMP_PORT, AMP_BIT))
 #define AMP_ENABLE  (BIT_SET(AMP_PORT, AMP_BIT))
+#define AMP_CHK     (BIT_READ(AMP_PORT, AMP_BIT))
 #else
 #define AMP_DISABLE (BIT_SET(AMP_PORT, AMP_BIT))
 #define AMP_ENABLE  (BIT_CLEAR(AMP_PORT, AMP_BIT))
+#define AMP_CHK     (BIT_READ_INV(AMP_PORT, AMP_BIT))
 #endif
-#define AMP_CHK     (BIT_READ(AMP_PORT, AMP_BIT))
 #define AMP_OUT     (BIT_SET(DDR_REG(AMP_PORT), AMP_BIT))
 
 #define AMP_INIT    AMP_DISABLE; AMP_OUT
