@@ -346,7 +346,9 @@ enum {
   DOT_STATIC, //статичная
   DOT_PULS, //плавно мигает
 #if DOTS_PORT_ENABLE
+#if NEON_DOT == 3
   DOT_RUNNING, //бегущая
+#endif
 #if (LAMP_NUM > 4) || DOTS_TYPE
   DOT_TURN_BLINK, //мигание по очереди
 #endif
@@ -1207,7 +1209,7 @@ void test_system(void) //проверка системы
   backlSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
   indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
   dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
 #endif
   while (1) {
@@ -2979,7 +2981,7 @@ uint8_t settings_main(void) //настроки основные
               break;
 #endif
             case SET_DOT_BRIGHT:
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
               if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[TIME_NIGHT] / 10, 0, 2, 0); //вывод яркости ночь
               if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
 #else
@@ -3012,7 +3014,7 @@ uint8_t settings_main(void) //настроки основные
 #if BACKL_TYPE == 3
           switch (cur_mode) {
             case SET_TIME_FORMAT: setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-#if (NEON_DOT == 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
             case SET_DOT_BRIGHT:
 #endif
 #if PLAYER_TYPE
@@ -3090,7 +3092,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
 #endif
               case SET_DOT_BRIGHT: //яркость точек
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
                 switch (cur_indi) {
                   case 0: if (mainSettings.dotBright[TIME_NIGHT] > 0) mainSettings.dotBright[TIME_NIGHT] -= 10; break;
                   case 1: if (mainSettings.dotBright[TIME_DAY] > 10) mainSettings.dotBright[TIME_DAY] -= 10; break;
@@ -3191,7 +3193,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
 #endif
               case SET_DOT_BRIGHT: //яркость точек
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
                 switch (cur_indi) {
                   case 0: if (mainSettings.dotBright[TIME_NIGHT] < 250) mainSettings.dotBright[TIME_NIGHT] += 10; break;
                   case 1: if (mainSettings.dotBright[TIME_DAY] < 250) mainSettings.dotBright[TIME_DAY] += 10; break;
@@ -3994,7 +3996,7 @@ uint8_t radioMenu(void) //радиоприемник
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
         if (!seek_run) { //если не идет поиск
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #else
           if (getStationStatusRDA()) indiSetDotL(0); //включаем разделителную точку
@@ -4037,7 +4039,7 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
         }
         else { //иначе отображаем частоту
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           indiSetDotL(3); //включаем разделителную точку
 #endif
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
@@ -4471,7 +4473,7 @@ void changeBright(void) //установка яркости от времени 
     if (mainSettings.timeSleep[TIME_NIGHT]) indi.sleepMode = SLEEP_NIGHT; //установили флаг режима сна индикаторов
   }
   else { //дневной режим
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
     dot.maxBright = 1; //установка максимальной яркости точек
@@ -4493,14 +4495,14 @@ void changeBright(void) //установка яркости от времени 
         case DOT_OFF: dotSetBright(0); break; //если точки выключены
         case DOT_STATIC: dotSetBright(dot.maxBright); break; //если точки статичные, устанавливаем яркость
         default:
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
           if (!dot.maxBright) dotSetBright(0); //если точки выключены
           else {
             dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
             dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
           }
 #endif
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           if (!dot.maxBright) indiClrDots(); //очистка разделителных точек
 #endif
           break;
@@ -4704,7 +4706,7 @@ void dotFlash(void) //мигание точек
     switch (fastSettings.dotMode) { //мигание точек
 #endif
       case DOT_PULS:
-#if (NEON_DOT == 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
         switch (dot.drive) {
           case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
 #if DOT_PULS_TIME != 1000
@@ -4729,6 +4731,7 @@ void dotFlash(void) //мигание точек
 #endif
         break;
 #if DOTS_PORT_ENABLE
+#if NEON_DOT == 3
       case DOT_RUNNING: //бегущая
         indiClrDots(); //очистка разделителных точек
 #if DOTS_TYPE
@@ -4758,6 +4761,7 @@ void dotFlash(void) //мигание точек
           }
         }
         break;
+#endif
 #if (LAMP_NUM > 4) || DOTS_TYPE
       case DOT_TURN_BLINK: //мигание по очереди
 #if DOT_TURN_TIME
@@ -4819,10 +4823,10 @@ void dotFlash(void) //мигание точек
 void dotReset(void) //сброс анимации точек
 {
   if (changeAnimState != 1) { //если нужно сбросить анимацию точек
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем секундные точки
 #endif
     _timer_ms[TMR_DOT] = 0; //сбросили таймер
@@ -4908,10 +4912,10 @@ void burnIndi(uint8_t mode, boolean demo) //антиотравление инд�
   uint8_t indi = 0; //номер индикатора
 
   if (mode != BURN_SINGLE_TIME) { //если режим без отображения времени
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
-#if (NEON_DOT != 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем секундные точки
 #endif
   }

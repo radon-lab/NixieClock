@@ -122,7 +122,7 @@ void indiInit(void) //инициализация индикаторов
 #if WIRE_PULL
   indi_null |= 0x30; //если установлена подтяжка шины
 #endif
-  for (uint8_t i = ((NEON_DOT == 2) && DOTS_PORT_ENABLE); i < (LAMP_NUM + 1); i++) { //инициализируем пины
+  for (uint8_t i = ((NEON_DOT == 3) && DOTS_PORT_ENABLE); i < (LAMP_NUM + 1); i++) { //инициализируем пины
     *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
     *(anodePort[i] - 1) |= anodeBit[i]; //устанавливаем анод как выход
 
@@ -254,22 +254,38 @@ void indiSetBright(uint8_t pwm) //установка общей яркости
 //-------------------------Установка левой разделителной точки------------------------------------
 void indiSetDotL(uint8_t dot) //установка разделителной точки
 {
+#if NEON_DOT == 3
   if (dot < LAMP_NUM) indi_dot_l |= (0x02 << dot);
+#else
+  if (dot < LAMP_NUM) indi_dot_l |= 0x01;
+#endif
 }
 //--------------------------Очистка левой разделителных точек-------------------------------------
 void indiClrDotL(uint8_t dot) //очистка разделителных точек
 {
+#if NEON_DOT == 3
   if (dot < LAMP_NUM) indi_dot_l &= ~(0x02 << dot);
+#else
+  if (dot < LAMP_NUM) indi_dot_l &= ~0x01;
+#endif
 }
 //-------------------------Установка правой разделителной точки-----------------------------------
 void indiSetDotR(uint8_t dot) //установка разделителной точки
 {
+#if NEON_DOT == 3
   if (dot < LAMP_NUM) indi_dot_r |= (0x02 << dot);
+#else
+  if (dot < LAMP_NUM) indi_dot_r |= 0x01;
+#endif
 }
 //--------------------------Очистка правой разделителных точек------------------------------------
 void indiClrDotR(uint8_t dot) //очистка разделителных точек
 {
+#if NEON_DOT == 3
   if (dot < LAMP_NUM) indi_dot_r &= ~(0x02 << dot);
+#else
+  if (dot < LAMP_NUM) indi_dot_r &= ~0x01;
+#endif
 }
 //-----------------------------Очистка разделителных точек----------------------------------------
 void indiClrDots(void) //очистка разделителных точек
@@ -380,13 +396,22 @@ inline uint8_t dotGetBright(void) //получить яркость точек
 //---------------------------------Установка яркости точек---------------------------------------
 void dotSetBright(uint8_t _pwm) //установка яркости точек
 {
-#if (NEON_DOT == 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
   if (_pwm) {
     indiSetDotL(2); //установка разделителной точки
+#if DOTS_TYPE
 #if LAMP_NUM > 4
     indiSetDotR(3); //установка разделителной точки
-#elif DOTS_TYPE
+#else
     indiSetDotR(1); //установка разделителной точки
+#endif
+#elif LAMP_NUM > 4
+    indiSetDotL(4); //установка разделителной точки
+#endif
+#if NEON_DOT == 2
+    if (_pwm > 250) _pwm = 250;
+    dot_dimm = _pwm;
+    indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
 #endif
   }
   else indiClrDots(); //очистка разделителных точек
