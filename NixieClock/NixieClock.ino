@@ -1215,7 +1215,7 @@ void test_system(void) //проверка системы
   while (1) {
     for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
       indiClrDots(); //выключаем разделительные точки
       indiSetDotL(indi); //включаем разделителную точку
 #endif
@@ -3255,7 +3255,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_TEMP_SENS: //настройка коррекции температуры
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
               indiSetDotL(2); //включаем разделителную точку
 #endif
               break;
@@ -3271,7 +3271,7 @@ uint8_t settings_main(void) //настроки основные
           changeBrightEnable(); //разрешить смену яркости
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #endif
         }
@@ -3435,13 +3435,13 @@ void autoShowTemp(void) //автоматический показ темпера
               setLedHue(pos + 3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
 #endif
             }
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
             indiSetDotL(pos + 2); //включаем разделителную точку
 #endif
 #else
             indiPrintNum(sens.temp + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
             indiSetDotL(pos + 2); //включаем разделителную точку
 #endif
@@ -3455,7 +3455,7 @@ void autoShowTemp(void) //автоматический показ темпера
           if (pos > 0) pos--;
           else {
             drv = 1;
-#if !DOTS_PORT_ENABLE
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
 #if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
             if (mode < 2) dotSetBright(dot.menuBright); //включаем точки
 #else
@@ -3496,7 +3496,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 #endif
 
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
   indiSetDotL(2); //включаем разделителную точку
 #else
   dotSetBright(dot.menuBright); //включаем точки
@@ -3548,14 +3548,14 @@ uint8_t showTemp(void) //показать температуру
           case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) { //если режим отображения температуры
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           indiSetDotL(2); //включаем разделителную точку
 #else
           dotSetBright(dot.menuBright); //включаем точки
 #endif
         }
         else { //иначе давление или влажность
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #else
           dotSetBright(0); //выключаем точки
@@ -3597,13 +3597,17 @@ uint8_t showDate(void) //показать дату
 {
   uint8_t mode = 0; //текущий режим
 
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
   indiSetDotL(2); //включаем разделителную точку
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
   indiSetDotL(4); //включаем разделителную точку
 #endif
 #else
+#if (NEON_DOT == 2) && (SHOW_DATE_TYPE < 2) && (LAMP_NUM > 4)
+  indiSetDotL(0); //включаем разделителную точку
+#else
   dotSetBright(dot.menuBright); //включаем точки
+#endif
 #endif
 
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
@@ -3669,14 +3673,14 @@ uint8_t showDate(void) //показать дату
         if (++mode > 1) mode = 0;
         switch (mode) {
           case 0: //дата
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiSetDotL(2); //включаем разделителную точку
 #else
             dotSetBright(dot.menuBright); //включаем точки
 #endif
             break;
           case 1: //год
-#if DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
 #else
             dotSetBright(0); //выключаем точки
