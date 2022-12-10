@@ -309,9 +309,9 @@ void playerUpdate(void)
   static boolean playState;
 
   if (!_timer_ms[TMR_PLAYER]) {
-    if (busyState != DF_BUSY_CHK) {
+    if (busyState == (boolean)DF_BUSY_CHK) {
       busyState = !busyState;
-      if (!busyState) _timer_ms[TMR_PLAYER] = PLAYER_BUSY_WAIT;
+      if (busyState) _timer_ms[TMR_PLAYER] = PLAYER_BUSY_WAIT;
       else {
 #if AMP_PORT_ENABLE
         if (!playerPlaybackStatus()) AMP_DISABLE;
@@ -361,7 +361,7 @@ void playerUpdate(void)
         if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
 
         switch (player.transferBuff[_COMMAND]) {
-          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; break;
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; if (busyState) busyState = 0; break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
           case PLAYER_CMD_STOP:
 #if AMP_PORT_ENABLE
