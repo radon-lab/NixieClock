@@ -268,7 +268,7 @@ enum {
   DEB_HV_ADC, //значение ацп преобразователя
   DEB_IR_BUTTONS, //програмирование кнопок
   DEB_LIGHT_SENS, //калибровка датчика освещения
-  DEB_RESET, //максимальное значение шим
+  DEB_RESET, //сброс настроек отладки
   DEB_MAX_ITEMS //максимум пунктов меню
 };
 
@@ -1177,19 +1177,21 @@ void checkRTC(void) //проверка модуля часов реальног�
 void checkErrors(void) //проверка ошибок
 {
   uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали регистр ошибок
-  for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
-    if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
-      indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
+  if (_error_reg) { //если есть ошибка
+    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+      if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
+        indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
 #if PLAYER_TYPE
-      playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим трек ошибки
-      playerSpeakNumber(i + 1); //воспроизводим номер ошибки
+        playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим трек ошибки
+        playerSpeakNumber(i + 1); //воспроизводим номер ошибки
 #else
-      melodyPlay(i, SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим мелодию
+        melodyPlay(i, SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим мелодию
 #endif
-      for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+      }
     }
+    updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
   }
-  updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
 }
 //---------------------------Проверка системы---------------------------------------
 void test_system(void) //проверка системы
@@ -1321,6 +1323,7 @@ boolean check_pass(void) //проверка пароля
 void debug_menu(void) //отладка
 {
   boolean set = 0; //режим настройки
+  boolean reset = 0; //сброс настройки
   uint8_t cur_mode = 0; //текущий режим
 #if IR_PORT_ENABLE
   uint8_t cur_button = 0; //текущая кнопка пульта
@@ -1370,6 +1373,7 @@ void debug_menu(void) //отладка
               indiPrintNum(adc_light, 1, 3); //выводим значение АЦП датчика освещения
               break;
 #endif
+            case DEB_RESET: indiPrintNum(reset, 0, 2, 0); break;//сброс настроек отладки
           }
           break;
       }
@@ -1438,6 +1442,7 @@ void debug_menu(void) //отладка
                 if (cur_button) cur_button--;
                 break;
 #endif
+              case DEB_RESET: reset = 0; break;//сброс настроек отладки
             }
             break;
         }
@@ -1478,6 +1483,7 @@ void debug_menu(void) //отладка
                 if (cur_button < ((sizeof(debugSettings.irButtons) / 2) - 1)) cur_button++;
                 break;
 #endif
+              case DEB_RESET: reset = 1; break;//сброс настроек отладки
             }
             break;
         }
@@ -1511,12 +1517,29 @@ void debug_menu(void) //отладка
               set = 0; //запретили войти в пункт меню
 #endif
               break;
-            case DEB_RESET:
-              set = 0; //вышли из подпункта меню
-              cur_mode = 0; //перешли на первый пункт меню
-#if DEBUG_PASS_ENABLE
-              if (check_pass()) { //подтверждение паролем
+            case DEB_RESET: reset = 0; break;
+          }
+        }
+        else { //иначе режим выбора пункта меню
+          switch (cur_mode) {
+            case DEB_AGING_CORRECT: writeAgingRTC(debugSettings.aging); break; //запись коррекции хода
+            case DEB_DEFAULT_MIN_PWM: indiSetBright(30); break; //устанавливаем максимальную яркость индикаторов
+#if IR_PORT_ENABLE
+            case DEB_IR_BUTTONS: //програмирование кнопок
+              irState = 0; //сбросили состояние
+              break;
 #endif
+#if LIGHT_SENS_ENABLE
+            case DEB_LIGHT_SENS: { //калибровка датчика освещения
+                uint8_t temp_mid = ((temp_max - temp_min) / 2) + temp_min;
+                debugSettings.min_light = temp_mid - LIGHT_SENS_GIST;
+                debugSettings.max_light = temp_mid + LIGHT_SENS_GIST;
+              }
+              break;
+#endif
+            case DEB_RESET:
+              cur_mode = 0; //перешли на первый пункт меню
+              if (reset) { //подтверждение
                 debugSettings.aging = 0; //коррекции хода модуля часов
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
@@ -1533,31 +1556,8 @@ void debug_menu(void) //отладка
 #else
                 melodyPlay(SOUND_RESET_SETTINGS, SOUND_LINK(general_sound), REPLAY_ONCE); //сигнал сброса настроек отладки
 #endif
-#if DEBUG_PASS_ENABLE
-              }
-#endif
-              break;
-          }
-        }
-        else { //иначе режим выбора пункта меню
-          switch (cur_mode) {
-            case DEB_AGING_CORRECT: writeAgingRTC(debugSettings.aging); break; //запись коррекции хода
-            case DEB_DEFAULT_MIN_PWM: indiSetBright(30); break; //устанавливаем максимальную яркость индикаторов
-#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
-#if IR_PORT_ENABLE
-            case DEB_IR_BUTTONS: //програмирование кнопок
-              irState = 0; //сбросили состояние
-              break;
-#endif
-#if LIGHT_SENS_ENABLE
-            case DEB_LIGHT_SENS: { //калибровка датчика освещения
-                uint8_t temp_mid = ((temp_max - temp_min) / 2) + temp_min;
-                debugSettings.min_light = temp_mid - LIGHT_SENS_GIST;
-                debugSettings.max_light = temp_mid + LIGHT_SENS_GIST;
               }
               break;
-#endif
-#endif
           }
         }
         dotSetBright((set) ? DEFAULT_DOT_BRIGHT : 0); //включаем точки
