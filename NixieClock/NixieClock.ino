@@ -1373,7 +1373,7 @@ void debug_menu(void) //отладка
               indiPrintNum(adc_light, 1, 3); //выводим значение АЦП датчика освещения
               break;
 #endif
-            case DEB_RESET: indiPrintNum(reset, 0, 2, 0); break;//сброс настроек отладки
+            case DEB_RESET: indiPrintNum(reset, 0, 2, 0); break; //сброс настроек отладки
           }
           break;
       }
@@ -1442,7 +1442,7 @@ void debug_menu(void) //отладка
                 if (cur_button) cur_button--;
                 break;
 #endif
-              case DEB_RESET: reset = 0; break;//сброс настроек отладки
+              case DEB_RESET: reset = 0; break; //сброс настроек отладки
             }
             break;
         }
@@ -1483,7 +1483,7 @@ void debug_menu(void) //отладка
                 if (cur_button < ((sizeof(debugSettings.irButtons) / 2) - 1)) cur_button++;
                 break;
 #endif
-              case DEB_RESET: reset = 1; break;//сброс настроек отладки
+              case DEB_RESET: reset = 1; break; //сброс настроек отладки
             }
             break;
         }
@@ -1517,7 +1517,7 @@ void debug_menu(void) //отладка
               set = 0; //запретили войти в пункт меню
 #endif
               break;
-            case DEB_RESET: reset = 0; break;
+            case DEB_RESET: reset = 0; break; //сброс настроек отладки
           }
         }
         else { //иначе режим выбора пункта меню
@@ -1537,9 +1537,9 @@ void debug_menu(void) //отладка
               }
               break;
 #endif
-            case DEB_RESET:
-              cur_mode = 0; //перешли на первый пункт меню
+            case DEB_RESET: //сброс настроек отладки
               if (reset) { //подтверждение
+                cur_mode = 0; //перешли на первый пункт меню
                 debugSettings.aging = 0; //коррекции хода модуля часов
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
