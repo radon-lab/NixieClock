@@ -4707,10 +4707,11 @@ void dotFlash(void) //мигание точек
 {
   if (dot.maxBright && !dot.update && !_timer_ms[TMR_DOT]) {
 #if ALARM_TYPE
-    switch ((alarms.dot) ? (alarms.dot - 1) : fastSettings.dotMode) { //мигание точек
+    switch ((alarms.dot) ? (alarms.dot - 1) : fastSettings.dotMode) //режим точек
 #else
-    switch (fastSettings.dotMode) { //мигание точек
+    switch (fastSettings.dotMode) //режим точек
 #endif
+    { //мигание точек
       case DOT_PULS:
 #if (NEON_DOT == 3) && DOTS_PORT_ENABLE
         switch (dot.drive) {
@@ -4725,13 +4726,14 @@ void dotFlash(void) //мигание точек
         }
 #else
         switch (dot.drive) {
-          case 0: if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; break;
+          case 0: if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; break; //сменили направление
           case 1:
             if (dotDecBright(dot.brightStep, 0)) {
-              dot.drive = 0;
+              dot.drive = 0; //сменили направление
               dot.update = 1; //сбросили флаг обновления точек
+              return; //выходим
             }
-            return;
+            break;
         }
         _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
 #endif
