@@ -1220,7 +1220,8 @@ void test_system(void) //проверка системы
       indiClr(); //очистка индикаторов
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
       indiClrDots(); //выключаем разделительные точки
-      indiSetDotL(indi); //включаем разделителную точку
+      indiSetDotL(indi); //включаем разделительную точку
+      indiSetDotR(indi); //включаем разделительную точку
 #endif
 #if BACKL_TYPE == 3
       setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
@@ -3244,6 +3245,7 @@ uint8_t settings_main(void) //настроки основные
         set = !set;
         if (set) {
           changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
+          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[TIME_NIGHT]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
@@ -3254,15 +3256,15 @@ uint8_t settings_main(void) //настроки основные
               backlSetBright(mainSettings.backlBright[TIME_NIGHT]); //если посветка статичная, устанавливаем яркость
 #else
               set = 0; //заблокировали пункт меню
+              dotSetBright(0); //выключаем точки
 #endif
               break;
+#if (NEON_DOT < 2) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
-#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-              indiSetDotL(2); //включаем разделителную точку
-#endif
+              indiSetDotL(2); //включаем разделительную точку
               break;
+#endif
           }
-          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
         }
         else {
 #if BACKL_TYPE == 3
@@ -3273,7 +3275,7 @@ uint8_t settings_main(void) //настроки основные
           changeBrightEnable(); //разрешить смену яркости
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
-#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT < 2) && DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #endif
         }
@@ -3423,7 +3425,9 @@ void autoShowTemp(void) //автоматический показ темпера
       if (!_timer_ms[TMR_ANIM]) { //если таймер истек
         _timer_ms[TMR_ANIM] = AUTO_TEMP_ANIM_TIME; //устанавливаем таймер
 
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
         dotSetBright(0); //выключаем точки
+#endif
         indiClr(); //очистка индикаторов
         switch (mode) {
           case 0:
@@ -3439,13 +3443,13 @@ void autoShowTemp(void) //автоматический показ темпера
             }
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
-            indiSetDotL(pos + 2); //включаем разделителную точку
+            indiSetDotL(pos + 2); //включаем разделительную точку
 #endif
 #else
             indiPrintNum(sens.temp + mainSettings.tempCorrect, pos, 3, ' '); //вывод температуры
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             indiClrDots(); //выключаем разделительные точки
-            indiSetDotL(pos + 2); //включаем разделителную точку
+            indiSetDotL(pos + 2); //включаем разделительную точку
 #endif
             break;
           case 1: indiPrintNum(sens.hum, pos, 4, ' '); //вывод влажности
@@ -3462,6 +3466,9 @@ void autoShowTemp(void) //автоматический показ темпера
             if (mode < 2) dotSetBright(dot.menuBright); //включаем точки
 #else
             if (!mode) dotSetBright(dot.menuBright); //включаем точки
+#endif
+#if NEON_DOT == 2
+            indiClrDotR(0); //очистка разделителной точки
 #endif
 #endif
             _timer_ms[TMR_ANIM] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
@@ -3499,9 +3506,12 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-  indiSetDotL(2); //включаем разделителную точку
+  indiSetDotL(2); //включаем разделительную точку
 #else
   dotSetBright(dot.menuBright); //включаем точки
+#if NEON_DOT == 2
+  indiClrDotR(0); //очистка разделителной точки
+#endif
 #endif
 
 #if PLAYER_TYPE
@@ -3551,9 +3561,12 @@ uint8_t showTemp(void) //показать температуру
         }
         if (!mode) { //если режим отображения температуры
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-          indiSetDotL(2); //включаем разделителную точку
+          indiSetDotL(2); //включаем разделительную точку
 #else
           dotSetBright(dot.menuBright); //включаем точки
+#if NEON_DOT == 2
+          indiClrDotR(0); //очистка разделителной точки
+#endif
 #endif
         }
         else { //иначе давление или влажность
@@ -3600,15 +3613,14 @@ uint8_t showDate(void) //показать дату
   uint8_t mode = 0; //текущий режим
 
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-  indiSetDotL(2); //включаем разделителную точку
+  indiSetDotL(2); //включаем разделительную точку
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
-  indiSetDotL(4); //включаем разделителную точку
+  indiSetDotL(4); //включаем разделительную точку
 #endif
 #else
-#if (NEON_DOT == 2) && (SHOW_DATE_TYPE < 2) && (LAMP_NUM > 4)
-  indiSetDotL(0); //включаем разделителную точку
-#else
   dotSetBright(dot.menuBright); //включаем точки
+#if (NEON_DOT == 2) && (SHOW_DATE_TYPE < 2) && (LAMP_NUM > 4)
+  indiClrDotR(0); //очистка разделителной точки
 #endif
 #endif
 
@@ -3676,9 +3688,12 @@ uint8_t showDate(void) //показать дату
         switch (mode) {
           case 0: //дата
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-            indiSetDotL(2); //включаем разделителную точку
+            indiSetDotL(2); //включаем разделительную точку
 #else
             dotSetBright(dot.menuBright); //включаем точки
+#if NEON_DOT == 2
+            indiClrDotR(0); //очистка разделителной точки
+#endif
 #endif
             break;
           case 1: //год
@@ -3907,6 +3922,11 @@ boolean radioVolSettings(void) //настройка громкости ради�
   boolean _state = 0;
   _timer_ms[TMR_MS] = 0; //сбросили таймер
 
+  dotSetBright(0); //выключаем точки
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+  indiClrDots(); //очистка разделителных точек
+#endif
+
   while (1) {
     dataUpdate(); //обработка данных
 
@@ -4002,11 +4022,14 @@ uint8_t radioMenu(void) //радиоприемник
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
         if (!seek_run) { //если не идет поиск
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT == 2) || !DOTS_PORT_ENABLE
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
+#if NEON_DOT == 2
+          indiClrDotL(0); //очистка разделителной точки
+#endif
 #else
-          if (getStationStatusRDA()) indiSetDotL(0); //включаем разделителную точку
-          else indiClrDotL(0); //выключаем разделителную точку
+          if (getStationStatusRDA()) indiSetDotL(0); //включаем разделительную точку
+          else indiClrDotL(0); //выключаем разделительную точку
 #endif
         }
         else { //иначе идет автопоиск
@@ -4046,7 +4069,7 @@ uint8_t radioMenu(void) //радиоприемник
         }
         else { //иначе отображаем частоту
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-          indiSetDotL(3); //включаем разделителную точку
+          indiSetDotL(3); //включаем разделительную точку
 #endif
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
           indiPrintNum(radioSettings.stationNum, 5); //номер станции
@@ -4133,6 +4156,9 @@ uint8_t radioMenu(void) //радиоприемник
             setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
             startSeekRDA(RDA_SEEK_UP); //начинаем поиск вверх
             dotSetBright(0); //выключаем точки
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+            indiClrDots(); //очистка разделителных точек
+#endif
           }
           else {
             seek_run = 0; //выключили поиск
@@ -4152,6 +4178,9 @@ uint8_t radioMenu(void) //радиоприемник
             setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
             startSeekRDA(RDA_SEEK_DOWN); //начинаем поиск вниз
             dotSetBright(0); //выключаем точки
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+            indiClrDots(); //очистка разделителных точек
+#endif
           }
           else {
             seek_run = 0; //выключили поиск
