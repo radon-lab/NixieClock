@@ -346,7 +346,7 @@ enum {
   DOT_STATIC, //статичная
   DOT_PULS, //плавно мигает
 #if DOTS_PORT_ENABLE
-#if NEON_DOT == 3
+#if NEON_DOT != 2
   DOT_RUNNING, //бегущая
 #endif
 #if (LAMP_NUM > 4) || DOTS_TYPE
@@ -4739,7 +4739,7 @@ void dotFlash(void) //мигание точек
 #endif
         break;
 #if DOTS_PORT_ENABLE
-#if NEON_DOT == 3
+#if NEON_DOT != 2
       case DOT_RUNNING: //бегущая
         indiClrDots(); //очистка разделителных точек
 #if DOTS_TYPE
