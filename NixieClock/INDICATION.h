@@ -273,7 +273,7 @@ void indiSetBright(uint8_t pwm) //установка общей яркости
 //-------------------------Установка левой разделителной точки------------------------------------
 void indiSetDotL(uint8_t dot) //установка разделителной точки
 {
-#if NEON_DOT == 3
+#if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_l |= (0x02 << dot);
 #else
   if (dot < LAMP_NUM) indi_dot_l |= 0x01;
@@ -282,7 +282,7 @@ void indiSetDotL(uint8_t dot) //установка разделителной т
 //--------------------------Очистка левой разделителных точек-------------------------------------
 void indiClrDotL(uint8_t dot) //очистка разделителных точек
 {
-#if NEON_DOT == 3
+#if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_l &= ~(0x02 << dot);
 #else
   if (dot < LAMP_NUM) indi_dot_l &= ~0x01;
@@ -291,7 +291,7 @@ void indiClrDotL(uint8_t dot) //очистка разделителных точ
 //-------------------------Установка правой разделителной точки-----------------------------------
 void indiSetDotR(uint8_t dot) //установка разделителной точки
 {
-#if NEON_DOT == 3
+#if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_r |= (0x02 << dot);
 #else
   if (dot < LAMP_NUM) indi_dot_r |= 0x01;
@@ -300,7 +300,7 @@ void indiSetDotR(uint8_t dot) //установка разделителной т
 //--------------------------Очистка правой разделителных точек------------------------------------
 void indiClrDotR(uint8_t dot) //очистка разделителных точек
 {
-#if NEON_DOT == 3
+#if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_r &= ~(0x02 << dot);
 #else
   if (dot < LAMP_NUM) indi_dot_r &= ~0x01;
