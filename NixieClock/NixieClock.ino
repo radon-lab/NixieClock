@@ -2397,15 +2397,11 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             setPowerRDA(RDA_ON); //включаем радио
             setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
             setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
           }
           else { //иначе обычный режим
             alarm[ALARM_RADIO] = 0; //обычный режим
             setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
             playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
@@ -2439,15 +2435,11 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             setPowerRDA(RDA_ON); //включаем радио
             setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
             setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
           }
           else { //иначе обычный режим
             alarm[ALARM_RADIO] = 0; //обычный режим
             setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
             playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
             melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
@@ -2484,7 +2476,6 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
             alarm[ALARM_VOLUME] = (PLAYER_MAX_VOL / 2);
-            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
             playerSetVolNow(alarm[ALARM_VOLUME]); //установка громкости
 #endif
           }
@@ -2495,9 +2486,6 @@ uint8_t settings_singleAlarm(void) //настройка будильника
             setPowerRDA(RDA_ON); //включаем радио
             setVolumeRDA(alarm[ALARM_VOLUME]); //устанавливаем громкость
             setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
           }
           blink_data = 0; //сбрасываем флаги
           _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
@@ -2788,15 +2776,11 @@ uint8_t settings_multiAlarm(void) //настройка будильников
               setPowerRDA(RDA_ON); //включаем радио
               setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
               setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-              playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
             }
             else { //иначе обычный режим
               alarm[ALARM_RADIO] = 0; //обычный режим
               setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
-              playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
               playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
               melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
@@ -2840,15 +2824,11 @@ uint8_t settings_multiAlarm(void) //настройка будильников
               setPowerRDA(RDA_ON); //включаем радио
               setVolumeRDA((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_RADIO_VOL_MAX); //устанавливаем громкость
               setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-              playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
             }
             else { //иначе обычный режим
               alarm[ALARM_RADIO] = 0; //обычный режим
               setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
-              playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
               playerSetVolNow((alarm[ALARM_VOLUME]) ? alarm[ALARM_VOLUME] : ALARM_PLAYER_VOL_MAX); //установка громкости
 #else
               melodyPlay(alarm[ALARM_SOUND], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
@@ -2894,7 +2874,6 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             setPowerRDA(RDA_OFF); //выключаем радио
 #if PLAYER_TYPE
             alarm[ALARM_VOLUME] = (PLAYER_MAX_VOL / 2);
-            playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
             playerSetVolNow(alarm[ALARM_VOLUME]); //установка громкости
 #endif
           }
@@ -2905,9 +2884,6 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             setPowerRDA(RDA_ON); //включаем радио
             setVolumeRDA(alarm[ALARM_VOLUME]); //устанавливаем громкость
             setFreqRDA(radioSettings.stationsSave[alarm[ALARM_SOUND]]); //устанавливаем частоту
-#if PLAYER_TYPE
-            playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
           }
           blink_data = 0; //сбрасываем флаги
           _timer_ms[TMR_MS] = time_out = 0; //сбрасываем таймеры
@@ -3934,9 +3910,6 @@ void radioPowerOff(void) //выключить питание радиоприе�
 {
   if (getPowerStatusRDA() == RDA_ON) { //если радио включено
     setPowerRDA(RDA_OFF); //выключаем радио
-#if PLAYER_TYPE
-    playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
-#endif
   }
 }
 //--------------------------Вернуть питание радиоприемника------------------------------
@@ -3944,9 +3917,6 @@ void radioPowerRet(void) //вернуть питание радиоприемн�
 {
   if (radioSettings.powerState == RDA_ON) { //если радио было включено
     radioPowerOn(); //включить питание радиоприемника
-#if PLAYER_TYPE
-    playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-#endif
   }
   else radioPowerOff(); // иначе выключить питание радиоприемника
 }
@@ -4190,7 +4160,6 @@ uint8_t radioMenu(void) //радиоприемник
 #if PLAYER_TYPE
       if (!radioSettings.powerState) { //если питание выключено
         if (!playerPlaybackStatus()) { //если все команды отправлены
-          if (playerMuteStatus()) playerSetMuteNow(PLAYER_MUTE_ON); //включаем приглушение звука плеера
           radioSettings.powerState = RDA_ON; //установили флаг питания радио
           radioPowerOn(); //включить питание радиоприемника
         }
@@ -4314,9 +4283,6 @@ uint8_t radioMenu(void) //радиоприемник
         case SET_KEY_HOLD: //удержание средней кнопк
           radioSettings.powerState = RDA_OFF; //сбросили флаг питания радио
           setPowerRDA(RDA_OFF); //включаем радио
-#if PLAYER_TYPE
-          playerSetMuteNow(PLAYER_MUTE_OFF); //выключаем приглушение звука плеера
-#endif
           return MAIN_PROGRAM; //выходим
       }
     }

@@ -266,13 +266,15 @@ void playerSetMute(boolean _mute)
 //------------------------------------Установить приглушение-------------------------------------
 void playerSetMuteNow(boolean _mute)
 {
-  player.playbackMute = _mute;
+  if (player.playbackMute != _mute) {
+    player.playbackMute = _mute;
 #if PLAYER_TYPE == 1 //DF плеер
-  playerSendDataCommand(PLAYER_CMD_MUTE, _mute, _MUTE_REG);
+    playerSendDataCommand(PLAYER_CMD_MUTE, _mute, _MUTE_REG);
 #else //SD плеер
-  if (_mute) BUZZ_INP;
-  else BUZZ_OUT;
+    if (_mute) BUZZ_INP;
+    else BUZZ_OUT;
 #endif
+  }
 }
 //-------------------------------------Воспроизвести число--------------------------------------
 void playerSpeakNumber(uint16_t _num, boolean _type)
@@ -314,7 +316,7 @@ void playerUpdate(void)
       if (busyState) _timer_ms[TMR_PLAYER] = PLAYER_BUSY_WAIT;
       else {
 #if AMP_PORT_ENABLE
-        if (!playerPlaybackStatus()) AMP_DISABLE;
+        if (!playerPlaybackStatus() && !player.playbackMute) AMP_DISABLE;
 #endif
         playState = 0;
       }
@@ -361,7 +363,11 @@ void playerUpdate(void)
         if (player.playbackStart >= sizeof(player.playbackBuff)) player.playbackStart = 0;
 
         switch (player.transferBuff[_COMMAND]) {
-          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER: if (!player.playbackMute) playState = 1; else return; if (busyState) busyState = 0; break;
+          case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
+            if (!player.playbackMute) playState = 1;
+            else return;
+            if (busyState) busyState = 0;
+            break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
           case PLAYER_CMD_STOP:
 #if AMP_PORT_ENABLE
