@@ -439,7 +439,7 @@ void dfPlayerInit(void)
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00)); //устанавливаем длинну посылки 8 бит
 #endif
 
-  playerSetVolNow((PLAYER_MAX_VOL / 2));
+  playerSetVolNow((PLAYER_MAX_VOL * (PLAYER_START_VOL / 100.0)));
   _timer_ms[TMR_PLAYER] = PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
@@ -452,5 +452,5 @@ void sdPlayerInit(void)
     }
     else buffer.cardType = 0; //иначе ошибка инициализации
   }
-  playerSetVolNow((PLAYER_MAX_VOL / 2));
+  playerSetVolNow((PLAYER_MAX_VOL * (PLAYER_START_VOL / 100.0)));
 }
