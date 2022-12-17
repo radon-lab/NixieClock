@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.0 релиз от 16.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.0 релиз от 17.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -2041,7 +2041,6 @@ uint8_t settings_time(void) //настройки времени
   uint8_t cur_mode = 0; //текущий режим
   uint8_t time_out = 0; //таймаут автовыхода
 
-  indiClr(); //очищаем индикаторы
   dotSetBright(dot.menuBright); //включаем точки
 
   _timer_ms[TMR_MS] = 0; //сбросили таймер
