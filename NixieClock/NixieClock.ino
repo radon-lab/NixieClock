@@ -1944,6 +1944,7 @@ void dataUpdate(void) //обработка данных
       timerSQW += msDec; //прибавили время
       if (timerSQW > SQW_MAX_TIME) { //если сигнал слишком длинный
         EIMSK = 0; //перешли на внутреннее тактирование
+        tick_sec = 1; //установили тики
         SET_ERROR(SQW_LONG_ERROR); //устанавливаем ошибку длинного сигнала
       }
     }
