@@ -1927,7 +1927,8 @@ void dataUpdate(void) //обработка данных
   lightSensCheck(); //проверка сенсора яркости освещения
 #endif
 
-  for (; tick_ms > 0; tick_ms--) { //если был тик, обрабатываем данные
+  for (uint8_t _tick = tick_ms; _tick > 0; _tick--) { //если был тик то обрабатываем данные
+    tick_ms--; //убавили счетчик миллисекунд
     btn.state = buttonStateUpdate(); //обновление состояния кнопок
 
     timerCorrect += debugSettings.timePeriod; //прибавляем период для коррекции
@@ -1955,7 +1956,6 @@ void dataUpdate(void) //обработка данных
         tick_sec++; //прибавляем секунду
       }
     }
-
     RESET_WDT; //сбрасываем таймер WDT
   }
 
