@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.0 релиз от 17.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.0 релиз от 18.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3611,7 +3611,9 @@ void speakTime(void) //воспроизвести время
 //----------------------------------Показать дату-----------------------------------
 uint8_t showDate(void) //показать дату
 {
+#if (SHOW_DATE_TYPE < 2) || (LAMP_NUM < 6)
   uint8_t mode = 0; //текущий режим
+#endif
 
 #if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
   dotSetBright(dot.menuBright); //включаем точки
