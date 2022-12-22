@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.0 релиз от 18.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.1 релиз от 22.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -15,7 +15,11 @@ enum {
   TEMP_SENS_ERROR,     //0005 - ошибка выбранный датчик температуры не обнаружен
   VCC_ERROR,           //0006 - ошибка напряжения питания
   MEMORY_ERROR,        //0007 - ошибка памяти еепром
-  RESET_ERROR          //0008 - ошибка софтовой перезагрузки
+  RESET_ERROR,         //0008 - ошибка софтовой перезагрузки
+  CONVERTER_ERROR,     //0009 - ошибка сбоя работы преобразователя
+  STACK_OVF_ERROR,     //0010 - ошибка переполнения стека
+  TICK_OVF_ERROR,      //0011 - ошибка переполнения тиков времени
+  INDI_ERROR           //0012 - ошибка сбоя работы динамической индикации
 };
 void dataUpdate(void); //процедура обработки данных
 void SET_ERROR(uint8_t err); //процедура установка ошибки
@@ -461,7 +465,8 @@ uint8_t mainTask = MAIN_PROGRAM; //переключать подпрограмм
 #define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио
 #define EEPROM_BLOCK_SETTINGS_DEBUG (EEPROM_BLOCK_SETTINGS_RADIO + sizeof(radioSettings)) //блок памяти настроек отладки
 #define EEPROM_BLOCK_ERROR (EEPROM_BLOCK_SETTINGS_DEBUG + sizeof(debugSettings)) //блок памяти ошибок
-#define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_ERROR + 1) //блок памяти количества будильников
+#define EEPROM_BLOCK_EXT_ERROR (EEPROM_BLOCK_ERROR + 1) //блок памяти расширеных ошибок
+#define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_EXT_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + 1) //блок памяти контрольной суммы настроек
 #define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы времени
@@ -471,7 +476,8 @@ uint8_t mainTask = MAIN_PROGRAM; //переключать подпрограмм
 #define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
 #define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок контрольной суммы памяти ошибок
-#define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы количества будильников
+#define EEPROM_BLOCK_CRC_EXT_ERROR (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы памяти расширеных ошибок
+#define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_EXT_ERROR + 1) //блок контрольной суммы количества будильников
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ALARM + 1) //первая ячейка памяти будильников
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
@@ -595,6 +601,7 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
+  if (checkByte(EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR)) updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //если контрольная сумма расширеных ошибок не совпала
 
   checkVCC(); //чтение напряжения питания
 
@@ -724,9 +731,17 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
 //-----------------------------Установка ошибки---------------------------------
 void SET_ERROR(uint8_t err) //установка ошибки
 {
-  uint8_t _error_bit = (0x01 << err); //выбрали флаг ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
-  EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
+  uint8_t _error_bit = 0; //флаг ошибки
+  if (err < 8) { //если номер ошибки не привышает первый блок
+    _error_bit = (0x01 << err); //выбрали флаг ошибки
+    EEPROM_UpdateByte(EEPROM_BLOCK_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | _error_bit); //обновили ячейку ошибки
+    EEPROM_UpdateByte(EEPROM_BLOCK_CRC_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы ошибки
+  }
+  else { //иначе расширеная ошибка
+    _error_bit = (0x01 << (err - 8)); //выбрали флаг ошибки
+    EEPROM_UpdateByte(EEPROM_BLOCK_EXT_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) | _error_bit); //обновили ячейку расширеной ошибки
+    EEPROM_UpdateByte(EEPROM_BLOCK_CRC_EXT_ERROR, EEPROM_ReadByte(EEPROM_BLOCK_CRC_EXT_ERROR) & (_error_bit ^ 0xFF)); //обновили ячейку контрольной суммы расширеной ошибки
+  }
 }
 //--------------------------Установка таймеров анимаций-------------------------
 void setAnimTimers(void) //установка таймеров анимаций
@@ -1180,9 +1195,9 @@ void checkRTC(void) //проверка модуля часов реальног�
 //-----------------------------Проверка ошибок-------------------------------------
 void checkErrors(void) //проверка ошибок
 {
-  uint8_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR); //прочитали регистр ошибок
+  uint16_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | ((uint16_t)EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) << 8); //прочитали регистр ошибок
   if (_error_reg) { //если есть ошибка
-    for (uint8_t i = 0; i < 8; i++) { //проверяем весь регистр
+    for (uint8_t i = 0; i < 12; i++) { //проверяем весь регистр
       if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
         indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
 #if PLAYER_TYPE
@@ -1195,6 +1210,7 @@ void checkErrors(void) //проверка ошибок
       }
     }
     updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
+    updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //сбросили ошибки
   }
 }
 //---------------------------Проверка системы---------------------------------------
@@ -1929,6 +1945,8 @@ void dataUpdate(void) //обработка данных
 
   for (uint8_t _tick = tick_ms; _tick > 0; _tick--) { //если был тик то обрабатываем данные
     tick_ms--; //убавили счетчик миллисекунд
+
+    indiCheck(); //проверка состояния динамической индикации
     btn.state = buttonStateUpdate(); //обновление состояния кнопок
 
     timerCorrect += debugSettings.timePeriod; //прибавляем период для коррекции
@@ -1961,6 +1979,10 @@ void dataUpdate(void) //обработка данных
 
   if (tick_sec) { //если был тик, обрабатываем данные
     tick_sec--; //убавили счетчик секунд
+
+#if GEN_ENABLE
+    converterCheck(); //проверка состояния преобразователя
+#endif
 
     for (uint8_t tm = 0; tm < TIMERS_SEC_NUM; tm++) { //опрашиваем все таймеры
       if (_timer_sec[tm]) _timer_sec[tm]--; //если таймер активен

@@ -1,6 +1,6 @@
 #define FREQ_TICK (uint8_t)(constrain((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
-#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5), 0, 255)) //расчет максимального шага яркости для точек
+#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5) - 1, 0, 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)((LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
@@ -81,7 +81,13 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #endif
 #endif
 
-  if (!++tick_ms || !(SPH & 0xFC)) { //если превышено количество тиков или стек переполнен
+  if (!++tick_ms) { //если превышено количество тиков
+    SET_ERROR(TICK_OVF_ERROR); //устанавливаем ошибку переполнения тиков времени
+    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
+    RESET_SYSTEM; //перезагрузка
+  }
+  if (!(SPH & 0xFC)) { //если стек переполнен
+    SET_ERROR(STACK_OVF_ERROR); //устанавливаем ошибку переполнения стека
     SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
     RESET_SYSTEM; //перезагрузка
   }
@@ -116,6 +122,35 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
 }
 #endif
 
+//------------------------Проверка состояния динамической индикации-------------------------------
+void indiCheck(void) //проверка состояния динамической индикации
+{
+  if (OCR0A != FREQ_TICK) {
+    OCR0A = FREQ_TICK;
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+  if (OCR0B > LIGHT_MAX) {
+    OCR0B = LIGHT_MAX;
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+}
+//----------------------------Проверка состояния преобразователя----------------------------------
+void converterCheck(void) //проверка состояния преобразователя
+{
+  if (!(TCCR1A & ((0x01 << WGM10) | (0x01 << COM1A1))) ||
+#if GEN_SPEED_X2
+      !(TCCR1B & ((0x01 << CS10) | (0x01 << WGM12))))
+#else
+      !(TCCR1B & (0x01 << CS10)))
+#endif
+  {
+    TCCR1A = TCCR1B = 0;
+    CONV_DISABLE;
+    SET_ERROR(CONVERTER_ERROR); //устанавливаем ошибку сбоя работы преобразователя
+    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
+    RESET_SYSTEM; //перезагрузка
+  }
+}
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
@@ -171,7 +206,7 @@ void indiInit(void) //инициализация индикаторов
 #endif
 
   TIMSK1 = 0; //отключаем прерывания Таймера1
-  TCCR1A = (0x01 << WGM10); //режим коррекция фазы шим
+  TCCR1A = (0x01 << WGM10); //режим коррекции фазы шим
 #if GEN_SPEED_X2
   TCCR1B = (0x01 << CS10) | (0x01 << WGM12);  //задаем частоту 62 кГц
 #else
