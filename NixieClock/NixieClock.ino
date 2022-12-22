@@ -17,9 +17,10 @@ enum {
   MEMORY_ERROR,        //0007 - ошибка памяти еепром
   RESET_ERROR,         //0008 - ошибка софтовой перезагрузки
   CONVERTER_ERROR,     //0009 - ошибка сбоя работы преобразователя
-  STACK_OVF_ERROR,     //0010 - ошибка переполнения стека
-  TICK_OVF_ERROR,      //0011 - ошибка переполнения тиков времени
-  INDI_ERROR           //0012 - ошибка сбоя работы динамической индикации
+  PWM_OVF_ERROR,       //0010 - ошибка переполнения заполнения шим преобразователя
+  STACK_OVF_ERROR,     //0011 - ошибка переполнения стека
+  TICK_OVF_ERROR,      //0012 - ошибка переполнения тиков времени
+  INDI_ERROR           //0013 - ошибка сбоя работы динамической индикации
 };
 void dataUpdate(void); //процедура обработки данных
 void SET_ERROR(uint8_t err); //процедура установка ошибки
@@ -1197,7 +1198,7 @@ void checkErrors(void) //проверка ошибок
 {
   uint16_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | ((uint16_t)EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) << 8); //прочитали регистр ошибок
   if (_error_reg) { //если есть ошибка
-    for (uint8_t i = 0; i < 12; i++) { //проверяем весь регистр
+    for (uint8_t i = 0; i < 13; i++) { //проверяем весь регистр
       if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
         indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
 #if PLAYER_TYPE
