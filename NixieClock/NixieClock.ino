@@ -1205,9 +1205,17 @@ void checkErrors(void) //проверка ошибок
         playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим трек ошибки
         playerSpeakNumber(i + 1); //воспроизводим номер ошибки
 #else
-        melodyPlay(i, SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим мелодию
+        uint8_t _sound_bit = 0; //указатель на бит ошибки
 #endif
-        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) {
+          dataUpdate(); //обработка данных
+#if !PLAYER_TYPE
+          if ((sound.replay == REPLAY_STOP) && (_sound_bit < 4)) { //если звук не играет
+            melodyPlay((boolean)(i & (0x01 << _sound_bit)), SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим звук
+            _sound_bit++; //сместили указатель
+          }
+#endif
+        }
       }
     }
     updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
