@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.2 релиз от 24.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.2 релиз от 25.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -5195,19 +5195,19 @@ void flipSecs(void) //анимация секунд
 }
 #endif
 //----------------------------------Анимация цифр-----------------------------------
-void animIndi(uint8_t flipMode, uint8_t type) //анимация цифр
+void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
-  switch (flipMode) {
+  switch (mode) {
     case 0: return; //без анимации
-    case 1: if (type == FLIP_DEMO) return; else flipMode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
+    case 1: if (type == FLIP_DEMO) return; else mode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
   }
 
-  flipMode -= 2; //установили режим
-  flipIndi(flipMode, type); //перешли в отрисовку анимации
+  mode -= 2; //установили режим
+  flipIndi(mode, type); //перешли в отрисовку анимации
   animPrintBuff(0, 6, LAMP_NUM); //отрисовали буфер
 }
 //----------------------------------Анимация цифр-----------------------------------
-void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
+void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   uint8_t changeBuffer[6]; //буфер анимаций
   uint8_t changeIndi = 0; //флаги разрядов
@@ -5229,7 +5229,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
 
   for (uint8_t i = 0; i < LAMP_NUM; i++) anim.flipBuffer[i] = indiGet(i);
 
-  switch (flipMode) {
+  switch (mode) {
     case FLIP_ORDER_OF_NUMBERS:
     case FLIP_ORDER_OF_CATHODES:
     case FLIP_SLOT_MACHINE:
@@ -5237,7 +5237,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
         anim.flipBuffer[i] = animDecodeNum(anim.flipBuffer[i]);
         changeBuffer[i] = animDecodeNum(anim.flipBuffer[i + 6]);
         if (type == FLIP_DEMO) anim.flipBuffer[i]--;
-        if (anim.flipBuffer[i] != changeBuffer[i]) {
+        else if ((anim.flipBuffer[i] != changeBuffer[i]) || (mode == FLIP_SLOT_MACHINE)) {
           if (changeBuffer[i] == 10) changeBuffer[i] = (anim.flipBuffer[i]) ? (anim.flipBuffer[i] - 1) : 9;
           if (anim.flipBuffer[i] == 10) anim.flipBuffer[i] = (changeBuffer[i]) ? (changeBuffer[i] - 1) : 9;
         }
@@ -5247,9 +5247,9 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
 
   _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
 
-  switch (flipMode) { //режим анимации перелистывания
+  switch (mode) { //режим анимации перелистывания
     case FLIP_BRIGHT: { //плавное угасание и появление
-        changeBuffer[1] = indi.maxBright; //установили максимальную яркость
+        changeBuffer[0] = indi.maxBright; //установили максимальную яркость
         anim.timeBright = FLIP_MODE_2_TIME / indi.maxBright; //расчёт шага яркости режима 2
 
         while (!buttonState()) {
@@ -5293,7 +5293,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                 indiPrintNum(anim.flipBuffer[i], i);
               }
               else {
-                if (anim.flipBuffer[i + 6] == 10) indiClr(i); //очистка индикатора
+                if (anim.flipBuffer[i + 6] == indi_null) indiClr(i); //очистка индикатора
                 changeIndi--; //иначе завершаем анимацию для разряда
               }
             }
@@ -5330,7 +5330,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                 indiPrintNum(cathodeMask[anim.flipBuffer[i]], i);
               }
               else {
-                if (anim.flipBuffer[i + 6] == 10) indiClr(i);  //очистка индикатора
+                if (anim.flipBuffer[i + 6] == indi_null) indiClr(i);  //очистка индикатора
                 changeIndi--; //иначе завершаем анимацию для разряда
               }
             }
@@ -5398,7 +5398,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                   }
                   break;
               }
-              _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
+              if (anim.flipBuffer[((LAMP_NUM - 1) - i) + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
             }
           }
         }
@@ -5449,7 +5449,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                   indiSet(anim.flipBuffer[6 + i], i); //вывод часов
                   break;
               }
-              _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
+              if (anim.flipBuffer[i + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
             }
           }
         }
@@ -5464,12 +5464,12 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
             if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
               for (uint8_t b = 0; b < i; b++) {
-                while (anim.flipBuffer[b] == changeIndi) {
+                while (changeBuffer[b] == changeIndi) {
                   changeIndi = random(0, LAMP_NUM);
                   b = 0;
                 }
               }
-              anim.flipBuffer[i] = changeIndi;
+              changeBuffer[i] = changeIndi;
               switch (c) {
                 case 0: indiClr(changeIndi); break; //очистка индикатора
                 case 1:
@@ -5481,7 +5481,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                   break; //вывод часов
               }
               c++; //прибавляем цикл
-              _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
+              if (anim.flipBuffer[changeIndi + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
             }
           }
         }
@@ -5496,12 +5496,12 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
             if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
               for (uint8_t b = 0; b < i; b++) {
-                while (anim.flipBuffer[b] == changeIndi) {
+                while (changeBuffer[b] == changeIndi) {
                   changeIndi = random(0, LAMP_NUM);
                   b = 0;
                 }
               }
-              anim.flipBuffer[i] = changeIndi;
+              changeBuffer[i] = changeIndi;
               switch (c) {
                 case 0: indiClr(changeIndi); break; //очистка индикатора
                 case 1:
@@ -5512,7 +5512,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
                   break;
               }
               i++; //прибавляем цикл
-              _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
+              if (anim.flipBuffer[changeIndi + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
             }
           }
         }
@@ -5527,8 +5527,8 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
 #if LAMP_NUM > 4
             if (type != FLIP_NORMAL) {
-              anim.flipBuffer[10] = RTC.s / 10; //секунды
-              anim.flipBuffer[11] = RTC.s % 10; //секунды
+              changeBuffer[4] = RTC.s / 10; //секунды
+              changeBuffer[5] = RTC.s % 10; //секунды
             }
 #endif
             for (uint8_t b = i; b < LAMP_NUM; b++) {
@@ -5536,7 +5536,7 @@ void flipIndi(uint8_t flipMode, uint8_t type) //анимация цифр
               indiPrintNum(anim.flipBuffer[b], b); //выводим разряд
             }
             if (anim.flipBuffer[i] == changeBuffer[i]) { //если разряд совпал
-              if (anim.flipBuffer[i + 6] == 10) indiClr(i); //очистка индикатора
+              if (anim.flipBuffer[i + 6] == indi_null) indiClr(i); //очистка индикатора
               changeIndi += FLIP_MODE_11_STEP; //добавили шаг
               i++; //завершаем анимацию для разряда
             }
