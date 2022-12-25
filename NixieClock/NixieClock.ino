@@ -5230,6 +5230,18 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
   for (uint8_t i = 0; i < LAMP_NUM; i++) anim.flipBuffer[i] = indiGet(i);
 
   switch (mode) {
+    case FLIP_BRIGHT:
+    case FLIP_GATES:
+      changeBuffer[0] = 0; //сбросили максимальную яркость
+      if (mode != FLIP_BRIGHT) changeIndi = 1; //перешли к второму этапу
+      for (uint8_t i = 0; i < LAMP_NUM; i++) {
+        if (anim.flipBuffer[i] != indi_null) {
+          changeBuffer[0] = indi.maxBright; //установили максимальную яркость
+          changeIndi = 0; //перешли к второму этапу
+          break; //продолжаем
+        }
+      }
+      break;
     case FLIP_ORDER_OF_NUMBERS:
     case FLIP_ORDER_OF_CATHODES:
     case FLIP_SLOT_MACHINE:
@@ -5249,7 +5261,6 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 
   switch (mode) { //режим анимации перелистывания
     case FLIP_BRIGHT: { //плавное угасание и появление
-        changeBuffer[0] = indi.maxBright; //установили максимальную яркость
         anim.timeBright = FLIP_MODE_2_TIME / indi.maxBright; //расчёт шага яркости режима 2
 
         while (!buttonState()) {
@@ -5341,27 +5352,17 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       }
       break;
     case FLIP_TRAIN: { //поезд
-        for (uint8_t c = 0; c < 2; c++) {
-          for (uint8_t i = 0; i < LAMP_NUM;) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-              indiClr(); //очистка индикатора
-              switch (c) {
-                case 0:
-                  animPrintBuff(i + 1, 0, LAMP_NUM);
-                  break;
-                case 1:
+        for (uint8_t i = 0; i < (LAMP_NUM + FLIP_MODE_5_STEP - 1); i++) {
+          indiClr(); //очистка индикатора
+          animPrintBuff(i + 1, 0, LAMP_NUM);
 #if LAMP_NUM > 4
-                  if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+          if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
 #endif
-                  animPrintBuff(i - (LAMP_NUM - 1), 6, LAMP_NUM);
-                  break;
-              }
-              i++; //прибавляем цикл
-              _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
-            }
+          animPrintBuff(i - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
+          _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
+          while (_timer_ms[TMR_ANIM]) { //ждем
+            dataUpdate(); //обработка данных
+            if (buttonState()) return; //возврат если нажата кнопка
           }
         }
       }
@@ -5405,30 +5406,29 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       }
       break;
     case FLIP_GATES: { //ворота
-        for (uint8_t c = 0; c < 2; c++) {
+        while (changeIndi < 2) {
           for (uint8_t i = 0; i < ((LAMP_NUM / 2) + 1);) {
             dataUpdate(); //обработка данных
 
             if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
               indiClr(); //очистка индикатора
-              switch (c) {
-                case 0:
-                  animPrintBuff(-i, 0, (LAMP_NUM / 2));
-                  animPrintBuff(i + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
-                  break;
-                case 1:
+              if (!changeIndi) {
+                animPrintBuff(-i, 0, (LAMP_NUM / 2));
+                animPrintBuff(i + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
+              }
+              else {
 #if LAMP_NUM > 4
-                  if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+                if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
 #endif
-                  animPrintBuff(i - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
-                  animPrintBuff(LAMP_NUM - i, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
-                  break;
+                animPrintBuff(i - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
+                animPrintBuff(LAMP_NUM - i, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
               }
               i++; //прибавляем цикл
               _timer_ms[TMR_ANIM] = FLIP_MODE_7_TIME; //устанавливаем таймер
             }
           }
+          changeIndi++; //прибавляем цикл
         }
       }
       break;
