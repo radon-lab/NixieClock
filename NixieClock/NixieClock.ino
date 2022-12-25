@@ -5231,9 +5231,10 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 
   switch (mode) {
     case FLIP_BRIGHT:
+    case FLIP_TRAIN:
     case FLIP_GATES:
       changeBuffer[0] = 0; //сбросили максимальную яркость
-      if (mode != FLIP_BRIGHT) changeIndi = 1; //перешли к второму этапу
+      if (mode != FLIP_BRIGHT) changeIndi = (mode != FLIP_TRAIN) ? 1 : FLIP_MODE_5_STEP; //перешли к второму этапу
       for (uint8_t i = 0; i < LAMP_NUM; i++) {
         if (anim.flipBuffer[i] != indi_null) {
           changeBuffer[0] = indi.maxBright; //установили максимальную яркость
@@ -5352,13 +5353,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       }
       break;
     case FLIP_TRAIN: { //поезд
-        for (uint8_t i = 0; i < (LAMP_NUM + FLIP_MODE_5_STEP - 1); i++) {
+        for (; changeIndi < (LAMP_NUM + FLIP_MODE_5_STEP - 1); changeIndi++) {
           indiClr(); //очистка индикатора
-          animPrintBuff(i + 1, 0, LAMP_NUM);
+          animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
 #if LAMP_NUM > 4
           if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
 #endif
-          animPrintBuff(i - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
+          animPrintBuff(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
           _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
           while (_timer_ms[TMR_ANIM]) { //ждем
             dataUpdate(); //обработка данных
