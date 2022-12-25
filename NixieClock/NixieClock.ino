@@ -3509,6 +3509,7 @@ void autoShowTemp(void) //автоматический показ темпера
       if (buttonState()) return; //возврат если нажата кнопка
     }
   }
+  animShow = ANIM_MAIN; //установили флаг анимации
 }
 //--------------------------------Показать температуру----------------------------------------
 uint8_t showTemp(void) //показать температуру
@@ -5597,7 +5598,6 @@ uint8_t mainScreen(void) //главный экран
           autoShowTemp(); //автоматическое отображение температуры
           _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
           changeAnimState = 2; //установили тип анимации
-          animShow = ANIM_MAIN; //установили флаг анимации
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
