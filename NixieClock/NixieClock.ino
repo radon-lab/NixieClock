@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.2 релиз от 25.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 29.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -102,6 +102,7 @@ struct Settings_1 {
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
+  uint8_t autoTempFlip = DEFAULT_AUTO_TEMP_ANIM; //режим анимации показа температуры
   uint8_t burnMode = DEFAULT_BURN_MODE; //режим антиотравления индикаторов
   uint8_t secsMode = DEFAULT_SECONDS_ANIM; //режим анимации секунд индикаторов
 } mainSettings;
@@ -409,7 +410,8 @@ enum {
   ANIM_NULL, //нет анимации
   ANIM_SECS, //запуск анимации секунд
   ANIM_MINS, //запуск анимации минут
-  ANIM_MAIN //запуск основной анимации
+  ANIM_MAIN, //запуск основной анимации
+  ANIM_OTHER //запуск иной анимации
 };
 
 //перечисления режимов времени
@@ -677,12 +679,18 @@ void INIT_SYSTEM(void) //инициализация
   checkTempSens(); //проверка установленного датчика температуры
 #endif
 
+  if (!LEFT_CHK) { //если левая кнопка зажата
 #if DEBUG_PASS_ENABLE
-  if (!LEFT_CHK && check_pass()) debug_menu(); //если левая кнопка зажата запускаем отладку
-#else
-  if (!LEFT_CHK) debug_menu(); //если левая кнопка зажата запускаем отладку
+    if (check_pass()) //если пароль верный
 #endif
-  if (!RIGHT_CHK) test_system(); //если правая кнопка зажата запускаем тест системы
+      debug_menu(); //запускаем отладку
+  }
+  else if (!RIGHT_CHK) test_system(); //если правая кнопка зажата запускаем тест системы
+#if FLIP_ANIM_START == 1
+  else animShow = ANIM_MAIN; //установили флаг анимации
+#elif FLIP_ANIM_START > 1
+  else animShow = (ANIM_OTHER + FLIP_ANIM_START); //установили флаг анимации
+#endif
 
   checkErrors(); //проверка на наличие ошибок
 
@@ -701,7 +709,7 @@ void INIT_SYSTEM(void) //инициализация
 #if ALARM_TYPE
   checkAlarms(); //проверка будильников
 #endif
-  animShow = ANIM_MAIN; //установили флаг анимации
+
   mainTask = MAIN_PROGRAM; //установили основную программу
 }
 //-----------------------------Прерывание от RTC--------------------------------
@@ -746,8 +754,8 @@ void SET_ERROR(uint8_t err) //установка ошибки
 //--------------------------Установка таймеров анимаций-------------------------
 void setAnimTimers(void) //установка таймеров анимаций
 {
-  _timer_sec[TMR_BURN] = ((uint16_t)BURN_PERIOD * 60) - RTC.s; //устанавливаем таймер антиотравления
-  _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+  _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+  _timer_sec[TMR_BURN] = getPhaseTime(BURN_PERIOD, BURN_PHASE); //установка таймера антиотравления
   _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
 }
 //-------------------------Разрешить анимации подсветки-------------------------
@@ -815,6 +823,11 @@ boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яр�
 uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
 {
   return (timeH > 12) ? (timeH - 12) : (timeH) ? timeH : 12; //возвращаем результат
+}
+//---------------------------------Получить время со сдвигом фазы-----------------------------------------
+uint16_t getPhaseTime(uint8_t time, int8_t phase) //получить время со сдвигом фазы
+{
+  return ((uint16_t)time * 60) + (phase - RTC.s) - ((RTC.s >= phase) ? 0 : 60);  //возвращаем результат
 }
 //------------------------Сверка контрольной суммы---------------------------------
 void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
@@ -1197,6 +1210,11 @@ void checkErrors(void) //проверка ошибок
 {
   uint16_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | ((uint16_t)EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) << 8); //прочитали регистр ошибок
   if (_error_reg) { //если есть ошибка
+#if FLIP_ANIM_START == 1
+    animShow = ANIM_MAIN; //установили флаг анимации
+#elif FLIP_ANIM_START > 1
+    animShow = (ANIM_OTHER + FLIP_ANIM_START); //установили флаг анимации
+#endif
     for (uint8_t i = 0; i < 13; i++) { //проверяем весь регистр
       if (_error_reg & (0x01 << i)) { //если стоит флаг ошибки
         indiPrintNum(i + 1, 0, 4, 0); //вывод ошибки
@@ -1206,8 +1224,14 @@ void checkErrors(void) //проверка ошибок
 #else
         uint8_t _sound_bit = 0; //указатель на бит ошибки
 #endif
-        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; !buttonState() && _timer_ms[TMR_MS];) {
+        for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; _timer_ms[TMR_MS];) {
           dataUpdate(); //обработка данных
+          if (buttonState()) { //если нажата кнопка
+#if FLIP_ANIM_START
+            animShow = ANIM_NULL; //сбросили флаг анимации
+#endif
+            break;
+          }
 #if !PLAYER_TYPE
           if ((sound.replay == REPLAY_STOP) && (_sound_bit < 4)) { //если звук не играет
             melodyPlay((boolean)(i & (0x01 << _sound_bit)), SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим звук
@@ -1264,7 +1288,7 @@ void test_system(void) //проверка системы
 #endif
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
           dataUpdate(); //обработка данных
-          if (buttonState()) return; //возврат если нажата кнопка
+          if (buttonState()) return; //выходим если нажата кнопка
         }
       }
 #if BACKL_TYPE == 3
@@ -1294,7 +1318,14 @@ boolean check_pass(void) //проверка пароля
 
     if (!secUpd) {
       secUpd = 1; //сбросили флаг
-      if (++time_out >= DEBUG_TIMEOUT) return 0; //если время вышло то выходим
+      if (++time_out >= DEBUG_TIMEOUT) { //если время вышло
+#if FLIP_ANIM_START == 1
+        animShow = ANIM_MAIN; //установили флаг анимации
+#elif FLIP_ANIM_START > 1
+        animShow = (ANIM_OTHER + FLIP_ANIM_START); //установили флаг анимации
+#endif
+        return 0; //выходим
+      }
     }
 
     if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
@@ -1338,12 +1369,12 @@ boolean check_pass(void) //проверка пароля
         cur_indi = 0; //сбросили текущий индикатор
         entry_pass = 0; //сбросили введеный пароль
 #if PLAYER_TYPE
-        playerSetTrack(PLAYER_PASS_SOUND, PLAYER_GENERAL_FOLDER);
+        playerSetTrack(PLAYER_PASS_SOUND, PLAYER_GENERAL_FOLDER); //сигнал ошибки ввода пароля
 #else
         melodyPlay(SOUND_PASS_ERROR, SOUND_LINK(general_sound), REPLAY_ONCE); //сигнал ошибки ввода пароля
 #endif
-        if (++attempts_pass >= DEBUG_PASS_ATTEMPTS) return 0; //превышено количество попыток ввода пароля
-        break; //пароль не совпал
+        if (++attempts_pass >= DEBUG_PASS_ATTEMPTS) return 0; //выходим если превышено количество попыток ввода пароля
+        break;
     }
   }
   return 0;
@@ -1600,7 +1631,7 @@ void debug_menu(void) //отладка
       case SET_KEY_HOLD: //удержание средней кнопки
         if (!set) { //если не в режиме настройки
           updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
-          return;
+          return; //выходим
         }
         break;
     }
@@ -2020,7 +2051,7 @@ void dataUpdate(void) //обработка данных
     secUpd = dot.update = 0; //очищаем флаги секунды и точек
 
 #if LAMP_NUM > 4
-    if (mainSettings.secsMode) animShow = ANIM_SECS; //показать анимацию переключения цифр
+    if (mainSettings.secsMode && animShow == ANIM_NULL) animShow = ANIM_SECS; //показать анимацию переключения цифр
 #endif
 
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
@@ -2051,7 +2082,7 @@ void dataUpdate(void) //обработка данных
         changeBright(); //установка яркости от времени суток
         if (mainTask == MAIN_PROGRAM || mainTask == SLEEP_PROGRAM) hourSound(); //звук смены часа
       }
-      if (fastSettings.flipMode) animShow = ANIM_MINS; //показать анимацию переключения цифр
+      if (fastSettings.flipMode && animShow < ANIM_MAIN) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
       checkAlarms(); //проверяем будильники на совпадение
 #endif
@@ -2939,6 +2970,7 @@ uint8_t settings_main(void) //настроки основные
   boolean cur_indi = 0; //текущий индикатор
   boolean blink_data = 0; //мигание сигментами
   uint8_t cur_mode = 0; //текущий режим
+  uint8_t animDemo = 0; //флаг демонстрации анимации
   uint8_t time_out = 0; //таймаут автовыхода
 
   _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -2981,86 +3013,106 @@ uint8_t settings_main(void) //настроки основные
 #endif
           break;
         case 1:
-          indiPrintNum(cur_mode + 1, 4, 2); //режим
-          switch (cur_mode) {
-            case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
-            case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
-            case SET_BTN_SOUND: //вывод звука кнопок
-#if PLAYER_TYPE
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.volumeSound, 0, 2, 0); //громкость озвучки
-#else
-              if (!blink_data) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
-#endif
-              break;
-            case SET_HOUR_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[TIME_NIGHT], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[TIME_DAY], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
-              break;
-            case SET_BRIGHT_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[TIME_NIGHT], 0, 2, 0); //вывод часа начала ночной посветки
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[TIME_DAY], 2, 2, 0); //вывод часа окончания ночной посветки
-              break;
-            case SET_INDI_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[TIME_NIGHT], 0, 2, 0); //яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[TIME_DAY], 2, 2, 0); //вывод яркости день
-              break;
-#if BACKL_TYPE
-            case SET_BACKL_BRIGHT:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[TIME_NIGHT] / 10, 0, 2, 0); //яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
-              break;
-#endif
-            case SET_DOT_BRIGHT:
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[TIME_NIGHT] / 10, 0, 2, 0); //вывод яркости ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
-#else
-              if (!blink_data) indiPrintNum((boolean)mainSettings.dotBright[TIME_NIGHT], 3); //вывод яркости ночь
-#endif
-              break;
-            case SET_TEMP_SENS:
-              if (!blink_data) {
-                if (sens.err) indiPrintNum(0, 0); //вывод ошибки
-                else indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3); //вывод температуры
-              }
-              indiPrintNum(sens.type, 3); //вывод сенсора температуры
-              break;
-            case SET_AUTO_TEMP:
-              if (!blink_data) indiPrintNum(mainSettings.autoTempTime, 1, 3); //вывод времени автопоказа температуры
-              break;
-            case SET_BURN_MODE:
-#if LAMP_NUM > 4
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.burnMode, 0, 2, 0); //вывод анимации антиотравления индикаторов
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.secsMode, 2, 2, 0); //вывод анимации антиотравления индикаторов
-#else
-              if (!blink_data) indiPrintNum(mainSettings.burnMode, 0, 2, 0); //вывод анимации антиотравления индикаторов
-#endif
-              break;
-            case SET_SLEEP_TIME:
-              if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeSleep[TIME_NIGHT], 0, 2, 0); //вывод времени ночь
-              if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeSleep[TIME_DAY], 2, 2, 0); //вывод времени день
-              break;
-          }
+          if (animDemo == 1) { //если нужно отобразить демонстрацию эффекта
+            animDemo = 0; //сбросили флаг демонстрации
 #if BACKL_TYPE == 3
-          switch (cur_mode) {
-            case SET_TIME_FORMAT: setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+            setLedHue(BACKL_MENU_COLOR_1, WHITE_ON); //подсветка активных разрядов
+#endif
+            switch (cur_mode) {
+              case SET_AUTO_TEMP: animIndi(mainSettings.autoTempFlip, FLIP_DEMO); break; //демонстрация анимации показа температуры
+              case SET_BURN_MODE:
+                burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                dotSetBright(dot.menuBright); //включаем точки
+                break;
+            }
+            _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
+          }
+          else {
+            if (animDemo > 1) { //если нужно отобразить анимацию
+              animDemo = 1; //перешли в режим анимации
+              _timer_ms[TMR_MS] = SETTINGS_WAIT_TIME; //устанавливаем таймер
+            }
+            indiPrintNum(cur_mode + 1, 4, 2); //режим
+            switch (cur_mode) {
+              case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
+              case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
+              case SET_BTN_SOUND: //вывод звука кнопок
+#if PLAYER_TYPE
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.volumeSound, 0, 2, 0); //громкость озвучки
+#else
+                if (!blink_data) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
+#endif
+                break;
+              case SET_HOUR_TIME:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeHour[TIME_NIGHT], 0, 2, 0); //вывод часа начала звукового оповещения нового часа
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeHour[TIME_DAY], 2, 2, 0); //вывод часа окончания звукового оповещения нового часа
+                break;
+              case SET_BRIGHT_TIME:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeBright[TIME_NIGHT], 0, 2, 0); //вывод часа начала ночной посветки
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeBright[TIME_DAY], 2, 2, 0); //вывод часа окончания ночной посветки
+                break;
+              case SET_INDI_BRIGHT:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.indiBright[TIME_NIGHT], 0, 2, 0); //яркости ночь
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.indiBright[TIME_DAY], 2, 2, 0); //вывод яркости день
+                break;
+#if BACKL_TYPE
+              case SET_BACKL_BRIGHT:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.backlBright[TIME_NIGHT] / 10, 0, 2, 0); //яркости ночь
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.backlBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
+                break;
+#endif
+              case SET_DOT_BRIGHT:
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.dotBright[TIME_NIGHT] / 10, 0, 2, 0); //вывод яркости ночь
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.dotBright[TIME_DAY] / 10, 2, 2, 0); //вывод яркости день
+#else
+                if (!blink_data) indiPrintNum((boolean)mainSettings.dotBright[TIME_NIGHT], 3); //вывод яркости ночь
+#endif
+                break;
+              case SET_TEMP_SENS:
+                if (!blink_data) {
+                  if (sens.err) indiPrintNum(0, 0); //вывод ошибки
+                  else indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3); //вывод температуры
+                }
+                indiPrintNum(sens.type, 3); //вывод сенсора температуры
+                break;
+              case SET_AUTO_TEMP:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.autoTempTime, 0, 2, 0); //вывод времени автопоказа температуры
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.autoTempFlip, 2, 2, 0); //вывод анимации автопоказа температуры
+                break;
+              case SET_BURN_MODE:
+#if LAMP_NUM > 4
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.burnMode, 0, 2, 0); //вывод анимации антиотравления индикаторов
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.secsMode, 2, 2, 0); //вывод анимации антиотравления индикаторов
+#else
+                if (!blink_data) indiPrintNum(mainSettings.burnMode, 0, 2, 0); //вывод анимации антиотравления индикаторов
+#endif
+                break;
+              case SET_SLEEP_TIME:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.timeSleep[TIME_NIGHT], 0, 2, 0); //вывод времени ночь
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.timeSleep[TIME_DAY], 2, 2, 0); //вывод времени день
+                break;
+            }
+#if BACKL_TYPE == 3
+            switch (cur_mode) {
+              case SET_TIME_FORMAT: setBacklHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if (NEON_DOT == 3) && DOTS_PORT_ENABLE
-            case SET_DOT_BRIGHT:
+              case SET_DOT_BRIGHT:
 #endif
 #if PLAYER_TYPE
-            case SET_BTN_SOUND:
+              case SET_BTN_SOUND:
 #endif
-            case SET_GLITCH: setBacklHue(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-            case SET_TEMP_SENS: setBacklHue(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-            case SET_AUTO_TEMP: setBacklHue(1, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              case SET_GLITCH: setBacklHue(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              case SET_TEMP_SENS: setBacklHue(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if LAMP_NUM < 6
-            case SET_BURN_MODE: setBacklHue(0, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              case SET_BURN_MODE: setBacklHue(0, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
-            default: setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              default: setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+            }
+#endif
+            blink_data = !blink_data; //мигание сигментами
           }
-#endif
-          blink_data = !blink_data; //мигание сигментами
           break;
       }
     }
@@ -3137,16 +3189,23 @@ uint8_t settings_main(void) //настроки основные
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
-                if (mainSettings.autoTempTime > 30) mainSettings.autoTempTime -= 30; else mainSettings.autoTempTime = 0;
-                _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+                switch (cur_indi) {
+                  case 0:
+                    if (mainSettings.autoTempTime > 0) mainSettings.autoTempTime--; else mainSettings.autoTempTime = 15;
+                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+                    break;
+                  case 1:
+                    if (mainSettings.autoTempFlip > 0) mainSettings.autoTempFlip--; else mainSettings.autoTempFlip = (FLIP_EFFECT_NUM + 1); //устанавливаем анимацию автопоказа температуры
+                    if (mainSettings.autoTempFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
+                    break;
+                }
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
                 switch (cur_indi) {
                   case 0:
                     if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
-                    burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                    dotSetBright(dot.menuBright); //включаем точки
+                    animDemo = 2; //установили флаг демонстрации анимации
                     break;
                   case 1: if (mainSettings.secsMode) mainSettings.secsMode--; else mainSettings.secsMode = (SECS_EFFECT_NUM - 1); break;
                 }
@@ -3238,16 +3297,23 @@ uint8_t settings_main(void) //настроки основные
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
               case SET_AUTO_TEMP: //автопоказ температуры
-                if (mainSettings.autoTempTime < 240) mainSettings.autoTempTime += 30; else mainSettings.autoTempTime = 240;
-                _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+                switch (cur_indi) {
+                  case 0:
+                    if (mainSettings.autoTempTime < 15) mainSettings.autoTempTime++; else mainSettings.autoTempTime = 0;
+                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+                    break;
+                  case 1:
+                    if (mainSettings.autoTempFlip < (FLIP_EFFECT_NUM + 1)) mainSettings.autoTempFlip++; else mainSettings.autoTempFlip = 0; //устанавливаем анимацию автопоказа температуры
+                    if (mainSettings.autoTempFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
+                    break;
+                }
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
 #if LAMP_NUM > 4
                 switch (cur_indi) {
                   case 0:
                     if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
-                    burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                    dotSetBright(dot.menuBright); //включаем точки
+                    animDemo = 2; //установили флаг демонстрации анимации
                     break;
                   case 1: if (mainSettings.secsMode < (SECS_EFFECT_NUM - 1)) mainSettings.secsMode++; else mainSettings.secsMode = 0; break;
                 }
@@ -3308,7 +3374,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
         }
         cur_indi = 0;
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = animDemo = blink_data = 0; //сбрасываем флаги
         break;
 
       case LEFT_KEY_HOLD: //удержание левой кнопки
@@ -3327,7 +3393,7 @@ uint8_t settings_main(void) //настроки основные
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = animDemo = blink_data = 0; //сбрасываем флаги
         break;
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
@@ -3346,7 +3412,7 @@ uint8_t settings_main(void) //настроки основные
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
           }
         }
-        _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
+        _timer_ms[TMR_MS] = time_out = animDemo = blink_data = 0; //сбрасываем флаги
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
@@ -3406,44 +3472,9 @@ void autoShowTemp(void) //автоматический показ темпера
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-  backlAnimDisable(); //запретили эффекты подсветки
-#if AUTO_TEMP_BACKL_TYPE == 1
-  changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-  setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
-#else
-  setLedBright(backl.menuBright); //установили максимальную яркость
-#endif
-#endif
-
   _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
 
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
-    switch (mode) {
-      case 0:
-#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
-        if (sens.hum) continue; //возвращаемся назад
-#endif
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
-#endif
-        break;
-      case 1:
-        if (!sens.hum) continue; //возвращаемся назад
-#if !AUTO_TEMP_SHOW_HUM || (LAMP_NUM < 6)
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
-#endif
-#endif
-        break;
-      case 2:
-        if (!sens.press) return; //выходим
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
-#endif
-        break;
-    }
-
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем точки
 #endif
@@ -3453,11 +3484,12 @@ void autoShowTemp(void) //автоматический показ темпера
     animClearBuff(); //очистка буфера анимации
     switch (mode) {
       case 0:
-#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1)
+#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1) //режим отображения температуры и влажности
       case 1:
+        mode = 1; //установили режим
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
-        if (mode) animPrintNum(sens.hum, 4, 2, ' '); //если режим отображения температуры и влажности
-        animIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
+        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
         indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3475,10 +3507,18 @@ void autoShowTemp(void) //автоматический показ темпера
           setBacklHue(4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T);  //установили цвет температуры и влажности
           setLedHue(3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
         }
-#endif
+        else setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+        backlAnimDisable(); //запретили эффекты подсветки
+#if AUTO_TEMP_BACKL_TYPE == 1
+        changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+        setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
 #else
+        setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
+#endif
+#else //иначе режим отображения температуры
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
-        animIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
         indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3491,15 +3531,33 @@ void autoShowTemp(void) //автоматический показ темпера
 #endif
 #endif
 #endif
+#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+        backlAnimDisable(); //запретили эффекты подсветки
+#if AUTO_TEMP_BACKL_TYPE == 1
+        changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+        setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+        setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
+#endif
         break;
       case 1:
+        if (!sens.hum) continue; //возвращаемся назад
+#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
+#endif
         animPrintNum(sens.hum, 0, 4, ' '); //вывод влажности
-        animIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #endif
         break;
       case 2:
+        if (!sens.press) continue; //возвращаемся назад
+#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
+#endif
         animPrintNum(sens.press, 0, 4, ' '); //вывод давления
-        animIndi(fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
         break;
     }
 
@@ -3509,7 +3567,7 @@ void autoShowTemp(void) //автоматический показ темпера
       if (buttonState()) return; //возврат если нажата кнопка
     }
   }
-  animShow = ANIM_MAIN; //установили флаг анимации
+  animShow = (mainSettings.autoTempFlip) ? (ANIM_OTHER + mainSettings.autoTempFlip) : ANIM_MAIN; //установили флаг анимации
 }
 //--------------------------------Показать температуру----------------------------------------
 uint8_t showTemp(void) //показать температуру
@@ -5552,21 +5610,25 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 //-----------------------------Главный экран------------------------------------------------
 uint8_t mainScreen(void) //главный экран
 {
+  if (animShow < ANIM_MAIN) animShow = 0; //сбрасываем флаг анимации цифр
+  else if (animShow >= ANIM_OTHER) {
+    animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
+    animShow = 0; //сбрасываем флаг анимации цифр
+  }
+
   if (indi.sleepMode) { //если активен режим сна
     if (!changeAnimState) _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
     else if (_timer_sec[TMR_SLEEP] < RESET_TIME_SLEEP) _timer_sec[TMR_SLEEP] = RESET_TIME_SLEEP; //установли минимальное время ожидания режима пробуждения
   }
 
-  if (!_timer_sec[TMR_BURN]) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
-  if (!_timer_sec[TMR_TEMP]) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
-  if (!_timer_sec[TMR_GLITCH]) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
+  if (_timer_sec[TMR_GLITCH] < RESET_TIME_GLITCH) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
+  if (_timer_sec[TMR_BURN] < RESET_TIME_BURN) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
+  if (_timer_sec[TMR_TEMP] < RESET_TIME_TEMP) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
 
 #if LAMP_NUM > 4
   anim.flipSeconds = 0; //сбрасываем флаги анимации секунд
 #endif
   changeAnimState = 0; //сбрасываем флаг установки таймера сна
-  if (animShow != ANIM_MAIN) animShow = 0; //сбрасываем флаг анимации цифр
-  else animShow = ANIM_MINS; //установили флаг анимации
 
   for (;;) { //основной цикл
     dataUpdate(); //обработка данных
@@ -5587,7 +5649,7 @@ uint8_t mainScreen(void) //главный экран
 #endif
           if (mainSettings.burnMode != BURN_SINGLE_TIME) mainTask = SLEEP_PROGRAM; //подмена текущей программы
           burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
-          _timer_sec[TMR_BURN] = ((uint16_t)BURN_PERIOD * 60) - RTC.s; //устанавливаем таймер
+          _timer_sec[TMR_BURN] = getPhaseTime(BURN_PERIOD, BURN_PHASE); //установка таймера антиотравления
           if (mainSettings.burnMode != BURN_SINGLE_TIME) changeAnimState = 2; //установили тип анимации
           else changeAnimState = 1; //установили тип анимации
           return MAIN_PROGRAM; //перезапуск основной программы
@@ -5596,12 +5658,12 @@ uint8_t mainScreen(void) //главный экран
         if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP]) { //если пришло время отобразить температуру
           mainTask = SLEEP_PROGRAM; //подмена текущей программы
           autoShowTemp(); //автоматическое отображение температуры
-          _timer_sec[TMR_TEMP] = mainSettings.autoTempTime; //устанавливаем таймер автопоказа температуры
+          _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
           changeAnimState = 2; //установили тип анимации
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
-        if (animShow == ANIM_MINS) { //если пришло время отобразить анимацию минут
+        if (animShow >= ANIM_MINS) { //если пришло время отобразить анимацию минут
           animIndi(fastSettings.flipMode, FLIP_TIME); //анимация цифр основная
           animShow = 0; //сбрасываем флаг анимации
         }
