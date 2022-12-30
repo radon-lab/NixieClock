@@ -5253,6 +5253,15 @@ void flipSecs(void) //анимация секунд
   }
 }
 #endif
+//----------------------Обновить буфер анимации текущего времени--------------------
+void animUpdateTime(void) //обновить буфер анимации текущего времени
+{
+  animPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
+  animPrintNum(RTC.m, 2, 2, 0); //вывод минут
+#if LAMP_NUM > 4
+  animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+#endif
+}
 //----------------------------------Анимация цифр-----------------------------------
 void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
@@ -5264,6 +5273,7 @@ void animIndi(uint8_t mode, uint8_t type) //анимация цифр
   mode -= 2; //установили режим
   flipIndi(mode, type); //перешли в отрисовку анимации
   animPrintBuff(0, 6, LAMP_NUM); //отрисовали буфер
+  animShow = 0; //сбрасываем флаг анимации
 }
 //----------------------------------Анимация цифр-----------------------------------
 void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
@@ -5271,14 +5281,8 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
   uint8_t changeBuffer[6]; //буфер анимаций
   uint8_t changeIndi = 0; //флаги разрядов
 
-  if (type != FLIP_NORMAL) { //если режим демонстрации
-    animPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
-    animPrintNum(RTC.m, 2, 2, 0); //вывод минут
-#if LAMP_NUM > 4
-    animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
-  }
-  if (type == FLIP_DEMO) {
+  if (type != FLIP_NORMAL) animUpdateTime(); //обновили буфер анимации текущего времени
+  if (type == FLIP_DEMO) { //если режим демонстрации
     indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
     indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
 #if LAMP_NUM > 4
@@ -5414,10 +5418,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     case FLIP_TRAIN: { //поезд
         for (; changeIndi < (LAMP_NUM + FLIP_MODE_5_STEP - 1); changeIndi++) {
           indiClr(); //очистка индикатора
+          if (type != FLIP_NORMAL) { //если анимация времени
+            if (!secUpd) { //если пришло время обновить индикаторы
+              secUpd = 1; //сбрасываем флаг
+              animUpdateTime(); //обновить буфер анимации текущего времени
+            }
+          }
           animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
-#if LAMP_NUM > 4
-          if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
           animPrintBuff(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
           _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
           while (_timer_ms[TMR_ANIM]) { //ждем
@@ -5434,9 +5441,6 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 
             if (buttonState()) return; //возврат если нажата кнопка
             if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-#if LAMP_NUM > 4
-              if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
               switch (c) {
                 case 0:
                   for (uint8_t b = i + 1; b > 0; b--) {
@@ -5449,6 +5453,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   }
                   break;
                 case 1:
+                  if (type != FLIP_NORMAL) { //если анимация времени
+                    if (!secUpd) { //если пришло время обновить индикаторы
+                      secUpd = 1; //сбрасываем флаг
+                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      animPrintBuff(LAMP_NUM - i, 12 - i, i); //вывод часов
+                    }
+                  }
                   for (uint8_t b = 0; b < LAMP_NUM - i; b++) {
                     if (b == changeIndi) indiSet(anim.flipBuffer[((LAMP_NUM + 6) - 1) - i], b); //вывод часов
                     else indiClr(b); //очистка индикатора
@@ -5478,9 +5489,12 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 animPrintBuff(i + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
               }
               else {
-#if LAMP_NUM > 4
-                if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
+                if (type != FLIP_NORMAL) { //если анимация времени
+                  if (!secUpd) { //если пришло время обновить индикаторы
+                    secUpd = 1; //сбрасываем флаг
+                    animUpdateTime(); //обновить буфер анимации текущего времени
+                  }
+                }
                 animPrintBuff(i - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
                 animPrintBuff(LAMP_NUM - i, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
               }
@@ -5503,10 +5517,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
               switch (c) {
                 case 0: indiClr(i); break; //очистка индикатора
                 case 1:
-#if LAMP_NUM > 4
-                  if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
-                  indiSet(anim.flipBuffer[6 + i], i); //вывод часов
+                  if (type != FLIP_NORMAL) { //если анимация времени
+                    if (!secUpd) { //если пришло время обновить индикаторы
+                      secUpd = 1; //сбрасываем флаг
+                      animUpdateTime(); //обновить буфер анимации текущего времени
+                    }
+                  }
+                  animPrintBuff(i, i + 6, LAMP_NUM - i); //вывод часов
                   break;
               }
               if (anim.flipBuffer[i + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
@@ -5533,9 +5550,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
               switch (c) {
                 case 0: indiClr(changeIndi); break; //очистка индикатора
                 case 1:
-#if LAMP_NUM > 4
-                  if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
+                  if (type != FLIP_NORMAL) { //если анимация времени
+                    if (!secUpd) { //если пришло время обновить индикаторы
+                      secUpd = 1; //сбрасываем флаг
+                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
+                    }
+                  }
                   indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
                   i++; //прибавляем цикл
                   break; //вывод часов
@@ -5565,9 +5586,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
               switch (c) {
                 case 0: indiClr(changeIndi); break; //очистка индикатора
                 case 1:
-#if LAMP_NUM > 4
-                  if (type != FLIP_NORMAL) animPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-#endif
+                  if (type != FLIP_NORMAL) { //если анимация времени
+                    if (!secUpd) { //если пришло время обновить индикаторы
+                      secUpd = 1; //сбрасываем флаг
+                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
+                    }
+                  }
                   indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
                   break;
               }
@@ -5585,12 +5610,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 
           if (buttonState()) return; //возврат если нажата кнопка
           if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-#if LAMP_NUM > 4
-            if (type != FLIP_NORMAL) {
-              changeBuffer[4] = RTC.s / 10; //секунды
-              changeBuffer[5] = RTC.s % 10; //секунды
+            if (type != FLIP_NORMAL) { //если анимация времени
+              if (!secUpd) { //если пришло время обновить индикаторы
+                secUpd = 1; //сбрасываем флаг
+                animUpdateTime(); //обновить буфер анимации текущего времени
+                animPrintBuff(0, i + 6, i); //вывод часов
+              }
             }
-#endif
             for (uint8_t b = i; b < LAMP_NUM; b++) {
               if (--anim.flipBuffer[b] > 9) anim.flipBuffer[b] = 9; //меняем цифру разряда
               indiPrintNum(anim.flipBuffer[b], b); //выводим разряд
@@ -5611,10 +5637,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 uint8_t mainScreen(void) //главный экран
 {
   if (animShow < ANIM_MAIN) animShow = 0; //сбрасываем флаг анимации цифр
-  else if (animShow >= ANIM_OTHER) {
-    animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
-    animShow = 0; //сбрасываем флаг анимации цифр
-  }
+  else if (animShow >= ANIM_OTHER) animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
 
   if (indi.sleepMode) { //если активен режим сна
     if (!changeAnimState) _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
@@ -5663,10 +5686,7 @@ uint8_t mainScreen(void) //главный экран
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
-        if (animShow >= ANIM_MINS) { //если пришло время отобразить анимацию минут
-          animIndi(fastSettings.flipMode, FLIP_TIME); //анимация цифр основная
-          animShow = 0; //сбрасываем флаг анимации
-        }
+        if (animShow >= ANIM_MINS) animIndi(fastSettings.flipMode, FLIP_TIME); //анимация минут
       }
       else animShow = 0; //сбрасываем флаг анимации
       if (indi.sleepMode && !_timer_sec[TMR_SLEEP]) return SLEEP_PROGRAM; //режим сна индикаторов
