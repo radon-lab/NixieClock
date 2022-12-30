@@ -4637,24 +4637,22 @@ uint8_t timerStopwatch(void) //таймер-секундомер
 void hourSound(void) //звук смены часа
 {
   if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
-    if (!alarms.now || alarms.wait) { //если будильник не работает
-      if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
+    if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
 #if PLAYER_TYPE
-        if (mainSettings.knockSound) {
-          speakTime(); //воспроизвести время
+      if (mainSettings.knockSound) {
+        speakTime(); //воспроизвести время
 #if HOUR_SOUND_SPEAK_TEMP
-          if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
-            updateTemp(); //обновить показания температуры
-            _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
-          }
-          speakTempCeil(); //воспроизвести целую температуру
-#endif
+        if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+          updateTemp(); //обновить показания температуры
+          _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
         }
-        else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
-#else
-        melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
+        speakTempCeil(); //воспроизвести целую температуру
 #endif
       }
+      else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+#else
+      melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
+#endif
     }
   }
 }
