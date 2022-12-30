@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 29.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 30.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -2051,7 +2051,7 @@ void dataUpdate(void) //обработка данных
     secUpd = dot.update = 0; //очищаем флаги секунды и точек
 
 #if LAMP_NUM > 4
-    if (mainSettings.secsMode && animShow == ANIM_NULL) animShow = ANIM_SECS; //показать анимацию переключения цифр
+    if (mainSettings.secsMode && (animShow == ANIM_NULL)) animShow = ANIM_SECS; //показать анимацию переключения цифр
 #endif
 
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
@@ -2080,9 +2080,9 @@ void dataUpdate(void) //обработка данных
           }
         }
         changeBright(); //установка яркости от времени суток
-        if (mainTask == MAIN_PROGRAM || mainTask == SLEEP_PROGRAM) hourSound(); //звук смены часа
+        hourSound(); //звук смены часа
       }
-      if (fastSettings.flipMode && animShow < ANIM_MAIN) animShow = ANIM_MINS; //показать анимацию переключения цифр
+      if (fastSettings.flipMode && (animShow < ANIM_MAIN)) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
       checkAlarms(); //проверяем будильники на совпадение
 #endif
@@ -4636,23 +4636,25 @@ uint8_t timerStopwatch(void) //таймер-секундомер
 //------------------------------------Звук смены часа------------------------------------
 void hourSound(void) //звук смены часа
 {
-  if (!alarms.now || alarms.wait) { //если будильник не работает
-    if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
+  if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
+    if (!alarms.now || alarms.wait) { //если будильник не работает
+      if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
 #if PLAYER_TYPE
-      if (mainSettings.knockSound) {
-        speakTime(); //воспроизвести время
+        if (mainSettings.knockSound) {
+          speakTime(); //воспроизвести время
 #if HOUR_SOUND_SPEAK_TEMP
-        if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
-          updateTemp(); //обновить показания температуры
-          _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+          if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+            updateTemp(); //обновить показания температуры
+            _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+          }
+          speakTempCeil(); //воспроизвести целую температуру
+#endif
         }
-        speakTempCeil(); //воспроизвести целую температуру
+        else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+#else
+        melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
 #endif
       }
-      else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
-#else
-      melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
-#endif
     }
   }
 }
