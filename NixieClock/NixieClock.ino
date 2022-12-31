@@ -5272,6 +5272,8 @@ void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 
   mode -= 2; //установили режим
   flipIndi(mode, type); //перешли в отрисовку анимации
+  if (mode == FLIP_BRIGHT) indiSetBright(indi.maxBright); //возвращаем максимальную яркость
+
   animPrintBuff(0, 6, LAMP_NUM); //отрисовали буфер
   animShow = 0; //сбрасываем флаг анимации
 }
@@ -5280,6 +5282,8 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   uint8_t changeBuffer[6]; //буфер анимаций
   uint8_t changeIndi = 0; //флаги разрядов
+  uint8_t changeCnt = 0; //счетчик шагов
+  uint8_t changeNum = 0; //счетчик разрядов
 
   if (type != FLIP_NORMAL) animUpdateTime(); //обновили буфер анимации текущего времени
   if (type == FLIP_DEMO) { //если режим демонстрации
@@ -5296,11 +5300,11 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     case FLIP_BRIGHT:
     case FLIP_TRAIN:
     case FLIP_GATES:
-      changeBuffer[0] = 0; //сбросили максимальную яркость
       if (mode != FLIP_BRIGHT) changeIndi = (mode != FLIP_TRAIN) ? 1 : FLIP_MODE_5_STEP; //перешли к второму этапу
+      else anim.timeBright = FLIP_MODE_2_TIME / indi.maxBright; //расчёт шага яркости
       for (uint8_t i = 0; i < LAMP_NUM; i++) {
         if (anim.flipBuffer[i] != indi_null) {
-          changeBuffer[0] = indi.maxBright; //установили максимальную яркость
+          changeCnt = indi.maxBright; //установили максимальную яркость
           changeIndi = 0; //перешли к второму этапу
           break; //продолжаем
         }
@@ -5317,322 +5321,254 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
           if (changeBuffer[i] == 10) changeBuffer[i] = (anim.flipBuffer[i]) ? (anim.flipBuffer[i] - 1) : 9;
           if (anim.flipBuffer[i] == 10) anim.flipBuffer[i] = (changeBuffer[i]) ? (changeBuffer[i] - 1) : 9;
         }
+        if (mode == FLIP_ORDER_OF_CATHODES) {
+          for (uint8_t i = 0; i < LAMP_NUM; i++) {
+            for (uint8_t c = 0; c < 10; c++) {
+              if (cathodeMask[c] == anim.flipBuffer[i]) {
+                anim.flipBuffer[i] = c;
+                break;
+              }
+            }
+            for (uint8_t c = 0; c < 10; c++) {
+              if (cathodeMask[c] == changeBuffer[i]) {
+                changeBuffer[i] = c;
+                break;
+              }
+            }
+          }
+        }
       }
       break;
   }
 
+  _timer_ms[TMR_MS] = FLIP_TIMEOUT; //устанавливаем таймер
   _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
 
-  switch (mode) { //режим анимации перелистывания
-    case FLIP_BRIGHT: { //плавное угасание и появление
-        anim.timeBright = FLIP_MODE_2_TIME / indi.maxBright; //расчёт шага яркости режима 2
+  while (!buttonState()) {
+    dataUpdate(); //обработка данных
 
-        while (!buttonState()) {
-          dataUpdate(); //обработка данных
+    if (type != FLIP_NORMAL) { //если анимация времени
+      if (!secUpd) { //если пришло время обновить индикаторы
+        secUpd = 1; //сбрасываем флаг
+        animUpdateTime(); //обновляем буфер анимации текущего времени
+        switch (mode) { //режим анимации перелистывания
+          case FLIP_RUBBER_BAND: if (changeCnt) animPrintBuff(LAMP_NUM - changeNum, (LAMP_NUM + 6) - changeNum, changeNum); break; //вывод часов
+          case FLIP_HIGHLIGHTS:
+          case FLIP_EVAPORATION:
+            if (changeCnt) for (uint8_t f = 0; f < changeNum; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
+            break;
+          case FLIP_SLOT_MACHINE:
+            animPrintBuff(0, 6, changeNum); //вывод часов
+            for (uint8_t f = changeNum; f < LAMP_NUM; f++) changeBuffer[f] = animDecodeNum(anim.flipBuffer[f + 6]);
+            break;
+        }
+      }
+    }
 
-          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+    if (!_timer_ms[TMR_MS]) break; //выходим если тайм-аут
+    if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+
+      switch (mode) { //режим анимации перелистывания
+        case FLIP_BRIGHT: { //плавное угасание и появление
             if (!changeIndi) { //если режим уменьшения яркости
-              if (changeBuffer[0]) {
-                changeBuffer[0]--;
-                if (type != FLIP_DEMO) animBright(changeBuffer[0]);
-                else indiSetBright(changeBuffer[0]); //уменьшение яркости
+              if (changeCnt) {
+                changeCnt--;
+                if (type != FLIP_DEMO) animBright(changeCnt);
+                else indiSetBright(changeCnt); //уменьшение яркости
               }
               else {
-                if (type != FLIP_NORMAL) animUpdateTime(); //обновляем буфер анимации текущего времени
                 animPrintBuff(0, 6, LAMP_NUM); //вывод буфера
                 changeIndi = 1; //перешли к разгоранию
               }
             }
             else { //иначе режим увеличения яркости
-              if (changeBuffer[0] < indi.maxBright) {
-                changeBuffer[0]++;
-                if (type != FLIP_DEMO) animBright(changeBuffer[0]);
-                else indiSetBright(changeBuffer[0]); //увеличение яркости
+              if (changeCnt < indi.maxBright) {
+                changeCnt++;
+                if (type != FLIP_DEMO) animBright(changeCnt);
+                else indiSetBright(changeCnt); //увеличение яркости
               }
-              else break;
+              else return; //выходим
             }
             _timer_ms[TMR_ANIM] = anim.timeBright; //устанавливаем таймер
           }
-        }
-        indiSetBright(indi.maxBright); //возвращаем максимальную яркость
-      }
-      break;
-    case FLIP_ORDER_OF_NUMBERS: { //перемотка по порядку числа
-        while (!buttonState()) {
-          dataUpdate(); //обработка данных
-
-          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+          break;
+        case FLIP_ORDER_OF_NUMBERS:  //перемотка по порядку числа
+        case FLIP_ORDER_OF_CATHODES: { //перемотка по порядку катодов в лампе
             changeIndi = LAMP_NUM; //загрузили буфер
             for (uint8_t i = 0; i < LAMP_NUM; i++) {
               if (anim.flipBuffer[i] != changeBuffer[i]) { //если не достигли конца анимации разряда
                 if (--anim.flipBuffer[i] > 9) anim.flipBuffer[i] = 9; //меняем цифру разряда
-                indiPrintNum(anim.flipBuffer[i], i);
+                indiPrintNum((mode != FLIP_ORDER_OF_CATHODES) ? anim.flipBuffer[i] : cathodeMask[anim.flipBuffer[i]], i);
               }
               else {
                 if (anim.flipBuffer[i + 6] == indi_null) indiClr(i); //очистка индикатора
                 changeIndi--; //иначе завершаем анимацию для разряда
               }
             }
-            if (!changeIndi) break;
-            _timer_ms[TMR_ANIM] = FLIP_MODE_3_TIME; //устанавливаем таймер
+            if (!changeIndi) return; //выходим
+            _timer_ms[TMR_ANIM] = (mode != FLIP_ORDER_OF_CATHODES) ? FLIP_MODE_3_TIME : FLIP_MODE_4_TIME; //устанавливаем таймер
           }
-        }
-      }
-      break;
-    case FLIP_ORDER_OF_CATHODES: { //перемотка по порядку катодов в лампе
-        for (uint8_t i = 0; i < LAMP_NUM; i++) {
-          for (uint8_t c = 0; c < 10; c++) {
-            if (cathodeMask[c] == anim.flipBuffer[i]) {
-              anim.flipBuffer[i] = c;
-              break;
-            }
-          }
-          for (uint8_t c = 0; c < 10; c++) {
-            if (cathodeMask[c] == changeBuffer[i]) {
-              changeBuffer[i] = c;
-              break;
-            }
-          }
-        }
-
-        while (!buttonState()) {
-          dataUpdate(); //обработка данных
-
-          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-            changeIndi = LAMP_NUM; //загрузили буфер
-            for (uint8_t i = 0; i < LAMP_NUM; i++) {
-              if (anim.flipBuffer[i] != changeBuffer[i]) { //если не достигли конца анимации разряда
-                if (--anim.flipBuffer[i] > 9) anim.flipBuffer[i] = 9; //меняем цифру разряда
-                indiPrintNum(cathodeMask[anim.flipBuffer[i]], i);
-              }
-              else {
-                if (anim.flipBuffer[i + 6] == indi_null) indiClr(i);  //очистка индикатора
-                changeIndi--; //иначе завершаем анимацию для разряда
-              }
-            }
-            if (!changeIndi) break;
-            _timer_ms[TMR_ANIM] = FLIP_MODE_4_TIME; //устанавливаем таймер
-          }
-        }
-      }
-      break;
-    case FLIP_TRAIN: { //поезд
-        for (; changeIndi < (LAMP_NUM + FLIP_MODE_5_STEP - 1); changeIndi++) {
-          indiClr(); //очистка индикатора
-          if (type != FLIP_NORMAL) { //если анимация времени
-            if (!secUpd) { //если пришло время обновить индикаторы
-              secUpd = 1; //сбрасываем флаг
-              animUpdateTime(); //обновляем буфер анимации текущего времени
-            }
-          }
-          animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
-          animPrintBuff(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
-          _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
-          while (_timer_ms[TMR_ANIM]) { //ждем
-            dataUpdate(); //обработка данных
-            if (buttonState()) return; //возврат если нажата кнопка
-          }
-        }
-      }
-      break;
-    case FLIP_RUBBER_BAND: { //резинка
-        for (uint8_t c = 0; c < 2; c++) {
-          for (uint8_t i = 0; i < LAMP_NUM;) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-              switch (c) {
-                case 0:
-                  for (uint8_t b = i + 1; b > 0; b--) {
-                    if ((b - 1) == (i - changeIndi)) indiSet(anim.flipBuffer[(LAMP_NUM - 1) - i], LAMP_NUM - b); //вывод часов
-                    else indiClr(LAMP_NUM - b); //очистка индикатора
-                  }
-                  if (changeIndi++ >= i) {
-                    changeIndi = 0; //сбрасываем позицию индикатора
-                    i++; //прибавляем цикл
-                  }
-                  break;
-                case 1:
-                  if (type != FLIP_NORMAL) { //если анимация времени
-                    if (!secUpd) { //если пришло время обновить индикаторы
-                      secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновляем буфер анимации текущего времени
-                      animPrintBuff(LAMP_NUM - i, (LAMP_NUM + 6) - i, i); //вывод часов
-                    }
-                  }
-                  for (uint8_t b = 0; b < LAMP_NUM - i; b++) {
-                    if (b == changeIndi) indiSet(anim.flipBuffer[((LAMP_NUM + 6) - 1) - i], b); //вывод часов
-                    else indiClr(b); //очистка индикатора
-                  }
-                  if (changeIndi++ >= (LAMP_NUM - 1) - i) {
-                    changeIndi = 0; //сбрасываем позицию индикатора
-                    i++; //прибавляем цикл
-                  }
-                  break;
-              }
-              if (anim.flipBuffer[((LAMP_NUM - 1) - i) + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
-            }
-          }
-        }
-      }
-      break;
-    case FLIP_GATES: { //ворота
-        while (changeIndi < 2) {
-          for (uint8_t i = 0; i < ((LAMP_NUM / 2) + 1);) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
+          break;
+        case FLIP_TRAIN: { //поезд
+            if (changeIndi < (LAMP_NUM + FLIP_MODE_5_STEP - 1)) {
               indiClr(); //очистка индикатора
-              if (!changeIndi) {
-                animPrintBuff(-i, 0, (LAMP_NUM / 2));
-                animPrintBuff(i + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
+              animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
+              animPrintBuff(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
+              changeIndi++;
+              _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
+            }
+            else return; //выходим
+          }
+          break;
+        case FLIP_RUBBER_BAND: { //резинка
+            if (changeCnt < 2) {
+              if (changeNum < LAMP_NUM) {
+                switch (changeCnt) {
+                  case 0:
+                    for (uint8_t b = changeNum + 1; b > 0; b--) {
+                      if ((b - 1) == (changeNum - changeIndi)) indiSet(anim.flipBuffer[(LAMP_NUM - 1) - changeNum], LAMP_NUM - b); //вывод часов
+                      else indiClr(LAMP_NUM - b); //очистка индикатора
+                    }
+                    if (changeIndi++ >= changeNum) {
+                      changeIndi = 0; //сбрасываем позицию индикатора
+                      changeNum++; //прибавляем цикл
+                    }
+                    break;
+                  case 1:
+                    for (uint8_t b = 0; b < (LAMP_NUM - changeNum); b++) {
+                      if (b == changeIndi) indiSet(anim.flipBuffer[((LAMP_NUM + 6) - 1) - changeNum], b); //вывод часов
+                      else indiClr(b); //очистка индикатора
+                    }
+                    if (changeIndi++ >= (LAMP_NUM - 1) - changeNum) {
+                      changeIndi = 0; //сбрасываем позицию индикатора
+                      changeNum++; //прибавляем цикл
+                    }
+                    break;
+                }
+                if (anim.flipBuffer[((LAMP_NUM - 1) - changeNum) + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
               }
               else {
-                if (type != FLIP_NORMAL) { //если анимация времени
-                  if (!secUpd) { //если пришло время обновить индикаторы
-                    secUpd = 1; //сбрасываем флаг
-                    animUpdateTime(); //обновляем буфер анимации текущего времени
+                changeCnt++; //прибавляем цикл
+                changeNum = 0; //сбросили счетчик
+              }
+            }
+            else return; //выходим
+          }
+          break;
+        case FLIP_GATES: { //ворота
+            if (changeIndi < 2) {
+              if (changeNum < ((LAMP_NUM / 2) + 1)) {
+                indiClr(); //очистка индикатора
+                if (!changeIndi) {
+                  animPrintBuff(-changeNum, 0, (LAMP_NUM / 2));
+                  animPrintBuff(changeNum + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
+                }
+                else {
+                  animPrintBuff(changeNum - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
+                  animPrintBuff(LAMP_NUM - changeNum, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
+                }
+                changeNum++; //прибавляем цикл
+                _timer_ms[TMR_ANIM] = FLIP_MODE_7_TIME; //устанавливаем таймер
+              }
+              else {
+                changeIndi++; //прибавляем цикл
+                changeNum = 0; //сбросили счетчик
+              }
+            }
+            else return; //выходим
+          }
+          break;
+        case FLIP_WAVE: { //волна
+            if (changeCnt < 2) {
+              if (changeNum < LAMP_NUM) {
+                switch (changeCnt) {
+                  case 0: indiClr((LAMP_NUM - 1) - changeNum); break; //очистка индикатора
+                  case 1: animPrintBuff((LAMP_NUM - 1) - changeNum, (LAMP_NUM + 5) - changeNum, changeNum + 1); break; //вывод часов
+                }
+                if (anim.flipBuffer[changeNum + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
+                changeNum++; //прибавляем цикл
+              }
+              else {
+                changeCnt++; //прибавляем цикл
+                changeNum = 0; //сбросили счетчик
+              }
+            }
+            else return; //выходим
+          }
+          break;
+        case FLIP_HIGHLIGHTS: { //блики
+            if (changeNum < LAMP_NUM) {
+              changeIndi = random(0, LAMP_NUM);
+              if (changeCnt < 2) {
+                for (uint8_t b = 0; b < changeNum; b++) {
+                  while (changeBuffer[b] == changeIndi) {
+                    changeIndi = random(0, LAMP_NUM);
+                    b = 0;
                   }
                 }
-                animPrintBuff(i - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
-                animPrintBuff(LAMP_NUM - i, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
-              }
-              i++; //прибавляем цикл
-              _timer_ms[TMR_ANIM] = FLIP_MODE_7_TIME; //устанавливаем таймер
-            }
-          }
-          changeIndi++; //прибавляем цикл
-        }
-      }
-      break;
-    case FLIP_WAVE: { //волна
-        for (uint8_t c = 0; c < 2; c++) {
-          for (uint8_t i = LAMP_NUM; i;) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-              i--; //убавляем цикл
-              switch (c) {
-                case 0: indiClr(i); break; //очистка индикатора
-                case 1:
-                  if (type != FLIP_NORMAL) { //если анимация времени
-                    if (!secUpd) { //если пришло время обновить индикаторы
-                      secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновляем буфер анимации текущего времени
-                    }
-                  }
-                  animPrintBuff(i, i + 6, LAMP_NUM - i); //вывод часов
-                  break;
-              }
-              if (anim.flipBuffer[i + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
-            }
-          }
-        }
-      }
-      break;
-    case FLIP_HIGHLIGHTS: { //блики
-        for (uint8_t i = 0; i < LAMP_NUM;) {
-          changeIndi = random(0, LAMP_NUM);
-          for (uint8_t c = 0; c < 2;) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-              for (uint8_t b = 0; b < i; b++) {
-                while (changeBuffer[b] == changeIndi) {
-                  changeIndi = random(0, LAMP_NUM);
-                  b = 0;
+                changeBuffer[changeNum] = changeIndi;
+                switch (changeCnt) {
+                  case 0: indiClr(changeIndi); break; //очистка индикатора
+                  case 1:
+                    indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
+                    changeNum++; //прибавляем цикл
+                    break; //вывод часов
                 }
+                changeCnt++; //прибавляем цикл
+                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
               }
-              changeBuffer[i] = changeIndi;
-              switch (c) {
-                case 0: indiClr(changeIndi); break; //очистка индикатора
-                case 1:
-                  if (type != FLIP_NORMAL) { //если анимация времени
-                    if (!secUpd) { //если пришло время обновить индикаторы
-                      secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновляем буфер анимации текущего времени
-                      for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
-                    }
-                  }
-                  indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
-                  i++; //прибавляем цикл
-                  break; //вывод часов
-              }
-              c++; //прибавляем цикл
-              if (anim.flipBuffer[changeIndi + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
+              else changeCnt = 0; //сбросили счетчик
             }
+            else return; //выходим
           }
-        }
-      }
-      break;
-    case FLIP_EVAPORATION: { //испарение
-        for (uint8_t c = 0; c < 2; c++) {
-          changeIndi = random(0, LAMP_NUM);
-          for (uint8_t i = 0; i < LAMP_NUM;) {
-            dataUpdate(); //обработка данных
-
-            if (buttonState()) return; //возврат если нажата кнопка
-            if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-              for (uint8_t b = 0; b < i; b++) {
-                while (changeBuffer[b] == changeIndi) {
-                  changeIndi = random(0, LAMP_NUM);
-                  b = 0;
+          break;
+        case FLIP_EVAPORATION: { //испарение
+            if (changeCnt < 2) {
+              changeIndi = random(0, LAMP_NUM);
+              if (changeNum < LAMP_NUM) {
+                for (uint8_t b = 0; b < changeNum; b++) {
+                  while (changeBuffer[b] == changeIndi) {
+                    changeIndi = random(0, LAMP_NUM);
+                    b = 0;
+                  }
                 }
+                changeBuffer[changeNum] = changeIndi;
+                switch (changeCnt) {
+                  case 0: indiClr(changeIndi); break; //очистка индикатора
+                  case 1:
+                    indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
+                    break;
+                }
+                changeNum++; //прибавляем цикл
+                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
               }
-              changeBuffer[i] = changeIndi;
-              switch (c) {
-                case 0: indiClr(changeIndi); break; //очистка индикатора
-                case 1:
-                  if (type != FLIP_NORMAL) { //если анимация времени
-                    if (!secUpd) { //если пришло время обновить индикаторы
-                      secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновляем буфер анимации текущего времени
-                      for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
-                    }
-                  }
-                  indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
-                  break;
+              else {
+                changeCnt++; //прибавляем цикл
+                changeNum = 0; //сбросили счетчик
               }
-              i++; //прибавляем цикл
-              if (anim.flipBuffer[changeIndi + (c * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
             }
+            else return; //выходим
           }
-        }
-      }
-      break;
+          break;
 
-    case FLIP_SLOT_MACHINE: { //игровой автомат
-        for (uint8_t i = 0; i < LAMP_NUM;) {
-          dataUpdate(); //обработка данных
-
-          if (buttonState()) return; //возврат если нажата кнопка
-          if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-            if (type != FLIP_NORMAL) { //если анимация времени
-              if (!secUpd) { //если пришло время обновить индикаторы
-                secUpd = 1; //сбрасываем флаг
-                animUpdateTime(); //обновляем буфер анимации текущего времени
-                animPrintBuff(0, 6, i); //вывод часов
-                for (uint8_t f = i; f < LAMP_NUM; f++) changeBuffer[f] = animDecodeNum(anim.flipBuffer[f + 6]);
+        case FLIP_SLOT_MACHINE: { //игровой автомат
+            if (changeNum < LAMP_NUM) {
+              for (uint8_t b = changeNum; b < LAMP_NUM; b++) {
+                if (--anim.flipBuffer[b] > 9) anim.flipBuffer[b] = 9; //меняем цифру разряда
+                indiPrintNum(anim.flipBuffer[b], b); //выводим разряд
               }
+              if (anim.flipBuffer[changeNum] == changeBuffer[changeNum]) { //если разряд совпал
+                if (anim.flipBuffer[changeNum + 6] == indi_null) indiClr(changeNum); //очистка индикатора
+                changeIndi += FLIP_MODE_11_STEP; //добавили шаг
+                changeNum++; //завершаем анимацию для разряда
+              }
+              _timer_ms[TMR_ANIM] = (uint16_t)FLIP_MODE_11_TIME + changeIndi; //устанавливаем таймер
             }
-            for (uint8_t b = i; b < LAMP_NUM; b++) {
-              if (--anim.flipBuffer[b] > 9) anim.flipBuffer[b] = 9; //меняем цифру разряда
-              indiPrintNum(anim.flipBuffer[b], b); //выводим разряд
-            }
-            if (anim.flipBuffer[i] == changeBuffer[i]) { //если разряд совпал
-              if (anim.flipBuffer[i + 6] == indi_null) indiClr(i); //очистка индикатора
-              changeIndi += FLIP_MODE_11_STEP; //добавили шаг
-              i++; //завершаем анимацию для разряда
-            }
-            _timer_ms[TMR_ANIM] = (uint16_t)FLIP_MODE_11_TIME + changeIndi; //устанавливаем таймер
+            else return; //выходим
           }
-        }
+          break;
       }
-      break;
+    }
   }
 }
 //-----------------------------Главный экран------------------------------------------------
