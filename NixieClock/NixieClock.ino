@@ -5355,7 +5355,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
           case FLIP_RUBBER_BAND: if (changeCnt) animPrintBuff(LAMP_NUM - changeNum, (LAMP_NUM + 6) - changeNum, changeNum); break; //вывод часов
           case FLIP_HIGHLIGHTS:
           case FLIP_EVAPORATION:
-            if (changeCnt) for (uint8_t f = 0; f < changeNum; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
+            if (changeCnt || (mode == FLIP_HIGHLIGHTS)) for (uint8_t f = 0; f < changeNum; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
             break;
           case FLIP_SLOT_MACHINE:
             animPrintBuff(0, 6, changeNum); //вывод часов
