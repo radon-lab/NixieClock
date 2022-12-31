@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 30.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 31.12.22
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -5338,8 +5338,9 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 else indiSetBright(changeBuffer[0]); //уменьшение яркости
               }
               else {
+                if (type != FLIP_NORMAL) animUpdateTime(); //обновляем буфер анимации текущего времени
+                animPrintBuff(0, 6, LAMP_NUM); //вывод буфера
                 changeIndi = 1; //перешли к разгоранию
-                animPrintBuff(0, 6, LAMP_NUM);
               }
             }
             else { //иначе режим увеличения яркости
@@ -5421,7 +5422,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
           if (type != FLIP_NORMAL) { //если анимация времени
             if (!secUpd) { //если пришло время обновить индикаторы
               secUpd = 1; //сбрасываем флаг
-              animUpdateTime(); //обновить буфер анимации текущего времени
+              animUpdateTime(); //обновляем буфер анимации текущего времени
             }
           }
           animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
@@ -5456,8 +5457,8 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   if (type != FLIP_NORMAL) { //если анимация времени
                     if (!secUpd) { //если пришло время обновить индикаторы
                       secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновить буфер анимации текущего времени
-                      animPrintBuff(LAMP_NUM - i, 12 - i, i); //вывод часов
+                      animUpdateTime(); //обновляем буфер анимации текущего времени
+                      animPrintBuff(LAMP_NUM - i, (LAMP_NUM + 6) - i, i); //вывод часов
                     }
                   }
                   for (uint8_t b = 0; b < LAMP_NUM - i; b++) {
@@ -5492,7 +5493,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 if (type != FLIP_NORMAL) { //если анимация времени
                   if (!secUpd) { //если пришло время обновить индикаторы
                     secUpd = 1; //сбрасываем флаг
-                    animUpdateTime(); //обновить буфер анимации текущего времени
+                    animUpdateTime(); //обновляем буфер анимации текущего времени
                   }
                 }
                 animPrintBuff(i - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
@@ -5520,7 +5521,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   if (type != FLIP_NORMAL) { //если анимация времени
                     if (!secUpd) { //если пришло время обновить индикаторы
                       secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      animUpdateTime(); //обновляем буфер анимации текущего времени
                     }
                   }
                   animPrintBuff(i, i + 6, LAMP_NUM - i); //вывод часов
@@ -5553,7 +5554,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   if (type != FLIP_NORMAL) { //если анимация времени
                     if (!secUpd) { //если пришло время обновить индикаторы
                       secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      animUpdateTime(); //обновляем буфер анимации текущего времени
                       for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
                     }
                   }
@@ -5589,7 +5590,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   if (type != FLIP_NORMAL) { //если анимация времени
                     if (!secUpd) { //если пришло время обновить индикаторы
                       secUpd = 1; //сбрасываем флаг
-                      animUpdateTime(); //обновить буфер анимации текущего времени
+                      animUpdateTime(); //обновляем буфер анимации текущего времени
                       for (uint8_t f = 0; f < i; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
                     }
                   }
@@ -5613,8 +5614,9 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
             if (type != FLIP_NORMAL) { //если анимация времени
               if (!secUpd) { //если пришло время обновить индикаторы
                 secUpd = 1; //сбрасываем флаг
-                animUpdateTime(); //обновить буфер анимации текущего времени
-                animPrintBuff(0, i + 6, i); //вывод часов
+                animUpdateTime(); //обновляем буфер анимации текущего времени
+                animPrintBuff(0, 6, i); //вывод часов
+                for (uint8_t f = i; f < LAMP_NUM; f++) changeBuffer[f] = animDecodeNum(anim.flipBuffer[f + 6]);
               }
             }
             for (uint8_t b = i; b < LAMP_NUM; b++) {
