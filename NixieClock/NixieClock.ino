@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.3 релиз от 31.12.22
+  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 01.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -350,6 +350,7 @@ enum {
 #if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
   DOT_RUNNING, //бегущая
+  DOT_SNAKE, //змейка
 #endif
 #if (LAMP_NUM > 4) || DOTS_TYPE
   DOT_TURN_BLINK, //мигание по очереди
@@ -1987,7 +1988,7 @@ void dataUpdate(void) //обработка данных
   for (uint8_t _tick = tick_ms; _tick > 0; _tick--) { //если был тик то обрабатываем данные
     tick_ms--; //убавили счетчик миллисекунд
 
-    indiCheck(); //проверка состояния динамической индикации
+    indiStateCheck(); //проверка состояния динамической индикации
     btn.state = buttonStateUpdate(); //обновление состояния кнопок
 
     timerCorrect += debugSettings.timePeriod; //прибавляем период для коррекции
@@ -2024,6 +2025,7 @@ void dataUpdate(void) //обработка данных
 #if GEN_ENABLE
     converterCheck(); //проверка состояния преобразователя
 #endif
+    indiCheck(); //проверка состояния динамической индикации
 
     for (uint8_t tm = 0; tm < TIMERS_SEC_NUM; tm++) { //опрашиваем все таймеры
       if (_timer_sec[tm]) _timer_sec[tm]--; //если таймер активен
@@ -3021,8 +3023,16 @@ uint8_t settings_main(void) //настроки основные
             switch (cur_mode) {
               case SET_AUTO_TEMP: animIndi(mainSettings.autoTempFlip, FLIP_DEMO); break; //демонстрация анимации показа температуры
               case SET_BURN_MODE:
+#if LAMP_NUM > 4
+                if (!cur_indi) {
+                  burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
+                  dotSetBright(dot.menuBright); //включаем точки
+                }
+                else animIndi(mainSettings.secsMode + 1, FLIP_DEMO); //демонстрация анимации секунд
+#else
                 burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
                 dotSetBright(dot.menuBright); //включаем точки
+#endif
                 break;
             }
             _timer_ms[TMR_MS] = blink_data = 0; //сбрасываем флаги
@@ -3207,7 +3217,10 @@ uint8_t settings_main(void) //настроки основные
                     if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
                     animDemo = 2; //установили флаг демонстрации анимации
                     break;
-                  case 1: if (mainSettings.secsMode) mainSettings.secsMode--; else mainSettings.secsMode = (SECS_EFFECT_NUM - 1); break;
+                  case 1:
+                    if (mainSettings.secsMode) mainSettings.secsMode--; else mainSettings.secsMode = (SECS_EFFECT_NUM - 1);
+                    if (mainSettings.secsMode) animDemo = 2; //установили флаг демонстрации анимации
+                    break;
                 }
 #else
                 if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
@@ -3315,7 +3328,13 @@ uint8_t settings_main(void) //настроки основные
                     if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
                     animDemo = 2; //установили флаг демонстрации анимации
                     break;
-                  case 1: if (mainSettings.secsMode < (SECS_EFFECT_NUM - 1)) mainSettings.secsMode++; else mainSettings.secsMode = 0; break;
+                  case 1:
+                    if (mainSettings.secsMode < (SECS_EFFECT_NUM - 1)) {
+                      mainSettings.secsMode++;
+                      animDemo = 2; //установили флаг демонстрации анимации
+                    }
+                    else mainSettings.secsMode = 0;
+                    break;
                 }
 #else
                 if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
@@ -3353,7 +3372,7 @@ uint8_t settings_main(void) //настроки основные
               dotSetBright(0); //выключаем точки
 #endif
               break;
-#if (NEON_DOT < 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
               indiSetDotL(2); //включаем разделительную точку
               break;
@@ -3369,7 +3388,7 @@ uint8_t settings_main(void) //настроки основные
           changeBrightEnable(); //разрешить смену яркости
           changeBright(); //установка яркости от времени суток
           dotSetBright(0); //выключаем точки
-#if (NEON_DOT < 2) && DOTS_PORT_ENABLE
+#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
           indiClrDots(); //выключаем разделительные точки
 #endif
         }
@@ -3472,8 +3491,6 @@ void autoShowTemp(void) //автоматический показ темпера
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
-  _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
-
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем точки
@@ -3490,17 +3507,15 @@ void autoShowTemp(void) //автоматический показ темпера
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-        indiSetDotL(2); //включаем разделительную точку
-#else
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
-        dotSetBright(dot.menuBright); //включаем точки
+        indiSetDotL(2); //включаем разделительную точку
 #else
         neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
         indiSetDotL(0); //установка разделительной точки
 #endif
-#endif
+#else
+        dotSetBright(dot.menuBright); //включаем точки
 #endif
 #if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
         if (mode) { //если режим отображения температуры и влажности
@@ -3519,17 +3534,15 @@ void autoShowTemp(void) //автоматический показ темпера
 #else //иначе режим отображения температуры
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-        indiSetDotL(2); //включаем разделительную точку
-#else
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
-        dotSetBright(dot.menuBright); //включаем точки
+        indiSetDotL(2); //включаем разделительную точку
 #else
         neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
         indiSetDotL(0); //установка разделительной точки
 #endif
-#endif
+#else
+        dotSetBright(dot.menuBright); //включаем точки
 #endif
 #if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
@@ -3561,8 +3574,8 @@ void autoShowTemp(void) //автоматический показ темпера
         break;
     }
 
-    _timer_ms[TMR_ANIM] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
-    while (_timer_ms[TMR_ANIM]) { //если таймер истек
+    _timer_ms[TMR_MS] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
+    while (_timer_ms[TMR_MS]) { //если таймер истек
       dataUpdate(); //обработка данных
       if (buttonState()) return; //возврат если нажата кнопка
     }
@@ -3589,15 +3602,15 @@ uint8_t showTemp(void) //показать температуру
 #endif
 #endif
 
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
-  dotSetBright(dot.menuBright); //включаем точки
-#elif DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
   indiSetDotL(2); //включаем разделительную точку
 #else
   neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
   indiSetDotL(0); //установка разделительной точки
 #endif
+#else
+  dotSetBright(dot.menuBright); //включаем точки
 #endif
 
 #if PLAYER_TYPE
@@ -3646,15 +3659,15 @@ uint8_t showTemp(void) //показать температуру
           case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) { //если режим отображения температуры
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
-          dotSetBright(dot.menuBright); //включаем точки
-#elif DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
           indiSetDotL(2); //включаем разделительную точку
 #else
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
           indiSetDotL(0); //установка разделительной точки
 #endif
+#else
+          dotSetBright(dot.menuBright); //включаем точки
 #endif
         }
         else { //иначе давление или влажность
@@ -3703,9 +3716,7 @@ uint8_t showDate(void) //показать дату
   uint8_t mode = 0; //текущий режим
 #endif
 
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
-  dotSetBright(dot.menuBright); //включаем точки
-#elif DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
   indiSetDotL(2); //включаем разделительную точку
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
@@ -3719,6 +3730,8 @@ uint8_t showDate(void) //показать дату
   indiSetDotL(0); //установка разделительной точки
 #endif
 #endif
+#else
+  dotSetBright(dot.menuBright); //включаем точки
 #endif
 
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
@@ -3784,15 +3797,15 @@ uint8_t showDate(void) //показать дату
         if (++mode > 1) mode = 0;
         switch (mode) {
           case 0: //дата
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
-            dotSetBright(dot.menuBright); //включаем точки
-#elif DOTS_PORT_ENABLE
+#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
 #if NEON_DOT != 2
             indiSetDotL(2); //включаем разделительную точку
 #else
             neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
             indiSetDotL(0); //установка разделительной точки
 #endif
+#else
+            dotSetBright(dot.menuBright); //включаем точки
 #endif
             break;
           case 1: //год
@@ -4180,7 +4193,7 @@ uint8_t radioMenu(void) //радиоприемник
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
         if (!seek_run) { //если не идет поиск
-#if (NEON_DOT < 2) || !DOTS_PORT_ENABLE
+#if (NEON_DOT < 2) && !DOTS_PORT_ENABLE
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #elif DOTS_PORT_ENABLE
 #if NEON_DOT != 2
@@ -4680,7 +4693,7 @@ void changeBright(void) //установка яркости от времени 
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
-    dot.maxBright = 1; //установка максимальной яркости точек
+    dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
 #endif
 #if BACKL_TYPE
     backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
@@ -4962,32 +4975,45 @@ void dotFlash(void) //мигание точек
 #if NEON_DOT != 2
         case DOT_RUNNING: //бегущая
           indiClrDots(); //очистка разделителных точек
-#if DOTS_TYPE
-          if (dot.count & 0x01) indiSetDotR(dot.count >> 1); //включаем правую точку
-          else indiSetDotL(dot.count >> 1); //включаем левую точку
-#else
-          indiSetDotL(dot.count); //включаем точку
-#endif
+          indiSetDots(dot.count, 1); //установка разделительных точек
           if (dot.drive) {
-            if (dot.count > 0) {
-              dot.count--; //сместили точку
-              _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
-            }
+            if (dot.count > 0) dot.count--; //сместили точку
             else {
               dot.drive = 0; //сменили направление
               dot.update = 1; //сбросили флаг обновления точек
+              return; //выходим
             }
           }
           else {
-            if (dot.count < ((LAMP_NUM * (DOTS_TYPE + 1)) - 1)) {
-              dot.count++; //сместили точку
-              _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
-            }
+            if (dot.count < ((LAMP_NUM * (DOTS_TYPE + 1)) - 1)) dot.count++; //сместили точку
             else {
               dot.drive = 1; //сменили направление
               dot.update = 1; //сбросили флаг обновления точек
+              return; //выходим
             }
           }
+          _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (LAMP_NUM * (DOTS_TYPE + 1))); //установили таймер
+          break;
+        case DOT_SNAKE: //змейка
+          indiClrDots(); //очистка разделителных точек
+          indiSetDots(dot.count - ((LAMP_NUM * (DOTS_TYPE + 1)) - 1), LAMP_NUM * (DOTS_TYPE + 1)); //установка разделительных точек
+          if (dot.drive) {
+            if (dot.count > 0) dot.count--; //убавили шаг
+            else {
+              dot.drive = 0; //сменили направление
+              dot.update = 1; //сбросили флаг обновления точек
+              return; //выходим
+            }
+          }
+          else {
+            if (dot.count < (((LAMP_NUM * (DOTS_TYPE + 1)) * 2) - 2)) dot.count++; //прибавили шаг
+            else {
+              dot.drive = 1; //сменили направление
+              dot.update = 1; //сбросили флаг обновления точек
+              return; //выходим
+            }
+          }
+          _timer_ms[TMR_DOT] = (DOT_SNAKE_TIME / ((LAMP_NUM * (DOTS_TYPE + 1)) * 2)); //установили таймер
           break;
 #endif
 #if (LAMP_NUM > 4) || DOTS_TYPE

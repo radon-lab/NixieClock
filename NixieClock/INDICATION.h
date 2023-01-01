@@ -16,8 +16,8 @@
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 
-#define _INDI_START TCNT0 = FREQ_TICK; TIMSK0 |= (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
-#define _INDI_STOP TIMSK0 &= ~(0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
+#define _INDI_START TCNT0 = FREQ_TICK; TIMSK0 = (0x01 << OCIE0B | 0x01 << OCIE0A) //запуск динамической индикации
+#define _INDI_STOP TIMSK0 = (0x01 << OCIE0B | 0x01 << OCIE0A); indiState = 0 //остановка динамической индикации
 
 //переменные работы с анимациями
 struct animData {
@@ -135,14 +135,30 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
 #endif
 
 //------------------------Проверка состояния динамической индикации-------------------------------
-void indiCheck(void) //проверка состояния динамической индикации
+void indiStateCheck(void) //проверка состояния динамической индикации
 {
-  if (OCR0A != FREQ_TICK) { //если вышли за предел
-    OCR0A = FREQ_TICK; //установили максимум
+  if (TIMSK0 != (0x01 << OCIE0B | 0x01 << OCIE0A)) { //если настройка изменилась
+    TIMSK0 = (0x01 << OCIE0B | 0x01 << OCIE0A); //установили настройку
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
   if (OCR0B > LIGHT_MAX) { //если вышли за предел
     OCR0B = LIGHT_MAX; //установили максимум
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+}
+//------------------------Проверка состояния динамической индикации-------------------------------
+void indiCheck(void) //проверка состояния динамической индикации
+{
+  if (TCCR0A != (0x01 << WGM01)) { //если настройка изменилась
+    TCCR0A = (0x01 << WGM01); //установили настройку
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+  if (TCCR0B != (0x01 << CS02)) { //если настройка изменилась
+    TCCR0B = (0x01 << CS02); //установили настройку
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+  if (OCR0A != FREQ_TICK) { //если вышли за предел
+    OCR0A = FREQ_TICK; //установили максимум
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
 }
@@ -327,7 +343,7 @@ void indiSetBright(uint8_t pwm, uint8_t start, uint8_t end) //установка
 #endif
 }
 //-------------------------Установка левой разделительной точки------------------------------------
-void indiSetDotL(uint8_t dot) //установка разделительной точки
+void indiSetDotL(uint8_t dot) //установка левой разделительной точки
 {
 #if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_l |= (0x02 << dot);
@@ -336,7 +352,7 @@ void indiSetDotL(uint8_t dot) //установка разделительной 
 #endif
 }
 //--------------------------Очистка левой разделительной точки-------------------------------------
-void indiClrDotL(uint8_t dot) //очистка разделительной точки
+void indiClrDotL(uint8_t dot) //очистка левой разделительной точки
 {
 #if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_l &= ~(0x02 << dot);
@@ -345,7 +361,7 @@ void indiClrDotL(uint8_t dot) //очистка разделительной то
 #endif
 }
 //-------------------------Установка правой разделительной точки-----------------------------------
-void indiSetDotR(uint8_t dot) //установка разделительной точки
+void indiSetDotR(uint8_t dot) //установка правой разделительной точки
 {
 #if NEON_DOT != 2
   if (dot < LAMP_NUM) indi_dot_r |= (0x02 << dot);
@@ -361,6 +377,21 @@ void indiClrDotR(uint8_t dot) //очистка разделительной то
 #else
   if (dot < LAMP_NUM) indi_dot_r &= ~0x01;
 #endif
+}
+//-------------------------Установка разделительных точек-----------------------------------
+void indiSetDots(int8_t dot, uint8_t num) //установка разделительных точек
+{
+  for (uint8_t pos = 0; pos < num; pos++) {
+    if ((uint8_t)dot < (LAMP_NUM * (DOTS_TYPE + 1))) { //если число в поле индикатора
+#if DOTS_TYPE
+      if (dot & 0x01) indiSetDotR(dot >> 1); //включаем правую точку
+      else indiSetDotL(dot >> 1); //включаем левую точку
+#else
+      indiSetDotL(dot); //включаем точку
+#endif
+    }
+    dot++;
+  }
 }
 //-----------------------------Очистка разделительных точек----------------------------------------
 void indiClrDots(void) //очистка разделительных точек
