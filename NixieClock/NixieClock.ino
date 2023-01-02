@@ -3495,18 +3495,12 @@ void autoShowTemp(void) //автоматический показ темпера
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
+  for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
 #if (NEON_DOT != 2) && DOTS_PORT_ENABLE
-  indiClrDots(); //выключаем разделительные точки
+    indiClrDots(); //выключаем разделительные точки
 #endif
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-  dotSetBright(0); //выключаем секундные точки
-#endif
-
-  for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
-#if (NEON_DOT == 2) || !DOTS_PORT_ENABLE
-    dotSetBright(0); //выключаем точки
-#else
-    indiClrDots(); //выключаем разделительные точки
+    dotSetBright(0); //выключаем секундные точки
 #endif
     animClearBuff(); //очистка буфера анимации
     switch (mode) {
