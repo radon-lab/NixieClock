@@ -237,6 +237,7 @@ void readerUpdate(void)
           else {
             OCR1B = 128; //выключаем dac
             OCR2B = 255; //устанавливаем COMB в начало
+            TIFR2 |= (0x01 << OCF2B); //сбрасываем флаг прерывания
             TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
             reader.playerState = READER_SOUND_WAIT;
           }
