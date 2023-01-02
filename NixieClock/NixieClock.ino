@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 01.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 03.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3496,10 +3496,9 @@ void autoShowTemp(void) //автоматический показ темпера
   }
 
   for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+#if (NEON_DOT == 2) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем точки
-#endif
-#if (NEON_DOT != 2) && DOTS_PORT_ENABLE
+#else
     indiClrDots(); //выключаем разделительные точки
 #endif
     animClearBuff(); //очистка буфера анимации
@@ -3511,7 +3510,7 @@ void autoShowTemp(void) //автоматический показ темпера
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
         indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3538,7 +3537,7 @@ void autoShowTemp(void) //автоматический показ темпера
 #else //иначе режим отображения температуры
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
         indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3606,7 +3605,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 #endif
 
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
   indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3663,7 +3662,7 @@ uint8_t showTemp(void) //показать температуру
           case 2: if (!sens.press) mode = 0; break;
         }
         if (!mode) { //если режим отображения температуры
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
           indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3675,7 +3674,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
         }
         else { //иначе давление или влажность
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+#if (NEON_DOT == 2) || !DOTS_PORT_ENABLE
           dotSetBright(0); //выключаем точки
 #else
           indiClrDots(); //выключаем разделительные точки
@@ -3720,7 +3719,7 @@ uint8_t showDate(void) //показать дату
   uint8_t mode = 0; //текущий режим
 #endif
 
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
   indiSetDotL(2); //включаем разделительную точку
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
@@ -3801,7 +3800,7 @@ uint8_t showDate(void) //показать дату
         if (++mode > 1) mode = 0;
         switch (mode) {
           case 0: //дата
-#if (NEON_DOT > 1) && DOTS_PORT_ENABLE
+#if DOTS_PORT_ENABLE
 #if NEON_DOT != 2
             indiSetDotL(2); //включаем разделительную точку
 #else
@@ -3813,7 +3812,7 @@ uint8_t showDate(void) //показать дату
 #endif
             break;
           case 1: //год
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+#if (NEON_DOT == 2) || !DOTS_PORT_ENABLE
             dotSetBright(0); //выключаем точки
 #else
             indiClrDots(); //выключаем разделительные точки
