@@ -16,6 +16,12 @@
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 
+#if WIRE_PULL
+#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4) | 0x30) //пустой сивол(отключеный индикатор)
+#else
+#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой сивол(отключеный индикатор)
+#endif
+
 //переменные работы с анимациями
 struct animData {
 #if LAMP_NUM > 4
@@ -48,12 +54,11 @@ const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //п
 
 uint8_t indi_dot_l; //буфер левых точек индикаторов
 uint8_t indi_dot_r; //буфер правых точек индикаторов
-uint8_t dot_dimm; //яркость секундной точки
 volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
 
+uint8_t dot_dimm; //яркость секундной точки
 uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
-uint8_t indi_null; //пустой сивол(отключеный индикатор)
 volatile uint8_t indiState; //текущей номер отрисовки индикатора
 
 void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //установка общей яркости
@@ -82,7 +87,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
 
   PORTC = indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
-  *anodePort[indiState] |= (indi_buf[indiState] != indi_null) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
+  *anodePort[indiState] |= (indi_buf[indiState] != INDI_NULL) ? anodeBit[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 #if DOTS_PORT_ENABLE
   if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
 #if DOTS_TYPE
@@ -193,7 +198,7 @@ void indiChangeCoef(void) //обновление коэффициента лин
 void indiChangePwm(void) //установка нового значения шим линейного регулирования
 {
   uint16_t dimm_all = 0;
-  for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != indi_null) dimm_all += indi_dimm[i];
+  for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != INDI_NULL) dimm_all += indi_dimm[i];
   OCR1A = constrain(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
 }
 //--------------------------------Инициализация индикаторов---------------------------------------
@@ -204,18 +209,14 @@ void indiInit(void) //инициализация индикаторов
   for (uint8_t i = 0; i < 4; i++) {
     PORTC |= (0x01 << decoderMask[i]); //устанавливаем высокий уровень катода
     DDRC |= (0x01 << decoderMask[i]); //устанавливаем катод как выход
-
-    if ((0x0A >> i) & 0x01) indi_null |= (0x01 << decoderMask[i]); //находим пустой символ
   }
-#if WIRE_PULL
-  indi_null |= 0x30; //если установлена подтяжка шины
-#endif
+
   for (uint8_t i = ((NEON_DOT == 3) && DOTS_PORT_ENABLE); i < (LAMP_NUM + 1); i++) { //инициализируем пины
     *anodePort[i] &= ~anodeBit[i]; //устанавливаем низкий уровень анода
     *(anodePort[i] - 1) |= anodeBit[i]; //устанавливаем анод как выход
 
     indi_dimm[i] = LIGHT_MAX; //устанавливаем максимальную яркость
-    indi_buf[i] = indi_null; //очищаем буфер пустыми символами
+    indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
   }
 
 #if DOTS_PORT_ENABLE
@@ -274,7 +275,7 @@ void indiInit(void) //инициализация индикаторов
 //-------------------------Очистка индикаторов----------------------------------------------------
 void indiClr(void) //очистка индикаторов
 {
-  for (uint8_t cnt = 0; cnt < LAMP_NUM; cnt++) indi_buf[cnt + 1] = indi_null;
+  for (uint8_t cnt = 0; cnt < LAMP_NUM; cnt++) indi_buf[cnt + 1] = INDI_NULL;
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
@@ -282,7 +283,7 @@ void indiClr(void) //очистка индикаторов
 //-------------------------Очистка индикатора----------------------------------------------------
 void indiClr(uint8_t indi) //очистка индикатора
 {
-  indi_buf[indi + 1] = indi_null;
+  indi_buf[indi + 1] = INDI_NULL;
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
@@ -378,50 +379,100 @@ void indiClrDots(void) //очистка разделительных точек
   indi_dot_r = 0x00; //выключаем правые точки
 #endif
 }
-//------------------------------------Вывод чисел-------------------------------------------------
-void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //вывод чисел
+//------------------------------------Печать чисел-------------------------------------------------
+void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char _filler) //печать чисел
 {
-  uint8_t buf[6]; //временный буфер
-  uint8_t _count = 0; //счетчик символов
-#if GEN_ENABLE
-  boolean _change = 0; //флаг измениния разряда
-#endif
+  uint8_t buff[6]; //временный буфер
+  uint8_t count = 0; //счетчик символов
 
   if (!_num) { //если ноль
-    buf[0] = digitMask[0]; //устанавливаем ноль
-    _count = 1; //прибавляем счетчик
+    buff[0] = digitMask[0]; //устанавливаем ноль
+    count = 1; //прибавляем счетчик
   }
   else { //иначе заполняем буфер числами
-    while (_num && (_count < 6)) { //если есть число
-      buf[_count++] = digitMask[_num % 10]; //забираем младший разряд в буфер
+    while (_num && (count < 6)) { //если есть число
+      buff[count++] = digitMask[_num % 10]; //забираем младший разряд в буфер
       _num /= 10; //отнимаем младший разряд от числа
     }
   }
 
-  while ((_length > _count) && (_count < 6)) buf[_count++] = digitMask[(_filler != ' ') ? _filler : 10]; //заполняем символами заполнителями
+  while ((_length > count) && (count < 6)) buff[count++] = digitMask[(_filler != ' ') ? _filler : 10]; //заполняем символами заполнителями
 
-  while (_count) { //расшивровка символов
-    _count--; //убавили счетчик символов
+  while (count) { //расшивровка символов
+    count--; //убавили счетчик символов
     if ((uint8_t)_indi++ < LAMP_NUM) { //если число в поле индикатора
       uint8_t mergeBuf = 0; //временный буфер дешефратора
       for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-        if ((buf[_count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
+        if ((buff[count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
       }
 #if WIRE_PULL
       mergeBuf |= 0x30; //если установлена подтяжка шины
 #endif
+      _out[_indi] = mergeBuf; //устанавливаем новое число
+    }
+  }
+}
+//------------------------------------Вывод чисел-------------------------------------------------
+void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //вывод чисел
+{
+  printNum(_num, indi_buf, _indi, _length, _filler); //печать чисел
 #if GEN_ENABLE
-      if (indi_buf[_indi] != mergeBuf) { //если новое число
-        if (indi_buf[_indi] == indi_null || mergeBuf == indi_null) _change = 1; //установили флаг измениния разряда
-        indi_buf[_indi] = mergeBuf; //устанавливаем новое число
-      }
-#else
-      indi_buf[_indi] = mergeBuf; //устанавливаем новое число
+  indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
+}
+//-----------------------------Декодирование чисел индикации--------------------------------------
+uint8_t animDecodeNum(uint8_t _num) //декодирование чисел индикации
+{
+  uint8_t mergeBuf = 0; //временный буфер дешефратора
+#if WIRE_PULL
+  _num &= ~0x30; //если установлена подтяжка шины
+#endif
+  for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
+    if ((_num >> decoderMask[dec]) & 0x01) mergeBuf |= (0x01 << dec); //устанавливаем бит дешефратора
+  }
+  for (uint8_t i = 0; i < 11; i++) {
+    if (mergeBuf == digitMask[i]) {
+      mergeBuf = i;
+      break;
+    }
+  }
+  return mergeBuf;
+}
+//-----------------------------Запись чисел в буфер анимации----------------------------------------
+void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //запись чисел в буфер анимации
+{
+  printNum(_num, (anim.flipBuffer + 5), _indi, _length, _filler); //печать чисел
+}
+//-------------------------------Отрисовка буфера анимации-----------------------------------------
+void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
+{
+  for (uint8_t i = 0; i < _max; i++) {
+    if ((uint8_t)_indi < LAMP_NUM) { //если число в поле индикатора
+      indi_buf[_indi + 1] = anim.flipBuffer[i + _step]; //устанавливаем новое число
+    }
+    _indi++;
+  }
+#if GEN_ENABLE
+  indiChangePwm(); //установка нового значения шим линейного регулирования
+#endif
+}
+//--------------------------------Очистка буфера анимации-------------------------------------------
+void animClearBuff(void) //очистка буфера анимации
+{
+  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
+}
+//---------------------------------Анимация смены яркости цифр---------------------------------------
+void animBright(uint8_t pwm) //анимация смены яркости цифр
+{
+  if (pwm > 30) pwm = 30;
+  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);;
+  for (uint8_t i = 0; i < LAMP_NUM; i++) {
+    if (anim.flipBuffer[i] != anim.flipBuffer[i + 6]) { //если не достигли конца анимации разряда
+      indi_dimm[i + 1] = pwm;
     }
   }
 #if GEN_ENABLE
-  if (_change) indiChangePwm(); //установка нового значения шим линейного регулирования
+  indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
 }
 //-------------------------------Получить яркости подсветки---------------------------------------
@@ -506,7 +557,7 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
 #elif NEON_DOT == 1
   neonDotSetBright(_pwm); //установка яркости неоновых точек
   if (_pwm) indi_buf[0] = 0; //разрешаем включать точки
-  else indi_buf[0] = indi_null; //запрещаем включать точки
+  else indi_buf[0] = INDI_NULL; //запрещаем включать точки
 #else
   OCR1B = _pwm; //устанавливаем яркость точек
   if (_pwm) TCCR1A |= (0x01 << COM1B1); //подключаем D10
@@ -535,87 +586,4 @@ boolean dotIncBright(uint8_t _step, uint8_t _max)
     return 1;
   }
   return 0;
-}
-//-----------------------------Декодирование чисел индикации--------------------------------------
-uint8_t animDecodeNum(uint8_t _num) //декодирование чисел индикации
-{
-  uint8_t mergeBuf = 0; //временный буфер дешефратора
-#if WIRE_PULL
-  _num &= ~0x30; //если установлена подтяжка шины
-#endif
-  for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-    if ((_num >> decoderMask[dec]) & 0x01) mergeBuf |= (0x01 << dec); //устанавливаем бит дешефратора
-  }
-  for (uint8_t i = 0; i < 11; i++) {
-    if (mergeBuf == digitMask[i]) {
-      mergeBuf = i;
-      break;
-    }
-  }
-  return mergeBuf;
-}
-//-------------------------------Отрисовка буфера анимации-----------------------------------------
-void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
-{
-  for (uint8_t i = 0; i < _max; i++) {
-    if ((uint8_t)_indi < LAMP_NUM) { //если число в поле индикатора
-      indi_buf[_indi + 1] = anim.flipBuffer[i + _step]; //устанавливаем новое число
-    }
-    _indi++;
-  }
-#if GEN_ENABLE
-  indiChangePwm(); //установка нового значения шим линейного регулирования
-#endif
-}
-//--------------------------------Очистка буфера анимации-------------------------------------------
-void animClearBuff(void) //очистка буфера анимации
-{
-  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = indi_null;
-}
-//-----------------------------Запись чисел в буфер анимации----------------------------------------
-void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //запись чисел в буфер анимации
-{
-  uint8_t buf[6]; //временный буфер
-  uint8_t _count = 0; //счетчик символов
-
-  if (!_num) { //если ноль
-    buf[0] = digitMask[0]; //устанавливаем ноль
-    _count = 1; //прибавляем счетчик
-  }
-  else { //иначе заполняем буфер числами
-    while (_num && (_count < 6)) { //если есть число
-      buf[_count++] = digitMask[_num % 10]; //забираем младший разряд в буфер
-      _num /= 10; //отнимаем младший разряд от числа
-    }
-  }
-
-  while ((_length > _count) && (_count < 6)) buf[_count++] = digitMask[(_filler != ' ') ? _filler : 10]; //заполняем символами заполнителями
-
-  while (_count) { //расшивровка символов
-    _count--; //убавили счетчик символов
-    if ((uint8_t)_indi++ < LAMP_NUM) { //если число в поле индикатора
-      uint8_t mergeBuf = 0; //временный буфер дешефратора
-      for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-        if ((buf[_count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
-      }
-#if WIRE_PULL
-      mergeBuf |= 0x30; //если установлена подтяжка шины
-#endif
-      anim.flipBuffer[_indi + 5] = mergeBuf; //устанавливаем новое число
-    }
-  }
-}
-//---------------------------------Анимация смены яркости цифр---------------------------------------
-void animBright(uint8_t pwm) //анимация смены яркости цифр
-{
-  if (pwm > 30) pwm = 30;
-  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);;
-  for (uint8_t i = 0; i < LAMP_NUM; i++) {
-    if (anim.flipBuffer[i] != anim.flipBuffer[i + 6]) { //если не достигли конца анимации разряда
-      indi_dimm[i + 1] = pwm;
-    }
-  }
-#if GEN_ENABLE
-  indiChangePwm(); //установка нового значения шим линейного регулирования
-#endif
 }

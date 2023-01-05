@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 03.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 04.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -5333,7 +5333,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       if (mode != FLIP_BRIGHT) changeIndi = (mode != FLIP_TRAIN) ? 1 : FLIP_MODE_5_STEP; //перешли к второму этапу
       else anim.timeBright = FLIP_MODE_2_TIME / indi.maxBright; //расчёт шага яркости
       for (uint8_t i = 0; i < LAMP_NUM; i++) {
-        if (anim.flipBuffer[i] != indi_null) {
+        if (anim.flipBuffer[i] != INDI_NULL) {
           changeCnt = indi.maxBright; //установили максимальную яркость
           changeIndi = 0; //перешли к второму этапу
           break; //продолжаем
@@ -5431,7 +5431,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 indiPrintNum((mode != FLIP_ORDER_OF_CATHODES) ? anim.flipBuffer[i] : cathodeMask[anim.flipBuffer[i]], i);
               }
               else {
-                if (anim.flipBuffer[i + 6] == indi_null) indiClr(i); //очистка индикатора
+                if (anim.flipBuffer[i + 6] == INDI_NULL) indiClr(i); //очистка индикатора
                 changeIndi--; //иначе завершаем анимацию для разряда
               }
             }
@@ -5475,7 +5475,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                     }
                     break;
                 }
-                if (anim.flipBuffer[((LAMP_NUM - 1) - changeNum) + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
+                if (anim.flipBuffer[((LAMP_NUM - 1) - changeNum) + (changeCnt * 6)] != INDI_NULL) _timer_ms[TMR_ANIM] = FLIP_MODE_6_TIME; //устанавливаем таймер
               }
               else {
                 changeCnt++; //прибавляем цикл
@@ -5515,7 +5515,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                   case 0: indiClr((LAMP_NUM - 1) - changeNum); break; //очистка индикатора
                   case 1: animPrintBuff((LAMP_NUM - 1) - changeNum, (LAMP_NUM + 5) - changeNum, changeNum + 1); break; //вывод часов
                 }
-                if (anim.flipBuffer[changeNum + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
+                if (anim.flipBuffer[changeNum + (changeCnt * 6)] != INDI_NULL) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
                 changeNum++; //прибавляем цикл
               }
               else {
@@ -5545,7 +5545,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                     break; //вывод часов
                 }
                 changeCnt++; //прибавляем цикл
-                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
+                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != INDI_NULL) _timer_ms[TMR_ANIM] = FLIP_MODE_9_TIME; //устанавливаем таймер
               }
               else changeCnt = 0; //сбросили счетчик
             }
@@ -5570,7 +5570,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                     break;
                 }
                 changeNum++; //прибавляем цикл
-                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != indi_null) _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
+                if (anim.flipBuffer[changeIndi + (changeCnt * 6)] != INDI_NULL) _timer_ms[TMR_ANIM] = FLIP_MODE_10_TIME; //устанавливаем таймер
               }
               else {
                 changeCnt++; //прибавляем цикл
@@ -5588,7 +5588,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 indiPrintNum(anim.flipBuffer[b], b); //выводим разряд
               }
               if (anim.flipBuffer[changeNum] == changeBuffer[changeNum]) { //если разряд совпал
-                if (anim.flipBuffer[changeNum + 6] == indi_null) indiClr(changeNum); //очистка индикатора
+                if (anim.flipBuffer[changeNum + 6] == INDI_NULL) indiClr(changeNum); //очистка индикатора
                 changeIndi += FLIP_MODE_11_STEP; //добавили шаг
                 changeNum++; //завершаем анимацию для разряда
               }
