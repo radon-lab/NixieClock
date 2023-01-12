@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.4 релиз от 04.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.5 релиз от 11.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -98,7 +98,7 @@ struct Settings_1 {
   uint8_t timeSleep[2] = {DEFAULT_SLEEP_WAKE_TIME_N, DEFAULT_SLEEP_WAKE_TIME}; //время перехода яркости
   boolean timeFormat = DEFAULT_TIME_FORMAT; //формат времени
   boolean knockSound = DEFAULT_KNOCK_SOUND; //звук кнопок или озвучка
-  uint8_t volumeSound = constrain((uint8_t)(PLAYER_MAX_VOL * (DEFAULT_PLAYER_VOLUME / 100.0)), PLAYER_MIN_VOL, PLAYER_MAX_VOL); //громкость озвучки
+  uint8_t volumeSound = CONSTRAIN((uint8_t)(PLAYER_MAX_VOL * (DEFAULT_PLAYER_VOLUME / 100.0)), PLAYER_MIN_VOL, PLAYER_MAX_VOL); //громкость озвучки
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
   uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
@@ -117,11 +117,17 @@ struct Settings_2 {
 struct Settings_3 { //настройки радио
   uint16_t stationsSave[RADIO_MAX_STATIONS] = {DEFAULT_RADIO_STATIONS};
   uint16_t stationsFreq = RADIO_MIN_FREQ;
-  uint8_t volume = constrain((uint8_t)(RADIO_MAX_VOL * (DEFAULT_RADIO_VOLUME / 100.0)), RADIO_MIN_VOL, RADIO_MAX_VOL);
+  uint8_t volume = CONSTRAIN((uint8_t)(RADIO_MAX_VOL * (DEFAULT_RADIO_VOLUME / 100.0)), RADIO_MIN_VOL, RADIO_MAX_VOL);
   uint8_t stationNum;
-  boolean powerState;
+
 } radioSettings;
 
+
+//переменные обработки кнопок
+struct radioData {
+  boolean powerState; //текущее состояние радио
+  uint8_t seekRun; //флаг автопоиска радио
+} radio;
 
 //переменные обработки кнопок
 struct buttonData {
@@ -209,39 +215,26 @@ uint16_t buzz_time; //циклы полуволны для работы пища
 #if BTN_TYPE
 #define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
 
-#define SET_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
-#define SET_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define SET_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define SET_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
-#define LEFT_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
-#define LEFT_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define LEFT_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define LEFT_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_LEFT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
-#define RIGHT_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
-#define RIGHT_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define RIGHT_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define RIGHT_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
 #define SET_CHK buttonCheckADC(SET_MIN_ADC, SET_MAX_ADC) //чтение средней аналоговой кнопки
 #define LEFT_CHK buttonCheckADC(LEFT_MIN_ADC, LEFT_MAX_ADC) //чтение левой аналоговой кнопки
 #define RIGHT_CHK buttonCheckADC(RIGHT_MIN_ADC, RIGHT_MAX_ADC) //чтение правой аналоговой кнопки
 
 #if (BTN_ADD_TYPE == 2)
-#define ADD_MIN_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
-#define ADD_MAX_ADC (uint8_t)(constrain(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define ADD_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
+#define ADD_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
 #define ADD_CHK buttonCheckADC(ADD_MIN_ADC, ADD_MAX_ADC) //чтение правой аналоговой кнопки
 #endif
 #endif
-
-//перечисления кнопок
-enum {
-  KEY_NULL, //кнопка не нажата
-  LEFT_KEY_PRESS, //клик левой кнопкой
-  LEFT_KEY_HOLD, //удержание левой кнопки
-  RIGHT_KEY_PRESS, //клик правой кнопкой
-  RIGHT_KEY_HOLD, //удержание правой кнопки
-  SET_KEY_PRESS, //клик средней кнопкой
-  SET_KEY_HOLD, //удержание средней кнопки
-  ADD_KEY_PRESS, //клик дополнительной кнопкой
-  ADD_KEY_HOLD //удержание дополнительной кнопки
-};
 
 //перечисления меню настроек
 enum {
@@ -661,7 +654,9 @@ void INIT_SYSTEM(void) //инициализация
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
 
+#if GEN_ENABLE
   indiChangeCoef(); //обновление коэффициента линейного регулирования
+#endif
 
 #if PLAYER_TYPE == 1
   dfPlayerInit(); //инициализация DF плеера
@@ -926,7 +921,7 @@ void updateTemp(void) //обновить показания температур
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
-  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + constrain(debugSettings.hvCorrect, -25, 25);
+  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
 }
 //------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
@@ -1161,7 +1156,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 #if IR_PORT_ENABLE
   if (irState == IR_READY) { //если пришла команда и управление ИК не заблокировано
     irState = 0; //сбрасываем флаг готовности
-    for (uint8_t button = 0; button < (sizeof(debugSettings.irButtons) / 2); button++) { //ищем номер кнопки
+    for (uint8_t button = 0; button < (KEY_MAX_ITEMS - 1); button++) { //ищем номер кнопки
       if (irCommand == debugSettings.irButtons[button]) { //если команда совпала
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
@@ -1386,8 +1381,9 @@ boolean check_pass(void) //проверка пароля
 //-----------------------------Отладка------------------------------------
 void debug_menu(void) //отладка
 {
-  boolean set = 0; //режим настройки
-  boolean reset = 0; //сброс настройки
+  boolean cur_set = 0; //режим настройки
+  boolean cur_reset = 0; //сброс настройки
+  boolean cur_update = 0; //обновление индикаторов
   uint8_t cur_mode = 0; //текущий режим
 #if IR_PORT_ENABLE
   uint8_t cur_button = 0; //текущая кнопка пульта
@@ -1404,19 +1400,15 @@ void debug_menu(void) //отладка
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
 
-#if LIGHT_SENS_ENABLE
-  _timer_ms[TMR_MS] = 0; //сбросили таймер
-#endif
-
   //настройки
   while (1) {
     dataUpdate(); //обработка данных
 
-    if (!secUpd) {
-      secUpd = 1; //сбрасываем флаг
+    if (!cur_update) {
+      cur_update = 1; //сбрасываем флаг
 
       indiClr(); //очистка индикаторов
-      switch (set) {
+      switch (cur_set) {
         case 0:
           indiPrintNum(cur_mode + 1, (LAMP_NUM / 2 - 1), 2, 0); //вывод режима
           break;
@@ -1425,15 +1417,17 @@ void debug_menu(void) //отладка
           switch (cur_mode) {
             case DEB_AGING_CORRECT: indiPrintNum(debugSettings.aging + 128, 0); break; //выводим коррекцию DS3231
             case DEB_TIME_CORRECT: indiPrintNum(debugSettings.timePeriod, 0); break; //выводим коррекцию внутреннего таймера
+#if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
             case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break; //выводим максимальный шим
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_FEEDBACK
             case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break; //выводим корекцию напряжения
+#endif
 #endif
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
-              indiPrintNum(cur_button + 1, 0); //выводим номер кнопки пульта
-              indiPrintNum((uint8_t)debugSettings.irButtons[cur_button], 1, 3); //выводим код кнопки пульта
+              indiPrintNum((debugSettings.irButtons[cur_button]) ? 1 : 0, 0); //выводим значение записи в ячейке кнопки пульта
+              indiPrintNum(cur_button + 1, 3, 2, 0); //выводим номер кнопки пульта
               break;
 #endif
 #if LIGHT_SENS_ENABLE
@@ -1441,21 +1435,26 @@ void debug_menu(void) //отладка
               indiPrintNum(adc_light, 1, 3); //выводим значение АЦП датчика освещения
               break;
 #endif
-            case DEB_RESET: indiPrintNum(reset, 0, 2, 0); break; //сброс настроек отладки
+            case DEB_RESET: indiPrintNum(cur_reset, 0, 2, 0); break; //сброс настроек отладки
           }
           break;
       }
     }
 
 #if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
-    if (set) {
+    if (cur_set) {
       switch (cur_mode) {
 #if IR_PORT_ENABLE
         case DEB_IR_BUTTONS: //програмирование кнопок
           if (irState == (IR_READY | IR_DISABLE)) { //если управление ИК заблокировано и пришла новая команда
+            indiPrintNum((uint8_t)irCommand, 0, 3, 0); //выводим код кнопки пульта
             debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
             irState = IR_DISABLE; //сбросили флаг готовности
-            secUpd = 0; //обновление экрана
+            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME;
+          }
+          else if (!_timer_ms[TMR_MS]) {
+            cur_update = 0; //обновление экрана
+            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME;
           }
           break;
 #endif
@@ -1466,7 +1465,7 @@ void debug_menu(void) //отладка
             if (temp_max < adc_light) temp_max = adc_light;
             analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
             _timer_ms[TMR_MS] = DEBUG_LIGHT_SENS_TIME;
-            secUpd = 0; //обновление экрана
+            cur_update = 0; //обновление экрана
           }
           break;
 #endif
@@ -1477,7 +1476,7 @@ void debug_menu(void) //отладка
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
-        switch (set) {
+        switch (cur_set) {
           case 0:
             if (cur_mode > 0) cur_mode--;
             else cur_mode = DEB_MAX_ITEMS - 1;
@@ -1489,36 +1488,36 @@ void debug_menu(void) //отладка
             switch (cur_mode) {
               case DEB_AGING_CORRECT: if (debugSettings.aging > -127) debugSettings.aging--; else debugSettings.aging = 127; break; //коррекция хода
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod > US_PERIOD_MIN) debugSettings.timePeriod--; else debugSettings.timePeriod = US_PERIOD_MAX; break; //коррекция хода
+#if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
                 if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; //минимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
                 if (debugSettings.max_pwm > 160) debugSettings.max_pwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect > -30) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
+#endif
 #endif
 #if IR_PORT_ENABLE
               case DEB_IR_BUTTONS: //програмирование кнопок
                 if (cur_button) cur_button--;
                 break;
 #endif
-              case DEB_RESET: reset = 0; break; //сброс настроек отладки
+              case DEB_RESET: cur_reset = 0; break; //сброс настроек отладки
             }
             break;
         }
-        secUpd = 0; //обновление экрана
+        cur_update = 0; //обновление экрана
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
-        switch (set) {
+        switch (cur_set) {
           case 0:
             if (cur_mode < (DEB_MAX_ITEMS - 1)) cur_mode++;
             else cur_mode = 0;
@@ -1530,68 +1529,69 @@ void debug_menu(void) //отладка
             switch (cur_mode) {
               case DEB_AGING_CORRECT: if (debugSettings.aging < 127) debugSettings.aging++; else debugSettings.aging = -127; break; //коррекция хода
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break; //коррекция хода
+#if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
                 if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; //минимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
                 if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-                indiChangePwm(); //установка нового значения шим линейного регулирования
                 break;
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_FEEDBACK
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect < 30) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
 #endif
+#endif
 #if IR_PORT_ENABLE
               case DEB_IR_BUTTONS: //програмирование кнопок
-                if (cur_button < ((sizeof(debugSettings.irButtons) / 2) - 1)) cur_button++;
+                if (cur_button < (KEY_MAX_ITEMS - 2)) cur_button++;
                 break;
 #endif
-              case DEB_RESET: reset = 1; break; //сброс настроек отладки
+              case DEB_RESET: cur_reset = 1; break; //сброс настроек отладки
             }
             break;
         }
-        secUpd = 0; //обновление экрана
+        cur_update = 0; //обновление экрана
         break;
 
       case SET_KEY_PRESS: //клик средней кнопкой
-        set = !set; //сменили сотояние подрежима меню
+        cur_set = !cur_set; //сменили сотояние подрежима меню
 
-        if (set) { //если в режиме настройки
+        if (cur_set) { //если в режиме настройки
           switch (cur_mode) {
-            case DEB_AGING_CORRECT: if (!readAgingRTC(&debugSettings.aging)) set = 0; break; //чтение коррекции хода
+            case DEB_AGING_CORRECT: if (!readAgingRTC(&debugSettings.aging)) cur_set = 0; break; //чтение коррекции хода
+            case DEB_TIME_CORRECT: break; //коррекция хода
+#if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
-            case DEB_DEFAULT_MAX_PWM: indiSetBright(30); break; //максимальное значение шим
-#if !GEN_ENABLE || !GEN_FEEDBACK
-            case DEB_HV_ADC: set = 0; break; //коррекция значения ацп преобразователя
+            case DEB_DEFAULT_MAX_PWM: break; //максимальное значение шим
+#if GEN_FEEDBACK
+            case DEB_HV_ADC: break; //коррекция значения ацп преобразователя
 #endif
-            case DEB_IR_BUTTONS: //програмирование кнопок
+#endif
 #if IR_PORT_ENABLE
+            case DEB_IR_BUTTONS: //програмирование кнопок
+              _timer_ms[TMR_MS] = 0; //сбросили таймер
               irState = IR_DISABLE; //установили флаг запрета
               cur_button = 0; //сбросили номер текущей кнопки
-#else
-              set = 0; //запретили войти в пункт меню
-#endif
               break;
-            case DEB_LIGHT_SENS: //калибровка датчика освещения
+#endif
 #if LIGHT_SENS_ENABLE
+            case DEB_LIGHT_SENS: //калибровка датчика освещения
+              _timer_ms[TMR_MS] = 0; //сбросили таймер
               temp_min = 255; //установили минимальное значение
               temp_max = 0; //установили максимальное значение
-#else
-              set = 0; //запретили войти в пункт меню
-#endif
               break;
-            case DEB_RESET: reset = 0; break; //сброс настроек отладки
+#endif
+            case DEB_RESET: cur_reset = 0; break; //сброс настроек отладки
+            default: cur_set = 0; break; //запретили войти в пункт меню
           }
         }
         else { //иначе режим выбора пункта меню
           switch (cur_mode) {
             case DEB_AGING_CORRECT: writeAgingRTC(debugSettings.aging); break; //запись коррекции хода
-            case DEB_DEFAULT_MIN_PWM: indiSetBright(30); break; //устанавливаем максимальную яркость индикаторов
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               irState = 0; //сбросили состояние
@@ -1606,17 +1606,21 @@ void debug_menu(void) //отладка
               break;
 #endif
             case DEB_RESET: //сброс настроек отладки
-              if (reset) { //подтверждение
+              if (cur_reset) { //подтверждение
                 cur_mode = 0; //перешли на первый пункт меню
                 debugSettings.aging = 0; //коррекции хода модуля часов
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
+#if GEN_ENABLE
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
                 debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-                indiChangePwm(); //установка коэффициента линейного регулирования
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_FEEDBACK
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
+#endif
+#endif
+#if IR_PORT_ENABLE
+                for (uint8_t i = 0; i < (KEY_MAX_ITEMS - 1); i++) debugSettings.irButtons[i] = 0; //сбрасываем значение ячеек кнопок пульта
 #endif
                 writeAgingRTC(debugSettings.aging); //запись коррекции хода
 #if PLAYER_TYPE
@@ -1627,13 +1631,14 @@ void debug_menu(void) //отладка
               }
               break;
           }
+          indiSetBright(30); //устанавливаем максимальную яркость индикаторов
         }
-        dotSetBright((set) ? DEFAULT_DOT_BRIGHT : 0); //включаем точки
-        secUpd = 0; //обновление экрана
+        dotSetBright((cur_set) ? 250 : 0); //включаем точки
+        cur_update = 0; //обновление экрана
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (!set) { //если не в режиме настройки
+        if (!cur_set) { //если не в режиме настройки
           updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
           return; //выходим
         }
@@ -3997,14 +4002,6 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
   updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
   return MAIN_PROGRAM; //выходим
 }
-//------------------------Остановка автопоиска радиостанции-----------------------------
-void radioSeekStop(void) //остановка автопоиска радиостанции
-{
-  stopSeekRDA(); //остановили поиск радио
-  clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
-  setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
-  setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
-}
 //-------------------------Включить питание радиоприемника------------------------------
 void radioPowerOn(void) //включить питание радиоприемника
 {
@@ -4022,7 +4019,7 @@ void radioPowerOff(void) //выключить питание радиоприе�
 //--------------------------Вернуть питание радиоприемника------------------------------
 void radioPowerRet(void) //вернуть питание радиоприемника
 {
-  if (radioSettings.powerState == RDA_ON) { //если радио было включено
+  if (radio.powerState == RDA_ON) { //если радио было включено
     radioPowerOn(); //включить питание радиоприемника
   }
   else radioPowerOff(); // иначе выключить питание радиоприемника
@@ -4039,7 +4036,7 @@ void radioSearchStation(void) //поиск радиостанции в памя�
   radioSettings.stationNum |= 0x80; //установили номер ячейки за пределом видимости
 }
 //-----------------------Переключить радиостанцию в памяти------------------------------
-void radioSwitchStation(void) //переключить радиостанцию в памяти
+void radioSwitchStation(boolean _drv) //переключить радиостанцию в памяти
 {
   if (radioSettings.stationNum & 0x80) { //если установлен флаг ячейки
     radioSettings.stationNum &= 0x7F; //сбросили флаг
@@ -4048,7 +4045,12 @@ void radioSwitchStation(void) //переключить радиостанцию 
     return; //выходим
   }
   for (uint8_t i = 0; i < RADIO_MAX_STATIONS; i++) { //ищем среди всех ячеек
-    if (radioSettings.stationNum < (RADIO_MAX_STATIONS - 1)) radioSettings.stationNum++; else radioSettings.stationNum = 0; //переключаем станцию
+    if (_drv) { //ищем вперед
+      if (radioSettings.stationNum < (RADIO_MAX_STATIONS - 1)) radioSettings.stationNum++; else radioSettings.stationNum = 0; //переключаем станцию
+    }
+    else { //ищем назад
+      if (radioSettings.stationNum > 0) radioSettings.stationNum--; else radioSettings.stationNum = (RADIO_MAX_STATIONS - 1); //переключаем станцию
+    }
     if (radioSettings.stationsSave[radioSettings.stationNum]) { //если в памяти записана частота
       radioSettings.stationsFreq = radioSettings.stationsSave[radioSettings.stationNum]; //прочитали частоту
       setFreqRDA(radioSettings.stationsFreq); //установили частоту
@@ -4056,8 +4058,92 @@ void radioSwitchStation(void) //переключить радиостанцию 
     }
   }
 }
-//---------------------------Настройка громкости радио----------------------------------
-boolean radioMenuSettings(boolean mode) //настройка громкости радио
+//------------------------Остановка автопоиска радиостанции-----------------------------
+void radioSeekStop(void) //остановка автопоиска радиостанции
+{
+  if (radio.seekRun) { //если идет поиск
+    radio.seekRun = 0; //выключили поиск
+    stopSeekRDA(); //остановили поиск радио
+    clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
+    setFreqRDA(radioSettings.stationsFreq); //устанавливаем частоту
+    setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
+    radioSearchStation(); //поиск радиостанции в памяти
+  }
+}
+//-----------------------------Быстрые настройки радио-----------------------------------
+#if IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+boolean radioFastSettings(uint8_t _state) //быстрые настройки радио
+{
+  if (radio.powerState) { //если радио включено
+    if (mainTask != RADIO_PROGRAM) {
+      mainTask = RADIO_PROGRAM; //подмена текущей программы
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
+      backlAnimDisable(); //запретили эффекты подсветки
+#if RADIO_BACKL_TYPE == 1
+      changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+      setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+      setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
+#endif
+    }
+
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
+    setBacklHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+#endif
+
+    dotSetBright(0); //выключаем точки
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+    indiClrDots(); //очистка разделителных точек
+#endif
+
+    while (1) {
+      dataUpdate(); //обработка данных
+
+      switch (_state) {
+        case KEY_NULL: break;
+
+        case VOL_UP_KEY_PRESS: //прибавить громкость
+          if (radioSettings.volume < RADIO_MAX_VOL) setVolumeRDA(++radioSettings.volume); //прибавитиь громкость
+          break;
+        case VOL_DOWN_KEY_PRESS: //убавить громкость
+          if (radioSettings.volume > RADIO_MIN_VOL) setVolumeRDA(--radioSettings.volume); //убавить громкость
+          break;
+        case STATION_UP_KEY_PRESS: //следующая станция
+          radioSwitchStation(1); //переключить радиостанцию в памяти
+          break;
+        case STATION_DOWN_KEY_PRESS: //предыдущая станция
+          radioSwitchStation(0); //переключить радиостанцию в памяти
+          break;
+
+        default: return 1; //выходим
+      }
+
+      switch (_state) {
+        case VOL_UP_KEY_PRESS:
+        case VOL_DOWN_KEY_PRESS:
+          _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
+          indiClr(); //очистка индикаторов
+          indiPrintNum(radioSettings.volume, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
+          break;
+        case STATION_UP_KEY_PRESS:
+        case STATION_DOWN_KEY_PRESS:
+          _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
+          indiClr(); //очистка индикаторов
+          indiPrintNum(radioSettings.stationNum, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
+          break;
+      }
+
+      _state = buttonState();
+
+      if (!_timer_ms[TMR_MS]) return 1; //выходим
+    }
+  }
+  return 0;
+}
+#endif
+//------------------------------Меню настроек радио-------------------------------------
+boolean radioMenuSettings(boolean mode) //меню настроек радио
 {
   boolean _state = 0; //флаг бездействия
   uint8_t _station = radioSettings.stationNum & 0x7F; //текущий номер радиостанции
@@ -4140,7 +4226,6 @@ uint8_t radioMenu(void) //радиоприемник
   if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
     boolean station_show = 0; //флаг анимации номера станции
     uint8_t time_out = 0; //таймаут автовыхода
-    uint8_t seek_run = 0; //флаг поиска
     uint16_t seek_freq = 0; //частота поиска
 
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
@@ -4158,15 +4243,16 @@ uint8_t radioMenu(void) //радиоприемник
 #if PLAYER_TYPE
       if (mainSettings.knockSound) playerSetTrackNow(PLAYER_RADIO_SOUND, PLAYER_GENERAL_FOLDER);
       playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
-      radioSettings.powerState = RDA_OFF; //сбросили флаг питания радио
+      radio.powerState = RDA_OFF; //сбросили флаг питания радио
 #else
       radioPowerOn(); //включить питание радиоприемника
-      radioSettings.powerState = RDA_ON; //установили флаг питания радио
+      radio.powerState = RDA_ON; //установили флаг питания радио
 #endif
     }
 
     radioSearchStation(); //поиск радиостанции в памяти
 
+    radio.seekRun = 0; //сбросили флаг автопоиска
     _timer_ms[TMR_MS] = 0; //сбросили таймер
 
     while (1) {
@@ -4176,18 +4262,18 @@ uint8_t radioMenu(void) //радиоприемник
         secUpd = 1; //сбросили флаг секунды
 #if ALARM_TYPE
         if (alarms.now && !alarms.wait) {  //тревога таймера
-          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          radioSeekStop(); //остановка автопоиска радиостанции
           return ALARM_PROGRAM;
         }
 #endif
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
         if (timer.mode == 2 && !timer.count) { //тревога таймера
-          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          radioSeekStop(); //остановка автопоиска радиостанции
           return WARN_PROGRAM;
         }
 #endif
         if (++time_out >= RADIO_TIMEOUT) { //если время вышло
-          if (seek_run) radioSeekStop(); //остановка автопоиска радиостанции
+          radioSeekStop(); //остановка автопоиска радиостанции
           animShow = ANIM_MAIN; //установили флаг анимации
           return MAIN_PROGRAM; //выходим по тайм-ауту
         }
@@ -4196,7 +4282,7 @@ uint8_t radioMenu(void) //радиоприемник
       if (!_timer_ms[TMR_MS]) { //если таймер истек
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
-        if (!seek_run) { //если не идет поиск
+        if (!radio.seekRun) { //если не идет поиск
 #if (NEON_DOT < 2) && !DOTS_PORT_ENABLE
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #elif DOTS_PORT_ENABLE
@@ -4215,21 +4301,21 @@ uint8_t radioMenu(void) //радиоприемник
             clrSeekCompleteStatusRDA(); //очищаем флаг окончания поиска
             seek_freq = getFreqRDA(); //прочитали частоту
           }
-          switch (seek_run) {
+          switch (radio.seekRun) {
             case 1:
-              if (radioSettings.stationsFreq > seek_freq) radioSettings.stationsFreq--; else seek_run = 0;
+              if (radioSettings.stationsFreq > seek_freq) radioSettings.stationsFreq--; else radio.seekRun = 0;
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               if (seek_anim > 0) seek_anim--; else seek_anim = ((LAMP_NUM + 1) * 2);
 #endif
               break;
             case 2:
-              if (radioSettings.stationsFreq < seek_freq) radioSettings.stationsFreq++; else seek_run = 0;
+              if (radioSettings.stationsFreq < seek_freq) radioSettings.stationsFreq++; else radio.seekRun = 0;
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               if (seek_anim < ((LAMP_NUM + 1) * 2)) seek_anim++; else seek_anim = 0;
 #endif
               break;
           }
-          if (!seek_run) {
+          if (!radio.seekRun) {
             setMuteRDA(RDA_MUTE_OFF); //выключаем приглушение звука
             radioSettings.stationsFreq = seek_freq; //прочитали частоту
             radioSearchStation(); //поиск радиостанции в памяти
@@ -4253,7 +4339,7 @@ uint8_t radioMenu(void) //радиоприемник
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
           if (radioSettings.stationNum < RADIO_MAX_STATIONS) indiPrintNum(radioSettings.stationNum, 5); //номер станции
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-          if (!seek_run) { //если не идет поиск
+          if (!radio.seekRun) { //если не идет поиск
             setBacklHue(0, 3, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
             setLedHue(3, RADIO_BACKL_COLOR_3, WHITE_ON);
 #if LAMP_NUM > 4
@@ -4266,9 +4352,9 @@ uint8_t radioMenu(void) //радиоприемник
       }
 
 #if PLAYER_TYPE
-      if (!radioSettings.powerState) { //если питание выключено
+      if (!radio.powerState) { //если питание выключено
         if (!playerPlaybackStatus()) { //если все команды отправлены
-          radioSettings.powerState = RDA_ON; //установили флаг питания радио
+          radio.powerState = RDA_ON; //установили флаг питания радио
           radioPowerOn(); //включить питание радиоприемника
         }
       }
@@ -4276,10 +4362,7 @@ uint8_t radioMenu(void) //радиоприемник
 
       switch (buttonState()) {
         case RIGHT_KEY_PRESS: //клик правой кнопкой
-          if (seek_run) { //если идет поиск
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-          }
+          radioSeekStop(); //остановка автопоиска радиостанции
           if (radioSettings.stationsFreq < RADIO_MAX_FREQ) radioSettings.stationsFreq++; else radioSettings.stationsFreq = RADIO_MIN_FREQ; //переключаем частоту
           setFreqRDA(radioSettings.stationsFreq); //установили частоту
           radioSearchStation(); //поиск радиостанции в памяти
@@ -4288,10 +4371,7 @@ uint8_t radioMenu(void) //радиоприемник
           break;
 
         case LEFT_KEY_PRESS: //клик левой кнопкой
-          if (seek_run) { //если идет поиск
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-          }
+          radioSeekStop(); //остановка автопоиска радиостанции
           if (radioSettings.stationsFreq > RADIO_MIN_FREQ) radioSettings.stationsFreq--; else radioSettings.stationsFreq = RADIO_MAX_FREQ; //переключаем частоту
           setFreqRDA(radioSettings.stationsFreq); //установили частоту
           radioSearchStation(); //поиск радиостанции в памяти
@@ -4300,36 +4380,28 @@ uint8_t radioMenu(void) //радиоприемник
           break;
 
         case ADD_KEY_PRESS: //клик дополнительной кнопкой
-          if (seek_run) { //если идет поиск
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-          }
-          radioSwitchStation(); //переключить радиостанцию в памяти
+          radioSeekStop(); //остановка автопоиска радиостанции
+          radioSwitchStation(1); //переключить радиостанцию в памяти
           station_show = 1; //подняли флаг отображения номера станции
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = 0; //сбросили таймер
           break;
 
         case SET_KEY_PRESS: //клик средней кнопкой
-          if (seek_run) { //если идет поиск
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-            radioSearchStation(); //поиск радиостанции в памяти
-          }
-          if (radioMenuSettings(0)) { //настройки радио
-            return MAIN_PROGRAM; //выходим
-          }
+          radioSeekStop(); //остановка автопоиска радиостанции
+          if (radioMenuSettings(0)) return MAIN_PROGRAM; //настройки радио
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = 0; //сбросили таймер
           break;
 
+
         case RIGHT_KEY_HOLD: //удержание правой кнопки
-          if (!seek_run) { //если не идет поиск
+          if (!radio.seekRun) { //если не идет поиск
             if (radioSettings.stationsFreq < RADIO_MAX_FREQ) { //если не достигли предела поиска
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               seek_anim = 0; //сбросили анимацию поиска
 #endif
-              seek_run = 2; //включили поиск
+              radio.seekRun = 2; //включили поиск
               seek_freq = RADIO_MAX_FREQ; //установили максимальную частоту
               radioSettings.stationNum |= 0x80; //установили номер ячейки за пределом видимости
               setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
@@ -4340,22 +4412,18 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
             }
           }
-          else {
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-            radioSearchStation(); //поиск радиостанции в памяти
-          }
+          else radioSeekStop(); //остановка автопоиска радиостанции
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = RADIO_ANIM_TIME; //устанавливаем таймер
           break;
 
         case LEFT_KEY_HOLD: //удержание левой кнопки
-          if (!seek_run) { //если не идет поиск
+          if (!radio.seekRun) { //если не идет поиск
             if (radioSettings.stationsFreq > RADIO_MIN_FREQ) { //если не достигли предела поиска
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
               seek_anim = ((LAMP_NUM + 1) * 2); //сбросили анимацию поиска
 #endif
-              seek_run = 1; //включили поиск
+              radio.seekRun = 1; //включили поиск
               seek_freq = RADIO_MIN_FREQ; //установили минимальную частоту
               radioSettings.stationNum |= 0x80; //установили номер ячейки за пределом видимости
               setMuteRDA(RDA_MUTE_ON); //включаем приглушение звука
@@ -4366,17 +4434,13 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
             }
           }
-          else {
-            seek_run = 0; //выключили поиск
-            radioSeekStop(); //остановка автопоиска радиостанции
-            radioSearchStation(); //поиск радиостанции в памяти
-          }
+          else radioSeekStop(); //остановка автопоиска радиостанции
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = RADIO_ANIM_TIME; //устанавливаем таймер
           break;
 
         case ADD_KEY_HOLD: //удержание дополнительной кнопки
-          if (!seek_run) { //если не идет поиск
+          if (!radio.seekRun) { //если не идет поиск
             if (!radioMenuSettings(1)) { //настройки радио
 #if !PLAYER_TYPE
               buzz_pulse(RADIO_SAVE_SOUND_FREQ, RADIO_SAVE_SOUND_TIME); //сигнал успешной записи радиостанции в память
@@ -4389,9 +4453,39 @@ uint8_t radioMenu(void) //радиоприемник
           break;
 
         case SET_KEY_HOLD: //удержание средней кнопк
-          radioSettings.powerState = RDA_OFF; //сбросили флаг питания радио
-          setPowerRDA(RDA_OFF); //включаем радио
+          radio.powerState = RDA_OFF; //сбросили флаг питания радио
+          setPowerRDA(RDA_OFF); //выключаем радио
           return MAIN_PROGRAM; //выходим
+
+#if IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+        case PWR_KEY_PRESS: //управление питанием
+          radioSeekStop(); //остановка автопоиска радиостанции
+          return MAIN_PROGRAM; //выход в режим часов
+        case VOL_UP_KEY_PRESS: //прибавить громкость
+          radioSeekStop(); //остановка автопоиска радиостанции
+          radioFastSettings(VOL_UP_KEY_PRESS); //прибавить громкость
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+        case VOL_DOWN_KEY_PRESS: //убавить громкость
+          radioSeekStop(); //остановка автопоиска радиостанции
+          radioFastSettings(VOL_DOWN_KEY_PRESS); //убавить громкость
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+        case STATION_UP_KEY_PRESS: //следующая станция
+          radioSeekStop(); //остановка автопоиска радиостанции
+          radioFastSettings(STATION_UP_KEY_PRESS); //следующая станция
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+        case STATION_DOWN_KEY_PRESS: //предыдущая станция
+          radioSeekStop(); //остановка автопоиска радиостанции
+          radioFastSettings(STATION_DOWN_KEY_PRESS); //предыдущая станция
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+#endif
       }
     }
     return INIT_PROGRAM;
@@ -5714,6 +5808,44 @@ uint8_t mainScreen(void) //главный экран
         }
 #endif
         return RADIO_PROGRAM; //радиоприемник
+#if IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+      case PWR_KEY_PRESS: //управление питанием
+        if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
+          if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
+            radioPowerOn(); //включить питание радиоприемника
+            radio.powerState = RDA_ON; //установили флаг питания радио
+          }
+          else {
+            setPowerRDA(RDA_OFF); //выключаем радио
+            radio.powerState = RDA_OFF; //сбросили флаг питания радио
+          }
+        }
+        break;
+      case VOL_UP_KEY_PRESS: //прибавить громкость
+        if (radioFastSettings(VOL_UP_KEY_PRESS)) { //если настройка изменилась
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return MAIN_PROGRAM; //выходим
+        }
+        break;
+      case VOL_DOWN_KEY_PRESS: //убавить громкость
+        if (radioFastSettings(VOL_DOWN_KEY_PRESS)) { //если настройка изменилась
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return MAIN_PROGRAM; //выходим
+        }
+        break;
+      case STATION_UP_KEY_PRESS: //следующая станция
+        if (radioFastSettings(STATION_UP_KEY_PRESS)) { //если настройка изменилась
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return MAIN_PROGRAM; //выходим
+        }
+        break;
+      case STATION_DOWN_KEY_PRESS: //предыдущая станция
+        if (radioFastSettings(STATION_DOWN_KEY_PRESS)) { //если настройка изменилась
+          updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
+          return MAIN_PROGRAM; //выходим
+        }
+        break;
+#endif
 #endif
 #endif
     }

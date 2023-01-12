@@ -22,11 +22,13 @@ void readTempSHT(void) //чтение температуры/влажности
 
   if (!typeSHT) { //если датчик не определен
     if (!wireBeginTransmission(SHT20_ADDR)) { //если SHT20
+      typeSHT = SHT20_ADDR; //установлили тип датчика
       wireWrite(SHT20_WRITE_REG); //устанавливаем адрес записи
       wireWrite(0xC1); //записываем настройку
       wireEnd(); //остановка шины wire
     }
     else if (!wireBeginTransmission(SHT30_ADDR)) { //если SHT30
+      typeSHT = SHT30_ADDR; //установлили тип датчика
       wireWrite(0x30); //записываем настройку
       wireWrite(0x66); //записываем настройку
       wireEnd(); //остановка шины wire

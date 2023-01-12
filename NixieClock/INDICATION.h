@@ -1,6 +1,6 @@
-#define FREQ_TICK (uint8_t)(constrain((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + 1))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
-#define DOT_LIGHT_MAX (uint8_t)(constrain(LIGHT_MAX + (LIGHT_MAX >> 5) - 1, 0, 255)) //расчет максимального шага яркости для точек
+#define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN(LIGHT_MAX + (LIGHT_MAX >> 5) - 1, 0, 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)((LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
@@ -33,8 +33,31 @@ struct animData {
 
 const uint8_t _anim_set[] PROGMEM = {FLIP_ANIM_RANDOM}; //массив случайных режимов
 
+//перечисления кнопок
+enum {
+  KEY_NULL, //кнопка не нажата
+  LEFT_KEY_PRESS, //клик левой кнопкой
+  LEFT_KEY_HOLD, //удержание левой кнопки
+  RIGHT_KEY_PRESS, //клик правой кнопкой
+  RIGHT_KEY_HOLD, //удержание правой кнопки
+  SET_KEY_PRESS, //клик средней кнопкой
+  SET_KEY_HOLD, //удержание средней кнопки
+  ADD_KEY_PRESS, //клик дополнительной кнопкой
+  ADD_KEY_HOLD, //удержание дополнительной кнопки
+#if IR_EXT_BTN_ENABLE
+#if IR_PORT_ENABLE && RADIO_ENABLE
+  PWR_KEY_PRESS, //клик кнопки питания
+  VOL_UP_KEY_PRESS, //клик кнопки громкости вверх
+  VOL_DOWN_KEY_PRESS, //клик кнопки громкости вниз
+  STATION_UP_KEY_PRESS, //клик кнопки станции вверх
+  STATION_DOWN_KEY_PRESS, //клик кнопки станции вниз
+#endif
+#endif
+  KEY_MAX_ITEMS //максимум кнопок
+};
+
 struct Settings_4 {
-  uint16_t irButtons[8]; //коды кнопок пульта
+  uint16_t irButtons[KEY_MAX_ITEMS - 1]; //коды кнопок пульта
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
@@ -192,14 +215,14 @@ void converterCheck(void) //проверка состояния преобраз
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
-  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / constrain(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
+  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / CONSTRAIN(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
 }
 //---------------------Установка нового значения шим линейного регулирования----------------------
 void indiChangePwm(void) //установка нового значения шим линейного регулирования
 {
   uint16_t dimm_all = 0;
   for (uint8_t i = 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != INDI_NULL) dimm_all += indi_dimm[i];
-  OCR1A = constrain(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
+  OCR1A = CONSTRAIN(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
 }
 //--------------------------------Инициализация индикаторов---------------------------------------
 void indiInit(void) //инициализация индикаторов
@@ -251,7 +274,7 @@ void indiInit(void) //инициализация индикаторов
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #if GEN_ENABLE
-  OCR1A = constrain(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
+  OCR1A = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #endif
 

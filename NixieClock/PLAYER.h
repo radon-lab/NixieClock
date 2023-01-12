@@ -80,7 +80,6 @@ volatile uint8_t uartBit; //текущий бит UART
 void uartDisable(void) //отключение uart
 {
   UCSR0B = 0; //выключаем UART
-  PRR |= (0x01 << PRUSART0); //выключаем питание UART
 }
 //-------------------------------------Статус UART--------------------------------------
 inline boolean uartStatus(void)

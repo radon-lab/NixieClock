@@ -128,20 +128,20 @@ void readTempBME(void) //чтение температуры/давления/в
 
   if (!typeBME) { //если датчик не определен
 #if SENS_BME_ENABLE == 1
-    if (readCalibrationBMP180()) typeBME = BMP180_ADDR;
+    if (readCalibrationBMP180()) typeBME = BMP180_ADDR; //установлили тип датчика
     else return; //иначе выходим
 #elif SENS_BME_ENABLE == 2
-    if (readCalibrationBME280()) {
-      typeBME = BME280_ADDR;
+    if (readCalibrationBME280()) { //если BME280
+      typeBME = BME280_ADDR; //установлили тип датчика
       writeREG(BME280_ADDR, BME280_CONTROL_HUM_REG, BME280_HUM_OVERSAMP); //устанавливаем разрешение датчика влажности
       writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
       writeREG(BME280_ADDR, BME280_CONFIG_REG, ((BME280_STANDBY << 5) | (BME280_FILTER_COEF << 2))); //устанавливаем частоту опроса и коэффициент фильтрации
     }
     else return; //иначе выходим
 #elif SENS_BME_ENABLE == 3
-    if (readCalibrationBMP180()) typeBME = BMP180_ADDR;
-    else if (readCalibrationBME280()) {
-      typeBME = BME280_ADDR;
+    if (readCalibrationBMP180()) typeBME = BMP180_ADDR; //установлили тип датчика
+    else if (readCalibrationBME280()) { //если BME280
+      typeBME = BME280_ADDR; //установлили тип датчика
       writeREG(BME280_ADDR, BME280_CONTROL_HUM_REG, BME280_HUM_OVERSAMP); //устанавливаем разрешение датчика влажности
       writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
       writeREG(BME280_ADDR, BME280_CONFIG_REG, ((BME280_STANDBY << 5) | (BME280_FILTER_COEF << 2))); //устанавливаем частоту опроса и коэффициент фильтрации

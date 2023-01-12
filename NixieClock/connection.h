@@ -59,6 +59,7 @@
 //    PORTD (0 - D0 | 1 - D1 | 2 - D2 | 3 - D3 | 4 - D4 | 5 - D5 | 6 - D6 | 7 - D7)
 //    PORTB (0 - D8 | 1 - D9 | 2 - D10 | 3 - D11 | 4 - D12 | 5 - D13)
 //    PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
+//    PORTE (0 - GND(3) | 1 - VCC(6) | 2 - A6 | 3 - A7)
 
 #define DDR_REG(portx)  (*(&portx - 1))
 #define PIN_REG(portx)  (*(&portx - 2))
@@ -68,10 +69,18 @@
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
+#define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
 #define DECODE_PCMSK(pin) ((pin < 8) ? PCMSK2 : PCMSK0)
 #define DECODE_PCIE(pin) ((pin < 8) ? PCIE2 : PCIE0)
+
+#ifdef PORTE
+#define DECODE_PORT(pin) ((pin < 8) ? PORTD : ((pin < 14) ? PORTB : PORTE))
+#define DECODE_BIT(pin) ((pin < 8) ? pin : ((pin < 14) ? (pin - 8) : (pin - 14)))
+#else
 #define DECODE_PORT(pin) ((pin < 8) ? PORTD : PORTB)
 #define DECODE_BIT(pin) ((pin < 8) ? pin : (pin - 8))
+#endif
 
 #define ANODE_OFF 0x00 //выключенный анод
 
