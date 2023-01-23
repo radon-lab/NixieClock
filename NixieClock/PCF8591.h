@@ -40,23 +40,17 @@ bool readAnalogInputChannelsPCFImpl(void) //чтение аналоговых п
 
   wireRead();
   for (uint8_t i = 0; i < 4; i++) {
-    ((uint8_t *)&analogInputChannelsPCF)[i] = wireRead();
+    if (i == 3) {
+      ((uint8_t *)&analogInputChannelsPCF)[i] = wireReadEndByte();
+    } else {
+      ((uint8_t *)&analogInputChannelsPCF)[i] = wireRead();
+    }
   }
-  wireEnd();
 
   return 1;
 }
 bool readAnalogInputChannelsPCF(void) { //чтение аналоговых портов ввода
-  // Добавлен запрет прерываний при чтении данных по I2C т.к. похоже иногда другой процесс тоже читает данные, по этой причине возникает коллизия
-  __asm__ __volatile__ (
-    "CLI                  \n\t" //запретили прерывания
-  );
-
   bool res = readAnalogInputChannelsPCFImpl();
-
-  __asm__ __volatile__ (
-    "SEI                  \n\t" //разрешили прерывания
-  );
 
   return res;
 }
