@@ -90,13 +90,6 @@
 #define ANODE_OFF 0x00 //выключенный анод
 
 //Оптопары(аноды ламп)
-#define ANODE_1_BIT (0x01 << DECODE_BIT(ANODE_1_PIN)) //(ЧЧ)
-#define ANODE_2_BIT (0x01 << DECODE_BIT(ANODE_2_PIN)) //(ЧЧ)
-#define ANODE_3_BIT (0x01 << DECODE_BIT(ANODE_3_PIN)) //(ММ)
-#define ANODE_4_BIT (0x01 << DECODE_BIT(ANODE_4_PIN)) //(ММ)
-#define ANODE_5_BIT (0x01 << DECODE_BIT(ANODE_5_PIN)) //(СС)
-#define ANODE_6_BIT (0x01 << DECODE_BIT(ANODE_6_PIN)) //(СС)
-
 #define ANODE_CLEAR(pin) (BIT_CLEAR(DECODE_PORT(pin), DECODE_BIT(pin)))
 #define ANODE_SET(pin)   (BIT_SET(DECODE_PORT(pin), DECODE_BIT(pin)))
 #define ANODE_OUT(pin)   (BIT_SET(DDR_REG(DECODE_PORT(pin)), DECODE_BIT(pin)))

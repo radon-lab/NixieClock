@@ -74,8 +74,8 @@ uint8_t adc_light; //значение АЦП сенсора яркости ос�
 boolean state_light = 1; //состояние сенсора яркости освещения
 
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
-#if INDI_TYPE
-const uint8_t regMask[] = {ANODE_OFF, ANODE_1_BIT, ANODE_2_BIT, ANODE_3_BIT, ANODE_4_BIT, ANODE_5_BIT, ANODE_6_BIT}; //таблица бит анодов ламп
+#if INDI_PORT_TYPE
+const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? DOT_PIN : ANODE_OFF, ANODE_1_PIN, ANODE_2_PIN, ANODE_3_PIN, ANODE_4_PIN, ANODE_5_PIN, ANODE_6_PIN}; //таблица бит анодов ламп
 #endif
 
 uint8_t indi_dot_l; //буфер левых точек индикаторов
@@ -110,7 +110,7 @@ inline void mainEnableWDT(void) //основной запуск WDT
 //----------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_COMPA_vect) //динамическая индикация
 {
-#if INDI_TYPE
+#if INDI_PORT_TYPE
   uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 #if DOTS_PORT_ENABLE
   if (indi_dot_l & indi_dot_pos) temp |= (0x01 << INDI_DOTL_BIT); //включаем левые точки
@@ -120,7 +120,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #endif
   REG_LATCH_ENABLE; //включили защелку
   SPDR = temp; //загрузили данные
-#if (NEON_DOT == 1)
+#if (NEON_DOT == 1) && !INDI_DOT_TYPE
   if (!indiState && (indi_buf[indiState] != INDI_NULL)) DOT_SET; //включили точки
 #endif
 #endif
@@ -128,7 +128,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
   PORTC = indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
 
-#if !INDI_TYPE
+#if !INDI_PORT_TYPE
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
 #if NEON_DOT == 1
@@ -163,16 +163,16 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
     RESET_SYSTEM; //перезагрузка
   }
 
-#if INDI_TYPE
+#if INDI_PORT_TYPE
   while (!(SPSR & (0x01 << SPIF))); //ждем отправки
   REG_LATCH_DISABLE; //выключили защелку
 #endif
 }
 ISR(TIMER0_COMPB_vect) {
-#if INDI_TYPE
+#if INDI_PORT_TYPE
   REG_LATCH_ENABLE; //включили защелку
   SPDR = 0x00; //загрузили данные
-#if (NEON_DOT == 1)
+#if (NEON_DOT == 1) && !INDI_DOT_TYPE
   if (!indiState) DOT_CLEAR; //выключили точки
 #endif
 #if DOTS_PORT_ENABLE
@@ -215,7 +215,7 @@ ISR(TIMER0_COMPB_vect) {
 #endif
   }
 
-#if INDI_TYPE
+#if INDI_PORT_TYPE
   while (!(SPSR & (0x01 << SPIF))); //ждем отправки
   REG_LATCH_DISABLE; //выключили защелку
 #endif
@@ -335,7 +335,7 @@ void indiInit(void) //инициализация индикаторов
 #if (NEON_DOT < 2)
   DOT_INIT; //инициализация секундных точек
 #endif
-#if !INDI_TYPE
+#if !INDI_PORT_TYPE
   ANODE_INIT(ANODE_1_PIN); //инициализация анода 1
   ANODE_INIT(ANODE_2_PIN); //инициализация анода 2
   ANODE_INIT(ANODE_3_PIN); //инициализация анода 3
