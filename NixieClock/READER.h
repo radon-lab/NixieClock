@@ -70,8 +70,13 @@ ISR(TIMER2_COMPB_vect)
   OCR2B += buffer.dacSampl;
   if (buffer.dacStart != buffer.dacEnd) {
     if (++buffer.dacStart >= DAC_BUFF_SIZE) buffer.dacStart = 0;
+#if BUZZ_PIN == 9
+    if (buffer.readData[buffer.dacStart] < 128) OCR1A = buffer.readData[buffer.dacStart] + ((((uint16_t)(buffer.readData[buffer.dacStart] ^ 0x7F) * buffer.dacVolume) * 26) >> 8);
+    else OCR1A = buffer.readData[buffer.dacStart] - ((((uint16_t)(buffer.readData[buffer.dacStart] & 0x7F) * buffer.dacVolume) * 26) >> 8);
+#elif BUZZ_PIN == 10
     if (buffer.readData[buffer.dacStart] < 128) OCR1B = buffer.readData[buffer.dacStart] + ((((uint16_t)(buffer.readData[buffer.dacStart] ^ 0x7F) * buffer.dacVolume) * 26) >> 8);
     else OCR1B = buffer.readData[buffer.dacStart] - ((((uint16_t)(buffer.readData[buffer.dacStart] & 0x7F) * buffer.dacVolume) * 26) >> 8);
+#endif
   }
 }
 #endif
@@ -235,7 +240,11 @@ void readerUpdate(void)
             else reader.playerState = READER_IDLE;
           }
           else {
+#if BUZZ_PIN == 9
+            OCR1A = 128; //выключаем dac
+#elif BUZZ_PIN == 10
             OCR1B = 128; //выключаем dac
+#endif
             OCR2B = 255; //устанавливаем COMB в начало
             TIFR2 |= (0x01 << OCF2B); //сбрасываем флаг прерывания
             TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
@@ -262,7 +271,11 @@ void readerUpdate(void)
           if (!playerPlaybackStatus() && !player.playbackMute) AMP_DISABLE;
 #endif
           TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
+#if BUZZ_PIN == 9
+          OCR1A = 128; //выключаем dac
+#elif BUZZ_PIN == 10
           OCR1B = 128; //выключаем dac
+#endif
           reader.playerState = READER_IDLE;
         }
         break;

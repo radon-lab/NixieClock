@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.5 релиз от 11.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.6 релиз от 23.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -936,11 +936,20 @@ void analogUpdate(void) //обработка аналоговых входов
           adc_temp += ADCL | ((uint16_t)ADCH << 8); //добавляем значение в буфер
           if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
             adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
+#if CONV_PIN == 9
             if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
             else {
               TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
               CONV_OFF; //выключаем пин преобразователя
             }
+#elif CONV_PIN == 10
+            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
+            else {
+              TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
+              CONV_OFF; //выключаем пин преобразователя
+            }
+#endif
+
             adc_temp = 0; //сбрасываем буфер усреднения
             adc_cycle = 0; //сбрасываем циклы буфера усреднения
 

@@ -1,29 +1,24 @@
 //Типы плат часов
 #if (BOARD_TYPE == 0) //IN-12 (индикаторы стоят правильно)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, ANODE_OFF, ANODE_OFF}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10};   //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
+enum {DOT_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+const uint8_t digitMask[] = {7, 3, 6, 4, 1, 9, 8, 0, 5, 2, 10}; //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
 #elif (BOARD_TYPE == 1) //IN-12 turned (индикаторы перевёрнуты)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, ANODE_OFF, ANODE_OFF}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10};   //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
+enum {DOT_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+const uint8_t digitMask[] = {2, 8, 1, 9, 6, 4, 3, 5, 0, 7, 10}; //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
 #elif (BOARD_TYPE == 2) //IN-14 (обычная и neon dot)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_4_PORT, &ANODE_3_PORT, &ANODE_2_PORT, &ANODE_1_PORT, ANODE_OFF, ANODE_OFF}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_1_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10};   //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
+enum {DOT_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+const uint8_t digitMask[] = {9, 8, 0, 5, 4, 7, 3, 6, 2, 1, 10}; //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6}; //порядок катодов in14
 #elif (BOARD_TYPE == 3) //другие индикаторы(4 лампы)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, ANODE_OFF, ANODE_OFF}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, ANODE_OFF, ANODE_OFF}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3};     //порядок катодов in12
+enum {DOT_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+const uint8_t digitMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
 #elif (BOARD_TYPE == 4) //другие индикаторы(6 ламп)
-volatile uint8_t* anodePort[] = {&DOT_PORT, &ANODE_1_PORT, &ANODE_2_PORT, &ANODE_3_PORT, &ANODE_4_PORT, &ANODE_5_PORT, &ANODE_6_PORT}; //таблица портов анодов ламп
-const uint8_t anodeBit[] = {0x01 << DOT_BIT, 0x01 << ANODE_1_BIT, 0x01 << ANODE_2_BIT, 0x01 << ANODE_3_BIT, 0x01 << ANODE_4_BIT, 0x01 << ANODE_5_BIT, 0x01 << ANODE_6_BIT}; //таблица бит анодов ламп
-const uint8_t digitMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};   //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6};     //порядок катодов in14
+enum {DOT_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+const uint8_t digitMask[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; //тут вводим свой порядок пинов лампы(цифра "10" - это пустой символ, должен быть всегда в конце)
+const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6}; //порядок катодов in14
 #endif
 
 //Работа со звуками
@@ -287,4 +282,4 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "1.8.5"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "1.8.6"     //версия прошивки для отображения и озвучки

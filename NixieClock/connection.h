@@ -21,10 +21,10 @@
 #define ADD_PIN   0  //пин доплнительной кнопки(0..13)(pin D)
 
 //Основная периферия
-#define CONV_PIN  9  //пин преобразователя(только пин 9)(pin D)
-#define DOT_PIN   10 //пин секундных точек(неоновая точка - 0..13 | светодиодная точка - 10)(pin D)
-#define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или адресные светодиоды - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
-#define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 10)(pin D)
+#define CONV_PIN  9  //пин преобразователя(9..10)(pin D)
+#define DOT_PIN   10 //пин секундных точек(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
+#define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
+#define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 9..10)(pin D)
 
 //Дополнительная периферия
 #define DOTL_PIN 0  //пин левых(основных) разделительных точек в индикаторах(0..13)(pin D)
@@ -44,6 +44,11 @@
 #define SD_MOSI_PIN 11 //пин SD карты MOSI(0..13)(pin D)
 #define SD_SCK_PIN  13 //пин SD карты SCK(0..13)(pin D)
 #define SD_CS_PIN   0  //пин SD карты CS(0..13)(pin D)
+
+//Сдвиговый регистр
+#define REG_LATCH_PIN 0  //пин SD карты MISO(кроме 12)(0..13)(pin D)
+#define REG_DATA_PIN 11  //пин SD карты MOSI(только 11)(pin D)
+#define REG_SCK_PIN  13  //пин SD карты SCK(только 13)(pin D)
 
 //Обратная связь
 #define ANALOG_DET_PIN 6 //пин обратной связи(6..7)(pin A)
@@ -85,29 +90,28 @@
 #define ANODE_OFF 0x00 //выключенный анод
 
 //Оптопары(аноды ламп)
-#define ANODE_1_BIT DECODE_BIT(ANODE_1_PIN) //(ЧЧ)
-#define ANODE_1_PORT DECODE_PORT(ANODE_1_PIN)
+#define ANODE_1_BIT (0x01 << DECODE_BIT(ANODE_1_PIN)) //(ЧЧ)
+#define ANODE_2_BIT (0x01 << DECODE_BIT(ANODE_2_PIN)) //(ЧЧ)
+#define ANODE_3_BIT (0x01 << DECODE_BIT(ANODE_3_PIN)) //(ММ)
+#define ANODE_4_BIT (0x01 << DECODE_BIT(ANODE_4_PIN)) //(ММ)
+#define ANODE_5_BIT (0x01 << DECODE_BIT(ANODE_5_PIN)) //(СС)
+#define ANODE_6_BIT (0x01 << DECODE_BIT(ANODE_6_PIN)) //(СС)
 
-#define ANODE_2_BIT DECODE_BIT(ANODE_2_PIN) //(ЧЧ)
-#define ANODE_2_PORT DECODE_PORT(ANODE_2_PIN)
+#define ANODE_CLEAR(pin) (BIT_CLEAR(DECODE_PORT(pin), DECODE_BIT(pin)))
+#define ANODE_SET(pin)   (BIT_SET(DECODE_PORT(pin), DECODE_BIT(pin)))
+#define ANODE_OUT(pin)   (BIT_SET(DDR_REG(DECODE_PORT(pin)), DECODE_BIT(pin)))
 
-#define ANODE_3_BIT DECODE_BIT(ANODE_3_PIN) //(ММ)
-#define ANODE_3_PORT DECODE_PORT(ANODE_3_PIN)
-
-#define ANODE_4_BIT DECODE_BIT(ANODE_4_PIN) //(ММ)
-#define ANODE_4_PORT DECODE_PORT(ANODE_4_PIN)
-
-#define ANODE_5_BIT DECODE_BIT(ANODE_5_PIN) //(СС)
-#define ANODE_5_PORT DECODE_PORT(ANODE_5_PIN)
-
-#define ANODE_6_BIT DECODE_BIT(ANODE_6_PIN) //(СС)
-#define ANODE_6_PORT DECODE_PORT(ANODE_6_PIN)
+#define ANODE_INIT(pin)  ANODE_CLEAR(pin); ANODE_OUT(pin)
 
 //Пин точек
 #define DOT_BIT   DECODE_BIT(DOT_PIN)
 #define DOT_PORT  DECODE_PORT(DOT_PIN)
 
 #define DOT_CLEAR (BIT_CLEAR(DOT_PORT, DOT_BIT))
+#define DOT_SET   (BIT_SET(DOT_PORT, DOT_BIT))
+#define DOT_OUT   (BIT_SET(DDR_REG(DOT_PORT), DOT_BIT))
+
+#define DOT_INIT  DOT_CLEAR; DOT_OUT
 
 //Пин левых точек индикаторов
 #define INDI_DOTL_BIT   DECODE_BIT(DOTL_PIN)
@@ -357,3 +361,34 @@
 #define IR_INP   (BIT_CLEAR(DDR_REG(IR_PORT), IR_BIT))
 
 #define IR_INIT  IR_SET; IR_INP
+
+//Пин DATA сдвигового регистра
+#define REG_DATA_BIT   DECODE_BIT(REG_DATA_PIN)
+#define REG_DATA_PORT  DECODE_PORT(REG_DATA_PIN)
+
+#define REG_DATA_SET   (BIT_SET(REG_DATA_PORT, REG_DATA_BIT))
+#define REG_DATA_CLEAR (BIT_CLEAR(REG_DATA_PORT, REG_DATA_BIT))
+#define REG_DATA_OUT   (BIT_SET(DDR_REG(REG_DATA_PORT), REG_DATA_BIT))
+
+#define REG_DATA_INIT  REG_DATA_SET; REG_DATA_OUT
+
+//Пин SCK сдвигового регистра
+#define REG_SCK_BIT   DECODE_BIT(REG_SCK_PIN)
+#define REG_SCK_PORT  DECODE_PORT(REG_SCK_PIN)
+
+#define REG_SCK_INV   (REG_SCK_PORT ^= REG_SCK_BIT)
+#define REG_SCK_SET   (BIT_SET(REG_SCK_PORT, REG_SCK_BIT))
+#define REG_SCK_CLEAR (BIT_CLEAR(REG_SCK_PORT, REG_SCK_BIT))
+#define REG_SCK_OUT   (BIT_SET(DDR_REG(REG_SCK_PORT), REG_SCK_BIT))
+
+#define REG_SCK_INIT  REG_SCK_CLEAR; REG_SCK_OUT
+
+//Пин LATCH сдвигового регистра
+#define REG_LATCH_BIT     DECODE_BIT(REG_LATCH_PIN)
+#define REG_LATCH_PORT    DECODE_PORT(REG_LATCH_PIN)
+
+#define REG_LATCH_DISABLE (BIT_SET(REG_LATCH_PORT, REG_LATCH_BIT))
+#define REG_LATCH_ENABLE  (BIT_CLEAR(REG_LATCH_PORT, REG_LATCH_BIT))
+#define REG_LATCH_OUT     (BIT_SET(DDR_REG(REG_LATCH_PORT), REG_LATCH_BIT))
+
+#define REG_LATCH_INIT    REG_LATCH_DISABLE; REG_LATCH_OUT
