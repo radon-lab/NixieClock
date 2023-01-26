@@ -22,7 +22,8 @@
 
 //Основная периферия
 #define CONV_PIN  9  //пин преобразователя(9..10)(pin D)
-#define DOT_PIN   10 //пин секундных точек(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
+#define DOT_1_PIN 10 //пин секундных точек(левой неонки)(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
+#define DOT_2_PIN 11 //пин секундных точек(правой неонки)(0..13)(pin D)
 #define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
 #define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 9..10)(pin D)
 
@@ -96,15 +97,25 @@
 
 #define ANODE_INIT(pin)  ANODE_CLEAR(pin); ANODE_OUT(pin)
 
-//Пин точек
-#define DOT_BIT   DECODE_BIT(DOT_PIN)
-#define DOT_PORT  DECODE_PORT(DOT_PIN)
+//Пин левых точек
+#define DOT_1_BIT   DECODE_BIT(DOT_1_PIN)
+#define DOT_1_PORT  DECODE_PORT(DOT_1_PIN)
 
-#define DOT_CLEAR (BIT_CLEAR(DOT_PORT, DOT_BIT))
-#define DOT_SET   (BIT_SET(DOT_PORT, DOT_BIT))
-#define DOT_OUT   (BIT_SET(DDR_REG(DOT_PORT), DOT_BIT))
+#define DOT_1_CLEAR (BIT_CLEAR(DOT_1_PORT, DOT_1_BIT))
+#define DOT_1_SET   (BIT_SET(DOT_1_PORT, DOT_1_BIT))
+#define DOT_1_OUT   (BIT_SET(DDR_REG(DOT_1_PORT), DOT_1_BIT))
 
-#define DOT_INIT  DOT_CLEAR; DOT_OUT
+#define DOT_1_INIT  DOT_1_CLEAR; DOT_1_OUT
+
+//Пин правых точек
+#define DOT_2_BIT   DECODE_BIT(DOT_2_PIN)
+#define DOT_2_PORT  DECODE_PORT(DOT_2_PIN)
+
+#define DOT_2_CLEAR (BIT_CLEAR(DOT_2_PORT, DOT_2_BIT))
+#define DOT_2_SET   (BIT_SET(DOT_2_PORT, DOT_2_BIT))
+#define DOT_2_OUT   (BIT_SET(DDR_REG(DOT_2_PORT), DOT_2_BIT))
+
+#define DOT_2_INIT  DOT_2_CLEAR; DOT_2_OUT
 
 //Пин левых точек индикаторов
 #define INDI_DOTL_BIT   DECODE_BIT(DOTL_PIN)
