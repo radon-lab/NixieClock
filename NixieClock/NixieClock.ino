@@ -2017,11 +2017,11 @@ void dataUpdate(void) //обработка данных
     }
 #endif
 
-#if LIGHT_SENS_TYPE == 2
+#if PCF8591_ENABLE && LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 2
   adc_light = LIGTH_VALUE; //записываем результат опроса
 #endif
 
-#if LIGHT_SENS_ENABLE
+#if LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 1
   lightSensCheck(); //проверка сенсора яркости освещения
 #endif
 
