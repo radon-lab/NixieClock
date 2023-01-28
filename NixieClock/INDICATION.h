@@ -156,7 +156,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
 #if NEON_DOT == 1
-      case DOT_POS: DOT_SET; break;
+      case DOT_POS: DOT_1_SET; break;
 #elif NEON_DOT == 2
       case DOT_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
 #endif
@@ -210,7 +210,7 @@ ISR(TIMER0_COMPB_vect) {
 #else
   switch (indiState) {
 #if NEON_DOT == 1
-    case DOT_POS: DOT_CLEAR; break;
+    case DOT_POS: DOT_1_CLEAR; break;
 #elif NEON_DOT == 2
     case DOT_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
 #endif
