@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.7 релиз от 28.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.7 релиз от 29.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1442,7 +1442,7 @@ void debug_menu(void) //отладка
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               indiPrintNum((debugSettings.irButtons[cur_button]) ? 1 : 0, 0); //выводим значение записи в ячейке кнопки пульта
-              indiPrintNum(cur_button + 1, 3, 2, 0); //выводим номер кнопки пульта
+              indiPrintNum(cur_button + 1, 2, 2, 0); //выводим номер кнопки пульта
               break;
 #endif
 #if LIGHT_SENS_ENABLE
