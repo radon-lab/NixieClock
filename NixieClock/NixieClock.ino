@@ -5069,7 +5069,7 @@ void dotFlash(void) //мигание точек
           }
 #else
           if (!dot.drive) {
-            if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; break; //сменили направление
+            if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
           }
           else {
             if (dotDecBright(dot.brightStep, 0)) {
@@ -5077,7 +5077,6 @@ void dotFlash(void) //мигание точек
               dot.update = 1; //сбросили флаг обновления точек
               return; //выходим
             }
-            break;
           }
           _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
 #endif
