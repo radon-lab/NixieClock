@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.7 релиз от 29.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 31.01.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1509,7 +1509,7 @@ void debug_menu(void) //отладка
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
-                if (debugSettings.max_pwm > 160) debugSettings.max_pwm -= 5; //максимальное значение шим
+                if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
 #if GEN_FEEDBACK
@@ -1546,7 +1546,7 @@ void debug_menu(void) //отладка
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break; //коррекция хода
 #if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
-                if (debugSettings.min_pwm < 150) debugSettings.min_pwm += 5; //минимальное значение шим
+                if (debugSettings.min_pwm < 190) debugSettings.min_pwm += 5; //минимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
@@ -2118,8 +2118,8 @@ void dataUpdate(void) //обработка данных
 #endif
 #if MOV_PORT_ENABLE
     if (indi.sleepMode && MOV_CHK) {
+      if (mainTask == SLEEP_PROGRAM) indi.sleepMode = SLEEP_DISABLE; //отключаем сон если в режиме сна
       _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
-      indi.sleepMode = SLEEP_DISABLE;
     }
 #endif
   }
@@ -4761,7 +4761,10 @@ void hourSound(void) //звук смены часа
   if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
     if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
 #if PLAYER_TYPE
+#if HOUR_SOUND_SPEAK_TYPE == 2
       if (mainSettings.knockSound) {
+#endif
+#if (HOUR_SOUND_SPEAK_TYPE == 1) || (HOUR_SOUND_SPEAK_TYPE == 2)
         speakTime(); //воспроизвести время
 #if HOUR_SOUND_SPEAK_TEMP
         if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
@@ -4770,8 +4773,14 @@ void hourSound(void) //звук смены часа
         }
         speakTempCeil(); //воспроизвести целую температуру
 #endif
+#endif
+#if HOUR_SOUND_SPEAK_TYPE == 2
       }
-      else playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+      else
+#endif
+#if (HOUR_SOUND_SPEAK_TYPE == 0) || (HOUR_SOUND_SPEAK_TYPE == 2)
+        playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+#endif
 #else
       melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
 #endif

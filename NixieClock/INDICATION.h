@@ -345,6 +345,7 @@ void converterCheck(void) //проверка состояния преобраз
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
+  if (debugSettings.max_pwm < (debugSettings.min_pwm + 10)) debugSettings.min_pwm = debugSettings.max_pwm - 10;
   pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * LAMP_NUM) / CONSTRAIN(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
 }
 //---------------------Установка нового значения шим линейного регулирования----------------------
