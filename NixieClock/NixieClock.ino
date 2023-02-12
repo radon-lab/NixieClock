@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 31.01.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 12.02.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1419,6 +1419,40 @@ void debug_menu(void) //отладка
   while (1) {
     dataUpdate(); //обработка данных
 
+    
+#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
+    if (cur_set) {
+      switch (cur_mode) {
+#if IR_PORT_ENABLE
+        case DEB_IR_BUTTONS: //програмирование кнопок
+          if (irState == (IR_READY | IR_DISABLE)) { //если управление ИК заблокировано и пришла новая команда
+            indiClr(3); //очистка индикатора
+            indiPrintNum((uint8_t)irCommand, 0, 3, 0); //выводим код кнопки пульта
+            debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
+            irState = IR_DISABLE; //сбросили флаг готовности
+            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME; //установили таймер
+          }
+          else if (!_timer_ms[TMR_MS]) {
+            cur_update = 0; //обновление экрана
+            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME; //установили таймер
+          }
+          break;
+#endif
+#if LIGHT_SENS_ENABLE
+        case DEB_LIGHT_SENS: //калибровка датчика освещения
+          if (!_timer_ms[TMR_MS]) {
+            if (temp_min > adc_light) temp_min = adc_light;
+            if (temp_max < adc_light) temp_max = adc_light;
+            analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
+            _timer_ms[TMR_MS] = DEBUG_LIGHT_SENS_TIME; //установили таймер
+            cur_update = 0; //обновление экрана
+          }
+          break;
+#endif
+      }
+    }
+#endif
+
     if (!cur_update) {
       cur_update = 1; //сбрасываем флаг
 
@@ -1455,38 +1489,6 @@ void debug_menu(void) //отладка
           break;
       }
     }
-
-#if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
-    if (cur_set) {
-      switch (cur_mode) {
-#if IR_PORT_ENABLE
-        case DEB_IR_BUTTONS: //програмирование кнопок
-          if (irState == (IR_READY | IR_DISABLE)) { //если управление ИК заблокировано и пришла новая команда
-            indiPrintNum((uint8_t)irCommand, 0, 3, 0); //выводим код кнопки пульта
-            debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
-            irState = IR_DISABLE; //сбросили флаг готовности
-            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME;
-          }
-          else if (!_timer_ms[TMR_MS]) {
-            cur_update = 0; //обновление экрана
-            _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME;
-          }
-          break;
-#endif
-#if LIGHT_SENS_ENABLE
-        case DEB_LIGHT_SENS: //калибровка датчика освещения
-          if (!_timer_ms[TMR_MS]) {
-            if (temp_min > adc_light) temp_min = adc_light;
-            if (temp_max < adc_light) temp_max = adc_light;
-            analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
-            _timer_ms[TMR_MS] = DEBUG_LIGHT_SENS_TIME;
-            cur_update = 0; //обновление экрана
-          }
-          break;
-#endif
-      }
-    }
-#endif
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
@@ -3072,8 +3074,8 @@ uint8_t settings_main(void) //настроки основные
               case SET_GLITCH: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод режима глюков
               case SET_BTN_SOUND: //вывод звука кнопок
 #if PLAYER_TYPE
-                if (!blink_data || cur_indi) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
-                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.volumeSound, 0, 2, 0); //громкость озвучки
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.volumeSound, 0, 2, 0); //громкость озвучки
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
 #else
                 if (!blink_data) indiPrintNum(mainSettings.knockSound, 3); //звук кнопок или озвучка
 #endif
@@ -3169,11 +3171,11 @@ uint8_t settings_main(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.knockSound = 0; break;
-                  case 1: if (mainSettings.volumeSound > PLAYER_MIN_VOL) mainSettings.volumeSound--; playerSetVolNow(mainSettings.volumeSound); break; //установили громкость
+                  case 0: if (mainSettings.volumeSound > PLAYER_MIN_VOL) mainSettings.volumeSound--; playerSetVolNow(mainSettings.volumeSound); break; //установили громкость
+                  case 1: mainSettings.knockSound = 0; break; //озвучка
                 }
 #else
-                mainSettings.knockSound = 0;
+                mainSettings.knockSound = 0; //звук кнопок
 #endif
                 break;
               case SET_HOUR_TIME: //время звука смены часа
@@ -3280,11 +3282,11 @@ uint8_t settings_main(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.knockSound = 1; break;
-                  case 1: if (mainSettings.volumeSound < PLAYER_MAX_VOL) mainSettings.volumeSound++; playerSetVolNow(mainSettings.volumeSound); break; //установили громкость
+                  case 0: if (mainSettings.volumeSound < PLAYER_MAX_VOL) mainSettings.volumeSound++; playerSetVolNow(mainSettings.volumeSound); break; //установили громкость
+                  case 1: mainSettings.knockSound = 1; break; //озвучка
                 }
 #else
-                mainSettings.knockSound = 1;
+                mainSettings.knockSound = 1; //звук кнопок
 #endif
                 break;
               case SET_HOUR_TIME: //время звука смены часа
@@ -5467,7 +5469,7 @@ void animUpdateTime(void) //обновить буфер анимации тек�
 void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   switch (mode) {
-    case 0: return; //без анимации
+    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = 0; return;  //без анимации
     case 1: if (type == FLIP_DEMO) return; else mode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
   }
 
