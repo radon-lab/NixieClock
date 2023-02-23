@@ -400,8 +400,8 @@ void playerUpdate(void)
       case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
         if (!player.playbackMute) {
           reader.playerState = READER_INIT;
-          reader.playerFolder = player.playbackBuff[player.playbackStart++];
           reader.playerTrack = player.playbackBuff[player.playbackStart++];
+          reader.playerFolder = player.playbackBuff[player.playbackStart++];
 #if AMP_PORT_ENABLE
           if (!AMP_CHK) {
             AMP_ENABLE;
