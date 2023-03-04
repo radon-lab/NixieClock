@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 23.02.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 04.03.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -1236,7 +1236,8 @@ void checkErrors(void) //проверка ошибок
         playerSetTrack(PLAYER_ERROR_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим трек ошибки
         playerSpeakNumber(i + 1); //воспроизводим номер ошибки
 #else
-        uint8_t _sound_bit = 0; //указатель на бит ошибки
+        uint8_t _sound_bit = ((i + 1) & 0x0F) | 0xF0; //указатель на бит ошибки
+        _timer_ms[TMR_PLAYER] = 0; //сбросили таймер
 #endif
         for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; _timer_ms[TMR_MS];) {
           dataUpdate(); //обработка данных
@@ -1247,9 +1248,9 @@ void checkErrors(void) //проверка ошибок
             break;
           }
 #if !PLAYER_TYPE
-          if ((sound.replay == REPLAY_STOP) && (_sound_bit < 4)) { //если звук не играет
-            melodyPlay((boolean)(i & (0x01 << _sound_bit)), SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим звук
-            _sound_bit++; //сместили указатель
+          if (!_timer_ms[TMR_PLAYER] && (_sound_bit != 0x0F)) { //если звук не играет
+            melodyPlay((boolean)(_sound_bit & 0x01), SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим звук
+            _sound_bit >>= 1; //сместили указатель
           }
 #endif
         }
@@ -1419,7 +1420,7 @@ void debug_menu(void) //отладка
   while (1) {
     dataUpdate(); //обработка данных
 
-    
+
 #if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
     if (cur_set) {
       switch (cur_mode) {
