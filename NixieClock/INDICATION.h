@@ -84,7 +84,7 @@ boolean state_light = 1; //состояние сенсора яркости ос
 
 const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
 #if INDI_PORT_TYPE
-const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? DOT_1_PIN : ANODE_OFF, ANODE_1_PIN, ANODE_2_PIN, ANODE_3_PIN, ANODE_4_PIN, ANODE_5_PIN, ANODE_6_PIN}; //таблица бит анодов ламп
+const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << DOT_1_PIN) : ANODE_OFF, (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
 #endif
 
 uint8_t indi_dot_l; //буфер левых точек индикаторов
@@ -126,26 +126,28 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #if INDI_PORT_TYPE
   uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 #if DOTS_PORT_ENABLE == 2
-  if (indi_dot_l & indi_dot_pos) temp |= (0x01 << INDI_DOTL_BIT); //включаем левые точки
+  if (indi_dot_l & indi_dot_pos) temp |= (0x01 << DOTL_PIN); //включаем левые точки
 #if DOTS_TYPE
-  if (indi_dot_r & indi_dot_pos) temp |= (0x01 << INDI_DOTR_BIT); //включаем правые точки
+  if (indi_dot_r & indi_dot_pos) temp |= (0x01 << DOTR_PIN); //включаем правые точки
 #endif
 #endif
 #if (NEON_DOT == 2) && INDI_DOT_TYPE
   if (!indiState) {
-    if (indi_buf[indiState] & 0x80) temp |= (0x01 << DOT_1_BIT); //включили точки
-    if (indi_buf[indiState] & 0x40) temp |= (0x01 << DOT_2_BIT); //включили точки
+    if (indi_buf[indiState] & 0x80) temp |= (0x01 << DOT_1_PIN); //включили точки
+    if (indi_buf[indiState] & 0x40) temp |= (0x01 << DOT_2_PIN); //включили точки
   }
 #endif
   REG_LATCH_ENABLE; //включили защелку
   SPDR = temp; //загрузили данные
-#if (NEON_DOT == 1) && !INDI_DOT_TYPE
+#if !INDI_DOT_TYPE
+#if NEON_DOT == 1
   if (!indiState && (indi_buf[indiState] != INDI_NULL)) DOT_SET; //включили точки
-#elif (NEON_DOT == 2) && !INDI_DOT_TYPE
+#elif NEON_DOT == 2
   if (!indiState) {
     if (indi_buf[indiState] & 0x80) DOT_1_SET; //включили точки
     if (indi_buf[indiState] & 0x40) DOT_2_SET; //включили точки
   }
+#endif
 #endif
 #endif
 
