@@ -141,7 +141,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   SPDR = temp; //загрузили данные
 #if !INDI_DOT_TYPE
 #if NEON_DOT == 1
-  if (!indiState && (indi_buf[indiState] != INDI_NULL)) DOT_SET; //включили точки
+  if (!indiState && (indi_buf[indiState] != INDI_NULL)) DOT_1_SET; //включили точки
 #elif NEON_DOT == 2
   if (!indiState) {
     if (indi_buf[indiState] & 0x80) DOT_1_SET; //включили точки
@@ -202,7 +202,7 @@ ISR(TIMER0_COMPB_vect) {
   REG_LATCH_ENABLE; //включили защелку
   SPDR = 0x00; //загрузили данные
 #if (NEON_DOT == 1) && !INDI_DOT_TYPE
-  if (!indiState) DOT_CLEAR; //выключили точки
+  if (!indiState) DOT_1_CLEAR; //выключили точки
 #elif (NEON_DOT == 2) && !INDI_DOT_TYPE
   if (!indiState) {
     DOT_1_CLEAR; //выключили точки
@@ -768,7 +768,7 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
   if (_pwm) TCCR1A |= (0x01 << COM1A1); //подключаем D9
   else {
     TCCR1A &= ~(0x01 << COM1A1); //отключаем D9
-    DOT_CLEAR; //выключили точки
+    DOT_1_CLEAR; //выключили точки
   }
 #elif DOT_1_PIN == 10
   OCR1B = _pwm; //устанавливаем яркость точек
