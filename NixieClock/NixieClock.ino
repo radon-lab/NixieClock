@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 04.03.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 07.03.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -4299,15 +4299,15 @@ uint8_t radioMenu(void) //радиоприемник
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
         if (!radio.seekRun) { //если не идет поиск
-#if DOTS_PORT_ENABLE
+#if NEON_DOT == 2
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
-          if (getStationStatusRDA()) indiSetDotR(0); //установка разделительной точки
-          else indiClrDots(); //очистка разделительных точек
-#elif NEON_DOT == 2
           if (getStationStatusRDA()) neonDotSet(DOT_RIGHT); //включаем разделительную точку
           else neonDotSet(DOT_NULL); //выключаем разделительную точку
 #elif NEON_DOT < 2
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
+#elif DOTS_PORT_ENABLE
+          if (getStationStatusRDA()) indiSetDotL(0); //установка разделительной точки
+          else indiClrDotL(0); //очистка разделительных точек
 #endif
         }
         else { //иначе идет автопоиск
