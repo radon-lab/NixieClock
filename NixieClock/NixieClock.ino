@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.9 релиз от 10.03.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.9 релиз от 11.03.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -5098,7 +5098,7 @@ void dotFlash(void) //мигание точек
 {
   if (mainTask == MAIN_PROGRAM) { //если основная программа
     if (!dot.update && !_timer_ms[TMR_DOT]) { //если пришло время
-      if (!dot.maxBright) { //если яркость не выключена
+      if (!dot.maxBright && (animShow < ANIM_MAIN)) { //если яркость не выключена и не запущена сторонняя анимация
         dot.update = 1; //сбросили флаг секунд
         return; //выходим
       }
@@ -5925,12 +5925,11 @@ uint8_t mainScreen(void) //главный экран
         return MAIN_SET_PROGRAM; //настроки основные
 
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
-#if RADIO_ENABLE || TIMER_ENABLE
-      case ADD_KEY_PRESS: //клик дополнительной кнопкой
-#endif
 #if TIMER_ENABLE
+      case ADD_KEY_PRESS: //клик дополнительной кнопкой
         return TIMER_PROGRAM; //таймер-секундомер
 #elif RADIO_ENABLE
+      case ADD_KEY_PRESS: //клик дополнительной кнопкой
         return RADIO_PROGRAM; //радиоприемник
 #endif
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
@@ -5946,8 +5945,7 @@ uint8_t mainScreen(void) //главный экран
         break;
 #endif
 
-#if RADIO_ENABLE
-#if IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
       case PWR_KEY_PRESS: //управление питанием
         if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
           if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
@@ -5984,7 +5982,6 @@ uint8_t mainScreen(void) //главный экран
           return MAIN_PROGRAM; //выходим
         }
         break;
-#endif
 #endif
 #endif
     }

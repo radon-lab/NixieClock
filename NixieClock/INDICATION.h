@@ -18,15 +18,15 @@
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 
 #if WIRE_PULL
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4) | 0x30) //пустой сивол(отключеный индикатор)
+#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4) | 0x30) //пустой символ(отключеный индикатор)
 #else
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой сивол(отключеный индикатор)
+#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 #endif
 
 #if DOTS_TYPE == 2
-#define DOTS_ALL (DOTS_NUM * 2)
+#define DOTS_ALL (DOTS_NUM * 2) //всего разделительных точек
 #else
-#define DOTS_ALL (DOTS_NUM)
+#define DOTS_ALL (DOTS_NUM) //всего разделительных точек
 #endif
 
 //переменные работы с анимациями
@@ -132,12 +132,10 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #if INDI_PORT_TYPE
   uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
 #if DOTS_PORT_ENABLE == 2
-#if DOTS_TYPE == 2
-  if (indi_dot_l & indi_dot_pos) temp |= (0x01 << DOTL_PIN); //включаем левые точки
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   if (indi_dot_r & indi_dot_pos) temp |= (0x01 << DOTR_PIN); //включаем правые точки
-#elif DOTS_TYPE == 1
-  if (indi_dot_r & indi_dot_pos) temp |= (0x01 << DOTR_PIN); //включаем правые точки
-#else
+#endif
+#if DOTS_TYPE != 1
   if (indi_dot_l & indi_dot_pos) temp |= (0x01 << DOTL_PIN); //включаем левые точки
 #endif
 #endif
@@ -187,12 +185,10 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #endif
 
 #if DOTS_PORT_ENABLE == 1
-#if DOTS_TYPE == 2
-  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
-#elif DOTS_TYPE == 1
-  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
-#else
+#endif
+#if DOTS_TYPE != 1
   if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
 #endif
 #endif
@@ -245,12 +241,10 @@ ISR(TIMER0_COMPB_vect) {
 
 #if DOTS_PORT_ENABLE
 #if DOTS_PORT_ENABLE == 1
-#if DOTS_TYPE == 2
-  INDI_DOTL_OFF; //выключаем левые точки
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   INDI_DOTR_OFF; //выключаем правые точки
-#elif DOTS_TYPE == 1
-  INDI_DOTR_OFF; //выключаем правые точки
-#else
+#endif
+#if DOTS_TYPE != 1
   INDI_DOTL_OFF; //выключаем левые точки
 #endif
 #endif
@@ -405,12 +399,10 @@ void indiInit(void) //инициализация индикаторов
   ANODE_INIT(ANODE_6_PIN); //инициализация анода 6
 #endif
 #if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 2
-  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
-#elif DOTS_TYPE == 1
-  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
-#else
+#endif
+#if DOTS_TYPE != 1
   INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
 #endif
 #endif
