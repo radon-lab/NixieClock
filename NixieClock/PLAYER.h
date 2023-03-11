@@ -422,6 +422,12 @@ void playerUpdate(void)
         player.playbackStart++;
         if (buffer.dacVolume > 9) buffer.dacVolume = 0;
         break;
+#if AMP_PORT_ENABLE
+      case PLAYER_CMD_STOP:
+        if (!player.playbackMute) AMP_DISABLE;
+        player.playbackStart += 2;
+        break;
+#endif
       default: player.playbackStart += 2; break;
     }
 

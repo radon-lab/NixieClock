@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.8 релиз от 07.03.23
+  Arduino IDE 1.8.13 версия прошивки 1.8.9 релиз от 10.03.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -350,7 +350,7 @@ enum {
   DOT_RUNNING, //бегущая
   DOT_SNAKE, //змейка
   DOT_RUBBER_BAND, //резинка
-#if (DOTS_NUM > 4) || DOTS_TYPE
+#if (DOTS_NUM > 4) || (DOTS_TYPE == 2)
   DOT_TURN_BLINK, //мигание по очереди
 #endif
 #endif
@@ -500,7 +500,7 @@ int main(void) //главный цикл программ
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
       case TEMP_PROGRAM: mainTask = showTemp(); break; //показать температуру
       case DATE_PROGRAM: mainTask = showDate(); break; //показать дату
-#if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       case WARN_PROGRAM: mainTask = timerWarn(); break; //предупреждение таймера
 #endif
 #if ALARM_TYPE
@@ -521,7 +521,9 @@ int main(void) //главный цикл программ
         updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
         break;
 #endif
+#if TIMER_ENABLE
       case TIMER_PROGRAM: mainTask = timerStopwatch(); break; //таймер-секундомер
+#endif
 #endif
       case SLEEP_PROGRAM: //режим сна индикаторов
         mainTask = sleepIndi(); //переход в программу
@@ -1012,7 +1014,7 @@ void checkVCC(void) //чтение напряжения питания
   uint16_t temp = 0; //буфер замеров
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS1) | (0x01 << ADPS2); //настройка АЦП пределитель 128
   ADMUX = (0x01 << REFS0) | (0x01 << MUX3) | (0x01 << MUX2) | (0x01 << MUX1); //выбор внешнего опорного + 1.1в
-  _delay_ms(1000); //ждём пока напряжение успокоится
+  _delay_ms(START_DELAY); //ждём пока напряжение успокоится
   for (uint8_t i = 0; i < CYCLE_VCC_CHECK; i++) {
     _delay_ms(5); //ждём пока опорное успокоится
     ADCSRA |= (1 << ADSC); //запускаем преобразование
@@ -2083,7 +2085,7 @@ void dataUpdate(void) //обработка данных
     if (mainSettings.secsMode && (animShow == ANIM_NULL)) animShow = ANIM_SECS; //показать анимацию переключения цифр
 #endif
 
-#if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
     switch (timer.mode) {
       case 1: if (timer.count != 65535) timer.count++; break;
       case 2: if (timer.count) timer.count--; break;
@@ -3401,7 +3403,11 @@ uint8_t settings_main(void) //настроки основные
               break;
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
+#if DOTS_TYPE == 1
+              indiSetDotR(1); //включаем разделительную точку
+#else
               indiSetDotL(2); //включаем разделительную точку
+#endif
               break;
 #endif
           }
@@ -3535,7 +3541,11 @@ void autoShowTemp(void) //автоматический показ темпера
         if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+        indiSetDotR(1); //включаем разделительную точку
+#else
         indiSetDotL(2); //включаем разделительную точку
+#endif
 #elif NEON_DOT == 2
         neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
         neonDotSet(DOT_LEFT); //установка разделительной точки
@@ -3560,7 +3570,11 @@ void autoShowTemp(void) //автоматический показ темпера
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+        indiSetDotR(1); //включаем разделительную точку
+#else
         indiSetDotL(2); //включаем разделительную точку
+#endif
 #elif NEON_DOT == 2
         neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
         neonDotSet(DOT_LEFT); //установка разделительной точки
@@ -3626,7 +3640,11 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+  indiSetDotR(1); //включаем разделительную точку
+#else
   indiSetDotL(2); //включаем разделительную точку
+#endif
 #elif NEON_DOT == 2
   neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
   neonDotSet(DOT_LEFT); //установка разделительной точки
@@ -3681,7 +3699,11 @@ uint8_t showTemp(void) //показать температуру
         }
         if (!mode) { //если режим отображения температуры
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+          indiSetDotR(1); //включаем разделительную точку
+#else
           indiSetDotL(2); //включаем разделительную точку
+#endif
 #elif NEON_DOT == 2
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
           neonDotSet(DOT_LEFT); //установка разделительной точки
@@ -3738,17 +3760,26 @@ uint8_t showDate(void) //показать дату
 
 #if DOTS_PORT_ENABLE
 #if SHOW_DATE_TYPE > 1
-#if DOTS_TYPE
+#if DOTS_TYPE == 2
   indiSetDotL(2); //включаем разделительную точку
   indiSetDotR(3); //включаем разделительную точку
 #elif DOTS_NUM > 4
+#if DOTS_TYPE == 1
+  indiSetDotR(1); //включаем разделительную точку
+  indiSetDotR(3); //включаем разделительную точку
+#else
   indiSetDotL(2); //включаем разделительную точку
   indiSetDotL(4); //включаем разделительную точку
+#endif
 #elif NEON_DOT != 3
   dotSetBright(dot.menuBright); //включаем точки
 #endif
 #else
+#if DOTS_TYPE == 1
+  indiSetDotR(1); //включаем разделительную точку
+#else
   indiSetDotL(2); //включаем разделительную точку
+#endif
 #endif
 #elif NEON_DOT == 2
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
@@ -3825,7 +3856,11 @@ uint8_t showDate(void) //показать дату
         switch (mode) {
           case 0: //дата
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+            indiSetDotR(1); //включаем разделительную точку
+#else
             indiSetDotL(2); //включаем разделительную точку
+#endif
 #elif NEON_DOT == 2
             neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
             neonDotSet(DOT_LEFT); //установка разделительной точки
@@ -4282,7 +4317,7 @@ uint8_t radioMenu(void) //радиоприемник
           return ALARM_PROGRAM;
         }
 #endif
-#if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
         if (timer.mode == 2 && !timer.count) { //тревога таймера
           radioSeekStop(); //остановка автопоиска радиостанции
           return WARN_PROGRAM;
@@ -4306,8 +4341,13 @@ uint8_t radioMenu(void) //радиоприемник
 #elif NEON_DOT < 2
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #elif DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+          if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
+          else indiClrDotR(3); //очистка разделительных точек
+#else
           if (getStationStatusRDA()) indiSetDotL(0); //установка разделительной точки
           else indiClrDotL(0); //очистка разделительных точек
+#endif
 #endif
         }
         else { //иначе идет автопоиск
@@ -4348,7 +4388,11 @@ uint8_t radioMenu(void) //радиоприемник
         }
         else { //иначе отображаем частоту
 #if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 1
+          indiSetDotR(2); //включаем разделительную точку
+#else
           indiSetDotL(3); //включаем разделительную точку
+#endif
 #endif
           indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
           if (radioSettings.stationNum < RADIO_MAX_STATIONS) indiPrintNum(radioSettings.stationNum, 5); //номер станции
@@ -5123,18 +5167,18 @@ void dotFlash(void) //мигание точек
             }
           }
           else {
-            if (dot.count < ((DOTS_NUM * (DOTS_TYPE + 1)) - 1)) dot.count++; //сместили точку
+            if (dot.count < (DOTS_ALL - 1)) dot.count++; //сместили точку
             else {
               dot.drive = 1; //сменили направление
               dot.update = 1; //сбросили флаг обновления точек
               return; //выходим
             }
           }
-          _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / (DOTS_NUM * (DOTS_TYPE + 1))); //установили таймер
+          _timer_ms[TMR_DOT] = (DOT_RUNNING_TIME / DOTS_ALL); //установили таймер
           break;
         case DOT_SNAKE: //змейка
           indiClrDots(); //очистка разделителных точек
-          indiSetDots(dot.count - ((DOTS_NUM * (DOTS_TYPE + 1)) - 1), DOTS_NUM * (DOTS_TYPE + 1)); //установка разделительных точек
+          indiSetDots(dot.count - (DOTS_ALL - 1), DOTS_ALL); //установка разделительных точек
           if (dot.drive) {
             if (dot.count > 0) dot.count--; //убавили шаг
             else {
@@ -5144,19 +5188,19 @@ void dotFlash(void) //мигание точек
             }
           }
           else {
-            if (dot.count < (((DOTS_NUM * (DOTS_TYPE + 1)) * 2) - 2)) dot.count++; //прибавили шаг
+            if (dot.count < ((DOTS_ALL * 2) - 2)) dot.count++; //прибавили шаг
             else {
               dot.drive = 1; //сменили направление
               dot.update = 1; //сбросили флаг обновления точек
               return; //выходим
             }
           }
-          _timer_ms[TMR_DOT] = (DOT_SNAKE_TIME / ((DOTS_NUM * (DOTS_TYPE + 1)) * 2)); //установили таймер
+          _timer_ms[TMR_DOT] = (DOT_SNAKE_TIME / (DOTS_ALL * 2)); //установили таймер
           break;
         case DOT_RUBBER_BAND: //резинка
           indiClrDots(); //очистка разделителных точек
           if (dot.drive) { //если режим убывания
-            if (dot.steps < ((DOTS_NUM * (DOTS_TYPE + 1)) - 1)) dot.steps++; //сместили точку
+            if (dot.steps < (DOTS_ALL - 1)) dot.steps++; //сместили точку
             else {
               if (dot.count) { //если еще есть точки
                 dot.count--; //убавили шаг
@@ -5174,10 +5218,10 @@ void dotFlash(void) //мигание точек
           }
           else { //иначе режим заполнения
             indiSetDots(dot.steps, 1); //установка разделительных точек
-            indiSetDots((DOTS_NUM * (DOTS_TYPE + 1)) - dot.count, dot.count); //установка разделительных точек
-            if (dot.steps < (((DOTS_NUM * (DOTS_TYPE + 1)) - 1) - dot.count)) dot.steps++; //сместили точку
+            indiSetDots(DOTS_ALL - dot.count, dot.count); //установка разделительных точек
+            if (dot.steps < ((DOTS_ALL - 1) - dot.count)) dot.steps++; //сместили точку
             else {
-              if (dot.count < ((DOTS_NUM * (DOTS_TYPE + 1)) - 1)) { //если еще есть точки
+              if (dot.count < (DOTS_ALL - 1)) { //если еще есть точки
                 dot.count++; //прибавили шаг
                 dot.steps = 0; //сбросили точку
               }
@@ -5189,9 +5233,9 @@ void dotFlash(void) //мигание точек
               }
             }
           }
-          _timer_ms[TMR_DOT] = (DOT_RUBBER_BAND_TIME / ((DOTS_NUM * (DOTS_TYPE + 1)) * (((DOTS_NUM * (DOTS_TYPE + 1)) / 2) + 0.5))); //установили таймер
+          _timer_ms[TMR_DOT] = (DOT_RUBBER_BAND_TIME / (DOTS_ALL * ((DOTS_ALL / 2) + 0.5))); //установили таймер
           break;
-#if (DOTS_NUM > 4) || DOTS_TYPE
+#if (DOTS_NUM > 4) || (DOTS_TYPE == 2)
         case DOT_TURN_BLINK: //мигание по очереди
 #if DOT_TURN_TIME
           if (dot.count < ((1000 / DOT_TURN_TIME) - 1)) {
@@ -5206,7 +5250,7 @@ void dotFlash(void) //мигание точек
           dot.update = 1; //сбросили флаг секунд
 #endif
           switch (dot.drive) {
-#if DOTS_TYPE
+#if DOTS_TYPE == 2
 #if LAMP_NUM > 4
             case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
             case 1: indiSetDotR(3); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
@@ -5215,8 +5259,13 @@ void dotFlash(void) //мигание точек
             case 1: indiSetDotL(2); indiClrDotR(1); dot.drive = 0; break; //включаем правую точку
 #endif
 #else
+#if DOTS_TYPE == 1
+            case 0: indiSetDotR(1); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
+            case 1: indiSetDotR(3); indiClrDotR(1); dot.drive = 0; break; //включаем правую точку
+#else
             case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; break; //включаем левую точку
             case 1: indiSetDotL(4); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
+#endif
 #endif
           }
           break;
@@ -5301,7 +5350,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 #if ALARM_TYPE
       if (alarms.now && !alarms.wait) return ALARM_PROGRAM; //тревога будильника
 #endif
-#if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       if (timer.mode == 2 && !timer.count) return WARN_PROGRAM; //тревога таймера
 #endif
       if (!indi.sleepMode) return MAIN_PROGRAM; //выход в режим часов
@@ -5802,7 +5851,7 @@ uint8_t mainScreen(void) //главный экран
 #if ALARM_TYPE
       if (alarms.now && !alarms.wait) return ALARM_PROGRAM; //тревога будильника
 #endif
-#if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       if (timer.mode == 2 && !timer.count) return WARN_PROGRAM; //тревога таймера
 #endif
 
@@ -5876,10 +5925,14 @@ uint8_t mainScreen(void) //главный экран
         return MAIN_SET_PROGRAM; //настроки основные
 
 #if BTN_ADD_TYPE || IR_PORT_ENABLE
+#if RADIO_ENABLE || TIMER_ENABLE
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
+#endif
+#if TIMER_ENABLE
         return TIMER_PROGRAM; //таймер-секундомер
-
-#if RADIO_ENABLE
+#elif RADIO_ENABLE
+        return RADIO_PROGRAM; //радиоприемник
+#endif
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
 #if ALARM_TYPE
         if (alarms.wait) {
@@ -5887,7 +5940,13 @@ uint8_t mainScreen(void) //главный экран
           break;
         }
 #endif
+#if RADIO_ENABLE && TIMER_ENABLE
         return RADIO_PROGRAM; //радиоприемник
+#else
+        break;
+#endif
+
+#if RADIO_ENABLE
 #if IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
       case PWR_KEY_PRESS: //управление питанием
         if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
