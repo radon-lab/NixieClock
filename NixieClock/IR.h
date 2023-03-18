@@ -25,7 +25,9 @@ void irInit(void) //инициализация IR приемника
 //-------------------------------Проверка принятой команды-------------------------------
 void irCheckCommand(uint8_t* _command) //проверка принятой команды
 {
+#if IR_CHECK_CRC_ADDR
   if (_command[0] != (_command[1] ^ 0xFF)) return; //проверяем контрольную сумму адреса
+#endif
   if (_command[2] != (_command[3] ^ 0xFF)) return; //проверяем контрольную сумму команды
   irState |= IR_READY; //установили флаг готовности
   irCommand = ((uint16_t)_command[0] << 8) | _command[2]; //скопировали команду

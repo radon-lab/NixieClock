@@ -40,7 +40,6 @@ void readTempSHT(void) //чтение температуры/влажности
     case SHT20_ADDR: {
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
         wireWrite(SHT20_READ_TEMP); //устанавливаем адрес записи
-        _delay_us(20); //ждем
         wireEnd(); //остановка шины wire
 
         _timer_ms[TMR_SENS] = SHT20_TEMP_TIME; //установили таймер
