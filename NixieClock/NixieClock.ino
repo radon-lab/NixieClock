@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.8.9 релиз от 18.03.23
+  Arduino IDE 1.8.13 версия прошивки 1.9.0 тест релиз от 19.04.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -601,6 +601,11 @@ void INIT_SYSTEM(void) //инициализация
   irInit();
 #endif
 
+#if (GEN_ENABLE && (GEN_FEEDBACK == 2))
+  FB_INIT;
+  ACSR = (0x01 << ACBG); //включаем компаратор
+#endif
+
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
   if (checkByte(EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR)) updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //если контрольная сумма расширеных ошибок не совпала
 
@@ -657,7 +662,7 @@ void INIT_SYSTEM(void) //инициализация
   }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_ENABLE && (GEN_FEEDBACK == 1)
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
 
@@ -935,7 +940,7 @@ void analogUpdate(void) //обработка аналоговых входов
 {
   if (!(ADCSRA & (1 << ADSC))) { //ждем окончания преобразования
     switch (ADMUX & 0x0F) {
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_ENABLE && (GEN_FEEDBACK == 1)
       case ANALOG_DET_PIN: {
           static uint8_t adc_cycle; //циклы буфера усреднения
           static uint16_t adc_temp; //буфер усреднения
@@ -996,7 +1001,7 @@ void analogUpdate(void) //обработка аналоговых входов
           return; //выходим
         }
 #endif
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_ENABLE && (GEN_FEEDBACK == 1)
         if (analogState & 0x04) { //обратная связь
           analogState &= ~0x04; //сбросили флаг обновления АЦП обратной связи преобразователя
           ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
@@ -1031,11 +1036,11 @@ void checkVCC(void) //чтение напряжения питания
   while (ADCSRA & (1 << ADSC)); //ждем окончания преобразования
   btn.adc = ADCH; //записываем результат опроса
 #endif
-#if GEN_ENABLE && GEN_FEEDBACK
+#if GEN_ENABLE && (GEN_FEEDBACK == 1)
   ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
 
-#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE || LIGHT_SENS_ENABLE
+#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || LIGHT_SENS_ENABLE
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
@@ -1321,7 +1326,7 @@ boolean check_pass(void) //проверка пароля
   uint8_t cur_indi = 0; //текущий индикатор
   uint8_t time_out = 0; //таймер авто выхода
   uint8_t attempts_pass = 0; //попытки ввода пароля
-  uint16_t entry_pass = 0; //введеный пароль
+  uint8_t entry_pass[] = {0, 0, 0 ,0}; //введеный пароль
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
@@ -1348,7 +1353,7 @@ boolean check_pass(void) //проверка пароля
     if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
       _timer_ms[TMR_MS] = DEBUG_PASS_BLINK_TIME; //устанавливаем таймер
 
-      indiPrintNum(entry_pass, (LAMP_NUM / 2 - 2), 4, 0); //вывод пароля
+      for (uint8_t i = 0; i < 4; i++) indiPrintNum(entry_pass[i], (LAMP_NUM / 2 - 2) + i); //вывод пароля
       if (blink_data) indiClr(cur_indi + (LAMP_NUM / 2 - 2)); //очистка индикатора
 
       blink_data = !blink_data; //мигаем индикатором
@@ -1357,22 +1362,12 @@ boolean check_pass(void) //проверка пароля
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
       case LEFT_KEY_PRESS: //клик левой кнопкой
-        switch (cur_indi) {
-          case 0: if (((entry_pass % 10000) / 1000) > 0) entry_pass -= 1000; else entry_pass += 9000; break; //первый разряд
-          case 1: if (((entry_pass % 1000) / 100) > 0) entry_pass -= 100; else entry_pass += 900; break; //второй разряд
-          case 2: if (((entry_pass % 100) / 10) > 0) entry_pass -= 10; else entry_pass += 90; break; //третий разряд
-          case 3: if ((entry_pass % 10) > 0) entry_pass -= 1; else entry_pass += 9; break; //четвертый разряд
-        }
+        if (entry_pass[cur_indi] > 0) entry_pass[cur_indi]--; else entry_pass[cur_indi] = 9;
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
-        switch (cur_indi) {
-          case 0: if (((entry_pass % 10000) / 1000) < 9) entry_pass += 1000; else entry_pass -= 9000; break; //первый разряд
-          case 1: if (((entry_pass % 1000) / 100) < 9) entry_pass += 100; else entry_pass -= 900; break; //второй разряд
-          case 2: if (((entry_pass % 100) / 10) < 9) entry_pass += 10; else entry_pass -= 90; break; //третий разряд
-          case 3: if ((entry_pass % 10) < 9) entry_pass += 1; else entry_pass -= 9; break; //четвертый разряд
-        }
+        if (entry_pass[cur_indi] < 9) entry_pass[cur_indi]++; else entry_pass[cur_indi] = 0;
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
 
@@ -1382,9 +1377,9 @@ boolean check_pass(void) //проверка пароля
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        if (entry_pass == DEBUG_PASS) return 1; //если пароль совпал
+        if (((uint16_t)entry_pass[3] + ((uint16_t)entry_pass[2] * 10) + ((uint16_t)entry_pass[1] * 100) + ((uint16_t)entry_pass[0] * 1000)) == DEBUG_PASS) return 1; //если пароль совпал
+        for (uint8_t i = 0; i < 4; i++) entry_pass[i] = 0; //сбросили введеный пароль
         cur_indi = 0; //сбросили текущий индикатор
-        entry_pass = 0; //сбросили введеный пароль
 #if PLAYER_TYPE
         playerSetTrack(PLAYER_PASS_SOUND, PLAYER_GENERAL_FOLDER); //сигнал ошибки ввода пароля
 #else
@@ -1421,7 +1416,6 @@ void debug_menu(void) //отладка
   //настройки
   while (1) {
     dataUpdate(); //обработка данных
-
 
 #if LIGHT_SENS_ENABLE || IR_PORT_ENABLE
     if (cur_set) {
@@ -1472,7 +1466,7 @@ void debug_menu(void) //отладка
 #if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
             case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break; //выводим максимальный шим
-#if GEN_FEEDBACK
+#if GEN_FEEDBACK == 1
             case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break; //выводим корекцию напряжения
 #endif
 #endif
@@ -1517,7 +1511,7 @@ void debug_menu(void) //отладка
                 if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
-#if GEN_FEEDBACK
+#if GEN_FEEDBACK == 1
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect > -30) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
@@ -1558,7 +1552,7 @@ void debug_menu(void) //отладка
                 if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
-#if GEN_FEEDBACK
+#if GEN_FEEDBACK == 1
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
                 if (debugSettings.hvCorrect < 30) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
@@ -1587,7 +1581,7 @@ void debug_menu(void) //отладка
 #if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
             case DEB_DEFAULT_MAX_PWM: break; //максимальное значение шим
-#if GEN_FEEDBACK
+#if GEN_FEEDBACK == 1
             case DEB_HV_ADC: break; //коррекция значения ацп преобразователя
 #endif
 #endif
@@ -1634,7 +1628,7 @@ void debug_menu(void) //отладка
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
                 debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
-#if GEN_FEEDBACK
+#if GEN_FEEDBACK == 1
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
 #endif
@@ -2006,8 +2000,27 @@ void dataUpdate(void) //обработка данных
   melodyUpdate(); //обработка мелодий
 #endif
 
-#if (GEN_ENABLE && GEN_FEEDBACK) || BTN_TYPE || LIGHT_SENS_ENABLE
+#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || LIGHT_SENS_ENABLE
   analogUpdate(); //обработка аналоговых входов
+#endif
+
+#if (GEN_ENABLE && (GEN_FEEDBACK == 2))
+  if (ACSR & (0x01 << ACI)) {
+    ACSR |= (0x01 << ACI); //сбрасываем флаг прерывания
+#if CONV_PIN == 9
+    if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
+    else {
+      TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
+        CONV_OFF; //выключаем пин преобразователя
+      }
+#elif CONV_PIN == 10
+    if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
+    else {
+      TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
+        CONV_OFF; //выключаем пин преобразователя
+      }
+#endif
+  }
 #endif
 
 #if LIGHT_SENS_ENABLE

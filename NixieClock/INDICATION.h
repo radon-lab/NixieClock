@@ -613,14 +613,7 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char 
   while (count) { //расшивровка символов
     count--; //убавили счетчик символов
     if ((uint8_t)_indi++ < LAMP_NUM) { //если число в поле индикатора
-      uint8_t mergeBuf = 0; //временный буфер дешефратора
-      for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-        if ((buff[count] >> dec) & 0x01) mergeBuf |= (0x01 << decoderMask[dec]); //устанавливаем бит дешефратора
-      }
-#if WIRE_PULL
-      mergeBuf |= 0x30; //если установлена подтяжка шины
-#endif
-      _out[_indi] = mergeBuf; //устанавливаем новое число
+      _out[_indi] = buff[count]; //устанавливаем новое число
     }
   }
 }
@@ -635,20 +628,8 @@ void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //
 //-----------------------------Декодирование чисел индикации--------------------------------------
 uint8_t animDecodeNum(uint8_t _num) //декодирование чисел индикации
 {
-  uint8_t mergeBuf = 0; //временный буфер дешефратора
-#if WIRE_PULL
-  _num &= ~0x30; //если установлена подтяжка шины
-#endif
-  for (uint8_t dec = 0; dec < 4; dec++) { //расставляем биты дешефратора
-    if ((_num >> decoderMask[dec]) & 0x01) mergeBuf |= (0x01 << dec); //устанавливаем бит дешефратора
-  }
-  for (uint8_t i = 0; i < 11; i++) {
-    if (mergeBuf == digitMask[i]) {
-      mergeBuf = i;
-      break;
-    }
-  }
-  return mergeBuf;
+  for (uint8_t mask = 0; mask < 11; mask++) if (_num == digitMask[mask]) return mask;
+  return 10;
 }
 //-----------------------------Запись чисел в буфер анимации----------------------------------------
 void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //запись чисел в буфер анимации

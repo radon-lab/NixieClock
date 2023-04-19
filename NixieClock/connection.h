@@ -52,7 +52,7 @@
 #define REG_SCK_PIN  13  //пин SD карты SCK(только 13)(pin D)
 
 //Обратная связь
-#define ANALOG_DET_PIN 6 //пин обратной связи(6..7)(pin A)
+#define ANALOG_DET_PIN 6 //пин обратной связи(для АЦП - (6..7)(pin A))(для компаратора - (только пин 7)(pin D))
 
 //Аналоговые кнопки
 #define ANALOG_BTN_PIN 7 //пин аналоговых кнопок(6..7)(pin A)
@@ -74,6 +74,13 @@
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
+
+#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
+#if WIRE_PULL
+#define _MASK(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4) | 0x30)
+#else
+#define _MASK(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
+#endif
 
 #define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
@@ -365,6 +372,15 @@
 #define IR_INP   (BIT_CLEAR(DDR_REG(IR_PORT), IR_BIT))
 
 #define IR_INIT  IR_SET; IR_INP
+
+//Пин обратной связи на компараторе
+#define FB_BIT   DECODE_BIT(ANALOG_DET_PIN)
+#define FB_PORT  DECODE_PORT(ANALOG_DET_PIN)
+
+#define FB_CLEAR (BIT_CLEAR(FB_PORT, FB_BIT))
+#define FB_INP   (BIT_CLEAR(DDR_REG(FB_PORT), FB_BIT))
+
+#define FB_INIT  FB_CLEAR; FB_INP
 
 //Пин DATA сдвигового регистра
 #define REG_DATA_BIT   DECODE_BIT(REG_DATA_PIN)
