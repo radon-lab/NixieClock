@@ -563,21 +563,70 @@ void indiClrDotR(uint8_t dot) //очистка разделительной то
   if (dot < DOTS_NUM) indi_dot_r &= ~(0x02 << dot);
 }
 //-------------------------Установка разделительных точек-----------------------------------
-void indiSetDots(int8_t dot, uint8_t num) //установка разделительных точек
+void indiSetDots(int8_t _dot, uint8_t _num) //установка разделительных точек
 {
-  for (uint8_t pos = 0; pos < num; pos++) {
-    if ((uint8_t)dot < DOTS_ALL) { //если число в поле индикатора
+  for (uint8_t pos = 0; pos < _num; pos++) {
+    if ((uint8_t)_dot < DOTS_ALL) { //если число в поле индикатора
 #if DOTS_TYPE == 2
-      if (dot & 0x01) indiSetDotR(dot >> 1); //включаем правую точку
-      else indiSetDotL(dot >> 1); //включаем левую точку
+      if (_dot & 0x01) indiSetDotR(_dot >> 1); //включаем правую точку
+      else indiSetDotL(_dot >> 1); //включаем левую точку
 #elif DOTS_TYPE == 1
-      indiSetDotR(dot); //включаем правую точку
+      indiSetDotR(_dot); //включаем правую точку
 #else
-      indiSetDotL(dot); //включаем левую точку
+      indiSetDotL(_dot); //включаем левую точку
 #endif
     }
-    dot++;
+    _dot++;
   }
+}
+//-------------------------Установка разделительных точек-----------------------------------
+void indiSetDotsMain(uint8_t _dot) //установка разделительных точек
+{
+#if DOTS_TYPE == 2
+#if LAMP_NUM > 4
+#if DOTS_MAIN == 0
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+#elif DOTS_MAIN == 1
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+#elif DOTS_MAIN == 2
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+#elif DOTS_MAIN == 3
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+#else
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+#endif
+#else
+#if DOTS_MAIN == 0
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+#elif DOTS_MAIN == 1
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+#else
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+#endif
+#endif
+#elif DOTS_NUM > 4
+#if DOTS_TYPE == 1
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+#else
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+#endif
+#else
+#if DOTS_TYPE == 1
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+#else
+    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+#endif
+#endif
 }
 //-----------------------------Очистка разделительных точек----------------------------------------
 void indiClrDots(void) //очистка разделительных точек
@@ -745,26 +794,7 @@ void neonDotSetBright(uint8_t _pwm) //установка яркости неон
 void dotSetBright(uint8_t _pwm) //установка яркости точек
 {
 #if (NEON_DOT == 3) && DOTS_PORT_ENABLE
-  if (_pwm) {
-#if DOTS_TYPE == 1
-    indiSetDotR(1); //установка разделительной точки
-#else
-    indiSetDotL(2); //установка разделительной точки
-#endif
-#if DOTS_TYPE == 2
-#if LAMP_NUM > 4
-    indiSetDotR(3); //установка разделительной точки
-#else
-    indiSetDotR(1); //установка разделительной точки
-#endif
-#elif DOTS_NUM > 4
-#if DOTS_TYPE == 1
-    indiSetDotR(3); //установка разделительной точки
-#else
-    indiSetDotL(4); //установка разделительной точки
-#endif
-#endif
-  }
+  if (_pwm) indiSetDotsMain(DOT_ALL); //установка разделительных точек
   else indiClrDots(); //очистка разделительных точек
 #elif NEON_DOT == 2
   neonDotSetBright(_pwm); //установка яркости неоновых точек

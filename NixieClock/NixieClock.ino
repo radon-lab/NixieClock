@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.9.0 тест релиз от 19.04.23
+  Arduino IDE 1.8.13 версия прошивки 1.9.1 тест релиз от 22.04.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -101,8 +101,8 @@ struct Settings_1 {
   uint8_t volumeSound = CONSTRAIN((uint8_t)(PLAYER_MAX_VOL * (DEFAULT_PLAYER_VOLUME / 100.0)), PLAYER_MIN_VOL, PLAYER_MAX_VOL); //громкость озвучки
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
   boolean glitchMode = DEFAULT_GLITCH_MODE; //режим глюков
-  uint8_t autoTempTime = DEFAULT_AUTO_TEMP_TIME; //интервал времени показа температуры
-  uint8_t autoTempFlip = DEFAULT_AUTO_TEMP_ANIM; //режим анимации показа температуры
+  uint8_t autoShowTime = DEFAULT_AUTO_SHOW_TIME; //интервал времени показа температуры
+  uint8_t autoShowFlip = DEFAULT_AUTO_SHOW_ANIM; //режим анимации показа температуры
   uint8_t burnMode = DEFAULT_BURN_MODE; //режим антиотравления индикаторов
   uint8_t secsMode = DEFAULT_SECONDS_ANIM; //режим анимации секунд индикаторов
 } mainSettings;
@@ -205,6 +205,9 @@ volatile uint16_t buzz_cnt_puls; //счетчик циклов длительн�
 volatile uint16_t buzz_cnt_time; //счетчик циклов полуволны
 uint16_t buzz_time; //циклы полуволны для работы пищалки
 
+const uint8_t autoShowModes[] = {AUTO_SHOW_MODES};
+const uint8_t autoShowTimes[] = {AUTO_SHOW_TIMES};
+
 #define ALARM_PLAYER_VOL_MIN (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MIN / 100.0))
 #define ALARM_PLAYER_VOL_MAX (uint8_t)(PLAYER_MAX_VOL * (ALARM_AUTO_VOL_MAX / 100.0))
 #define ALARM_PLAYER_VOL_TIME (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_PLAYER_VOL_MAX - ALARM_PLAYER_VOL_MIN))
@@ -250,7 +253,7 @@ enum {
   SET_BACKL_BRIGHT, //яркость подсветки
   SET_DOT_BRIGHT, //яркость точек
   SET_TEMP_SENS, //настройка датчика температуры
-  SET_AUTO_TEMP, //автопоказ температуры
+  SET_AUTO_SHOW, //автопоказ данных
   SET_BURN_MODE, //анимация антиотравления индикаторов
   SET_SLEEP_TIME, //время до ухода в сон
   SET_MAX_ITEMS //максимум пунктов меню
@@ -351,7 +354,10 @@ enum {
   DOT_SNAKE, //змейка
   DOT_RUBBER_BAND, //резинка
 #if (DOTS_NUM > 4) || (DOTS_TYPE == 2)
-  DOT_TURN_BLINK, //мигание по очереди
+  DOT_TURN_BLINK, //мигание одной точки по очереди
+#endif
+#if (DOTS_NUM > 4) && (DOTS_TYPE == 2)
+  DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
 #endif
 #endif
   DOT_BLINK, //одиночное мигание
@@ -602,7 +608,7 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
 #if (GEN_ENABLE && (GEN_FEEDBACK == 2))
-  FB_INIT;
+  FB_INIT; //инициализация обратной связи
   ACSR = (0x01 << ACBG); //включаем компаратор
 #endif
 
@@ -764,7 +770,7 @@ void SET_ERROR(uint8_t err) //установка ошибки
 //--------------------------Установка таймеров анимаций-------------------------
 void setAnimTimers(void) //установка таймеров анимаций
 {
-  _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+  _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
   _timer_sec[TMR_BURN] = getPhaseTime(BURN_PERIOD, BURN_PHASE); //установка таймера антиотравления
   _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
 }
@@ -1326,7 +1332,7 @@ boolean check_pass(void) //проверка пароля
   uint8_t cur_indi = 0; //текущий индикатор
   uint8_t time_out = 0; //таймер авто выхода
   uint8_t attempts_pass = 0; //попытки ввода пароля
-  uint8_t entry_pass[] = {0, 0, 0 ,0}; //введеный пароль
+  uint8_t entry_pass[] = {0, 0, 0 , 0}; //введеный пароль
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов
@@ -2005,20 +2011,20 @@ void dataUpdate(void) //обработка данных
 #endif
 
 #if (GEN_ENABLE && (GEN_FEEDBACK == 2))
-  if (ACSR & (0x01 << ACI)) {
+  if (ACSR & (0x01 << ACI)) { //если изменилось состояние на входе
     ACSR |= (0x01 << ACI); //сбрасываем флаг прерывания
 #if CONV_PIN == 9
     if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
     else {
       TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
-        CONV_OFF; //выключаем пин преобразователя
-      }
+      CONV_OFF; //выключаем пин преобразователя
+    }
 #elif CONV_PIN == 10
     if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
     else {
       TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
-        CONV_OFF; //выключаем пин преобразователя
-      }
+      CONV_OFF; //выключаем пин преобразователя
+    }
 #endif
   }
 #endif
@@ -3063,7 +3069,7 @@ uint8_t settings_main(void) //настроки основные
             setLedHue(BACKL_MENU_COLOR_1, WHITE_ON); //подсветка активных разрядов
 #endif
             switch (cur_mode) {
-              case SET_AUTO_TEMP: animIndi(mainSettings.autoTempFlip, FLIP_DEMO); break; //демонстрация анимации показа температуры
+              case SET_AUTO_SHOW: animIndi(mainSettings.autoShowFlip, FLIP_DEMO); break; //демонстрация анимации показа температуры
               case SET_BURN_MODE:
 #if LAMP_NUM > 4
                 if (!cur_indi) {
@@ -3129,9 +3135,9 @@ uint8_t settings_main(void) //настроки основные
                 }
                 indiPrintNum(sens.type, 3); //вывод сенсора температуры
                 break;
-              case SET_AUTO_TEMP:
-                if (!blink_data || cur_indi) indiPrintNum(mainSettings.autoTempTime, 0, 2, 0); //вывод времени автопоказа температуры
-                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.autoTempFlip, 2, 2, 0); //вывод анимации автопоказа температуры
+              case SET_AUTO_SHOW:
+                if (!blink_data || cur_indi) indiPrintNum(mainSettings.autoShowTime, 0, 2, 0); //вывод времени автопоказа температуры
+                if (!blink_data || !cur_indi) indiPrintNum(mainSettings.autoShowFlip, 2, 2, 0); //вывод анимации автопоказа температуры
                 break;
               case SET_BURN_MODE:
 #if LAMP_NUM > 4
@@ -3240,15 +3246,15 @@ uint8_t settings_main(void) //настроки основные
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
-              case SET_AUTO_TEMP: //автопоказ температуры
+              case SET_AUTO_SHOW: //автопоказ температуры
                 switch (cur_indi) {
                   case 0:
-                    if (mainSettings.autoTempTime > 0) mainSettings.autoTempTime--; else mainSettings.autoTempTime = 15;
-                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+                    if (mainSettings.autoShowTime > 0) mainSettings.autoShowTime--; else mainSettings.autoShowTime = 15;
+                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
                     break;
                   case 1:
-                    if (mainSettings.autoTempFlip > 0) mainSettings.autoTempFlip--; else mainSettings.autoTempFlip = (FLIP_EFFECT_NUM + 1); //устанавливаем анимацию автопоказа температуры
-                    if (mainSettings.autoTempFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
+                    if (mainSettings.autoShowFlip > 0) mainSettings.autoShowFlip--; else mainSettings.autoShowFlip = (FLIP_EFFECT_NUM + 1); //устанавливаем анимацию автопоказа температуры
+                    if (mainSettings.autoShowFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
                     break;
                 }
                 break;
@@ -3351,15 +3357,15 @@ uint8_t settings_main(void) //настроки основные
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
-              case SET_AUTO_TEMP: //автопоказ температуры
+              case SET_AUTO_SHOW: //автопоказ
                 switch (cur_indi) {
                   case 0:
-                    if (mainSettings.autoTempTime < 15) mainSettings.autoTempTime++; else mainSettings.autoTempTime = 0;
-                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+                    if (mainSettings.autoShowTime < 15) mainSettings.autoShowTime++; else mainSettings.autoShowTime = 0;
+                    _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
                     break;
                   case 1:
-                    if (mainSettings.autoTempFlip < (FLIP_EFFECT_NUM + 1)) mainSettings.autoTempFlip++; else mainSettings.autoTempFlip = 0; //устанавливаем анимацию автопоказа температуры
-                    if (mainSettings.autoTempFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
+                    if (mainSettings.autoShowFlip < (FLIP_EFFECT_NUM + 1)) mainSettings.autoShowFlip++; else mainSettings.autoShowFlip = 0; //устанавливаем анимацию автопоказа температуры
+                    if (mainSettings.autoShowFlip > 1) animDemo = 2; //установили флаг демонстрации анимации
                     break;
                 }
                 break;
@@ -3416,7 +3422,7 @@ uint8_t settings_main(void) //настроки основные
               break;
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
               indiSetDotR(1); //включаем разделительную точку
 #else
               indiSetDotL(2); //включаем разделительную точку
@@ -3529,109 +3535,6 @@ void speakPress(void) //воспроизвести давление
   playerSetTrack(PLAYER_SENS_PRESS_START + playerGetSpeak(sens.press), PLAYER_END_NUMBERS_FOLDER);
   playerSetTrack(PLAYER_SENS_PRESS_OTHER, PLAYER_END_NUMBERS_FOLDER);
 }
-//--------------------------------Автоматический показ температуры----------------------------------------
-void autoShowTemp(void) //автоматический показ температуры
-{
-  if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
-    updateTemp(); //обновить показания температуры
-    _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
-  }
-
-  for (uint8_t mode = 0; mode < AUTO_TEMP_SHOW_TYPE; mode++) {
-#if DOTS_PORT_ENABLE
-    indiClrDots(); //выключаем разделительные точки
-#endif
-#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-    dotSetBright(0); //выключаем секундные точки
-#endif
-    animClearBuff(); //очистка буфера анимации
-    switch (mode) {
-      case 0:
-#if AUTO_TEMP_SHOW_HUM && (LAMP_NUM > 4) && (AUTO_TEMP_SHOW_TYPE > 1) //режим отображения температуры и влажности
-      case 1:
-        mode = 1; //установили режим
-        animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
-        if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
-        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
-        indiSetDotR(1); //включаем разделительную точку
-#else
-        indiSetDotL(2); //включаем разделительную точку
-#endif
-#elif NEON_DOT == 2
-        neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
-        neonDotSet(DOT_LEFT); //установка разделительной точки
-#else
-        dotSetBright(dot.menuBright); //включаем точки
-#endif
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        if (mode) { //если режим отображения температуры и влажности
-          setBacklHue(4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T);  //установили цвет температуры и влажности
-          setLedHue(3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
-        }
-        else setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
-        backlAnimDisable(); //запретили эффекты подсветки
-#if AUTO_TEMP_BACKL_TYPE == 1
-        changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-        setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
-#else
-        setLedBright(backl.menuBright); //установили максимальную яркость
-#endif
-#endif
-#else //иначе режим отображения температуры
-        animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
-        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
-        indiSetDotR(1); //включаем разделительную точку
-#else
-        indiSetDotL(2); //включаем разделительную точку
-#endif
-#elif NEON_DOT == 2
-        neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
-        neonDotSet(DOT_LEFT); //установка разделительной точки
-#else
-        dotSetBright(dot.menuBright); //включаем точки
-#endif
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
-        backlAnimDisable(); //запретили эффекты подсветки
-#if AUTO_TEMP_BACKL_TYPE == 1
-        changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-        setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
-#else
-        setLedBright(backl.menuBright); //установили максимальную яркость
-#endif
-#endif
-        break;
-      case 1:
-        if (!sens.hum) continue; //возвращаемся назад
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
-#endif
-        animPrintNum(sens.hum, 0, 4, ' '); //вывод влажности
-        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#endif
-        break;
-      case 2:
-        if (!sens.press) continue; //возвращаемся назад
-#if (BACKL_TYPE == 3) && AUTO_TEMP_BACKL_TYPE
-        setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
-#endif
-        animPrintNum(sens.press, 0, 4, ' '); //вывод давления
-        animIndi((mainSettings.autoTempFlip) ? mainSettings.autoTempFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-        break;
-    }
-
-    _timer_ms[TMR_MS] = AUTO_TEMP_PAUSE_TIME; //устанавливаем таймер
-    while (_timer_ms[TMR_MS]) { //если таймер истек
-      dataUpdate(); //обработка данных
-      if (buttonState()) return; //возврат если нажата кнопка
-    }
-  }
-  animShow = (mainSettings.autoTempFlip) ? (ANIM_OTHER + mainSettings.autoTempFlip) : ANIM_MAIN; //установили флаг анимации
-}
 //--------------------------------Показать температуру----------------------------------------
 uint8_t showTemp(void) //показать температуру
 {
@@ -3653,7 +3556,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
   indiSetDotR(1); //включаем разделительную точку
 #else
   indiSetDotL(2); //включаем разделительную точку
@@ -3675,7 +3578,9 @@ uint8_t showTemp(void) //показать температуру
     if (!secUpd) {
       secUpd = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
+#if MENU_SHOW_NUMBER
       indiPrintNum(mode + 1, 5); //режим
+#endif
       switch (mode) {
         case 0:
           indiPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' ');
@@ -3712,7 +3617,7 @@ uint8_t showTemp(void) //показать температуру
         }
         if (!mode) { //если режим отображения температуры
 #if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
           indiSetDotR(1); //включаем разделительную точку
 #else
           indiSetDotL(2); //включаем разделительную точку
@@ -3729,7 +3634,6 @@ uint8_t showTemp(void) //показать температуру
           indiClrDots(); //выключаем разделительные точки
 #else
           dotSetBright(0); //выключаем точки
-
 #endif
         }
 #if PLAYER_TYPE
@@ -3773,11 +3677,8 @@ uint8_t showDate(void) //показать дату
 
 #if DOTS_PORT_ENABLE
 #if SHOW_DATE_TYPE > 1
-#if DOTS_TYPE == 2
-  indiSetDotL(2); //включаем разделительную точку
-  indiSetDotR(3); //включаем разделительную точку
-#elif DOTS_NUM > 4
-#if DOTS_TYPE == 1
+#if DOTS_NUM > 4
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
   indiSetDotR(1); //включаем разделительную точку
   indiSetDotR(3); //включаем разделительную точку
 #else
@@ -3788,7 +3689,7 @@ uint8_t showDate(void) //показать дату
   dotSetBright(dot.menuBright); //включаем точки
 #endif
 #else
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
   indiSetDotR(1); //включаем разделительную точку
 #else
   indiSetDotL(2); //включаем разделительную точку
@@ -3838,7 +3739,9 @@ uint8_t showDate(void) //показать дату
       setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
 #endif
 #else
+#if MENU_SHOW_NUMBER
       indiPrintNum(mode + 1, 5); //режим
+#endif
       switch (mode) {
         case 0:
 #if SHOW_DATE_TYPE == 1
@@ -3869,7 +3772,7 @@ uint8_t showDate(void) //показать дату
         switch (mode) {
           case 0: //дата
 #if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
             indiSetDotR(1); //включаем разделительную точку
 #else
             indiSetDotL(2); //включаем разделительную точку
@@ -3901,6 +3804,177 @@ uint8_t showDate(void) //показать дату
   }
   animShow = ANIM_MAIN; //установили флаг анимации
   return MAIN_PROGRAM; //выходим
+}
+//--------------------------------Меню автоматического показа----------------------------------------
+void autoShowMenu(void) //меню автоматического показа
+{
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+  boolean state = 0; //состояние подсветки
+#endif
+
+  if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
+    updateTemp(); //обновить показания температуры
+    _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+  }
+
+  for (uint8_t mode = 0; mode < sizeof(autoShowModes); mode++) {
+#if DOTS_PORT_ENABLE
+    indiClrDots(); //выключаем разделительные точки
+#endif
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+    dotSetBright(0); //выключаем секундные точки
+#endif
+    animClearBuff(); //очистка буфера анимации
+    switch (autoShowModes[mode]) {
+      case 0: //режим отображения температуры
+        animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+        indiSetDotR(1); //включаем разделительную точку
+#else
+        indiSetDotL(2); //включаем разделительную точку
+#endif
+#elif NEON_DOT == 2
+        neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
+        neonDotSet(DOT_LEFT); //установка разделительной точки
+#else
+        dotSetBright(dot.menuBright); //включаем точки
+#endif
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+#endif
+        break;
+
+      case 1: //режим отображения влажности
+        if (!sens.hum) continue; //возвращаемся назад
+        animPrintNum(sens.hum, 0, 4, ' '); //вывод влажности
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
+#endif
+        break;
+
+      case 2: //режим отображения давления
+        if (!sens.press) continue; //возвращаемся назад
+        animPrintNum(sens.press, 0, 4, ' '); //вывод давления
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
+#endif
+        break;
+
+#if LAMP_NUM > 4
+      case 3: //режим отображения температуры и влажности
+        animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
+        if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+        indiSetDotR(1); //включаем разделительную точку
+#else
+        indiSetDotL(2); //включаем разделительную точку
+#endif
+#elif NEON_DOT == 2
+        neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
+        neonDotSet(DOT_LEFT); //установка разделительной точки
+#else
+        dotSetBright(dot.menuBright); //включаем точки
+#endif
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        if (sens.hum) { //если режим отображения температуры и влажности
+          setBacklHue(4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T);  //установили цвет температуры и влажности
+          setLedHue(3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
+        }
+        else setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+#endif
+        break;
+#endif
+
+      case 4: //режим отображения даты
+#if (SHOW_DATE_TYPE == 1) || (SHOW_DATE_TYPE == 3)
+        animPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
+        animPrintNum(RTC.DD, 2, 2, 0); //вывод даты
+#else
+        animPrintNum(RTC.DD, 0, 2, 0); //вывод даты
+        animPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
+#endif
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+        indiSetDotR(1); //включаем разделительную точку
+#else
+        indiSetDotL(2); //включаем разделительную точку
+#endif
+#elif NEON_DOT == 2
+        neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
+        neonDotSet(DOT_LEFT); //установка разделительной точки
+#else
+        dotSetBright(dot.menuBright); //включаем точки
+#endif
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
+        setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
+#endif
+        break;
+
+      case 5: //режим отображения года
+        animPrintNum(RTC.YY, 0); //вывод года
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
+        setBacklHue(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
+#endif
+        break;
+
+#if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
+      case 6: //режим отображения даты и года
+#if SHOW_DATE_TYPE == 3
+        animPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
+        animPrintNum(RTC.DD, 2, 2, 0); //вывод даты
+#else
+        animPrintNum(RTC.DD, 0, 2, 0); //вывод даты
+        animPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
+#endif
+        animPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
+        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if DOTS_NUM > 4
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+        indiSetDotR(1); //включаем разделительную точку
+        indiSetDotR(3); //включаем разделительную точку
+#else
+        indiSetDotL(2); //включаем разделительную точку
+        indiSetDotL(4); //включаем разделительную точку
+#endif
+#elif NEON_DOT != 3
+        dotSetBright(dot.menuBright); //включаем точки
+#endif
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
+#endif
+        break;
+#endif
+      default: continue; //иначе неизвестный режим
+    }
+
+#if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+    if (!state) { //если первый запуск
+      state = 1; //установили флаг подсветки
+      backlAnimDisable(); //запретили эффекты подсветки
+#if AUTO_SHOW_BACKL_TYPE == 1
+      changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+      setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+      setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
+    }
+#endif
+
+    _timer_ms[TMR_MS] = (uint16_t)autoShowTimes[mode] * 1000; //устанавливаем таймер
+    while (_timer_ms[TMR_MS]) { //если таймер истек
+      dataUpdate(); //обработка данных
+      if (buttonState()) return; //возврат если нажата кнопка
+    }
+  }
+  animShow = (mainSettings.autoShowFlip) ? (ANIM_OTHER + mainSettings.autoShowFlip) : ANIM_MAIN; //установили флаг анимации
 }
 //----------------------------------Переключение быстрых настроек-----------------------------------
 uint8_t fastSetSwitch(void) //переключение быстрых настроек
@@ -4401,7 +4475,7 @@ uint8_t radioMenu(void) //радиоприемник
         }
         else { //иначе отображаем частоту
 #if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
           indiSetDotR(2); //включаем разделительную точку
 #else
           indiSetDotL(3); //включаем разделительную точку
@@ -5249,7 +5323,7 @@ void dotFlash(void) //мигание точек
           _timer_ms[TMR_DOT] = (DOT_RUBBER_BAND_TIME / (DOTS_ALL * ((DOTS_ALL / 2) + 0.5))); //установили таймер
           break;
 #if (DOTS_NUM > 4) || (DOTS_TYPE == 2)
-        case DOT_TURN_BLINK: //мигание по очереди
+        case DOT_TURN_BLINK: //мигание одной точкой по очереди
 #if DOT_TURN_TIME
           if (dot.count < ((1000 / DOT_TURN_TIME) - 1)) {
             dot.count++; //прибавили шаг
@@ -5262,27 +5336,33 @@ void dotFlash(void) //мигание точек
 #else
           dot.update = 1; //сбросили флаг секунд
 #endif
+          indiClrDots(); //очистка разделительных точек
           switch (dot.drive) {
-#if DOTS_TYPE == 2
-#if LAMP_NUM > 4
-            case 0: indiSetDotL(2); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
-            case 1: indiSetDotR(3); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
-#else
-            case 0: indiSetDotR(1); indiClrDotL(2); dot.drive = 1; break; //включаем левую точку
-            case 1: indiSetDotL(2); indiClrDotR(1); dot.drive = 0; break; //включаем правую точку
-#endif
-#else
-#if DOTS_TYPE == 1
-            case 0: indiSetDotR(1); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
-            case 1: indiSetDotR(3); indiClrDotR(1); dot.drive = 0; break; //включаем правую точку
-#else
-            case 0: indiSetDotL(2); indiClrDotL(4); dot.drive = 1; break; //включаем левую точку
-            case 1: indiSetDotL(4); indiClrDotL(2); dot.drive = 0; break; //включаем правую точку
-#endif
-#endif
+            case 0: indiSetDotsMain(DOT_LEFT); dot.drive = 1; break; //включаем левую точку
+            case 1: indiSetDotsMain(DOT_RIGHT); dot.drive = 0; break; //включаем правую точку
           }
           break;
 #endif
+#endif
+#if (DOTS_NUM > 4) && (DOTS_TYPE == 2)
+        case DOT_DUAL_TURN_BLINK: //мигание двумя точками по очереди
+#if DOT_DUAL_TURN_TIME
+          if (dot.count < ((1000 / DOT_DUAL_TURN_TIME) - 1)) {
+            dot.count++; //прибавили шаг
+            _timer_ms[TMR_DOT] = DOT_DUAL_TURN_TIME; //установили таймер
+          }
+          else {
+            dot.count = 0; //сбросили счетчик
+            dot.update = 1; //сбросили флаг секунд
+          }
+#else
+          dot.update = 1; //сбросили флаг секунд
+#endif
+          switch (dot.drive) {
+            case 0: indiSetDotL(2); indiSetDotR(3); indiClrDotR(1); indiClrDotL(4); dot.drive = 1; break; //включаем левую точку
+            case 1: indiSetDotR(1); indiSetDotL(4); indiClrDotL(2); indiClrDotR(3); dot.drive = 0; break; //включаем правую точку
+          }
+          break;
 #endif
         case DOT_BLINK:
           switch (dot.drive) {
@@ -5850,7 +5930,7 @@ uint8_t mainScreen(void) //главный экран
 
   if (_timer_sec[TMR_GLITCH] < RESET_TIME_GLITCH) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
   if (_timer_sec[TMR_BURN] < RESET_TIME_BURN) _timer_sec[TMR_BURN] = RESET_TIME_BURN; //если время вышло то устанавливаем минимальное время
-  if (_timer_sec[TMR_TEMP] < RESET_TIME_TEMP) _timer_sec[TMR_TEMP] = RESET_TIME_TEMP; //если время вышло то устанавливаем минимальное время
+  if (_timer_sec[TMR_TEMP] < RESET_TIME_SHOW) _timer_sec[TMR_TEMP] = RESET_TIME_SHOW; //если время вышло то устанавливаем минимальное время
 
 #if LAMP_NUM > 4
   anim.flipSeconds = 0; //сбрасываем флаги анимации секунд
@@ -5882,10 +5962,10 @@ uint8_t mainScreen(void) //главный экран
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
-        if (mainSettings.autoTempTime && !_timer_sec[TMR_TEMP]) { //если пришло время отобразить температуру
+        if (mainSettings.autoShowTime && !_timer_sec[TMR_TEMP]) { //если пришло время отобразить температуру
           mainTask = SLEEP_PROGRAM; //подмена текущей программы
-          autoShowTemp(); //автоматическое отображение температуры
-          _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoTempTime, AUTO_TEMP_PHASE); //установка таймера показа температуры
+          autoShowMenu(); //автоматическое отображение данных
+          _timer_sec[TMR_TEMP] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
           changeAnimState = 2; //установили тип анимации
           return MAIN_PROGRAM; //перезапуск основной программы
         }
