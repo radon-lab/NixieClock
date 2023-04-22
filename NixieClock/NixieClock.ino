@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.9.1 тест релиз от 22.04.23
+  Arduino IDE 1.8.13 версия прошивки 1.9.1 тест релиз от 23.04.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -3817,7 +3817,7 @@ void autoShowMenu(void) //меню автоматического показа
     _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
   }
 
-  for (uint8_t mode = 0; mode < sizeof(autoShowModes); mode++) {
+  for (uint8_t mode = 0; mode < ((sizeof(autoShowModes) < sizeof(autoShowTimes)) ? sizeof(autoShowModes) : sizeof(autoShowTimes)); mode++) {
 #if DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
@@ -3925,9 +3925,9 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         break;
 
-#if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
+#if LAMP_NUM > 4
       case 6: //режим отображения даты и года
-#if SHOW_DATE_TYPE == 3
+#if (SHOW_DATE_TYPE == 1) || (SHOW_DATE_TYPE == 3)
         animPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
         animPrintNum(RTC.DD, 2, 2, 0); //вывод даты
 #else
