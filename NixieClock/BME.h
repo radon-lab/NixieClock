@@ -183,13 +183,28 @@ void readTempBME(void) //чтение температуры/давления/в
         press_raw = (((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8) | wireReadEndByte());
         press_raw >>= (8 - BMP180_OVERSAMP);
 
-        int32_t temp_val_1 = ((temp_raw - CalibrationBMP.AC_6) * CalibrationBMP.AC_5 >> 15) + ((int32_t)CalibrationBMP.MC << 11) / (((temp_raw - CalibrationBMP.AC_6) * CalibrationBMP.AC_5 >> 15) + CalibrationBMP.MD);
-        uint32_t press_val_1 = ((uint32_t)CalibrationBMP.AC_4 * (uint32_t)(((((CalibrationBMP.AC_3 * (temp_val_1 - 4000)) >> 13) + ((CalibrationBMP.B_1 * (((temp_val_1 - 4000) * (temp_val_1 - 4000)) >> 12)) >> 16) + 2) >> 2) + 32768)) >> 15;
-        uint32_t press_val_2 = ((uint32_t)press_raw - ((((CalibrationBMP.AC_1 * 4 + ((CalibrationBMP.B_2 * (((temp_val_1 - 4000) * (temp_val_1 - 4000)) >> 12)) >> 11) + ((CalibrationBMP.AC_2 * (temp_val_1 - 4000)) >> 11)) << BMP180_OVERSAMP) + 2) >> 2)) * (uint32_t)(50000UL >> BMP180_OVERSAMP);
-        int32_t press_val_3 = (press_val_2 < 0x80000000) ? (press_val_2 * 2 / press_val_1) : (press_val_2 / press_val_1 * 2);
+        int32_t temp_val_1 = ((int32_t)(temp_raw - CalibrationBMP.AC_6) * CalibrationBMP.AC_5) >> 15;
+        int32_t temp_val_2 = ((int32_t)CalibrationBMP.MC << 11) / (temp_val_1 + CalibrationBMP.MD);
+        temp_raw = temp_val_1 + temp_val_2;
 
-        sens.temp = (temp_val_1 + 8) >> 4; //установили температуру
-        sens.press = (float)(press_val_3 + (((((press_val_3 >> 8) * (press_val_3 >> 8) * 3038) >> 16) + ((-7357 * press_val_3) >> 16) + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
+        int32_t press_val_4 = temp_raw - 4000;
+        temp_val_1 = ((int32_t)CalibrationBMP.B_2 * ((press_val_4 * press_val_4) >> 12)) >> 11;
+        temp_val_2 = ((int32_t)CalibrationBMP.AC_2 * press_val_4) >> 11;
+        int32_t press_val_1 = temp_val_1 + temp_val_2;
+        int32_t press_val_2 = ((((int32_t)CalibrationBMP.AC_1 * 4 + press_val_1) << BMP180_OVERSAMP) + 2) >> 2;
+        temp_val_1 = ((int32_t)CalibrationBMP.AC_3 * press_val_4) >> 13;
+        temp_val_2 = ((int32_t)CalibrationBMP.B_1 * ((press_val_4 * press_val_4) >> 12)) >> 16;
+        press_val_1 = ((temp_val_1 + temp_val_2) + 2) >> 2;
+        uint32_t press_val_3 = ((uint32_t)CalibrationBMP.AC_4 * (uint32_t)(press_val_1 + 32768)) >> 15;
+        uint32_t press_val_5 = ((uint32_t)press_raw - press_val_2) * (50000 >> BMP180_OVERSAMP);
+        if (press_val_5 < 0x80000000) press_raw = (press_val_5 * 2) / press_val_3;
+        else press_raw = (press_val_5 / press_val_3) * 2;
+        temp_val_1 = (press_raw >> 8) * (press_raw >> 8);
+        temp_val_1 = (temp_val_1 * 3038) >> 16;
+        temp_val_2 = (-7357 * (press_raw)) >> 16;
+
+        sens.temp = (temp_raw + 8) >> 4; //установили температуру
+        sens.press = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
         sens.hum = 0; //сбросили влажность
       }
       break;
@@ -211,13 +226,11 @@ void readTempBME(void) //чтение температуры/давления/в
         int32_t temp_raw = (((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8) | (uint32_t)wireRead()) >> 4; //читаем 24-х битное значение ацп температуры
         int32_t hum_raw = ((uint16_t)wireRead() << 8) | (uint16_t)wireReadEndByte(); //читаем 16-и битное значение ацп влажности
 
-
         int32_t temp_val_1 = ((((temp_raw >> 3) - ((int32_t)CalibrationBME.TEMP_1 << 1))) * ((int32_t)CalibrationBME.TEMP_2)) >> 11;
         int32_t temp_val_2 = (((((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1)) * ((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1))) >> 12) * ((int32_t)CalibrationBME.TEMP_3)) >> 14;
         temp_raw = temp_val_1 + temp_val_2; //цельночисленная температура
 
         sens.temp = ((temp_raw * 5 + 128) >> 8) / 10; //установили температуру
-
 
         int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
         int32_t press_val_2 = ((press_val_1 >> 2) * (press_val_1 >> 2) >> 11) * (int32_t)CalibrationBME.PRESS_6;
@@ -231,11 +244,10 @@ void readTempBME(void) //чтение температуры/давления/в
           else press_raw = (press_raw / (uint32_t)press_val_1) * 2;
           press_val_1 = (((int32_t)CalibrationBME.PRESS_9) * ((int32_t)(((press_raw >> 3) * (press_raw >> 3)) >> 13))) >> 12;
           press_val_2 = (((int32_t)(press_raw >> 2)) * ((int32_t)CalibrationBME.PRESS_8)) >> 13;
-          
+
           sens.press = (uint32_t)((int32_t)press_raw + ((press_val_1 + press_val_2 + CalibrationBME.PRESS_7) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
         }
         else sens.press = 0; //иначе записываем 0
-
 
         int32_t hum_val  = (temp_raw - ((int32_t)76800)); //компенсация температуры
         hum_val = (((((hum_raw << 14) - (((int32_t)CalibrationBME.HUM_4) << 20) - (((int32_t)CalibrationBME.HUM_5) * hum_val)) +
