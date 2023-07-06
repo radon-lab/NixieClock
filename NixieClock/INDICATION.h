@@ -726,7 +726,7 @@ void animClearBuff(void) //очистка буфера анимации
 void animBright(uint8_t pwm) //анимация смены яркости цифр
 {
   if (pwm > 30) pwm = 30;
-  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);;
+  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
   for (uint8_t i = 0; i < LAMP_NUM; i++) {
     if (anim.flipBuffer[i] != anim.flipBuffer[i + 6]) { //если не достигли конца анимации разряда
       indi_dimm[i + 1] = pwm;
