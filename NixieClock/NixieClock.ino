@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.9.2 релиз от 05.07.23
+  Arduino IDE 1.8.13 версия прошивки 1.9.3 релиз от 19.07.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -8,19 +8,19 @@
 */
 //-----------------Ошибки-----------------
 enum {
-  DS3231_ERROR,        //0001 - ошибка связи с модулем DS3231
-  DS3231_OSF_ERROR,    //0002 - ошибка осцилятора модуля DS3231
-  SQW_SHORT_ERROR,     //0003 - ошибка слишком короткий сигнал SQW
-  SQW_LONG_ERROR,      //0004 - ошибка сигнал SQW отсутсвует или слишком длинный сигнал SQW
-  TEMP_SENS_ERROR,     //0005 - ошибка выбранный датчик температуры не обнаружен
-  VCC_ERROR,           //0006 - ошибка напряжения питания
-  MEMORY_ERROR,        //0007 - ошибка памяти еепром
-  RESET_ERROR,         //0008 - ошибка софтовой перезагрузки
-  CONVERTER_ERROR,     //0009 - ошибка сбоя работы преобразователя
-  PWM_OVF_ERROR,       //0010 - ошибка переполнения заполнения шим преобразователя
-  STACK_OVF_ERROR,     //0011 - ошибка переполнения стека
-  TICK_OVF_ERROR,      //0012 - ошибка переполнения тиков времени
-  INDI_ERROR           //0013 - ошибка сбоя работы динамической индикации
+  DS3231_ERROR,        //0001 - нет связи с модулем DS3231
+  DS3231_OSF_ERROR,    //0002 - сбой осцилятора модуля DS3231
+  SQW_SHORT_ERROR,     //0003 - слишком короткий сигнал SQW
+  SQW_LONG_ERROR,      //0004 - сигнал SQW отсутсвует или слишком длинный сигнал SQW
+  TEMP_SENS_ERROR,     //0005 - выбранный датчик температуры не обнаружен
+  VCC_ERROR,           //0006 - напряжения питания вне рабочего диапазона
+  MEMORY_ERROR,        //0007 - сбой памяти еепром
+  RESET_ERROR,         //0008 - софтовой перезагрузки
+  CONVERTER_ERROR,     //0009 - сбой работы преобразователя
+  PWM_OVF_ERROR,       //0010 - переполнение заполнения шим преобразователя
+  STACK_OVF_ERROR,     //0011 - переполнение стека
+  TICK_OVF_ERROR,      //0012 - переполнение тиков времени
+  INDI_ERROR           //0013 - сбой работы динамической индикации
 };
 void dataUpdate(void); //процедура обработки данных
 void SET_ERROR(uint8_t err); //процедура установка ошибки
@@ -145,10 +145,10 @@ struct dotData {
 #if DOTS_PORT_ENABLE
   uint8_t steps; //шаги точек
 #endif
-  uint8_t brightStep; //шаг мигания точек
-  uint8_t brightTime; //период шага мигания точек
   uint8_t maxBright; //максимальная яркость точек
   uint8_t menuBright; //максимальная яркость точек в меню
+  uint8_t brightStep; //шаг мигания точек
+  uint16_t brightTime; //период шага мигания точек
 } dot;
 
 //переменные работы с подсветкой
@@ -160,11 +160,11 @@ struct backlightData {
   uint8_t maxBright; //максимальная яркость подсветки
   uint8_t minBright; //минимальная яркость подсветки
   uint8_t menuBright; //максимальная яркость подсветки в меню
-  uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_2_step; //шаг эффекта номер 2
+  uint16_t mode_2_time; //время эффекта номер 2
   uint8_t mode_4_step; //шаг эффекта номер 4
-  uint16_t mode_8_time; //время эффекта номер 6
   uint8_t mode_8_step; //шаг эффекта номер 6
+  uint16_t mode_8_time; //время эффекта номер 6
 } backl;
 
 //переменные работы с индикаторами
@@ -345,11 +345,14 @@ enum {
 enum {
   DOT_OFF, //выключена
   DOT_STATIC, //статичная
+#if NEON_DOT != 3
   DOT_PULS, //плавно мигает
+#endif
 #if NEON_DOT == 2
   DOT_TURN_BLINK_NEON, //мигание по очереди неоновых ламп
 #endif
 #if DOTS_PORT_ENABLE
+  DOT_BLINK, //одиночное мигание
   DOT_RUNNING, //бегущая
   DOT_SNAKE, //змейка
   DOT_RUBBER_BAND, //резинка
@@ -360,8 +363,8 @@ enum {
   DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
 #endif
 #endif
-  DOT_BLINK, //одиночное мигание
-  DOT_DOOBLE_BLINK, //двойное мигание
+  DOT_OTHER_BLINK, //дополнительное одиночное мигание
+  DOT_OTHER_DOOBLE_BLINK, //дополнительное двойное мигание
   DOT_EFFECT_NUM //максимум эффектов подсветки
 };
 
@@ -692,6 +695,8 @@ void INIT_SYSTEM(void) //инициализация
 #if SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #endif
+
+  mainEnableWDT(); //основной запуск WDT
 
   if (!LEFT_CHK) { //если левая кнопка зажата
 #if DEBUG_PASS_ENABLE
@@ -5195,22 +5200,8 @@ void dotFlash(void) //мигание точек
       switch (fastSettings.dotMode) //режим точек
 #endif
       { //мигание точек
+#if NEON_DOT != 3
         case DOT_PULS:
-#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
-          if (!dot.drive) {
-            dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
-#if DOT_PULS_TIME != 1000
-            _timer_ms[TMR_DOT] = DOT_PULS_TIME; //установили таймер
-#else
-            dot.update = 1; //сбросили флаг секунд
-#endif
-          }
-          else {
-            dotSetBright(0); //выключаем точки
-            dot.drive = 0; //сменили направление
-            dot.update = 1; //сбросили флаг секунд
-          }
-#else
           if (!dot.drive) {
             if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
           }
@@ -5222,8 +5213,8 @@ void dotFlash(void) //мигание точек
             }
           }
           _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
-#endif
           break;
+#endif
 #if NEON_DOT == 2
         case DOT_TURN_BLINK_NEON:
           switch (dot.count) {
@@ -5242,6 +5233,22 @@ void dotFlash(void) //мигание точек
           break;
 #endif
 #if DOTS_PORT_ENABLE
+        case DOT_BLINK:
+          if (!dot.drive) {
+            indiSetDotsMain(DOT_ALL); //установка разделительных точек
+            dot.drive = 1; //сменили направление
+#if DOT_BLINK_TIME
+            _timer_ms[TMR_DOT] = DOT_BLINK_TIME; //установили таймер
+#else
+            dot.update = 1; //сбросили флаг секунд
+#endif
+          }
+          else {
+            indiClrDots(); //очистка разделительных точек
+            dot.drive = 0; //сменили направление
+            dot.update = 1; //сбросили флаг секунд
+          }
+          break;
         case DOT_RUNNING: //бегущая
           indiClrDots(); //очистка разделителных точек
           indiSetDots(dot.count, 1); //установка разделительных точек
@@ -5364,11 +5371,11 @@ void dotFlash(void) //мигание точек
           }
           break;
 #endif
-        case DOT_BLINK:
+        case DOT_OTHER_BLINK:
           switch (dot.drive) {
             case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
-#if DOT_BLINK_TIME != 1000
-              _timer_ms[TMR_DOT] = DOT_BLINK_TIME; //установили таймер
+#if DOT_OTHER_BLINK_TIME != 1000
+              _timer_ms[TMR_DOT] = DOT_OTHER_BLINK_TIME; //установили таймер
 #else
               dot.update = 1; //сбросили флаг секунд
 #endif
@@ -5376,7 +5383,7 @@ void dotFlash(void) //мигание точек
             case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
           }
           break;
-        case DOT_DOOBLE_BLINK:
+        case DOT_OTHER_DOOBLE_BLINK:
           if (dot.count & 0x01) dotSetBright(0); //выключаем точки
           else dotSetBright(dot.maxBright); //включаем точки
 
@@ -5384,7 +5391,7 @@ void dotFlash(void) //мигание точек
             dot.count = 0;  //сбрасываем счетчик
             dot.update = 1; //сбросили флаг обновления точек
           }
-          else _timer_ms[TMR_DOT] = DOT_DOOBLE_TIME; //установили таймер
+          else _timer_ms[TMR_DOT] = DOT_OTHER_DOOBLE_TIME; //установили таймер
           break;
         default: dot.update = 1; break; //сбросили флаг обновления точек
       }

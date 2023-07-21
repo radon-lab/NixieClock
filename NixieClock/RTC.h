@@ -45,7 +45,7 @@ boolean readAgingRTC(int8_t* data) //чтение коррекции хода
 {
   if (wireRequestFrom(RTC_ADDR, 0x10)) return 0; //запрашиваем чтение данных, если нет ответа выходим
   *data = wireReadEndByte(); //записываем результат
-  return 1;
+  return 1; //выходим
 }
 //-------------------------------Запись коррекции хода-------------------------------------
 void writeAgingRTC(int8_t data) //запись коррекции хода
@@ -75,9 +75,9 @@ boolean getOSF(boolean mode) //проверка флага OSF
       }
     }
     SET_ERROR(DS3231_OSF_ERROR); //установили ошибку осцилятора модуля RTC
-    return 0;
+    return 0; //выходим
   }
-  return 1;
+  return 1; //выходим
 }
 //-----------------------------------Настройка SQW-----------------------------------------
 boolean setSQW(void) //настройка SQW
@@ -158,7 +158,7 @@ boolean getTime(boolean mode) //запрашиваем время из RTC
     RTC.MM = unpackREG(wireRead()); //получаем месяц
     RTC.YY = unpackREG(wireReadEndByte()) + 2000; //получаем год
     RTC.DW = getWeekDay(RTC.YY, RTC.MM, RTC.DD); //получаем день недели
-    return 1;
+    return 1; //выходим
   }
   return 0; //выходим
 }
