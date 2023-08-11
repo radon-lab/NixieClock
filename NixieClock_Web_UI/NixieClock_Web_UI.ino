@@ -196,7 +196,7 @@ void build() {
           }
         }
         else alarmRadioList += "пусто";
-        
+
         String alarmNumList;
         for (uint8_t i = 0; i < alarm.all ; i++) {
           if (i) alarmNumList += ',';
@@ -446,65 +446,6 @@ void build() {
     GP.UI_END();    // завершить окно панели управления <<<<-------------
   }
   GP.BUILD_END();
-}
-
-boolean updateTime(void) {
-  if (!ntp.updateNow()) {
-    mainTime.second = ntp.second();
-    mainTime.minute = ntp.minute();
-    mainTime.hour = ntp.hour();
-    mainDate.day = ntp.day();
-    mainDate.month = ntp.month();
-    mainDate.year = ntp.year();
-    return true;
-  }
-  return false;
-}
-
-void wifi_config(void) {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println F("");
-    Serial.print F("Connecting to settings \"");
-    Serial.print(settings.ssid);
-    Serial.print F("\"...");
-
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.begin(settings.ssid, settings.pass);
-    for (int8_t i = 50; i > 0; i--) {
-      Serial.print F(".");
-      delay(500);
-      if (WiFi.status() == WL_CONNECTED) {
-        Serial.println F("");
-        Serial.println F("Wifi connected");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
-
-        ntp.begin(); //запустить ntp
-        ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
-        updateTime(); //запросить текущее время
-        break;
-      }
-    }
-  }
-
-  IPAddress apIP(AP_IP);
-  IPAddress subnet(255, 255, 255, 0);
-  //если не удалось подключиться запускаем в режиме точки доступа
-  Serial.println F("");
-  Serial.print F("Access Point ssid: ");
-  Serial.println(AP_SSID);
-  Serial.print F("Access Point pass: ");
-  Serial.println(AP_PASS);
-  if (WiFi.status() != WL_CONNECTED) {
-    //отключаем wifi
-    WiFi.disconnect();
-    //включаем точку доступа
-    WiFi.mode(WIFI_AP);
-  }
-  //задаем настройки сети
-  WiFi.softAPConfig(apIP, apIP, subnet);
-  //включаем wifi в режиме точки доступа с именем и паролем по умолчанию
-  WiFi.softAP(AP_SSID, AP_PASS);
 }
 
 void action() {
@@ -855,6 +796,65 @@ void action() {
   }
 }
 
+boolean updateTime(void) {
+  if (!ntp.updateNow()) {
+    mainTime.second = ntp.second();
+    mainTime.minute = ntp.minute();
+    mainTime.hour = ntp.hour();
+    mainDate.day = ntp.day();
+    mainDate.month = ntp.month();
+    mainDate.year = ntp.year();
+    return true;
+  }
+  return false;
+}
+
+void wifi_config(void) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println F("");
+    Serial.print F("Connecting to settings \"");
+    Serial.print(settings.ssid);
+    Serial.print F("\"...");
+
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.begin(settings.ssid, settings.pass);
+    for (int8_t i = 50; i > 0; i--) {
+      Serial.print F(".");
+      delay(500);
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println F("");
+        Serial.println F("Wifi connected");
+        Serial.print("IP address: ");
+        Serial.println(WiFi.localIP());
+
+        ntp.begin(); //запустить ntp
+        ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
+        updateTime(); //запросить текущее время
+        break;
+      }
+    }
+  }
+
+  IPAddress apIP(AP_IP);
+  IPAddress subnet(255, 255, 255, 0);
+  //если не удалось подключиться запускаем в режиме точки доступа
+  Serial.println F("");
+  Serial.print F("Access Point ssid: ");
+  Serial.println(AP_SSID);
+  Serial.print F("Access Point pass: ");
+  Serial.println(AP_PASS);
+  if (WiFi.status() != WL_CONNECTED) {
+    //отключаем wifi
+    WiFi.disconnect();
+    //включаем точку доступа
+    WiFi.mode(WIFI_AP);
+  }
+  //задаем настройки сети
+  WiFi.softAPConfig(apIP, apIP, subnet);
+  //включаем wifi в режиме точки доступа с именем и паролем по умолчанию
+  WiFi.softAP(AP_SSID, AP_PASS);
+}
+
 void setup() {
   twi_init();
 
@@ -905,14 +905,16 @@ void loop() {
   }
 
   if (ntp.tick()) {
-    mainTime.second = ntp.second();
-    mainTime.minute = ntp.minute();
-    mainTime.hour = ntp.hour();
-    mainDate.day = ntp.day();
-    mainDate.month = ntp.month();
-    mainDate.year = ntp.year();
-    busSetComand(WRITE_TIME);
-    busSetComand(WRITE_DATE);
+    if (!ntp.status()) {
+      mainTime.second = ntp.second();
+      mainTime.minute = ntp.minute();
+      mainTime.hour = ntp.hour();
+      mainDate.day = ntp.day();
+      mainDate.month = ntp.month();
+      mainDate.year = ntp.year();
+      busSetComand(WRITE_TIME);
+      busSetComand(WRITE_DATE);
+    }
   }
 
   ui.tick();
