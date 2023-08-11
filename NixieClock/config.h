@@ -127,6 +127,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_PASS_SOUND 18         //трек озвучки неверного пароля(1..255)
 #define PLAYER_HOUR_SOUND 19         //трек озвучки смены часа(1..255)
 #define PLAYER_TIMER_WARN_SOUND 20   //трек озвучки окончания таймера(1..255)
+#define PLAYER_TEST_VOL_SOUND 21     //трек проверки громкости озвучки(1..255)
 
 #define PLAYER_ALARM_FOLDER 5        //папка с озвучкой будильника(1..16)
 #define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
@@ -265,9 +266,15 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define DAC_FAT_DEPTH 16             //глубина буферизации чтения данных файловой таблицы(8..64)(шаг 8)
 #define DAC_INIT_ATTEMPTS 3          //количество попыток инициализации карты(1..5)
 
+//Настройки шины wire
+#define WIRE_PULL 1                  //тип подтяжки шины I2C(0 - внешняя подтяжка | 1 - внутренняя подтяжка)
+#define WIRE_SLAVE_ADDR 127          //адрес часов в слейв режиме(8..127)
+#define WIRE_SLAVE_TIME 5000         //время ожидания перехода в мастер режим(500...10000)
+
 //Настройки памяти
 #define EEPROM_BLOCK_NULL 0          //начальный блок памяти(0..511)
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "1.9.3"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "2.0.0"     //версия прошивки для отображения и озвучки
+#define HARDWARE_VERSION 0x01        //версия прошивки для интерфейса wire

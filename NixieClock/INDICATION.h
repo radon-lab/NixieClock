@@ -90,7 +90,7 @@ enum {
   KEY_MAX_ITEMS //максимум кнопок
 };
 
-struct Settings_4 {
+struct Settings_5 {
   uint16_t irButtons[KEY_MAX_ITEMS - 1]; //коды кнопок пульта
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим

@@ -17,12 +17,9 @@
 #if PLAYER_TYPE == 2
 #define PLAYER_MIN_VOL 0 //минимальная громкость SD плеер
 #define PLAYER_MAX_VOL 9 //максимальная громкость SD плеер
-#elif PLAYER_TYPE == 1
+#else
 #define PLAYER_MIN_VOL 0 //минимальная громкость DF плеер
 #define PLAYER_MAX_VOL 30 //максимальная громкость DF плеер
-#else
-#define PLAYER_MIN_VOL 1 //минимальная громкость бузер
-#define PLAYER_MAX_VOL 8 //максимальная громкость бузер
 #endif
 
 enum {
@@ -50,6 +47,8 @@ enum {
 };
 
 struct playerData { //буфер обмена
+  uint8_t playbackVol; //текущая громкость звука
+  uint8_t playbackRetVol; //флаг возврата громкости звука
   boolean playbackMute; //флаг работы без звука
   boolean playbackNow; //флаг срочной отправки данных
   uint8_t playbackEnd; //последний байт буфера воспроизведения
@@ -63,6 +62,7 @@ struct playerData { //буфер обмена
 const uint8_t speakTable[] PROGMEM = {2, 0, 1, 1, 1, 2, 2, 2, 2, 2}; //таблица воспроизведения окончаний фраз
 
 inline boolean playerPlaybackStatus(void);
+void playerSetVolNow(uint8_t _vol);
 void playerSendData(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSendDataNow(uint8_t cmd, uint8_t data_low = 0x00, uint8_t data_high = 0x00);
 void playerSendDataCommand(uint8_t cmd, uint8_t data_low, uint8_t reg = 0x00);
@@ -247,15 +247,23 @@ void playerSetVol(uint8_t _vol)
 {
   playerSendDataNow(PLAYER_CMD_SET_VOL, _vol);
 }
-//------------------------------Установить громкость  без очереди--------------------------------
+//------------------------------Установить громкость без очереди--------------------------------
 void playerSetVolNow(uint8_t _vol)
 {
+  if (player.playbackVol != _vol) {
+    player.playbackVol = _vol;
 #if PLAYER_TYPE == 1 //DF плеер
-  playerSendDataCommand(PLAYER_CMD_SET_VOL, _vol, _VOL_REG);
+    playerSendDataCommand(PLAYER_CMD_SET_VOL, _vol, _VOL_REG);
 #else //SD плеер
-  buffer.dacVolume = 9 - _vol;
-  if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+    buffer.dacVolume = 9 - _vol;
+    if (buffer.dacVolume > 9) buffer.dacVolume = 0;
 #endif
+  }
+}
+//----------------------Установить громкость по окончанию воспроизведения------------------------
+inline void playerRetVol(uint8_t _vol)
+{
+  player.playbackRetVol = _vol + 1;
 }
 //------------------------------------Установить приглушение-------------------------------------
 void playerSetMute(boolean _mute)
@@ -314,9 +322,15 @@ void playerUpdate(void)
       busyState = !busyState;
       if (busyState) _timer_ms[TMR_PLAYER] = PLAYER_BUSY_WAIT;
       else {
+        if (!playerPlaybackStatus()) {
+          if (player.playbackRetVol) {
+            playerSetVolNow(player.playbackRetVol - 1);
+            player.playbackRetVol = 0;
+          }
 #if AMP_PORT_ENABLE
-        if (!playerPlaybackStatus() && !player.playbackMute) AMP_DISABLE;
+          if (!player.playbackMute) AMP_DISABLE;
 #endif
+        }
         playState = 0;
       }
     }
@@ -324,12 +338,12 @@ void playerUpdate(void)
     if (playerCommandStatus()) { //если нужно отправить команду
       if (uartStatus()) { //если команда не отправляется
         uint8_t _reg = 0x01; //указатель регистра
-        for (uint8_t i = 0; i < (sizeof(player.commandBuff) / 2); i++) {
+        for (uint8_t cmd = 0; cmd < _MAX_REG; cmd++) {
           if (player.commandStatus & _reg) {
             player.commandStatus &= ~_reg;
 
-            player.transferBuff[_COMMAND] = player.commandBuff[i][0];
-            player.transferBuff[_DATA_L] = player.commandBuff[i][1];
+            player.transferBuff[_COMMAND] = player.commandBuff[cmd][0];
+            player.transferBuff[_DATA_L] = player.commandBuff[cmd][1];
             player.transferBuff[_DATA_H] = 0;
 
             playerGenCRC(player.transferBuff);
@@ -368,6 +382,7 @@ void playerUpdate(void)
             if (busyState) busyState = 0;
             break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
+          case PLAYER_CMD_SET_VOL: player.playbackVol = player.transferBuff[_DATA_L]; break;
           case PLAYER_CMD_STOP:
 #if AMP_PORT_ENABLE
             if (!player.playbackMute) AMP_DISABLE;
@@ -418,7 +433,8 @@ void playerUpdate(void)
         else BUZZ_OUT;
         break;
       case PLAYER_CMD_SET_VOL:
-        buffer.dacVolume = 9 - player.playbackBuff[player.playbackStart++];
+        player.playbackVol = player.playbackBuff[player.playbackStart++];
+        buffer.dacVolume = 9 - player.playbackVol;
         player.playbackStart++;
         if (buffer.dacVolume > 9) buffer.dacVolume = 0;
         break;
