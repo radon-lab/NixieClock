@@ -2461,7 +2461,7 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if ESP_ENABLE
         bus.status &= ~(0x01 << BUS_COMMAND_WAIT); //сбросили статус
         switch (bus.comand) {
-          case BUS_WRITE_TIME: memoryCheck |= (0x01 << MEM_UPDATE_TIME_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки времени
+          case BUS_WRITE_TIME: bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки времени
           case BUS_WRITE_FAST_SET: memoryCheck |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
           case BUS_WRITE_MAIN_SET: memoryCheck |= (0x01 << MEM_UPDATE_MAIN_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //основные настройки
 #if ALARM_TYPE
