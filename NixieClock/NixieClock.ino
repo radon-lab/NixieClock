@@ -519,6 +519,7 @@ enum {
 };
 enum {
   BUS_EXT_COMMAND_CHECK_TEMP,
+  BUS_EXT_COMMAND_SEND_TIME,
   BUS_EXT_MAX_DATA
 };
 
@@ -1055,10 +1056,7 @@ void updateMemory(void) //обновить данные в памяти
     for (uint8_t i = 0; i < MEM_MAX_DATA; i++) { //проверяем все флаги
       if (temp & 0x01) { //если флаг установлен
         switch (i) { //выбираем действие
-          case MEM_UPDATE_TIME_SET:
-            sendTime(); //отправить время в RTC
-            updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
-            break;
+          case MEM_UPDATE_TIME_SET: sendTime(); updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); break; //записываем дату и время в память
           case MEM_UPDATE_MAIN_SET: updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); break; //записываем основные настройки в память
           case MEM_UPDATE_FAST_SET: updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); break; //записываем быстрые настройки в память
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
@@ -2196,6 +2194,7 @@ uint8_t busCheck(void) //проверка статуса шины
                 _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
               }
               break;
+            case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
           }
           status >>= 1; //сместили флаги
         }
@@ -2265,7 +2264,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WAIT_DATA: //установка команды
             bus.comand = TWDR; //записали команду
             switch (bus.comand) {
-              case BUS_WRITE_TIME: memoryCheck &= ~(0x01 << MEM_UPDATE_TIME_SET); if (mainTask == CLOCK_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //настройки времени
+              case BUS_WRITE_TIME: if (mainTask == CLOCK_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //настройки времени
               case BUS_WRITE_FAST_SET: memoryCheck &= ~(0x01 << MEM_UPDATE_FAST_SET); if (mainTask == FAST_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //быстрые настройки
               case BUS_WRITE_MAIN_SET: memoryCheck &= ~(0x01 << MEM_UPDATE_MAIN_SET); if (mainTask == MAIN_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //основные настройки
 #if ALARM_TYPE
@@ -2461,7 +2460,7 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if ESP_ENABLE
         bus.status &= ~(0x01 << BUS_COMMAND_WAIT); //сбросили статус
         switch (bus.comand) {
-          case BUS_WRITE_TIME: bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки времени
+          case BUS_WRITE_TIME: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки времени
           case BUS_WRITE_FAST_SET: memoryCheck |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
           case BUS_WRITE_MAIN_SET: memoryCheck |= (0x01 << MEM_UPDATE_MAIN_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //основные настройки
 #if ALARM_TYPE
