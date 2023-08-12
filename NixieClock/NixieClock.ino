@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.0 релиз от 11.08.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.0 релиз от 12.08.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver"
   Страница проекта - https://alexgyver.ru/nixieclock_v2
 
@@ -2185,7 +2185,7 @@ uint8_t busCheck(void) //проверка статуса шины
     uint8_t status = bus.statusExt;
     bus.statusExt = 0; //сбросили статус
     if (status) { //если установлены флаги радио
-      for (uint8_t i = 0; i < BUS_MAX_DATA; i++) { //проверяем все флаги
+      for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
             case BUS_EXT_COMMAND_CHECK_TEMP:
@@ -2196,8 +2196,8 @@ uint8_t busCheck(void) //проверка статуса шины
               break;
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
           }
-          status >>= 1; //сместили флаги
         }
+        status >>= 1; //сместили флаги
       }
     }
   }
