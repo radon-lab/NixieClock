@@ -1,4 +1,11 @@
 /*
+  Arduino IDE 1.8.13 версия прошивки 1.0.0 релиз от 12.08.23
+  Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
+  Страница проекта прошивки - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
+
+  Исходник - https://github.com/radon-lab/NixieClock
+  Автор Radon-lab & Psyx86.
+
   В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить последние версии библиотек:
   GyverPortal
   GyverNTP
@@ -19,6 +26,7 @@ GyverNTP ntp(DEFAULT_GMT, 3600);
 //"ntp.msk-ix.ru"
 
 struct settingsData {
+  boolean ntpSync;
   int8_t ntpGMT;
   char ssid[20];
   char pass[20];
@@ -148,6 +156,7 @@ void build() {
           M_BOX(GP_JUSTIFY, GP.LABEL("Формат");  M_BOX(GP_RIGHT, GP.LABEL("24ч");  GP.SWITCH("mainTimeFormat", mainSettings.timeFormat); GP.LABEL("12ч");););
           GP.HR();
           M_BOX(GP.LABEL("Часовой пояс"); GP.SELECT("syncGmt", "GMT-12,GMT-11,GMT-10,GMT-9,GMT-8,GMT-7,GMT-6,GMT-5,GMT-4,GMT-3,GMT-2,GMT-1,GMT+0,GMT+1,GMT+2,GMT+3,GMT+4,GMT+5,GMT+6,GMT+7,GMT+8,GMT+9,GMT+10,GMT+11,GMT+12", settings.ntpGMT + 12, 0, (boolean)(WiFi.status() != WL_CONNECTED)););
+          M_BOX(GP_JUSTIFY, GP.LABEL("Автосинхронизация"); M_BOX(GP_RIGHT, GP.SWITCH("syncAuto", settings.ntpSync, GP_GREEN, (boolean)(WiFi.status() != WL_CONNECTED));););
           GP.BUTTON("syncTime", (WiFi.status() != WL_CONNECTED) ? "Время с устройства" : "Синхронизация с сервером");
         );
         M_BLOCK_TAB(
@@ -417,7 +426,7 @@ void build() {
       GP.SPAN("Здесь можно обновить прошивку ESP, формат файла bin. Его можно получить открыв скетч в Arduino IDE-Скетч-Экспорт бинарного файла (сохраняется в папку со скетчем)", GP_CENTER, "", "#07b379");     // + выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
 
       M_BLOCK(
-        M_BOX(GP.LABEL("Экспорт настроек"); GP.FILE_UPLOAD(""); );
+        //M_BOX(GP.LABEL("Экспорт настроек"); GP.FILE_UPLOAD(""); );
         //M_BOX(GP.LABEL("Импорт настроек"); GP.FILE_UPLOAD("file_upl"); );
         M_BOX(GP.LABEL("Обновить прошивку ESP"); GP.OTA_FIRMWARE(""); );
       );
@@ -473,6 +482,9 @@ void action() {
     }
     if (ui.clickBool("mainTimeFormat", mainSettings.timeFormat)) {
       busSetComand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
+    }
+    if (ui.clickBool("syncAuto", settings.ntpSync)) {
+      memory.update(); //обновить данные в памяти
     }
     //--------------------------------------------------------------------
     if (ui.clickBool("mainGlitch", mainSettings.glitchMode)) {
@@ -829,7 +841,7 @@ void wifi_config(void) {
 
         ntp.begin(); //запустить ntp
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
-        updateTime(); //запросить текущее время
+        //updateTime(); //запросить текущее время
         break;
       }
     }
@@ -862,12 +874,13 @@ void setup() {
 
   // читаем логин пароль из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xA5) == 1) {
+  if (memory.begin(0, 0xA7) == 1) {
     for (uint8_t i = 0; i < 20; i++) {
       settings.ssid[i] = '\0';
       settings.pass[i] = '\0';
     }
     settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
+    settings.ntpSync = false; //выключаем авто-синхронизацию
     memory.update(); //обновить данные в памяти
   }
 
@@ -876,7 +889,6 @@ void setup() {
 
   busSetComand(READ_DEVICE);
   busSetComand(WRITE_CHECK_SENS);
-  busSetComand(READ_TIME_DATE);
   busSetComand(READ_FAST_SET);
   busSetComand(READ_MAIN_SET);
   busSetComand(READ_EXTENDED_SET);
@@ -892,7 +904,6 @@ void setup() {
 
 void loop() {
   if (!ui.state()) { //если портал не запущен
-    //if (!busStatusBuffer()) { //если ничего не отправляется по шине
     //поключаемся к wifi
     wifi_config();
     //подключаем конструктор и запускаем
@@ -901,7 +912,6 @@ void loop() {
     ui.start();
     ui.enableOTA(); //без пароля
     ui.downloadAuto(true);
-    //}
   }
 
   if (ntp.tick()) {
@@ -912,8 +922,10 @@ void loop() {
       mainDate.day = ntp.day();
       mainDate.month = ntp.month();
       mainDate.year = ntp.year();
-      busSetComand(WRITE_TIME);
-      busSetComand(WRITE_DATE);
+      if (settings.ntpSync) {
+        busSetComand(WRITE_TIME);
+        busSetComand(WRITE_DATE);
+      }
     }
   }
 
