@@ -809,7 +809,7 @@ void INIT_SYSTEM(void) //инициализация
   changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
 
   checkRTC(); //проверка модуля часов
-#if AHT_SHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
+#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #endif
 
@@ -1090,7 +1090,7 @@ void updateTemp(void) //обновить показания температур
 #if DS3231_ENABLE
     case SENS_DS3231: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
 #endif
-#if AHT_SHT_ENABLE
+#if SENS_AHT_ENABLE
     case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
 #endif
 #if SENS_SHT_ENABLE

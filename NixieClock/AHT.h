@@ -20,7 +20,7 @@ void readTempAHT(void) //чтение температуры/влажности
 
   if (!typeAHT) { //если датчик не определен
     if (!wireBeginTransmission(AHT10_ADDR)) { //если AHT10
-#if AHT_SHT_ENABLE == 2
+#if SENS_AHT_ENABLE == 2
       wireWrite(AHT20_CALIBRATE_START); //начинаем калибровку для AHT20
 #else
       wireWrite(AHT10_CALIBRATE_START); //начинаем калибровку для AHT10
@@ -31,9 +31,9 @@ void readTempAHT(void) //чтение температуры/влажности
 
       _timer_ms[TMR_SENS] = AHT10_CALIBRATE_TIME; //установили таймер
       while (1) { //ждем окончания калибровки
-        if (wireBeginTransmission(AHT10_ADDR, 1)) return;
-        if ((wireRead() & 0x68) == 0x08) break;
         dataUpdate(); //обработка данных
+        if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
+        if ((wireReadEndByte() & 0x68) == 0x08) break;
         if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
       }
       typeAHT = AHT10_ADDR; //установлили тип датчика
@@ -41,7 +41,7 @@ void readTempAHT(void) //чтение температуры/влажности
     else return; //иначе выходим
   }
 
-  if (wireBeginTransmission(AHT10_ADDR)) return;
+  if (wireBeginTransmission(AHT10_ADDR)) return; //начало передачи
   wireWrite(AHT10_MEASURE_START); //записываем настройку
   wireWrite(AHT10_MEASURE_DATA); //записываем настройку
   wireWrite(AHT10_NOP_DATA); //записываем настройку
@@ -49,11 +49,14 @@ void readTempAHT(void) //чтение температуры/влажности
 
   _timer_ms[TMR_SENS] = AHT10_MEASURE_TIME; //установили таймер
   while (1) { //ждем окончания калибровки
-    if (wireBeginTransmission(AHT10_ADDR, 1)) return;
-    if (!(wireRead() & 0x80)) break;
     dataUpdate(); //обработка данных
+    if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
+    if (!(wireReadEndByte() & 0x80)) break;
     if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
   }
+
+  if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
+  wireRead(); //пропускаем статус
 
   uint32_t hum_raw = ((uint32_t)wireRead() << 16) | ((uint32_t)wireRead() << 8);
   uint8_t data_raw = wireRead();
