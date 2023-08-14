@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.0 релиз от 12.08.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.1 релиз от 14.08.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -80,6 +80,7 @@ struct sensorData {
 #include "PLAYER.h"
 #include "RDA.h"
 #include "RTC.h"
+#include "AHT.h"
 #include "SHT.h"
 #include "BME.h"
 #include "DHT.h"
@@ -392,16 +393,11 @@ enum {
 //перечисления датчиков температуры
 enum {
   SENS_DS3231, //датчик DS3231
-#if SENS_SHT_ENABLE
-  SENS_SHT,
-#endif
-#if SENS_BME_ENABLE
+  SENS_AHT, //датчики AHT
+  SENS_SHT, //датчики SHT
   SENS_BME, //датчики BME/BMP
-#endif
-#if SENS_PORT_ENABLE
-  SENS_DS18B20, //датчик DS18B20
-  SENS_DHT, //датчик DHT
-#endif
+  SENS_DS18B20, //датчики DS18B20
+  SENS_DHT, //датчики DHT
   SENS_ALL //датчиков всего
 };
 
@@ -813,7 +809,7 @@ void INIT_SYSTEM(void) //инициализация
   changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
 
   checkRTC(); //проверка модуля часов
-#if SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
+#if AHT_SHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #endif
 
@@ -842,7 +838,10 @@ void INIT_SYSTEM(void) //инициализация
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   setAnimTimers(); //установка таймеров анимаций
+
+#if DS3231_ENABLE
   _timer_sec[TMR_SYNC] = ((uint16_t)RTC_SYNC_TIME * 60); //устанавливаем таймер синхронизации
+#endif
 
 #if ALARM_TYPE
   checkAlarms(); //проверка будильников
@@ -1088,7 +1087,12 @@ void updateTemp(void) //обновить показания температур
 {
   sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
   switch (sens.type) { //выбор датчика температуры
-    default: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
+#if DS3231_ENABLE
+    case SENS_DS3231: if (readTempRTC()) sens.err = 0; return; //чтение температуры с датчика DS3231
+#endif
+#if AHT_SHT_ENABLE
+    case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
+#endif
 #if SENS_SHT_ENABLE
     case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
 #endif
@@ -1100,7 +1104,9 @@ void updateTemp(void) //обновить показания температур
     case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
 #endif
   }
+#if DS3231_ENABLE
   if (sens.err) readTempRTC(); //чтение температуры с датчика DS3231
+#endif
 }
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
@@ -1367,11 +1373,14 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 //------------------Проверка модуля часов реального времени-------------------------
 void checkRTC(void) //проверка модуля часов реального времени
 {
+#if DS3231_ENABLE
   if (!disable32K()) return; //отключение вывода 32K
+#endif
 
 #if SQW_PORT_ENABLE
+#if DS3231_ENABLE
   if (!setSQW()) return; //установка SQW на 1Гц
-
+#endif
   EIMSK = 0; //запретили прерывание INT0
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
@@ -1385,10 +1394,12 @@ void checkRTC(void) //проверка модуля часов реальног�
   }
 #endif
 
+#if DS3231_ENABLE
   if (!getTime(RTC_CLEAR_OSF)) { //считываем время из RTC
     writeAgingRTC(debugSettings.aging); //восстанавливаем коррекцию хода
     sendTime(); //отправляем последнее сохраненное время в RTC
   }
+#endif
 
 #if SQW_PORT_ENABLE
   if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
@@ -1633,7 +1644,9 @@ void debug_menu(void) //отладка
         case 1:
           indiPrintNum(cur_mode + 1, 5); //режим
           switch (cur_mode) {
+#if DS3231_ENABLE
             case DEB_AGING_CORRECT: indiPrintNum(debugSettings.aging + 128, 0); break; //выводим коррекцию DS3231
+#endif
             case DEB_TIME_CORRECT: indiPrintNum(debugSettings.timePeriod, 0); break; //выводим коррекцию внутреннего таймера
 #if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
@@ -1672,7 +1685,9 @@ void debug_menu(void) //отладка
             break;
           case 1:
             switch (cur_mode) {
+#if DS3231_ENABLE
               case DEB_AGING_CORRECT: if (debugSettings.aging > -127) debugSettings.aging--; else debugSettings.aging = 127; break; //коррекция хода
+#endif
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod > US_PERIOD_MIN) debugSettings.timePeriod--; else debugSettings.timePeriod = US_PERIOD_MAX; break; //коррекция хода
 #if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
@@ -1713,7 +1728,9 @@ void debug_menu(void) //отладка
             break;
           case 1:
             switch (cur_mode) {
+#if DS3231_ENABLE
               case DEB_AGING_CORRECT: if (debugSettings.aging < 127) debugSettings.aging++; else debugSettings.aging = -127; break; //коррекция хода
+#endif
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break; //коррекция хода
 #if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
@@ -1748,7 +1765,9 @@ void debug_menu(void) //отладка
 
         if (cur_set) { //если в режиме настройки
           switch (cur_mode) {
+#if DS3231_ENABLE
             case DEB_AGING_CORRECT: if (!readAgingRTC(&debugSettings.aging)) cur_set = 0; break; //чтение коррекции хода
+#endif
             case DEB_TIME_CORRECT: break; //коррекция хода
 #if GEN_ENABLE
             case DEB_DEFAULT_MIN_PWM: indiSetBright(1); break; //минимальное значение шим
@@ -1794,7 +1813,9 @@ void debug_menu(void) //отладка
             case DEB_RESET: //сброс настроек отладки
               if (cur_reset) { //подтверждение
                 cur_mode = 0; //перешли на первый пункт меню
+#if DS3231_ENABLE
                 debugSettings.aging = 0; //коррекции хода модуля часов
+#endif
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
 #if GEN_ENABLE
                 debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
@@ -1808,7 +1829,9 @@ void debug_menu(void) //отладка
 #if IR_PORT_ENABLE
                 for (uint8_t i = 0; i < (KEY_MAX_ITEMS - 1); i++) debugSettings.irButtons[i] = 0; //сбрасываем значение ячеек кнопок пульта
 #endif
+#if DS3231_ENABLE
                 writeAgingRTC(debugSettings.aging); //запись коррекции хода
+#endif
 #if PLAYER_TYPE
                 playerSetTrack(PLAYER_RESET_SOUND, PLAYER_GENERAL_FOLDER);
 #else
@@ -2631,10 +2654,12 @@ void dataUpdate(void) //обработка данных
       }
       timerSQW = 0; //сбросили таймер
     }
+#if DS3231_ENABLE
     else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
       _timer_sec[TMR_SYNC] = ((uint16_t)RTC_SYNC_TIME * 60); //установили таймер
       if (getTime(RTC_CHECK_OSF)) RTC.s--; //синхронизируем время
     }
+#endif
 
     secUpd = dot.update = 0; //очищаем флаги секунды и точек
 

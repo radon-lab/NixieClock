@@ -18,7 +18,7 @@
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempSHT(void) //чтение температуры/влажности
 {
-  static uint8_t typeSHT; //тип датчика BME
+  static uint8_t typeSHT; //тип датчика SHT
 
   if (!typeSHT) { //если датчик не определен
     if (!wireBeginTransmission(SHT20_ADDR)) { //если SHT20

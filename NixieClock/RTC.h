@@ -4,7 +4,7 @@
 #define RTC_CLEAR_OSF 0x01 //проверить и очистить флаг OSF
 
 //структура времени
-struct time { 
+struct time {
   uint8_t s = 0; //секунды
   uint8_t m = 0; //минуты
   uint8_t h = 8; //часы
@@ -129,6 +129,7 @@ boolean readTempRTC(void) //чтение температуры
 void sendTime(void) //отправить время в RTC
 {
   RTC.DW = getWeekDay(RTC.YY, RTC.MM, RTC.DD); //получаем день недели
+#if DS3231_ENABLE
   if (wireBeginTransmission(RTC_ADDR)) SET_ERROR(DS3231_ERROR); //устанавливаем ошибку модуля RTC
   else { //иначе отправляем данные
     wireWrite(0x00); //устанавливаем адрес записи
@@ -141,6 +142,7 @@ void sendTime(void) //отправить время в RTC
     wireWrite(packREG(RTC.YY - 2000)); //отправляем год
     wireEnd(); //конец передачи
   }
+#endif
 }
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
 boolean getTime(boolean mode) //запрашиваем время из RTC

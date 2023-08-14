@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.0 релиз от 12.08.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.1 релиз от 14.08.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта прошивки - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -26,6 +26,8 @@ GyverNTP ntp(DEFAULT_GMT, 3600);
 //"ntp.msk-ix.ru"
 
 struct settingsData {
+  uint8_t climateTime;
+  boolean climateAvg;
   boolean ntpSync;
   int8_t ntpGMT;
   char ssid[20];
@@ -40,12 +42,23 @@ GPdate mainDate;
 GPtime mainTime;
 GPtime alarmTime;
 
+uint8_t climateCountAvg;
+uint16_t climateTempAvg;
+uint16_t climateHumAvg;
+uint16_t climatePressAvg;
+
 #include "WIRE.h"
 #include "CLOCKBUS.h"
 
-String tempSensList[] = {"DS3231", "SHT20/SHT21/SHT25/SHT30/SHT31/SHT35", "BMP180/BMP085/BMP280/BME280", "DHT11/DHT12/MW33", "DHT21/DHT22(AM2301/AM2302)", "DS18B20/DS18S20/DS1820"};
+int16_t climateArrMain[2][CLIMATE_BUFFER];
+int16_t climateArrExt[1][CLIMATE_BUFFER];
+uint32_t climateDates[CLIMATE_BUFFER];
+const char *climateNamesMain[] = {"Температура", "Влажность"};
+const char *climateNamesExt[] = {"Давление"};
 
-void build() {
+String tempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
+
+void build(void) {
   GP.BUILD_BEGIN(GP_DARK);
   GP.ONLINE_CHECK(); // проверять статус платы
 
@@ -56,6 +69,7 @@ void build() {
     // ссылки меню
     GP.UI_LINK("/", "Основная");
     GP.UI_LINK("/settings", "Настройки");
+    GP.UI_LINK("/climate", "Климат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
     GP.UI_LINK("/system_information", "О системе");
     GP.UI_LINK("/update", "Обновление");
@@ -147,7 +161,7 @@ void build() {
       );
     GP.HR(GP_GRAY);
 
-    if (ui.uri("/")) { //Основная страница
+    if (ui.uri("/")) { //основная страница
       M_GRID(
         M_BLOCK_TAB(
           "Настройка время",
@@ -278,7 +292,7 @@ void build() {
         );
       }
     }
-    else if (ui.uri("/settings")) {//Настройки
+    else if (ui.uri("/settings")) {//настройки
       updateList += "mainAutoShow";
       updateList += ',';
       updateList += "mainAutoShowTime";
@@ -303,6 +317,7 @@ void build() {
           M_BOX(GP_LEFT, GP.LABEL("Коррекция датчика,°C");  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1);););
           M_BOX(GP_LEFT, GP.LABEL("Тип датчика");  M_BOX(GP_RIGHT, GP.NUMBER("", (sens.err) ? "Ошибка" : tempSensList[sens.type], INT32_MAX, "", true);););
         );
+
         GP.TABLE_BEGIN();
         GP.TR(GP_CENTER);
         GP.TD(GP_CENTER, 2);
@@ -345,6 +360,7 @@ void build() {
           GP.LABEL("Звук смены часа ");
           M_BOX(GP_CENTER, GP.LABEL(" С"); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1);  GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1); GP.LABEL("До"););
         );
+
         GP.TABLE_BEGIN();
         GP.TR(GP_CENTER);
         GP.TD(GP_CENTER, 1);
@@ -362,7 +378,34 @@ void build() {
       );
 
     }
-    else if (ui.uri("/radio")) { //Радиоприемник
+    else if (ui.uri("/climate")) { //климат
+      int heightSize = 500;
+      if (sens.press) heightSize = 300;
+
+      if (sens.hum) {
+        GP.PLOT_STOCK_DARK<2, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize);
+      }
+      else {
+        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize);
+      }
+
+      if (sens.press) {
+        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataExt", climateNamesExt, climateDates, climateArrExt, 0, heightSize);
+      }
+
+      GP.BLOCK_BEGIN(GP_DIV_RAW, "92.3%");
+      M_GRID(
+        M_BLOCK_THIN(
+          M_BOX(GP.LABEL("Усреднение"); GP.SWITCH("climateAvg", settings.climateAvg););
+        );
+
+        M_BLOCK_THIN(
+          M_BOX(GP.LABEL("Интервал,мин."); GP.SPINNER("climateTime", settings.climateTime, 1, 60, 1););
+        );
+      );
+      GP.BLOCK_END();
+    }
+    else if (ui.uri("/radio")) { //радиоприемник
       updateList += "radioVol";
       updateList += ',';
       updateList += "radioFreq";
@@ -387,22 +430,10 @@ void build() {
       M_BOX(GP.BUTTON("radioSeekDown", "|◄◄", "", GP_CYAN); GP.BUTTON("radioFreqDown", "◄", "", GP_CYAN); GP.BUTTON("radioFreqUp", "►", "", GP_CYAN); GP.BUTTON("radioSeekUp", "►►|", "", GP_CYAN););
       /*
         //средние кнопки
-        GP.BOX_BEGIN(GP_CENTER, "70%", 1);
-        GP.BUTTON("radioSeekDown", "|◄◄");
-        GP.BUTTON("radioFreqDown", "◄");
-        GP.BUTTON("radioFreqUp", "►");
-        GP.BUTTON("radioSeekUp", "►►|");
-        GP.BOX_END();
+        GP.BOX_BEGIN(GP_CENTER, "70%", 1); GP.BUTTON("radioSeekDown", "|◄◄"); GP.BUTTON("radioFreqDown", "◄"); GP.BUTTON("radioFreqUp", "►"); GP.BUTTON("radioSeekUp", "►►|"); GP.BOX_END();
         //маленькие кнопки
-        GP.BOX_BEGIN(GP_CENTER, "100%", 1);
-        GP.BUTTON_MINI("radioSeekDown", "|◄◄");
-        GP.BUTTON_MINI("radioFreqDown", " ◄ ");
-        GP.BUTTON_MINI("radioFreqUp", " ► ");
-        GP.BUTTON_MINI("radioSeekUp", "►►|");
-        GP.BOX_END();
+        GP.BOX_BEGIN(GP_CENTER, "100%", 1); GP.BUTTON_MINI("radioSeekDown", "|◄◄"); GP.BUTTON_MINI("radioFreqDown", " ◄ "); GP.BUTTON_MINI("radioFreqUp", " ► "); GP.BUTTON_MINI("radioSeekUp", "►►|"); GP.BOX_END();
       */
-      //GP.HR();
-      //M_BOX(GP_CENTER, GP.LABEL("Станции"););
       M_BLOCK_THIN_TAB(
         "Станции",
         M_TABLE(
@@ -419,35 +450,39 @@ void build() {
         );
       );
     }
-    else if (ui.uri("/system_information")) { //Информация о системе
-      GP.SYSTEM_INFO(ESP_FIRMWARE_VERSION);
+    else if (ui.uri("/system_information")) { //информация о системе
+      M_BLOCK(GP.SYSTEM_INFO(ESP_FIRMWARE_VERSION););
     }
-    else if (ui.uri("/update")) { //Обновление ESP
-      GP.SPAN("Здесь можно обновить прошивку ESP, формат файла bin. Его можно получить открыв скетч в Arduino IDE-Скетч-Экспорт бинарного файла (сохраняется в папку со скетчем)", GP_CENTER, "", "#07b379");     // + выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
-
+    else if (ui.uri("/update")) { //обновление ESP
       M_BLOCK(
-        //M_BOX(GP.LABEL("Экспорт настроек"); GP.FILE_UPLOAD(""); );
-        //M_BOX(GP.LABEL("Импорт настроек"); GP.FILE_UPLOAD("file_upl"); );
-        M_BOX(GP.LABEL("Обновить прошивку ESP"); GP.OTA_FIRMWARE(""); );
+        GP.SPAN("Здесь можно обновить прошивку ESP, формат файла bin. Его можно получить открыв скетч в Arduino IDE-Скетч-Экспорт бинарного файла (сохраняется в папку со скетчем)", GP_CENTER, "", "#07b379");     // + выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+        //M_BOX(GP.LABEL("Экспорт настроек"); GP.FILE_UPLOAD(""););
+        //M_BOX(GP.LABEL("Импорт настроек"); GP.FILE_UPLOAD("file_upl"););
+        GP.HR();
+        M_BOX(GP.LABEL("Обновить прошивку ESP"); GP.OTA_FIRMWARE(""););
       );
     }
     else if (ui.uri("/network")) { //подключение к роутеру
       if (WiFi.status() != WL_CONNECTED) {
-        GP.FORM_BEGIN("/");
-        GP.TEXT("login", "Логин", settings.ssid);
-        GP.BREAK();
-        GP.TEXT("pass", "Пароль", settings.pass);
-        GP.HR();
-        GP.SUBMIT("Подключиться");
-        GP.FORM_END();
+        M_BLOCK(
+          GP.FORM_BEGIN("/");
+          GP.TEXT("login", "Логин", settings.ssid);
+          GP.BREAK();
+          GP.TEXT("pass", "Пароль", settings.pass);
+          GP.HR();
+          GP.SUBMIT("Подключиться");
+          GP.FORM_END();
+        );
       }
       else {
-        GP.FORM_BEGIN("/network");
-        GP.LABEL("Подключено к \"" + String(settings.ssid) + "\"");
-        GP.LABEL("IP адрес \"" + WiFi.localIP().toString() + "\"");
-        GP.HR();
-        GP.SUBMIT("Отключиться");
-        GP.FORM_END();
+        M_BLOCK(
+          GP.FORM_BEGIN("/network");
+          GP.LABEL("Подключено к \"" + String(settings.ssid) + "\"");
+          GP.LABEL("IP адрес \"" + WiFi.localIP().toString() + "\"");
+          GP.HR();
+          GP.SUBMIT("Отключиться");
+          GP.FORM_END();
+        );
       }
     }
 
@@ -646,6 +681,13 @@ void action() {
       }
     }
     //--------------------------------------------------------------------
+    if (ui.clickInt("climateTime", settings.climateTime)) {
+      memory.update(); //обновить данные в памяти
+    }
+    if (ui.clickBool("climateAvg", settings.climateAvg)) {
+      memory.update(); //обновить данные в памяти
+    }
+    //--------------------------------------------------------------------
     if (ui.click("radioPower")) {
       radioSettings.powerState = ui.getBool("radioPower");
       busSetComand(WRITE_RADIO_POWER);
@@ -742,7 +784,7 @@ void action() {
     }
     if (ui.update("barTemp")) {   //начинается
       ui.answer(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С");
-      busSetComand(READ_STATUS);
+      if (deviceInformation[LAMP_NUM]) busSetComand(READ_STATUS);
     }
     if (ui.update("barHum")) {   //начинается
       ui.answer(String(sens.hum) + "%");
@@ -803,7 +845,60 @@ void action() {
     }
     if (ui.update("radioPower")) {   //начинается
       ui.answer(radioSettings.powerState);
-      busSetComand(READ_RADIO_POWER);
+      if (deviceInformation[LAMP_NUM]) busSetComand(READ_RADIO_POWER);
+    }
+  }
+}
+
+void climateReset(void) {
+  climateCountAvg = 0;
+  climateTempAvg = 0;
+  climateHumAvg = 0;
+  climatePressAvg = 0;
+}
+
+void climateUpdate(void) {
+  static boolean firstStart;
+
+  if (mainDate.year) {
+    uint32_t unixNow = 0;
+    if (!ntp.synced() || (WiFi.status() != WL_CONNECTED)) unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
+    else unixNow = ntp.unix();
+
+    if (!firstStart) {
+      firstStart = true;
+      for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
+        climateDates[i] = unixNow;
+      }
+      climateReset(); //сброс усреднения
+    }
+
+    if (settings.climateAvg) {
+      climateTempAvg += sens.temp;
+      climateHumAvg += sens.hum;
+      climatePressAvg += sens.press;
+    }
+    else {
+      climateTempAvg = sens.temp;
+      climateHumAvg = sens.hum;
+      climatePressAvg = sens.press;
+    }
+
+    if (++climateCountAvg >= settings.climateTime) {
+      if (settings.climateAvg) {
+        if (climateTempAvg) climateTempAvg /= climateCountAvg;
+        if (climateHumAvg) climateHumAvg /= climateCountAvg;
+        if (climatePressAvg) climatePressAvg /= climateCountAvg;
+      }
+      GPaddInt(climateTempAvg, climateArrMain[0], CLIMATE_BUFFER);
+      if (climateHumAvg) {
+        GPaddInt(climateHumAvg * 10, climateArrMain[1], CLIMATE_BUFFER);
+      }
+      if (climatePressAvg) {
+        GPaddInt(climatePressAvg, climateArrExt[0], CLIMATE_BUFFER);
+      }
+      GPaddUnix(unixNow, climateDates, CLIMATE_BUFFER);
+      climateReset(); //сброс усреднения
     }
   }
 }
@@ -841,7 +936,6 @@ void wifi_config(void) {
 
         ntp.begin(); //запустить ntp
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
-        //updateTime(); //запросить текущее время
         break;
       }
     }
@@ -874,16 +968,20 @@ void setup() {
 
   // читаем логин пароль из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xA7) == 1) {
+  if (memory.begin(0, 0xA9) == 1) {
     for (uint8_t i = 0; i < 20; i++) {
       settings.ssid[i] = '\0';
       settings.pass[i] = '\0';
     }
+    settings.climateTime = DEFAULT_CLIMATE_TIME;
+    settings.climateAvg = DEFAULT_CLIMATE_AVG;
     settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
     settings.ntpSync = false; //выключаем авто-синхронизацию
     memory.update(); //обновить данные в памяти
   }
-
+  for (int i = 0; i < CLIMATE_BUFFER; i++) {
+    climateDates[i] = GPunix(2022, 1, 22, 21, 59, 0, 3);
+  }
   deviceInformation[HARDWARE_VERSION] = HW_VERSION;
   alarm.now = 0;
 
@@ -931,11 +1029,14 @@ void loop() {
 
   ui.tick();
 
-  static uint32_t timer;
+  static uint32_t timer = millis();
   if ((millis() - timer) >= 60000) {
     timer = millis();
-    busSetComand(WRITE_CHECK_SENS);
-    busSetComand(READ_SENS_DATA);
+    if (deviceInformation[LAMP_NUM]) {
+      busSetComand(WRITE_CHECK_SENS);
+      if (!ntp.synced() || (WiFi.status() != WL_CONNECTED)) busSetComand(READ_TIME_DATE);
+      busSetComand(READ_SENS_DATA);
+    }
   }
 
   if (deviceStatus) {

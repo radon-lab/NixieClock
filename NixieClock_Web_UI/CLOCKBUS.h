@@ -227,7 +227,7 @@ enum {
 };
 
 struct busData {
-  uint8_t buffer[128];
+  uint8_t buffer[256];
   uint8_t bufferStart = 0;
   uint8_t bufferEnd = 0;
   uint8_t bufferLastCommand = 0;
@@ -237,6 +237,7 @@ struct busData {
   uint32_t timerStart = 0;
 } bus;
 
+void climateUpdate(void);
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos = 0x00);
 void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos = 0x00);
 
@@ -260,32 +261,6 @@ void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos) {
   twi_write_byte((data >> 8) & 0xFF); //отправляем дополнительные натройки
 }
 //--------------------------------------------------------------------
-void busWriteBuffer(uint8_t data) {
-  uint8_t _buff = bus.bufferEnd + 1;
-  if (_buff >= sizeof(bus.buffer)) _buff = 0;
-  if (_buff != bus.bufferStart) {
-    bus.buffer[bus.bufferEnd] = data;
-    bus.bufferEnd = _buff;
-  }
-}
-//--------------------------------------------------------------------
-uint8_t busReadBuffer(void) {
-  return bus.buffer[bus.bufferStart];
-}
-//--------------------------------------------------------------------
-void busShiftBuffer(void) {
-  if (bus.bufferStart != bus.bufferEnd) {
-    bus.bufferStart++;
-    if (bus.bufferStart == (bus.bufferEnd + 1)) bus.bufferStart = bus.bufferEnd = 0;
-    if (bus.bufferStart >= sizeof(bus.buffer)) bus.bufferStart = 0;
-  }
-}
-//--------------------------------------------------------------------
-boolean busStatusBuffer(void) {
-  if (bus.bufferStart != bus.bufferEnd) return 1;
-  return 0;
-}
-//--------------------------------------------------------------------
 void busTimerSetInterval(uint16_t time) {
   bus.timerInterval = time;
   bus.timerStart = millis();
@@ -296,15 +271,38 @@ inline boolean busTimerCheck(void) {
   return false;
 }
 //--------------------------------------------------------------------
+boolean busStatusBuffer(void) {
+  return (boolean)(bus.bufferStart != bus.bufferEnd);
+}
+//--------------------------------------------------------------------
+uint8_t busFreeBuffer(void) {
+  return (uint8_t)(bus.bufferStart - bus.bufferEnd - 1);
+}
+//--------------------------------------------------------------------
+void busWriteBuffer(uint8_t data) {
+  if (busFreeBuffer()) {
+    bus.buffer[bus.bufferEnd] = data;
+    bus.bufferEnd++;
+  }
+}
+//--------------------------------------------------------------------
+uint8_t busReadBuffer(void) {
+  return bus.buffer[bus.bufferStart];
+}
+//--------------------------------------------------------------------
+void busShiftBuffer(void) {
+  if (busStatusBuffer()) bus.bufferStart++;
+}
+//--------------------------------------------------------------------
 void busSetComand(uint8_t cmd) {
-  if (!busStatusBuffer() || bus.bufferLastCommand != cmd) {
+  if (busFreeBuffer() && (bus.bufferLastCommand != cmd)) {
     bus.bufferLastCommand = cmd;
     busWriteBuffer(cmd);
   }
 }
 //--------------------------------------------------------------------
 void busSetComand(uint8_t cmd, uint8_t arg) {
-  if (!busStatusBuffer() || bus.bufferLastCommand != cmd || bus.bufferLastArgument != arg) {
+  if ((busFreeBuffer() >= 2) && ((bus.bufferLastCommand != cmd) || (bus.bufferLastArgument != arg))) {
     bus.bufferLastCommand = cmd;
     bus.bufferLastArgument = arg;
     busWriteBuffer(cmd);
@@ -610,6 +608,7 @@ void busUpdate(void) {
           sens.press = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
           sens.hum = twi_read_byte(TWI_NACK);
           twi_write_stop(); //завершаем передачу
+          climateUpdate(); //обновляем показания графиков
         }
         break;
       case READ_SENS_INFO:
