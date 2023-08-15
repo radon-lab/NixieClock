@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.1 релиз от 14.08.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.1 релиз от 15.08.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта прошивки - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -164,7 +164,7 @@ void build(void) {
     if (ui.uri("/")) { //основная страница
       M_GRID(
         M_BLOCK_TAB(
-          "Настройка время",
+          "Настройка времени",
           M_BOX(GP.LABEL("Время"); GP.TIME("time"););
           M_BOX(GP.LABEL("Дата"); GP.DATE("date"););
           M_BOX(GP_JUSTIFY, GP.LABEL("Формат");  M_BOX(GP_RIGHT, GP.LABEL("24ч");  GP.SWITCH("mainTimeFormat", mainSettings.timeFormat); GP.LABEL("12ч");););
@@ -306,7 +306,7 @@ void build(void) {
           M_BOX(GP.LABEL("Эффект"); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"););
           GP.HR();
           M_BOX(GP_CENTER, GP.LABEL("Тип данных"););
-          M_BOX(GP_CENTER, GP.SPAN("(Источник и время в сек)"););
+          M_BOX(GP_CENTER, GP.SPAN("(источник и время в сек)"););
           M_BOX(GP.LABEL("1"); GP.SELECT("extShowMode/0", "Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1);););
           M_BOX(GP.LABEL("2"); GP.SELECT("extShowMode/1", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[1]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/1", extendedSettings.autoShowTimes[1], 1, 5, 1);););
           M_BOX(GP.LABEL("3"); GP.SELECT("extShowMode/2", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[2]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/2", extendedSettings.autoShowTimes[2], 1, 5, 1);););
@@ -400,7 +400,7 @@ void build(void) {
         );
 
         M_BLOCK_THIN(
-          M_BOX(GP.LABEL("Интервал,мин."); GP.SPINNER("climateTime", settings.climateTime, 1, 60, 1););
+          M_BOX(GP.LABEL("Интервал, мин"); GP.SPINNER("climateTime", settings.climateTime, 1, 60, 1););
         );
       );
       GP.BLOCK_END();
