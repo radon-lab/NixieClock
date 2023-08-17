@@ -377,7 +377,7 @@ void build(void) {
         GP.TD(GP_CENTER, 1);
         M_BLOCK_TAB(
           "Подсветка",
-          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 26, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););
+          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););
           M_BOX(GP.LABEL("Режим"); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
           GP.HR();
           GP.LABEL("Яркость");
