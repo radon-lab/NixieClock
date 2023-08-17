@@ -111,7 +111,7 @@ struct Settings_1 {
 struct Settings_2 { //быстрые настройки
   uint8_t flipMode = DEFAULT_FLIP_ANIM; //режим анимации
   uint8_t backlMode = DEFAULT_BACKL_MODE; //режим подсветки
-  uint8_t backlColor = (DEFAULT_BACKL_COLOR > 25) ? (DEFAULT_BACKL_COLOR - 227) : (DEFAULT_BACKL_COLOR * 10); //цвет подсветки
+  uint8_t backlColor = (DEFAULT_BACKL_COLOR > 25) ? (DEFAULT_BACKL_COLOR + 227) : (DEFAULT_BACKL_COLOR * 10); //цвет подсветки
   uint8_t dotMode = DEFAULT_DOT_MODE; //режим точек
 } fastSettings;
 
