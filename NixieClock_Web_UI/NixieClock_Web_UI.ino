@@ -1,22 +1,29 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.1 релиз от 15.08.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.2 релиз от 17.08.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта прошивки - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab & Psyx86.
 
+  Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
+  Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете последнюю версию!
+
   В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить последние версии библиотек:
   GyverPortal
   GyverNTP
   EEManager
 
+  Папку с плагином "ESP8266LittleFS" необходимо поместить в .../Program Files/Arduino/tools, затем нужно перезапустить Arduino IDE(если была запущена).
+  Сначала загружаете прошивку, затем "Инструменты -> ESP8266 LittleFS Data Upload".
+
   Подключение к часам производится по шине I2C, так-же необходимо отключить внутреннюю подтяжку шины в часах, а внешнюю подтяжку подключить к 3.3в(подтяжка на шине должна быть строго только в одном месте!)
 */
 #include "config.h"
 
+#include <LittleFS.h>
 #include <GyverPortal.h>
-GyverPortal ui;
+GyverPortal ui(&LittleFS);
 
 #include <GyverNTP.h>
 GyverNTP ntp(DEFAULT_GMT, 3600);
@@ -50,9 +57,11 @@ uint16_t climatePressAvg;
 #include "WIRE.h"
 #include "CLOCKBUS.h"
 
+boolean climateLocal = false;
 int16_t climateArrMain[2][CLIMATE_BUFFER];
 int16_t climateArrExt[1][CLIMATE_BUFFER];
 uint32_t climateDates[CLIMATE_BUFFER];
+
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
 
@@ -67,7 +76,7 @@ void build(void) {
     GP.UI_MENU("Nixie clock", GP_RED);   // начать меню
 
     // ссылки меню
-    GP.UI_LINK("/", "Основная");
+    GP.UI_LINK("/", "Главная");
     GP.UI_LINK("/settings", "Настройки");
     GP.UI_LINK("/climate", "Климат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
@@ -162,6 +171,7 @@ void build(void) {
     GP.HR(GP_GRAY);
 
     if (ui.uri("/")) { //основная страница
+      GP.PAGE_TITLE("Главная");
       M_GRID(
         M_BLOCK_TAB(
           "Настройка времени",
@@ -181,7 +191,7 @@ void build(void) {
           M_BOX(GP.LABEL("Секунды"); GP.SELECT("mainSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", mainSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR();
           M_BOX(GP.LABEL("Подсветка"); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor != 255) ? ((fastSettings.backlColor / 10) + 1) : 0, 0, 26, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]); ); );
+          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]); ); );
         );
       );
 
@@ -293,6 +303,7 @@ void build(void) {
       }
     }
     else if (ui.uri("/settings")) {//настройки
+      GP.PAGE_TITLE("Настройки");
       updateList += "mainAutoShow";
       updateList += ',';
       updateList += "mainAutoShowTime";
@@ -346,8 +357,8 @@ void build(void) {
           M_BOX(GP.LABEL("Разделители"); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
           GP.HR();
           GP.LABEL("Яркость");
-          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 5, 30, 1); ); );//Ползунки
-          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 5, 30, 1); ); );//Ползунки
+          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, GP_GREEN, (boolean)(deviceInformation[NEON_DOT] == 3));););//Ползунки
+          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10);););//Ползунки
         );
         GP.TABLE_END();
       );
@@ -366,12 +377,12 @@ void build(void) {
         GP.TD(GP_CENTER, 1);
         M_BLOCK_TAB(
           "Подсветка",
-          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor != 255) ? ((fastSettings.backlColor / 10) + 1) : 0, 0, 26, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]); ); );
+          M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 26, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););
           M_BOX(GP.LABEL("Режим"); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
           GP.HR();
           GP.LABEL("Яркость");
-          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay / 10, 0, 25, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]); ); );//Ползунки
-          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight / 10, 0, 25, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]); ); );//Ползунки
+          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););//Ползунки
+          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););//Ползунки
 
         );
         GP.TABLE_END();
@@ -379,18 +390,19 @@ void build(void) {
 
     }
     else if (ui.uri("/climate")) { //климат
+      GP.PAGE_TITLE("Климат");
       int heightSize = 500;
       if (sens.press) heightSize = 300;
 
       if (sens.hum) {
-        GP.PLOT_STOCK_DARK<2, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize);
+        GP.PLOT_STOCK_DARK<2, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
       }
       else {
-        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize);
+        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
       }
 
       if (sens.press) {
-        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataExt", climateNamesExt, climateDates, climateArrExt, 0, heightSize);
+        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataExt", climateNamesExt, climateDates, climateArrExt, 0, heightSize, climateLocal);
       }
 
       GP.BLOCK_BEGIN(GP_DIV_RAW, "92.3%");
@@ -406,6 +418,7 @@ void build(void) {
       GP.BLOCK_END();
     }
     else if (ui.uri("/radio")) { //радиоприемник
+      GP.PAGE_TITLE("Радиоприёмник");
       updateList += "radioVol";
       updateList += ',';
       updateList += "radioFreq";
@@ -451,9 +464,11 @@ void build(void) {
       );
     }
     else if (ui.uri("/system_information")) { //информация о системе
+      GP.PAGE_TITLE("О системе");
       M_BLOCK(GP.SYSTEM_INFO(ESP_FIRMWARE_VERSION););
     }
     else if (ui.uri("/update")) { //обновление ESP
+      GP.PAGE_TITLE("Обновление");
       M_BLOCK(
         GP.SPAN("Здесь можно обновить прошивку ESP, формат файла bin. Его можно получить открыв скетч в Arduino IDE-Скетч-Экспорт бинарного файла (сохраняется в папку со скетчем)", GP_CENTER, "", "#07b379");     // + выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
         //M_BOX(GP.LABEL("Экспорт настроек"); GP.FILE_UPLOAD(""););
@@ -463,6 +478,7 @@ void build(void) {
       );
     }
     else if (ui.uri("/network")) { //подключение к роутеру
+      GP.PAGE_TITLE("Сетевые настройки");
       if (WiFi.status() != WL_CONNECTED) {
         M_BLOCK(
           GP.FORM_BEGIN("/");
@@ -538,8 +554,8 @@ void action() {
       busSetComand(WRITE_MAIN_SET, MAIN_SECS_MODE);
     }
     if (ui.click("fastColor")) {
-      uint8_t color = constrain(ui.getInt("fastColor"), 0, 26);
-      fastSettings.backlColor = (color) ? ((color - 1) * 10) : 255;
+      uint8_t color = constrain(ui.getInt("fastColor"), 0, 28);
+      fastSettings.backlColor = (color > 25) ? (color + 227) : (color * 10);
       busSetComand(WRITE_FAST_SET, FAST_BACKL_COLOR);
     }
     //--------------------------------------------------------------------
@@ -589,12 +605,10 @@ void action() {
       busSetComand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
     }
 
-    if (ui.click("mainBacklBrightDay")) {
-      mainSettings.backlBrightDay = ui.getInt("mainBacklBrightDay") * 10;
+    if (ui.clickInt("mainBacklBrightDay", mainSettings.backlBrightDay)) {
       busSetComand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_D);
     }
-    if (ui.click("mainBacklBrightNight")) {
-      mainSettings.backlBrightNight = ui.getInt("mainBacklBrightNight") * 10;
+    if (ui.clickInt("mainBacklBrightNight", mainSettings.backlBrightNight)) {
       busSetComand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_N);
     }
 
@@ -850,11 +864,22 @@ void action() {
   }
 }
 
+void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
+  GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
+  if (hum) {
+    GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
+  }
+  if (press) {
+    GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
+  }
+  GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
+}
+
 void climateReset(void) {
-  climateCountAvg = 0;
   climateTempAvg = 0;
   climateHumAvg = 0;
   climatePressAvg = 0;
+  climateCountAvg = 0;
 }
 
 void climateUpdate(void) {
@@ -868,37 +893,31 @@ void climateUpdate(void) {
     if (!firstStart) {
       firstStart = true;
       for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
-        climateDates[i] = unixNow;
+        climateAdd(sens.temp, sens.hum, sens.press, unixNow);
       }
       climateReset(); //сброс усреднения
-    }
-
-    if (settings.climateAvg) {
-      climateTempAvg += sens.temp;
-      climateHumAvg += sens.hum;
-      climatePressAvg += sens.press;
     }
     else {
-      climateTempAvg = sens.temp;
-      climateHumAvg = sens.hum;
-      climatePressAvg = sens.press;
-    }
-
-    if (++climateCountAvg >= settings.climateTime) {
       if (settings.climateAvg) {
-        if (climateTempAvg) climateTempAvg /= climateCountAvg;
-        if (climateHumAvg) climateHumAvg /= climateCountAvg;
-        if (climatePressAvg) climatePressAvg /= climateCountAvg;
+        climateTempAvg += sens.temp;
+        climateHumAvg += sens.hum;
+        climatePressAvg += sens.press;
       }
-      GPaddInt(climateTempAvg, climateArrMain[0], CLIMATE_BUFFER);
-      if (climateHumAvg) {
-        GPaddInt(climateHumAvg * 10, climateArrMain[1], CLIMATE_BUFFER);
+      else {
+        climateTempAvg = sens.temp;
+        climateHumAvg = sens.hum;
+        climatePressAvg = sens.press;
       }
-      if (climatePressAvg) {
-        GPaddInt(climatePressAvg, climateArrExt[0], CLIMATE_BUFFER);
+
+      if (++climateCountAvg >= settings.climateTime) {
+        if (settings.climateAvg) {
+          if (climateTempAvg) climateTempAvg /= climateCountAvg;
+          if (climateHumAvg) climateHumAvg /= climateCountAvg;
+          if (climatePressAvg) climatePressAvg /= climateCountAvg;
+        }
+        climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
+        climateReset(); //сброс усреднения
       }
-      GPaddUnix(unixNow, climateDates, CLIMATE_BUFFER);
-      climateReset(); //сброс усреднения
     }
   }
 }
@@ -965,6 +984,17 @@ void setup() {
   twi_init();
 
   Serial.begin(115200);
+  Serial.println("");
+  if (!LittleFS.begin()) Serial.println("FS Error");
+  else Serial.println("FS Init");
+
+  File file = LittleFS.open("/gp_data/PLOT_STOCK.js", "r");
+  if (!file) Serial.println("Script file Error");
+  else {
+    file.close();
+    climateLocal = true; //работаем локально
+    Serial.println("Script file found");
+  }
 
   // читаем логин пароль из памяти
   EEPROM.begin(memory.blockSize());

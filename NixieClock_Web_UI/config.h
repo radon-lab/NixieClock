@@ -20,4 +20,4 @@
 
 //Дополнительно
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.0.1" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.0.2" //версия прошивки модуля esp

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.1 релиз от 14.08.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.2 релиз от 17.08.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -111,7 +111,7 @@ struct Settings_1 {
 struct Settings_2 { //быстрые настройки
   uint8_t flipMode = DEFAULT_FLIP_ANIM; //режим анимации
   uint8_t backlMode = DEFAULT_BACKL_MODE; //режим подсветки
-  uint8_t backlColor = (DEFAULT_BACKL_COLOR) ? ((DEFAULT_BACKL_COLOR - 1) * 10) : 255; //цвет подсветки
+  uint8_t backlColor = (DEFAULT_BACKL_COLOR > 25) ? (DEFAULT_BACKL_COLOR - 227) : (DEFAULT_BACKL_COLOR * 10); //цвет подсветки
   uint8_t dotMode = DEFAULT_DOT_MODE; //режим точек
 } fastSettings;
 
@@ -4627,7 +4627,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
           case FAST_FLIP_MODE: indiPrintNum(fastSettings.flipMode, anim - 1, 2); break; //вывод режима анимации
           case FAST_DOT_MODE: indiPrintNum(fastSettings.dotMode, anim); break; //вывод режима точек
 #if BACKL_TYPE
-          case FAST_BACKL_COLOR: indiPrintNum((fastSettings.backlColor == 255) ? 0 : ((fastSettings.backlColor / 10) + 1), anim - 1, 2); break; //вывод цвета подсветки
+          case FAST_BACKL_COLOR: indiPrintNum((fastSettings.backlColor >= 253) ? (fastSettings.backlColor - 227) : (fastSettings.backlColor / 10), anim - 1, 2); break; //вывод цвета подсветки
 #endif
         }
         anim++; //сдвигаем анимацию
@@ -4704,7 +4704,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
       case RIGHT_KEY_PRESS: //клик правой кнопкой
 #if BACKL_TYPE == 3
         if (mode == FAST_BACKL_COLOR) {
-          if (fastSettings.backlColor < 250) fastSettings.backlColor += 10; else if (fastSettings.backlColor == 250) fastSettings.backlColor = 255; else fastSettings.backlColor = 0;
+          if (fastSettings.backlColor < 250) fastSettings.backlColor += 10; else if (fastSettings.backlColor == 250) fastSettings.backlColor = 253; else fastSettings.backlColor++;
           setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
           _timer_ms[TMR_MS] = FAST_BACKL_TIME;
         }
@@ -4727,7 +4727,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
       case LEFT_KEY_PRESS: //клик левой кнопкой
 #if BACKL_TYPE == 3
         if (mode == FAST_BACKL_COLOR) {
-          if (fastSettings.backlColor == 255) fastSettings.backlColor = 250; else if (fastSettings.backlColor > 0) fastSettings.backlColor -= 10; else fastSettings.backlColor = 255;
+          if (fastSettings.backlColor > 253) fastSettings.backlColor--; else if (fastSettings.backlColor == 253) fastSettings.backlColor = 250; else if (fastSettings.backlColor > 0) fastSettings.backlColor -= 10; else fastSettings.backlColor = 255;
           setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
           _timer_ms[TMR_MS] = FAST_BACKL_TIME;
         }
