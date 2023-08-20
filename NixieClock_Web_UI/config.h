@@ -15,9 +15,9 @@
 //   ESP8266 ESP-01............................ GPIO0/D5   GPIO2/D3
 //   NodeMCU 1.0, WeMos D1 Mini................ GPIO4/D2   GPIO5/D1
 
-#define TWI_SDA_PIN D1 //пин SDA шины I2C
-#define TWI_SCL_PIN D2 //пин SCL шины I2C
+#define TWI_SDA_PIN 4 //пин SDA шины I2C
+#define TWI_SCL_PIN 5 //пин SCL шины I2C
 
 //Дополнительно
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.0.2" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.0.3" //версия прошивки модуля esp

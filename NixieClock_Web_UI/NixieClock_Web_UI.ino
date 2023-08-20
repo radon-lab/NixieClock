@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.2 релиз от 17.08.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.3 релиз от 20.08.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта прошивки - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -71,22 +71,28 @@ void build(void) {
   GP.BUILD_BEGIN(GP_DARK);
   GP.ONLINE_CHECK(); // проверять статус платы
 
-  if (deviceInformation[HARDWARE_VERSION] != HW_VERSION) GP.SPAN("Внимание! Эта версия прошивки не может взаимодействовать с этим устройством!", GP_CENTER, "", "#07b379");
+  if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
+    GP.SPAN("Внимание! Эта версия веб-интерфейса не может взаимодействовать с этим устройством!", GP_CENTER, "", "#07b379");
+    GP.BREAK();
+    GP.LABEL("Clock HW: 0x" + String(deviceInformation[HARDWARE_VERSION], HEX));
+    GP.BREAK();
+    GP.LABEL("WebUI HW: 0x" + String(HW_VERSION, HEX));
+  }
   else {
     GP.UI_MENU("Nixie clock", GP_RED);   // начать меню
 
     // ссылки меню
     GP.UI_LINK("/", "Главная");
     GP.UI_LINK("/settings", "Настройки");
-    GP.UI_LINK("/climate", "Климат");
+    if (deviceInformation[SENS_TEMP]) GP.UI_LINK("/climate", "Климат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
-    GP.UI_LINK("/system_information", "О системе");
+    GP.UI_LINK("/information", "О системе");
     GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/network", "Сетевые настройки");
 
     // кастомный контент
     GP.HR(GP_GRAY);
-    if (deviceInformation[LAMP_NUM]) {
+    if (deviceInformation[HARDWARE_VERSION]) {
       GP.LABEL_BLOCK("Firmware: " + String(deviceInformation[FIRMWARE_VERSION_1]) + "." + String(deviceInformation[FIRMWARE_VERSION_2]) + "." + String(deviceInformation[FIRMWARE_VERSION_3]), "", GP_CYAN_B, 0, 1);
       GP.BREAK();
       GP.LABEL_BLOCK("Clock online", "", GP_GREEN_B, 0, 1);
@@ -142,17 +148,18 @@ void build(void) {
 
     updateList += "barTime";
     updateList += ',';
-    updateList += "barTemp";
-    if (sens.hum) {
+    if (deviceInformation[SENS_TEMP]) {
+      updateList += "barTemp";
+      if (sens.hum) {
+        updateList += ',';
+        updateList += "barHum";
+      }
+      if (sens.press) {
+        updateList += ',';
+        updateList += "barPress";
+      }
       updateList += ',';
-      updateList += "barHum";
     }
-    if (sens.press) {
-      updateList += ',';
-      updateList += "barPress";
-    }
-    updateList += ',';
-
     GP.UI_BODY(); // начать основное окно
     GP.GRID_RESPONSIVE(600); // позволяет "отключить" таблицу при ширине экрана меньше 600px
 
@@ -161,13 +168,13 @@ void build(void) {
       GP_ALS(GP_LEFT, GP_RIGHT),
       M_TR(GP.LABEL(" "); GP.LABEL(" "); GP.LABEL_BLOCK(ui.getSystemTime().encode(), "barTime", GP_WHITE, 18, 1););
       M_TD(
-        GP.LABEL_BLOCK(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С", "barTemp", GP_GREEN, 18, 1);
+        if (deviceInformation[SENS_TEMP]) GP.LABEL_BLOCK(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С", "barTemp", GP_GREEN, 18, 1);
         if (sens.hum) GP.LABEL_BLOCK(String(sens.hum) + "%", "barHum", GP_BLUE, 18, 1);
-        if (sens.press) GP.LABEL_BLOCK(String(sens.press) + "mm.Hg", "barPress", GP_PINK, 18, 1);
-          GP.LABEL(" ");
-          GP.LABEL(" ");
+          if (sens.press) GP.LABEL_BLOCK(String(sens.press) + "mm.Hg", "barPress", GP_PINK, 18, 1);
+            GP.LABEL(" ");
+            GP.LABEL(" ");
+          );
         );
-      );
     GP.HR(GP_GRAY);
 
     if (ui.uri("/")) { //основная страница
@@ -316,78 +323,90 @@ void build(void) {
           M_BOX(GP_CENTER, GP.LABEL("Интервал, мин");  M_BOX(GP_RIGHT, GP.SPINNER("mainAutoShowTime", mainSettings.autoShowTime, 1, 15, 1);););
           M_BOX(GP.LABEL("Эффект"); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"););
           GP.HR();
-          M_BOX(GP_CENTER, GP.LABEL("Тип данных"););
-          M_BOX(GP_CENTER, GP.SPAN("(источник и время в сек)"););
+          GP.LABEL("Тип данных", "", GP_GRAY_B);
+          GP.SPAN("(источник и время в сек)", GP_CENTER, "", GP_GRAY_B);
           M_BOX(GP.LABEL("1"); GP.SELECT("extShowMode/0", "Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1);););
           M_BOX(GP.LABEL("2"); GP.SELECT("extShowMode/1", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[1]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/1", extendedSettings.autoShowTimes[1], 1, 5, 1);););
           M_BOX(GP.LABEL("3"); GP.SELECT("extShowMode/2", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[2]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/2", extendedSettings.autoShowTimes[2], 1, 5, 1);););
           M_BOX(GP.LABEL("4"); GP.SELECT("extShowMode/3", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[3]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/3", extendedSettings.autoShowTimes[3], 1, 5, 1);););
           M_BOX(GP.LABEL("5"); GP.SELECT("extShowMode/4", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[4]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/4", extendedSettings.autoShowTimes[4], 1, 5, 1);););
           GP.HR();
-          M_BOX(GP_CENTER, GP.LABEL("Дополнительно"););
-          M_BOX(GP_LEFT, GP.LABEL("Коррекция датчика,°C");  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1);););
+          GP.LABEL("Дополнительно", "", GP_GRAY_B);
+          M_BOX(GP_LEFT, GP.LABEL("Коррекция датчика, °C");  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, GP_GREEN, "", (boolean)!deviceInformation[SENS_TEMP]);););
           M_BOX(GP_LEFT, GP.LABEL("Тип датчика");  M_BOX(GP_RIGHT, GP.NUMBER("", (sens.err) ? "Ошибка" : tempSensList[sens.type], INT32_MAX, "", true);););
         );
 
-        GP.TABLE_BEGIN();
-        GP.TR(GP_CENTER);
-        GP.TD(GP_CENTER, 2);
         M_BLOCK_TAB(
           "Индикаторы",
-          GP.LABEL("Яркость");
+          GP.LABEL("Яркость", "", GP_GRAY_B);
           M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtDay", mainSettings.indiBrightDay, 5, 30, 1); ); );//Ползунки
           M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtNight", mainSettings.indiBrightNight, 5, 30, 1); ); );//Ползунки
           GP.HR();
-          M_BOX(GP_CENTER, GP.LABEL("Эффекты"););
+          GP.LABEL("Эффекты", "", GP_GRAY_B);
           M_BOX(GP_JUSTIFY, GP.LABEL("Глюки"); M_BOX(GP_RIGHT, GP.SWITCH("mainGlitch", mainSettings.glitchMode);););
           M_BOX(GP.LABEL("Минуты"); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
           M_BOX(GP.LABEL("Секунды"); GP.SELECT("mainSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", mainSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR();
-          M_BOX(GP_CENTER, GP.LABEL("Антиотравление(период,мин./метод)");); GP.BREAK();
-          M_BOX(GP.SPINNER("extBurnTime", extendedSettings.burnTime, 10, 180, 1); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
+          GP.LABEL("Антиотравление", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("Период, мин"); GP.SPINNER("extBurnTime", extendedSettings.burnTime, 10, 180, 1););
+          M_BOX(GP.LABEL("Метод"); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
           GP.HR();
-          GP.LABEL("Время смены яркости");
+          GP.LABEL("Время смены яркости", "", GP_GRAY_B);
           M_BOX(GP_CENTER, GP.LABEL(" С"); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1); GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1); GP.LABEL("До"););
           GP.HR();
-          GP.LABEL("Режим сна");
+          GP.LABEL("Режим сна", "", GP_GRAY_B);
           M_BOX(GP_CENTER, GP.LABEL("День"); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15); GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5); GP.LABEL("Ночь"););
         );
-        M_BLOCK_TAB(
-          "Неонки",
-          M_BOX(GP.LABEL("Разделители"); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
-          GP.HR();
-          GP.LABEL("Яркость");
-          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, GP_GREEN, (boolean)(deviceInformation[NEON_DOT] == 3));););//Ползунки
-          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10);););//Ползунки
-        );
-        GP.TABLE_END();
       );
-      M_GRID(
-        M_BLOCK_TAB(
-          "Звуки",
-          M_BOX(GP_JUSTIFY, GP.LABEL("Включить"); M_BOX(GP_RIGHT, GP.SWITCH("mainSound", mainSettings.knockSound);););
-          M_BOX(GP_JUSTIFY, GP.LABEL("Громкость"); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, 30, 1, 0, GP_GREEN, (boolean)!deviceInformation[PLAYER_TYPE]);););
-          GP.HR();
-          GP.LABEL("Звук смены часа ");
-          M_BOX(GP_CENTER, GP.LABEL(" С"); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1);  GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1); GP.LABEL("До"););
-        );
 
-        GP.TABLE_BEGIN();
-        GP.TR(GP_CENTER);
-        GP.TD(GP_CENTER, 1);
+      M_GRID(
         M_BLOCK_TAB(
           "Подсветка",
           M_BOX(GP.LABEL("Цвет"); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););
           M_BOX(GP.LABEL("Режим"); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
           GP.HR();
-          GP.LABEL("Яркость");
-          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););//Ползунки
-          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]);););//Ползунки
-
+          GP.LABEL("Яркость", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]););); //ползунки
+          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 1, 0, GP_GREEN, (boolean)!deviceInformation[BACKL_TYPE]););); //ползунки
         );
-        GP.TABLE_END();
+
+        M_BLOCK_TAB(
+          "Неонки",
+          M_BOX(GP.LABEL("Разделители"); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
+          GP.HR();
+          GP.LABEL("Яркость", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("День"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, GP_GREEN, (boolean)(deviceInformation[NEON_DOT] == 3)););); //ползунки
+          M_BOX(GP.LABEL("Ночь"); M_BOX(GP_RIGHT, GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10););); //ползунки
+        );
       );
 
+      M_GRID(
+        M_BLOCK_TAB(
+          "Звуки",
+          M_BOX(GP_JUSTIFY, GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок"); M_BOX(GP_RIGHT, GP.SWITCH("mainSound", mainSettings.knockSound);););
+          M_BOX(GP_JUSTIFY, GP.LABEL("Громкость"); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, (deviceInformation[PLAYER_TYPE] == 2) ? 9 : 30, 1, 0, GP_GREEN, (boolean)!deviceInformation[PLAYER_TYPE]);););
+          GP.HR();
+          GP.LABEL("Звук смены часа ", "", GP_GRAY_B);
+          M_BOX(GP_CENTER, GP.LABEL(" С"); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1);  GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1); GP.LABEL("До"););
+          GP.HR();
+          GP.LABEL("Озвучка смены часа", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("Температура"); M_BOX(GP_RIGHT, GP.SWITCH("mainHourTemp", mainSettings.hourSound & 0x80, GP_GREEN, (boolean)!(deviceInformation[PLAYER_TYPE] && deviceInformation[SENS_TEMP]));););
+          M_BOX(GP.LABEL("Новый час"); GP.SELECT("mainHourSound", "Автоматически,Только мелодия,Только озвучка,Мелодия и озвучка", mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
+        );
+
+        M_BLOCK_TAB(
+          "Будильник",
+          M_BOX(GP.LABEL("Автоотключение, мин"); GP.SPINNER("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, GP_GREEN, "", (boolean)!deviceInformation[ALARM_TYPE]););
+          GP.HR();
+          GP.LABEL("Дополнительно", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("Время ожидания, мин"); GP.SPINNER("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, GP_GREEN, "", (boolean)!deviceInformation[ALARM_TYPE]););
+          M_BOX(GP.LABEL("Отключить звук, мин"); GP.SPINNER("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, GP_GREEN, "", (boolean)!deviceInformation[ALARM_TYPE]););
+          GP.HR();
+          GP.LABEL("Разделители", "", GP_GRAY_B);
+          M_BOX(GP.LABEL("Активный"); GP.SELECT("extAlarmDotOn", "Выключены,Статичные,Без реакции,Мигают один раз в секунду,Мигают два раза в секунду", extendedSettings.alarmDotOn, 0, (boolean)!deviceInformation[ALARM_TYPE]););
+          M_BOX(GP.LABEL("Ожидание"); GP.SELECT("extAlarmDotWait", "Выключены,Статичные,Без реакции,Мигают один раз в секунду,Мигают два раза в секунду", extendedSettings.alarmDotWait, 0, (boolean)!deviceInformation[ALARM_TYPE]););
+        );
+      );
     }
     else if (ui.uri("/climate")) { //климат
       GP.PAGE_TITLE("Климат");
@@ -463,7 +482,7 @@ void build(void) {
         );
       );
     }
-    else if (ui.uri("/system_information")) { //информация о системе
+    else if (ui.uri("/information")) { //информация о системе
       GP.PAGE_TITLE("О системе");
       M_BLOCK(GP.SYSTEM_INFO(ESP_FIRMWARE_VERSION););
     }
@@ -576,6 +595,10 @@ void action() {
     if (ui.clickInt("mainAutoShowTime", mainSettings.autoShowTime)) {
       busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
     }
+    if (ui.click("mainTempCorrect")) {
+      mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("mainTempCorrect") * 10), -127, 127);
+      busSetComand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
+    }
 
     if (ui.clickInt("mainTimeBrightS", mainSettings.timeBrightStart)) {
       busSetComand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_S);
@@ -620,9 +643,14 @@ void action() {
       busSetComand(WRITE_MAIN_SET, MAIN_VOLUME_SOUND);
       busSetComand(WRITE_TEST_MAIN_VOL);
     }
-    if (ui.click("mainTempCorrect")) {
-      mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("mainTempCorrect") * 10), -127, 127);
-      busSetComand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
+    if (ui.click("mainHourTemp")) {
+      if (ui.getBool("mainHourTemp")) mainSettings.hourSound |= 0x80;
+      else mainSettings.hourSound &= ~0x80;
+      busSetComand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
+    }
+    if (ui.click("mainHourSound")) {
+      mainSettings.hourSound = (mainSettings.hourSound & 0x80) | constrain(ui.getInt("mainHourSound"), 0, 3);
+      busSetComand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
     }
     //--------------------------------------------------------------------
     if (ui.click("alarmDisable")) {
@@ -772,6 +800,27 @@ void action() {
       busSetComand(WRITE_EXTENDED_SHOW_TIME, pos);
     }
   }
+  
+  if (ui.click("extAlarmTimeout")) {
+    extendedSettings.alarmTime = ui.getInt("extAlarmTimeout");
+    busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT);
+  }
+  if (ui.click("extAlarmWaitTime")) {
+    extendedSettings.alarmWaitTime = ui.getInt("extAlarmWaitTime");
+    busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_WAIT);
+  }
+  if (ui.click("extAlarmSoundTime")) {
+    extendedSettings.alarmSoundTime = ui.getInt("extAlarmSoundTime");
+    busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT_SOUND);
+  }
+  if (ui.click("extAlarmDotOn")) {
+    extendedSettings.alarmDotOn = ui.getInt("extAlarmDotOn");
+    busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_ON);
+  }
+  if (ui.click("extAlarmDotWait")) {
+    extendedSettings.alarmDotWait = ui.getInt("extAlarmDotWait");
+    busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_WAIT);
+  }
   /**************************************************************************/
   if (ui.form()) {
     //проверяем, была ли это форма "/network"
@@ -795,10 +844,10 @@ void action() {
   if (ui.update()) {
     if (ui.update("barTime")) {   //начинается
       ui.answer(ui.getSystemTime().encode());
+      if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(READ_STATUS);
     }
     if (ui.update("barTemp")) {   //начинается
       ui.answer(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С");
-      if (deviceInformation[LAMP_NUM]) busSetComand(READ_STATUS);
     }
     if (ui.update("barHum")) {   //начинается
       ui.answer(String(sens.hum) + "%");
@@ -859,7 +908,7 @@ void action() {
     }
     if (ui.update("radioPower")) {   //начинается
       ui.answer(radioSettings.powerState);
-      if (deviceInformation[LAMP_NUM]) busSetComand(READ_RADIO_POWER);
+      if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(READ_RADIO_POWER);
     }
   }
 }
@@ -1009,10 +1058,6 @@ void setup() {
     settings.ntpSync = false; //выключаем авто-синхронизацию
     memory.update(); //обновить данные в памяти
   }
-  for (int i = 0; i < CLIMATE_BUFFER; i++) {
-    climateDates[i] = GPunix(2022, 1, 22, 21, 59, 0, 3);
-  }
-  deviceInformation[HARDWARE_VERSION] = HW_VERSION;
   alarm.now = 0;
 
   busSetComand(READ_DEVICE);
@@ -1062,7 +1107,7 @@ void loop() {
   static uint32_t timer = millis();
   if ((millis() - timer) >= 60000) {
     timer = millis();
-    if (deviceInformation[LAMP_NUM]) {
+    if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) {
       busSetComand(WRITE_CHECK_SENS);
       if (!ntp.synced() || (WiFi.status() != WL_CONNECTED)) busSetComand(READ_TIME_DATE);
       busSetComand(READ_SENS_DATA);
