@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.3 релиз от 20.08.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.3 релиз от 21.08.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -15,7 +15,7 @@ enum {
   TEMP_SENS_ERROR,     //0005 - выбранный датчик температуры не обнаружен
   VCC_ERROR,           //0006 - напряжения питания вне рабочего диапазона
   MEMORY_ERROR,        //0007 - сбой памяти еепром
-  RESET_ERROR,         //0008 - софтовой перезагрузки
+  RESET_ERROR,         //0008 - софтовая перезагрузка
   CONVERTER_ERROR,     //0009 - сбой работы преобразователя
   PWM_OVF_ERROR,       //0010 - переполнение заполнения шим преобразователя
   STACK_OVF_ERROR,     //0011 - переполнение стека
@@ -145,6 +145,16 @@ struct radioData {
   uint16_t seekFreq; //частота автопоиска радио
 } radio;
 
+//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника | громкость мелодии | радиобудильник
+struct alarmData {
+  uint8_t num; //текущее количество будильников
+  uint8_t dot; //флаг активных точек будильника
+  uint8_t now; //флаг активоного будильника
+  uint8_t sound; //информация о текущем будильнике
+  uint8_t radio; //информация о текущем будильнике
+  uint8_t volume; //информация о текущем будильнике
+} alarms;
+
 //переменные обработки кнопок
 struct buttonData {
   uint8_t state; //текущее состояние кнопок
@@ -194,14 +204,6 @@ uint8_t changeBrightState; //флаг состояния смены яркост
 uint8_t changeAnimState; //флаг состояния анимаций
 uint8_t animShow; //флаг анимации смены времени
 boolean secUpd; //флаг обновления секунды
-
-//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника | громкость мелодии
-struct alarmData {
-  boolean wait; //флаг ожидания звука будильника
-  uint8_t num; //текущее количество будильников
-  uint8_t dot; //флаг активных точек будильника
-  uint8_t now; //флаг активоного будильника
-} alarms;
 
 //переменные таймера/секундомера
 struct timerData {
@@ -459,15 +461,38 @@ enum {
   CHANGE_ENABLE //смена яркости разрешена
 };
 
-enum {
-  MEM_UPDATE_TIME_SET,
-  MEM_UPDATE_MAIN_SET,
-  MEM_UPDATE_FAST_SET,
-  MEM_UPDATE_RADIO_SET,
-  MEM_UPDATE_EXTENDED_SET,
-  MEM_MAX_DATA
+const uint8_t deviceInformation[] = { //комплектация часов
+  CONVERT_CHAR(FIRMWARE_VERSION[0]),
+  CONVERT_CHAR(FIRMWARE_VERSION[2]),
+  CONVERT_CHAR(FIRMWARE_VERSION[4]),
+  HARDWARE_VERSION,
+  (DS3231_ENABLE | SENS_AHT_ENABLE | SENS_SHT_ENABLE | SENS_BME_ENABLE | SENS_PORT_ENABLE),
+  LAMP_NUM,
+  BACKL_TYPE,
+  NEON_DOT,
+  DOTS_PORT_ENABLE,
+  DOTS_NUM,
+  DOTS_TYPE,
+  RADIO_ENABLE,
+  ALARM_TYPE,
+  PLAYER_TYPE,
+#if PLAYER_TYPE
+  PLAYER_ALARM_MAX,
+#else
+  SOUND_MAX(alarm_sound),
+#endif
+  PLAYER_MAX_VOL
 };
-uint8_t memoryCheck;
+
+//переменные работы с шиной
+struct busData {
+  uint8_t position; //текущая позиция
+  uint8_t counter; //счетчик байт
+  uint8_t comand; //текущая команда
+  uint8_t status; //статус шины
+  uint8_t statusExt; //статус шины
+  uint8_t buffer[ALARM_MAX_ARR]; //буфер шины
+} bus;
 
 #define BUS_WAIT_DATA 0x00
 
@@ -531,16 +556,6 @@ enum {
   BUS_EXT_MAX_DATA
 };
 
-//переменные работы с шиной
-struct busData {
-  uint8_t position; //текущая позиция
-  uint8_t counter; //счетчик байт
-  uint8_t comand; //текущая команда
-  uint8_t status; //статус шины
-  uint8_t statusExt; //статус шины
-  uint8_t buffer[ALARM_MAX_ARR]; //буфер шины
-} bus;
-
 enum {
   STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_MAIN_SET,
@@ -552,28 +567,15 @@ enum {
 };
 uint8_t deviceStatus; //состояние часов
 
-const uint8_t deviceInformation[] = { //комплектация часов
-  CONVERT_CHAR(FIRMWARE_VERSION[0]),
-  CONVERT_CHAR(FIRMWARE_VERSION[2]),
-  CONVERT_CHAR(FIRMWARE_VERSION[4]),
-  HARDWARE_VERSION,
-  (DS3231_ENABLE | SENS_AHT_ENABLE | SENS_SHT_ENABLE | SENS_BME_ENABLE | SENS_PORT_ENABLE),
-  LAMP_NUM,
-  BACKL_TYPE,
-  NEON_DOT,
-  DOTS_PORT_ENABLE,
-  DOTS_NUM,
-  DOTS_TYPE,
-  RADIO_ENABLE,
-  ALARM_TYPE,
-  PLAYER_TYPE,
-#if PLAYER_TYPE
-  PLAYER_ALARM_MAX,
-#else
-  SOUND_MAX(alarm_sound),
-#endif
-  PLAYER_MAX_VOL
+enum {
+  MEM_UPDATE_TIME_SET,
+  MEM_UPDATE_MAIN_SET,
+  MEM_UPDATE_FAST_SET,
+  MEM_UPDATE_RADIO_SET,
+  MEM_UPDATE_EXTENDED_SET,
+  MEM_MAX_DATA
 };
+uint8_t memoryCheck;
 
 //перечисления основных программ
 enum {
@@ -1930,7 +1932,6 @@ void alarmReset(void) //сброс будильника
   _timer_sec[TMR_ALM] = 0; //сбрасываем таймер отключения будильника
   _timer_sec[TMR_ALM_WAIT] = 0; //сбрасываем таймер ожидания повторного включения тревоги
   _timer_sec[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
-  alarms.wait = 0; //сбрасываем флаг ожидания
   alarms.now = 0; //сбрасываем флаг тревоги
   checkAlarms(); //проверка будильников
 }
@@ -1992,7 +1993,7 @@ void setAlarmDot(uint8_t dot) //удалить будильник
 //----------------------------------Проверка будильников----------------------------------------------------
 void checkAlarms(void) //проверка будильников
 {
-  if (!alarms.wait) { //если не режим ожидания
+  if (!alarms.now) { //если тревога не активна
     alarms.dot = 0; //сбрасываем флаг включенных точек будильника
     for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
       if (alarmRead(alm, ALARM_MODE)) { //если будильник включен
@@ -2004,12 +2005,19 @@ void checkAlarms(void) //проверка будильников
         alarms.dot = ALARM_ON_BLINK_DOT + 1; //мигание точек при включенном будильнике
 #endif
         if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
-          if (!alarms.now) { //если тревога не активна
-            alarms.now = alm + 1; //устанавливаем флаг тревоги
-            _timer_sec[TMR_ALM] = ((uint16_t)extendedSettings.alarmTime * 60); //установили таймер таймаута будильника
-            _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
-            return; //выходим
+          alarms.now = 1; //устанавливаем флаг тревоги
+          if (alarmRead(alm, ALARM_MODE) == 1) { //если был установлен режим одиночный
+#if ESP_ENABLE
+            deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+#endif
+            alarmWrite(alm, ALARM_MODE, 0); //выключаем будильник
           }
+          alarms.sound = alarmRead(alm, ALARM_SOUND); //номер мелодии
+          alarms.radio = alarmRead(alm, ALARM_RADIO); //текущий режим звука
+          alarms.volume = alarmRead(alm, ALARM_VOLUME); //текущая громкость
+          _timer_sec[TMR_ALM] = ((uint16_t)extendedSettings.alarmTime * 60); //установили таймер таймаута будильника
+          _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
+          return; //выходим
         }
       }
     }
@@ -2024,17 +2032,17 @@ void alarmDataUpdate(void) //обновление данных будильни�
       return; //выходим
     }
 
-    if (extendedSettings.alarmWaitTime && alarms.wait) { //если будильник в режиме ожидания
+    if (extendedSettings.alarmWaitTime && (alarms.now == 2)) { //если будильник в режиме ожидания
       if (!_timer_sec[TMR_ALM_WAIT]) { //если пришло время повторно включить звук
         _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60);
-        alarms.wait = 0; //сбрасываем флаг ожидания
+        alarms.now = 1; //сбрасываем флаг ожидания
       }
     }
     else if (extendedSettings.alarmSoundTime) { //если таймаут тревоги включен
       if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
         if (extendedSettings.alarmWaitTime) { //если время ожидания включено
           _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
-          alarms.wait = 1; //устанавливаем флаг ожидания тревоги
+          alarms.now = 2; //устанавливаем флаг ожидания тревоги
 #if ESP_ENABLE
           setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
 #elif ALARM_WAIT_BLINK_DOT > 2
@@ -2052,24 +2060,14 @@ void alarmDataUpdate(void) //обновление данных будильни�
 uint8_t alarmWarn(void) //тревога будильника
 {
   boolean blink_data = 0; //флаг мигания индикаторами
-  uint8_t sound_num = alarmRead(alarms.now - 1, ALARM_SOUND); //номер мелодии
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  uint8_t radio_mode = alarmRead(alarms.now - 1, ALARM_RADIO); //текущий режим звука
-#endif
+
 #if PLAYER_TYPE || (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE))
   boolean auto_vol = 0; //флаг автогромкости
-  uint8_t cur_vol = alarmRead(alarms.now - 1, ALARM_VOLUME); //текущая громкость
+  uint8_t cur_vol = alarms.volume; //текущая громкость
 #endif
-
-  if (alarmRead(alarms.now - 1, ALARM_MODE) == 1) { //если был установлен режим одиночный
-#if ESP_ENABLE
-    deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
-#endif
-    alarmWrite(alarms.now - 1, ALARM_MODE, 0); //выключаем будильник
-  }
 
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  if (radio_mode) { //если режим радио
+  if (alarms.radio) { //если режим радио
     if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
       if (!cur_vol) { //если автогромкость
         auto_vol = 1; //установили флаг автогромкости
@@ -2077,16 +2075,16 @@ uint8_t alarmWarn(void) //тревога будильника
       }
       setPowerRDA(RDA_ON); //включаем радио
       setVolumeRDA(cur_vol); //устанавливаем громкость
-      setFreqRDA(radioSettings.stationsSave[sound_num]); //устанавливаем частоту
+      setFreqRDA(radioSettings.stationsSave[alarms.sound]); //устанавливаем частоту
       _timer_ms[TMR_ANIM] = ALARM_RADIO_VOL_TIME; //устанавливаем таймер
     }
-    else radio_mode = 0; //отключили режим радио
+    else alarms.radio = 0; //отключили режим радио
   }
   else radioPowerOff(); //выключить питание радиоприемника
 #endif
 
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  if (!radio_mode) {
+  if (!alarms.radio) {
 #endif
 #if PLAYER_TYPE
     if (!cur_vol) { //если автогромкость
@@ -2097,7 +2095,7 @@ uint8_t alarmWarn(void) //тревога будильника
     playerSetVolNow(cur_vol); //установка громкости
     _timer_ms[TMR_ANIM] = ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
 #else
-    melodyPlay(sound_num, SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+    melodyPlay(alarms.sound, SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
   }
@@ -2116,7 +2114,7 @@ uint8_t alarmWarn(void) //тревога будильника
   while (1) {
     dataUpdate(); //обработка данных
 
-    if (!alarms.now || alarms.wait) { //если тревога сброшена
+    if (alarms.now != 1) { //если тревога сброшена
 #if PLAYER_TYPE
       playerStop(); //сброс позиции мелодии
 #else
@@ -2127,13 +2125,20 @@ uint8_t alarmWarn(void) //тревога будильника
 
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
 #if PLAYER_TYPE
-    if (!radio_mode && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + sound_num, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
+    if (!alarms.radio && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
     if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
-      _timer_ms[TMR_ANIM] = (radio_mode) ? ALARM_RADIO_VOL_TIME : ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
-      if (cur_vol < ((radio_mode) ? ALARM_RADIO_VOL_MAX : ALARM_PLAYER_VOL_MAX)) cur_vol++;
-      else auto_vol = 0; //сбросили флаг автогромкости
-      if (radio_mode) setVolumeRDA(cur_vol); //устанавливаем громкость
-      else playerSetVolNow(cur_vol); //установка громкости
+      if (alarms.radio) {
+        _timer_ms[TMR_ANIM] = ALARM_RADIO_VOL_TIME; //устанавливаем таймер
+        if (cur_vol < ALARM_RADIO_VOL_MAX) cur_vol++;
+        else auto_vol = 0; //сбросили флаг автогромкости
+        setVolumeRDA(cur_vol); //устанавливаем громкость
+      }
+      else {
+        _timer_ms[TMR_ANIM] = ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
+        if (cur_vol < ALARM_PLAYER_VOL_MAX) cur_vol++;
+        else auto_vol = 0; //сбросили флаг автогромкости
+        playerSetVolNow(cur_vol); //установка громкости
+      }
     }
 #else
     if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
@@ -2144,7 +2149,7 @@ uint8_t alarmWarn(void) //тревога будильника
     }
 #endif
 #elif PLAYER_TYPE
-    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + sound_num, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
+    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
     if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
       _timer_ms[TMR_ANIM] = ALARM_PLAYER_VOL_TIME; //устанавливаем таймер
       if (cur_vol < ALARM_PLAYER_VOL_MAX) cur_vol++;
@@ -2181,12 +2186,12 @@ uint8_t alarmWarn(void) //тревога будильника
       case SET_KEY_PRESS: //клик средней кнопкой
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
-        if (extendedSettings.alarmWaitTime && !radio_mode) //если есть время ожидания и режим музыкального будильника
+        if (extendedSettings.alarmWaitTime && !alarms.radio) //если есть время ожидания и режим музыкального будильника
 #else
         if (extendedSettings.alarmWaitTime) //если есть время ожидания
 #endif
         {
-          alarms.wait = 1; //устанавливаем флаг ожидания
+          alarms.now = 2; //устанавливаем флаг ожидания
 #if ESP_ENABLE
           setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
 #elif ALARM_WAIT_BLINK_DOT > 2
@@ -2204,8 +2209,8 @@ uint8_t alarmWarn(void) //тревога будильника
         }
         else {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
-          if (radio_mode) {
-            radioSettings.stationsFreq = radioSettings.stationsSave[sound_num];
+          if (alarms.radio) {
+            radioSettings.stationsFreq = radioSettings.stationsSave[alarms.sound];
             radio.powerState = RDA_ON; //установили флаг питания радио
           }
 #endif
@@ -2539,7 +2544,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SET_ALARM_DOT:
             if (alarms.dot) { //если точки будильника активны
               bus.status |= (0x01 << BUS_COMMAND_UPDATE);
-              if (alarms.wait) setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
+              if (alarms.now == 2) setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
               else setAlarmDot(extendedSettings.alarmDotOn); //мигание точек при включенном будильнике
             }
             break;
@@ -5116,7 +5121,7 @@ uint8_t radioMenu(void) //радиоприемник
         }
 #endif
 #if ALARM_TYPE
-        if (alarms.now && !alarms.wait) { //тревога таймера
+        if (alarms.now == 1) { //тревога таймера
           radioSeekStop(); //остановка автопоиска радиостанции
           return ALARM_PROGRAM;
         }
@@ -6126,7 +6131,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
     if (!secUpd) { //если пришло время обновить индикаторы
       secUpd = 1; //сбрасываем флаг
 #if ALARM_TYPE
-      if (alarms.now && !alarms.wait) return ALARM_PROGRAM; //тревога будильника
+      if (alarms.now == 1) return ALARM_PROGRAM; //тревога будильника
 #endif
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       if (timer.mode == 2 && !timer.count) return WARN_PROGRAM; //тревога таймера
@@ -6637,7 +6642,7 @@ uint8_t mainScreen(void) //главный экран
       if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //обновление шины
 #endif
 #if ALARM_TYPE
-      if (alarms.now && !alarms.wait) return ALARM_PROGRAM; //тревога будильника
+      if (alarms.now == 1) return ALARM_PROGRAM; //тревога будильника
 #endif
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       if (timer.mode == 2 && !timer.count) return WARN_PROGRAM; //тревога таймера
@@ -6705,7 +6710,7 @@ uint8_t mainScreen(void) //главный экран
 
       case SET_KEY_HOLD: //удержание средней кнопки
 #if ALARM_TYPE
-        if (alarms.wait) {
+        if (alarms.now == 2) {
           alarmDisable(); //отключение будильника
           break;
         }
@@ -6722,7 +6727,7 @@ uint8_t mainScreen(void) //главный экран
 #endif
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
 #if ALARM_TYPE
-        if (alarms.wait) {
+        if (alarms.now == 2) {
           alarmDisable(); //отключение будильника
           break;
         }
