@@ -1,4 +1,4 @@
-#define HW_VERSION 0x02 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x03 //версия прошивки для интерфейса wire
 
 #define BUS_WRITE_TIME 0x01
 #define BUS_READ_TIME 0x02
@@ -33,7 +33,8 @@
 
 #define BUS_SET_SHOW_TIME 0x1B
 #define BUS_SET_BURN_TIME 0x1C
-#define BUS_SET_ALARM_DOT 0x1D
+#define BUS_SET_MAIN_DOT 0x1D
+#define BUS_SET_ALARM_DOT 0x1E
 
 #define BUS_TEST_SOUND 0xFC
 
@@ -103,18 +104,25 @@ struct sensorData {
 } sens;
 
 struct alarmData {
+  uint8_t set; //настройка текущего будильника
   uint8_t all; //всего будильников
   uint8_t now; //текущий будильник
-  uint8_t hour; //текущий будильник
-  uint8_t minute; //текущий будильник
-  uint8_t mode; //режим
-  uint8_t days; //дни недели
-  uint8_t sound; //мелодия
-  uint8_t station; //станция
-  uint8_t volumeNow; //громкость
-  uint8_t volumeOld; //громкость
-  uint8_t radio; //радиобудильник
+  uint8_t num; //текущий будильник
+  uint8_t volume; //текущая громкость
 } alarm;
+
+enum {
+  ALARM_DATA_HOUR, //время будильника
+  ALARM_DATA_MINS, //время будильника
+  ALARM_DATA_MODE, //режим будильника
+  ALARM_DATA_DAYS, //день недели будильника
+  ALARM_DATA_SOUND, //мелодия будильника
+  ALARM_DATA_STATION, //станция будильника
+  ALARM_DATA_VOLUME, //громкость будильника
+  ALARM_DATA_RADIO, //радиобудильник
+  ALARM_DATA_MAX //всего данных
+};
+uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
 
 enum {
   STATUS_UPDATE_TIME_SET,
@@ -208,12 +216,15 @@ enum {
   READ_MAIN_SET,
   WRITE_MAIN_SET,
 
+  READ_ALARM,
+  READ_ALARM_ALL,
   READ_ALARM_NUM,
   READ_SELECT_ALARM,
   WRITE_SELECT_ALARM,
   DEL_ALARM,
   NEW_ALARM,
 
+  READ_RADIO_SET,
   READ_RADIO_STA,
   WRITE_RADIO_STA,
   READ_RADIO_VOL,
@@ -320,14 +331,14 @@ void busShiftBuffer(void) {
 }
 //--------------------------------------------------------------------
 void busSetComand(uint8_t cmd) {
-  if (busFreeBuffer() && (bus.bufferLastCommand != cmd)) {
+  if (!busStatusBuffer() || (busFreeBuffer() && (bus.bufferLastCommand != cmd))) {
     bus.bufferLastCommand = cmd;
     busWriteBuffer(cmd);
   }
 }
 //--------------------------------------------------------------------
 void busSetComand(uint8_t cmd, uint8_t arg) {
-  if ((busFreeBuffer() >= 2) && ((bus.bufferLastCommand != cmd) || (bus.bufferLastArgument != arg))) {
+  if (!busStatusBuffer() || ((busFreeBuffer() >= 2) && ((bus.bufferLastCommand != cmd) || (bus.bufferLastArgument != arg)))) {
     bus.bufferLastCommand = cmd;
     bus.bufferLastArgument = arg;
     busWriteBuffer(cmd);
@@ -392,7 +403,7 @@ void busUpdate(void) {
             case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); break; //отправляем дополнительные натройки
             case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
             case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
-            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
+            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); busWriteBuffer(BUS_SET_MAIN_DOT); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -459,6 +470,44 @@ void busUpdate(void) {
         }
         break;
 
+      case READ_ALARM: {
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_SELECT_ALARM, alarm.num)) { //начинаем передачу
+            if (++alarm.num >= alarm.all) {
+              alarmReload = 2;
+              busShiftBuffer(); //сместили буфер команд
+            }
+            alarm_data[alarm.num][ALARM_DATA_HOUR] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.num][ALARM_DATA_MINS] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.num][ALARM_DATA_MODE] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.num][ALARM_DATA_DAYS] = twi_read_byte(TWI_ACK);
+            uint8_t tempSound = twi_read_byte(TWI_ACK);
+            uint8_t tempVolume = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.num][ALARM_DATA_RADIO] = twi_read_byte(TWI_NACK);
+            if (!alarm_data[alarm.num][ALARM_DATA_RADIO]) {
+              alarm_data[alarm.num][ALARM_DATA_SOUND] = tempSound;
+              alarm_data[alarm.num][ALARM_DATA_VOLUME] = ((100.0 / deviceInformation[PLAYER_MAX_VOL]) * tempVolume);
+            }
+            else {
+              alarm_data[alarm.num][ALARM_DATA_STATION] = tempSound;
+              alarm_data[alarm.num][ALARM_DATA_VOLUME] = ((100.0 / 30.0) * tempVolume);
+            }
+            twi_write_stop(); //завершаем передачу
+          }
+        }
+        break;
+      case READ_ALARM_ALL: {
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
+            busShiftBuffer(); //сместили буфер команд
+            uint8_t tempAll = twi_read_byte(TWI_NACK);
+            if (alarm.all != tempAll) alarm.now = alarm.set = 0;
+            if (tempAll > MAX_ALARMS) tempAll = MAX_ALARMS;
+            alarm.num = 0;
+            alarm.all = tempAll;
+            twi_write_stop(); //завершаем передачу
+            busWriteBuffer(READ_ALARM);
+          }
+        }
+        break;
       case READ_ALARM_NUM: {
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
             busShiftBuffer(); //сместили буфер команд
@@ -472,20 +521,20 @@ void busUpdate(void) {
       case READ_SELECT_ALARM: {
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_SELECT_ALARM, alarm.now)) { //начинаем передачу
             busShiftBuffer(); //сместили буфер команд
-            alarm.hour = twi_read_byte(TWI_ACK);
-            alarm.minute = twi_read_byte(TWI_ACK);
-            alarm.mode = twi_read_byte(TWI_ACK);
-            alarm.days = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.now][ALARM_DATA_HOUR] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.now][ALARM_DATA_MINS] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.now][ALARM_DATA_MODE] = twi_read_byte(TWI_ACK);
+            alarm_data[alarm.now][ALARM_DATA_DAYS] = twi_read_byte(TWI_ACK);
             uint8_t tempSound = twi_read_byte(TWI_ACK);
             uint8_t tempVolume = twi_read_byte(TWI_ACK);
-            alarm.radio = twi_read_byte(TWI_NACK);
-            if (!alarm.radio) {
-              alarm.sound = tempSound;
-              alarm.volumeNow = ((100.0 / deviceInformation[PLAYER_MAX_VOL]) * tempVolume);
+            alarm_data[alarm.now][ALARM_DATA_RADIO] = twi_read_byte(TWI_NACK);
+            if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
+              alarm_data[alarm.now][ALARM_DATA_SOUND] = tempSound;
+              alarm_data[alarm.now][ALARM_DATA_VOLUME] = ((100.0 / deviceInformation[PLAYER_MAX_VOL]) * tempVolume);
             }
             else {
-              alarm.station = tempSound;
-              alarm.volumeNow = ((100.0 / 30.0) * tempVolume);
+              alarm_data[alarm.now][ALARM_DATA_STATION] = tempSound;
+              alarm_data[alarm.now][ALARM_DATA_VOLUME] = ((100.0 / 30.0) * tempVolume);
             }
             twi_write_stop(); //завершаем передачу
           }
@@ -495,17 +544,17 @@ void busUpdate(void) {
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           switch (busReadBuffer()) {
-            case ALARM_TIME: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 0); twi_write_byte(alarm.hour); twi_write_byte(alarm.minute); break; //время будильника
-            case ALARM_MODE: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 2); twi_write_byte(alarm.mode); break; //режим будильника
-            case ALARM_DAYS: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 3); twi_write_byte(alarm.days); break; //день недели будильника
-            case ALARM_SOUND: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 4); twi_write_byte((!alarm.radio) ? alarm.sound : alarm.station); break; //мелодия будильника
+            case ALARM_TIME: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 0); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_HOUR]); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_MINS]); break; //время будильника
+            case ALARM_MODE: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 2); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_MODE]); break; //режим будильника
+            case ALARM_DAYS: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 3); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_DAYS]); break; //день недели будильника
+            case ALARM_SOUND: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 4); twi_write_byte((!alarm_data[alarm.now][ALARM_DATA_RADIO]) ? alarm_data[alarm.now][ALARM_DATA_SOUND] : alarm_data[alarm.now][ALARM_DATA_STATION]); break; //мелодия будильника
             case ALARM_VOLUME: { //громкость будильника
-                float volume = alarm.volumeNow / 100.0;
+                float volume = alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0;
                 busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 5);
-                twi_write_byte(((alarm.radio) ? 30 : deviceInformation[PLAYER_MAX_VOL]) * volume);
+                twi_write_byte(((alarm_data[alarm.now][ALARM_DATA_RADIO]) ? 30 : deviceInformation[PLAYER_MAX_VOL]) * volume);
               }
               break;
-            case ALARM_RADIO: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 6); twi_write_byte(alarm.radio); break; //радиобудильник
+            case ALARM_RADIO: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 6); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_RADIO]); break; //радиобудильник
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -528,6 +577,18 @@ void busUpdate(void) {
         }
         break;
 
+      case READ_RADIO_SET:
+        if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_RADIO_SET)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          radioSettings.volume = twi_read_byte(TWI_ACK);
+          twi_read_byte(TWI_ACK);
+          radioSettings.stationsFreq = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+          for (uint8_t i = 0; i < 10; i++) {
+            radioSettings.stationsSave[i] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte((i < 9) ? TWI_ACK : TWI_NACK) << 8); //отправляем натройки радиостанций
+          }
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
       case READ_RADIO_STA:
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_SELECT_BYTE, 0x04, BUS_READ_RADIO_SET)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
@@ -748,7 +809,7 @@ void busUpdate(void) {
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_TEST_SOUND); //регистр времени
-          twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm.volumeNow / 100.0))); //громкость
+          twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
           twi_write_byte(21); //номер трека
           twi_write_byte(4); //номер папки
           twi_write_stop(); //завершаем передачу
@@ -758,8 +819,8 @@ void busUpdate(void) {
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_TEST_SOUND); //регистр времени
-          twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm.volumeNow / 100.0))); //громкость
-          twi_write_byte(alarm.sound + 1); //номер трека
+          twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
+          twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + 1); //номер трека
           twi_write_byte(5); //номер папки
           twi_write_stop(); //завершаем передачу
         }

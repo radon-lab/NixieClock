@@ -276,5 +276,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.0.3"     //версия прошивки для отображения и озвучки
-#define HARDWARE_VERSION 0x02        //версия прошивки для интерфейса wire
+#define FIRMWARE_VERSION "2.0.4"     //версия прошивки для отображения и озвучки
+#define HARDWARE_VERSION 0x03        //версия прошивки для интерфейса wire

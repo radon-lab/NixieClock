@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.3 релиз от 21.08.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.4 релиз от 30.08.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -116,20 +116,7 @@ struct Settings_2 { //быстрые настройки
   uint8_t dotMode = DEFAULT_DOT_MODE; //режим точек
 } fastSettings;
 
-struct Settings_3 { //расширенные настройки
-  uint8_t autoShowModes[5] = {AUTO_SHOW_MODES};
-  uint8_t autoShowTimes[5] = {AUTO_SHOW_TIMES};
-  uint8_t burnTime = BURN_PERIOD;
-  uint8_t alarmTime = ALARM_TIMEOUT;
-  uint8_t alarmWaitTime = ALARM_WAIT;
-  uint8_t alarmSoundTime = ALARM_TIMEOUT_SOUND;
-#if ESP_ENABLE
-  uint8_t alarmDotOn = ALARM_ON_BLINK_DOT;
-  uint8_t alarmDotWait = ALARM_WAIT_BLINK_DOT;
-#endif
-} extendedSettings;
-
-struct Settings_4 { //настройки радио
+struct Settings_3 { //настройки радио
   uint8_t volume = CONSTRAIN((uint8_t)(RADIO_MAX_VOL * (DEFAULT_RADIO_VOLUME / 100.0)), RADIO_MIN_VOL, RADIO_MAX_VOL); //текущая громкость
   uint8_t stationNum; //текущий номер радиостанции из памяти
   uint16_t stationsFreq = RADIO_MIN_FREQ; //текущая частота
@@ -461,6 +448,17 @@ enum {
   CHANGE_ENABLE //смена яркости разрешена
 };
 
+struct Settings_4 { //расширенные настройки
+  uint8_t autoShowModes[5] = {AUTO_SHOW_MODES};
+  uint8_t autoShowTimes[5] = {AUTO_SHOW_TIMES};
+  uint8_t burnTime = BURN_PERIOD;
+  uint8_t alarmTime = ALARM_TIMEOUT;
+  uint8_t alarmWaitTime = ALARM_WAIT;
+  uint8_t alarmSoundTime = ALARM_TIMEOUT_SOUND;
+  uint8_t alarmDotOn = ((ALARM_ON_BLINK_DOT > 2) ? (ALARM_ON_BLINK_DOT - 3) : (ALARM_ON_BLINK_DOT + DOT_EFFECT_NUM));
+  uint8_t alarmDotWait = ((ALARM_WAIT_BLINK_DOT > 2) ? (ALARM_WAIT_BLINK_DOT - 3) : (ALARM_WAIT_BLINK_DOT + DOT_EFFECT_NUM));
+} extendedSettings;
+
 const uint8_t deviceInformation[] = { //комплектация часов
   CONVERT_CHAR(FIRMWARE_VERSION[0]),
   CONVERT_CHAR(FIRMWARE_VERSION[2]),
@@ -531,7 +529,8 @@ struct busData {
 
 #define BUS_SET_SHOW_TIME 0x1B
 #define BUS_SET_BURN_TIME 0x1C
-#define BUS_SET_ALARM_DOT 0x1D
+#define BUS_SET_MAIN_DOT 0x1D
+#define BUS_SET_ALARM_DOT 0x1E
 
 #define BUS_TEST_SOUND 0xFC
 
@@ -1985,11 +1984,6 @@ void delAlarm(uint8_t alarm) //удалить будильник
     updateByte(--alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
-//-----------------------------------Удалить будильник-----------------------------------------------------
-void setAlarmDot(uint8_t dot) //удалить будильник
-{
-  alarms.dot = (dot > 2) ? ((dot - 1) + DOT_EFFECT_NUM) : ((dot != 2) ? (dot + 1) : 0);
-}
 //----------------------------------Проверка будильников----------------------------------------------------
 void checkAlarms(void) //проверка будильников
 {
@@ -1997,13 +1991,7 @@ void checkAlarms(void) //проверка будильников
     alarms.dot = 0; //сбрасываем флаг включенных точек будильника
     for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
       if (alarmRead(alm, ALARM_MODE)) { //если будильник включен
-#if ESP_ENABLE
-        setAlarmDot(extendedSettings.alarmDotOn); //мигание точек при включенном будильнике
-#elif ALARM_ON_BLINK_DOT > 2
-        alarms.dot = (ALARM_ON_BLINK_DOT - 1) + DOT_EFFECT_NUM; //мигание точек при включенном будильнике
-#elif ALARM_ON_BLINK_DOT != 2
-        alarms.dot = ALARM_ON_BLINK_DOT + 1; //мигание точек при включенном будильнике
-#endif
+        alarms.dot = extendedSettings.alarmDotOn; //мигание точек при включенном будильнике
         if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
           alarms.now = 1; //устанавливаем флаг тревоги
           if (alarmRead(alm, ALARM_MODE) == 1) { //если был установлен режим одиночный
@@ -2043,13 +2031,7 @@ void alarmDataUpdate(void) //обновление данных будильни�
         if (extendedSettings.alarmWaitTime) { //если время ожидания включено
           _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
           alarms.now = 2; //устанавливаем флаг ожидания тревоги
-#if ESP_ENABLE
-          setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
-#elif ALARM_WAIT_BLINK_DOT > 2
-          alarms.dot = (ALARM_WAIT_BLINK_DOT - 1) + DOT_EFFECT_NUM; //мигание точек при отложенном будильнике
-#elif ALARM_WAIT_BLINK_DOT != 2
-          alarms.dot = ALARM_WAIT_BLINK_DOT + 1; //мигание точек при отложенном будильнике
-#endif
+          alarms.dot = extendedSettings.alarmDotWait; //мигание точек при отложенном будильнике
         }
         else alarmReset(); //сброс будильника
       }
@@ -2192,13 +2174,7 @@ uint8_t alarmWarn(void) //тревога будильника
 #endif
         {
           alarms.now = 2; //устанавливаем флаг ожидания
-#if ESP_ENABLE
-          setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
-#elif ALARM_WAIT_BLINK_DOT > 2
-          alarms.dot = (ALARM_WAIT_BLINK_DOT - 1) + DOT_EFFECT_NUM; //мигание точек при отложенном будильнике
-#elif ALARM_WAIT_BLINK_DOT != 2
-          alarms.dot = ALARM_WAIT_BLINK_DOT + 1; //мигание точек при отложенном будильнике
-#endif
+          alarms.dot = extendedSettings.alarmDotWait; //мигание точек при отложенном будильнике
           _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
           _timer_sec[TMR_ALM_SOUND] = 0;
 #if PLAYER_TYPE
@@ -2301,7 +2277,7 @@ uint8_t busUpdate(void) //обновление статуса шины
       case 0x60: //принят SLA+W - передан ACK
         bus.position = 0;
         bus.counter = 0;
-        bus.comand = 0;
+        bus.comand = BUS_WAIT_DATA;
         TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
       case 0x80: //принят байт данных - передан ACK
@@ -2406,8 +2382,10 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #endif
           case BUS_SELECT_BYTE: //выбрать произвольное место записи
-            if (!bus.counter && TWDR) bus.counter = TWDR; //установка места записи
-            else bus.comand = TWDR; //установка команды
+            if (!bus.counter) {
+              bus.counter = TWDR; //установка места записи
+              bus.comand = BUS_WAIT_DATA; //установка команды
+            }
             break;
         }
         TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
@@ -2540,15 +2518,19 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
           case BUS_SET_SHOW_TIME: _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); break; //установка таймера показа температуры
           case BUS_SET_BURN_TIME: _timer_sec[TMR_BURN] = getPhaseTime(extendedSettings.burnTime, BURN_PHASE); break; //установка таймера антиотравления
+          case BUS_SET_MAIN_DOT: //установка анимации точек
 #if ALARM_TYPE
-          case BUS_SET_ALARM_DOT:
+          case BUS_SET_ALARM_DOT: //установка анимации точек будильника
             if (alarms.dot) { //если точки будильника активны
-              bus.status |= (0x01 << BUS_COMMAND_UPDATE);
-              if (alarms.now == 2) setAlarmDot(extendedSettings.alarmDotWait); //мигание точек при отложенном будильнике
-              else setAlarmDot(extendedSettings.alarmDotOn); //мигание точек при включенном будильнике
+              if (alarms.now == 2) alarms.dot = extendedSettings.alarmDotWait; //мигание точек при отложенном будильнике
+              else alarms.dot = extendedSettings.alarmDotOn; //мигание точек при включенном будильнике
             }
-            break;
+            else if (bus.comand != BUS_SET_MAIN_DOT) break;
 #endif
+            changeAnimState = 2; //установили тип анимации
+            bus.status |= (0x01 << BUS_COMMAND_UPDATE);
+            break;
+
 #if PLAYER_TYPE
           case BUS_TEST_SOUND: //тест звука
             if (!player.playbackMute) {
@@ -3738,7 +3720,7 @@ uint8_t settings_main(void) //настроки основные
               case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 2); break; //вывод формата времени
               case SET_GLITCH:
 #if PLAYER_TYPE
-                if (!blink_data || cur_indi) indiPrintNum((mainSettings.hourSound & 0x03) + ((mainSettings.hourSound & 0x80) ? 0 : 10), 0, 2, 0); //вывод типа озвучки смены часа
+                if (!blink_data || cur_indi) indiPrintNum((mainSettings.hourSound & 0x03) + ((mainSettings.hourSound & 0x80) ? 10 : 0), 0, 2, 0); //вывод типа озвучки смены часа
                 if (!blink_data || !cur_indi) indiPrintNum(mainSettings.glitchMode, 3); //вывод режима глюков
 #else
                 if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); //вывод режима глюков
@@ -6057,7 +6039,7 @@ void dotFlash(void) //мигание точек
         case DOT_OTHER_BLINK:
           switch (dot.drive) {
             case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
-#if DOT_OTHER_BLINK_TIME != 1000
+#if DOT_OTHER_BLINK_TIME
               _timer_ms[TMR_DOT] = DOT_OTHER_BLINK_TIME; //установили таймер
 #else
               dot.update = 1; //сбросили флаг секунд
@@ -6639,7 +6621,10 @@ uint8_t mainScreen(void) //главный экран
 
     if (!secUpd) { //если пришло время обновить индикаторы
 #if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //обновление шины
+      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
+        if (!changeAnimState) changeAnimState = 1; //установили тип анимации
+        return MAIN_PROGRAM; //перезапуск основной программы
+      }
 #endif
 #if ALARM_TYPE
       if (alarms.now == 1) return ALARM_PROGRAM; //тревога будильника
