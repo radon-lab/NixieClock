@@ -584,10 +584,10 @@ void build(void) {
       GP.PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
-      GP.SPAN("Здесь можно обновить прошивку ESP, формат файла bin. Его можно получить открыв прошивку в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой)", GP_CENTER, "", UI_INFO_COLOR);     //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+      GP.SPAN("Здесь можно обновить прошивку и файловую систему ESP, формат файла bin. Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой). Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
       GP.HR(UI_LINE_COLOR);
       M_BOX(GP.LABEL("Обновить прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
-      //M_BOX(GP.LABEL("Обновить файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
+      M_BOX(GP.LABEL("Обновить файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
       GP.BLOCK_END();
     }
     else if (ui.uri("/network")) { //подключение к роутеру
