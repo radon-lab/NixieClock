@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.4 релиз от 31.08.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 01.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -410,13 +410,13 @@ void build(void) {
       updateList += ',';
       updateList += "mainAutoShowTime";
 
-      String alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
+      String alarmDotModeList = "Без реакции," + dotModeList + ",Мигают один раз в секунду,Мигают два раза в секунду";
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
         M_BOX(GP_JUSTIFY, GP.LABEL("Включить", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainAutoShow", (boolean)mainSettings.autoShowTime, UI_SWITCH_COLOR);););
         M_BOX(GP_CENTER, GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.SPINNER("mainAutoShowTime", mainSettings.autoShowTime, 1, 15, 1, 0, UI_SPINNER_COLOR);););
-        M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"););
+        M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
         GP.HR(UI_LINE_COLOR);
         GP.LABEL("Тип данных", "", UI_HINT_COLOR);
         GP.SPAN("(источник и время в сек)", GP_CENTER, "", UI_HINT_COLOR);
@@ -773,6 +773,9 @@ void action() {
       if (ui.clickInt("mainAutoShowTime", mainSettings.autoShowTime)) {
         busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
       }
+      if (ui.clickInt("mainAutoShowFlip", mainSettings.autoShowFlip)) {
+        busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_FLIP);
+      }
       if (ui.click("mainTempCorrect")) {
         mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("mainTempCorrect") * 10), -127, 127);
         busSetComand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
@@ -1086,7 +1089,7 @@ void climateUpdate(void) {
       climateReset(); //сброс усреднения
     }
     else {
-      if (settings.climateAvg) {
+      if (settings.climateAvg && (settings.climateTime > 1)) {
         climateTempAvg += sens.temp + mainSettings.tempCorrect;
         climateHumAvg += sens.hum;
         climatePressAvg += sens.press;
@@ -1098,7 +1101,7 @@ void climateUpdate(void) {
       }
 
       if (++climateCountAvg >= settings.climateTime) {
-        if (settings.climateAvg) {
+        if (settings.climateAvg && (settings.climateTime > 1)) {
           if (climateTempAvg) climateTempAvg /= climateCountAvg;
           if (climateHumAvg) climateHumAvg /= climateCountAvg;
           if (climatePressAvg) climatePressAvg /= climateCountAvg;
@@ -1263,7 +1266,7 @@ void loop() {
   }
 
   if (ntp.tick()) {
-    if (!ntp.status()) {
+    if (ntp.synced() && !ntp.status()) {
       mainTime.second = ntp.second();
       mainTime.minute = ntp.minute();
       mainTime.hour = ntp.hour();

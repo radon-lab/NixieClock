@@ -48,7 +48,7 @@
 #define UI_ALARM_ADD_COLOR "#e67b09" //цвет кнопки нового будильника
 #define UI_ALARM_DEL_COLOR GP_RED //цвет кнопки удалить будильник
 #define UI_ALARM_SET_COLOR "#e67b09" //цвет кнопки настроить будильник
-#define UI_ALARM_BACK_COLOR GP_GRAY //цвет кнопки выйти из настроек будильника
+#define UI_ALARM_BACK_COLOR GP_BLUE //цвет кнопки выйти из настроек будильника
 #define UI_ALARM_TIME_COLOR GP_DEFAULT //цвет времени будильника
 #define UI_ALARM_INFO_COLOR GP_DEFAULT //цвет состояния будильника
 #define UI_ALARM_BLOCK_COLOR GP_GRAY //цвет блока информации о будильнике
@@ -72,4 +72,4 @@
 #define MAX_ALARMS 7 //максимум будильников(3..15)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.0.4" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.0.5" //версия прошивки модуля esp

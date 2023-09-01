@@ -1,5 +1,7 @@
+//Информация о интефейсе
 #define HW_VERSION 0x03 //версия прошивки для интерфейса wire
 
+//Команды интерфейса
 #define BUS_WRITE_TIME 0x01
 #define BUS_READ_TIME 0x02
 
@@ -103,6 +105,7 @@ struct sensorData {
   boolean err; //ошибка сенсора
 } sens;
 
+//----------------Будильники--------------
 struct alarmData {
   uint8_t set; //настройка текущего будильника
   uint8_t all; //всего будильников
