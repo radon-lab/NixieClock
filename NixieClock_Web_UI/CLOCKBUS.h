@@ -256,6 +256,7 @@ enum {
   SET_SHOW_TIME,
   SET_BURN_TIME,
   SET_ALARM_DOT,
+  SET_MAIN_DOT,
 
   WRITE_TEST_MAIN_VOL,
   WRITE_TEST_ALARM_VOL,
@@ -406,7 +407,7 @@ void busUpdate(void) {
             case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); break; //отправляем дополнительные натройки
             case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
             case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
-            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); busWriteBuffer(BUS_SET_MAIN_DOT); break; //отправляем дополнительные натройки
+            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); busWriteBuffer(SET_MAIN_DOT); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -797,6 +798,13 @@ void busUpdate(void) {
           twi_write_stop(); //завершаем передачу
         }
         break;
+      case SET_MAIN_DOT:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_SET_MAIN_DOT); //регистр времени
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
 
       case WRITE_TEST_MAIN_VOL:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
@@ -858,6 +866,7 @@ void busUpdate(void) {
           twi_write_stop(); //завершаем передачу
         }
         break;
+      default: busShiftBuffer(); break; //сместили буфер команд
     }
   }
 }
