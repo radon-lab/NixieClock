@@ -410,7 +410,7 @@ void build(void) {
       updateList += ',';
       updateList += "mainAutoShowTime";
 
-      String alarmDotModeList = "Без реакции," + dotModeList + ",Мигают один раз в секунду,Мигают два раза в секунду";
+      String alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
