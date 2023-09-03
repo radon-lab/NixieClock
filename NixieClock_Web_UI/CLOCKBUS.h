@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x03 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x04 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -38,6 +38,7 @@
 #define BUS_SET_MAIN_DOT 0x1D
 #define BUS_SET_ALARM_DOT 0x1E
 
+#define BUS_TEST_FLIP 0xFB
 #define BUS_TEST_SOUND 0xFC
 
 #define BUS_SELECT_BYTE 0xFD
@@ -134,6 +135,7 @@ enum {
   STATUS_UPDATE_RADIO_SET,
   STATUS_UPDATE_EXTENDED_SET,
   STATUS_UPDATE_ALARM_SET,
+  STATUS_UPDATE_SENS_DATA,
   STATUS_MAX_DATA
 };
 uint8_t deviceStatus; //состояние часов
@@ -261,6 +263,7 @@ enum {
   WRITE_TEST_MAIN_VOL,
   WRITE_TEST_ALARM_VOL,
   WRITE_TEST_ALARM_SOUND,
+  WRITE_TEST_MAIN_FLIP,
 
   READ_STATUS,
   READ_DEVICE
@@ -404,7 +407,7 @@ void busUpdate(void) {
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           switch (busReadBuffer()) {
-            case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); break; //отправляем дополнительные натройки
+            case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); busWriteBuffer(WRITE_TEST_MAIN_FLIP); break; //отправляем дополнительные натройки
             case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
             case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
             case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); busWriteBuffer(SET_MAIN_DOT); break; //отправляем дополнительные натройки
@@ -833,6 +836,13 @@ void busUpdate(void) {
           twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
           twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + 1); //номер трека
           twi_write_byte(5); //номер папки
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TEST_MAIN_FLIP:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_TEST_FLIP); //регистр времени
           twi_write_stop(); //завершаем передачу
         }
         break;

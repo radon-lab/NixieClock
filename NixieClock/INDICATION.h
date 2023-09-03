@@ -17,9 +17,12 @@
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 
-#if WIRE_PULL
+#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
+#if WIRE_PULL && !ESP_ENABLE
+#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4) | 0x30)
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4) | 0x30) //пустой символ(отключеный индикатор)
 #else
+#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 #endif
 

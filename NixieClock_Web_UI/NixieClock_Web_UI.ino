@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 01.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 03.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -47,8 +47,10 @@ GPdate mainDate;
 GPtime mainTime;
 GPtime alarmTime;
 
-boolean otaUpdate = true; //флаг запрете обновления
+boolean otaUpdate = true; //флаг запрета обновления
 boolean alarmSvgImage = false; //флаг локальных изоражений будильника
+
+boolean sensDataWait = true; //флаг ожидания температуры
 uint8_t alarmReload = 0; //флаг обновления страницы будильника
 
 uint8_t climateCountAvg;
@@ -179,7 +181,7 @@ void build(void) {
       GP_ALS(GP_LEFT, GP_RIGHT),
       M_TR(GP.LABEL(" "); GP.LABEL(" "); GP.LABEL_BLOCK(ui.getSystemTime().encode(), "barTime", UI_BAR_CLOCK_COLOR, 18, 1););
       M_TD(
-        if (deviceInformation[SENS_TEMP]) GP.LABEL_BLOCK(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
+        if (deviceInformation[SENS_TEMP]) GP.LABEL_BLOCK(String((sens.temp) ? ((sens.temp + mainSettings.tempCorrect) / 10.0) : 0, 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
         if (sens.hum) GP.LABEL_BLOCK(String(sens.hum) + "%", "barHum", UI_BAR_HUM_COLOR, 18, 1);
           if (sens.press) GP.LABEL_BLOCK(String(sens.press) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
             GP.LABEL(" ");
@@ -307,7 +309,7 @@ void build(void) {
 
           GP.RELOAD("alarmReload");
 
-          String alarmModeList[] = {"Однократно", "Ежедневно", "По будням"};
+          String alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
           String alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
 
           String reloadList;
@@ -326,18 +328,18 @@ void build(void) {
             uint8_t alarmMode = alarm_data[i][ALARM_DATA_MODE];
 
             String alarmStatus;
-            if (alarmMode) {
-              if (alarmMode >= 4) {
-                boolean alarmDaysFirst = false;
-                uint8_t alarmDays = alarm_data[i][ALARM_DATA_DAYS];
-                nowWeekDay = getWeekDay(ui.getSystemDate().year, ui.getSystemDate().month, ui.getSystemDate().day); //получить день недели;
-                for (uint8_t dl = 0; dl < 7; dl++) {
-                  if (alarmDays & (0x01 << nowWeekDay)) {
-                    nowWeekDay = dl;
-                    break;
-                  }
-                  if (++nowWeekDay > 7) nowWeekDay = 0;
+            if (alarmMode >= 3) {
+              boolean alarmDaysFirst = false;
+              uint8_t alarmDays = (alarmMode != 3) ? alarm_data[i][ALARM_DATA_DAYS] : 0x3E;
+              nowWeekDay = getWeekDay(ui.getSystemDate().year, ui.getSystemDate().month, ui.getSystemDate().day); //получить день недели;
+              for (uint8_t dl = 0; dl < 7; dl++) {
+                if (alarmDays & (0x01 << nowWeekDay)) {
+                  nowWeekDay = dl;
+                  break;
                 }
+                if (++nowWeekDay > 7) nowWeekDay = 1;
+              }
+              if (alarmMode != 3) {
                 for (uint8_t dw = 0; dw < 7; dw++) {
                   alarmDays >>= 1;
                   if (alarmDays & 0x01) {
@@ -347,10 +349,12 @@ void build(void) {
                   }
                 }
               }
-              else {
-                alarmStatus += alarmModeList[alarmMode - 1];
-              }
+            }
+            if (alarmMode < 4) {
+              alarmStatus += alarmModeList[alarmMode];
+            }
 
+            if (alarmMode) {
               GPtime nowTime = ui.getSystemTime();
               if ((nowTime.hour > alarmHour) && nowWeekDay) nowWeekDay -= 1;
               if (nowTime.hour < alarmHour) alarmHour -= nowTime.hour;
@@ -374,7 +378,6 @@ void build(void) {
               alarmStatus += alarmMins;
               alarmStatus += "мин";
             }
-            else alarmStatus += "Отключен";
 
             GP.BLOCK_BEGIN(GP_THIN, "", "", UI_ALARM_BLOCK_COLOR);
             if (alarmSvgImage) {
@@ -584,7 +587,9 @@ void build(void) {
       GP.PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
-      GP.SPAN("Здесь можно обновить прошивку и файловую систему ESP, формат файла bin. Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой). Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+      GP.SPAN("Здесь можно обновить прошивку и файловую систему ESP, формат файлов bin.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+      GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
       GP.HR(UI_LINE_COLOR);
       M_BOX(GP.LABEL("Обновить прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
       M_BOX(GP.LABEL("Обновить файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
@@ -627,10 +632,8 @@ void action() {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
         if (setSyncTime()) {
-          if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) {
-            busSetComand(WRITE_TIME);
-            busSetComand(WRITE_DATE);
-          }
+          busSetComand(WRITE_TIME);
+          busSetComand(WRITE_DATE);
         }
         memory.update(); //обновить данные в памяти
       }
@@ -638,10 +641,8 @@ void action() {
         if ((WiFi.status() != WL_CONNECTED) || !updateTime()) { //запросить текущее время
           mainTime = ui.getSystemTime(); //запросить время браузера
         }
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) {
-          busSetComand(WRITE_TIME);
-          busSetComand(WRITE_DATE);
-        }
+        busSetComand(WRITE_TIME);
+        busSetComand(WRITE_DATE);
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
         memory.update(); //обновить данные в памяти
@@ -741,13 +742,13 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.clickSub("main")) {
       if (ui.clickDate("mainDate", mainDate)) {
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(WRITE_DATE);
+        busSetComand(WRITE_DATE);
       }
       if (ui.clickTime("mainTime", mainTime)) {
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(WRITE_TIME);
+        busSetComand(WRITE_TIME);
       }
       if (ui.clickBool("mainTimeFormat", mainSettings.timeFormat)) {
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
+        busSetComand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
       }
       if (ui.clickBool("mainGlitch", mainSettings.glitchMode)) {
         busSetComand(WRITE_MAIN_SET, MAIN_GLITCH_MODE);
@@ -963,10 +964,10 @@ void action() {
     if (ui.updateSub("bar")) {
       if (ui.update("barTime")) {   //начинается
         ui.answer(ui.getSystemTime().encode());
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(READ_STATUS);
+        if (!sensDataWait) busSetComand(READ_STATUS);
       }
       if (ui.update("barTemp")) {   //начинается
-        ui.answer(String((sens.temp + mainSettings.tempCorrect) / 10.0, 1) + "°С");
+        ui.answer(String((sens.temp) ? ((sens.temp + mainSettings.tempCorrect) / 10.0) : 0, 1) + "°С");
       }
       if (ui.update("barHum")) {   //начинается
         ui.answer(String(sens.hum) + "%");
@@ -1038,7 +1039,7 @@ void action() {
       }
       if (ui.update("radioPower")) { //если было обновление
         ui.answer(radioSettings.powerState);
-        if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) busSetComand(READ_RADIO_POWER);
+        busSetComand(READ_RADIO_POWER);
       }
     }
   }
@@ -1076,39 +1077,38 @@ void climateReset(void) {
 void climateUpdate(void) {
   static boolean firstStart;
 
-  if (mainDate.year) {
-    uint32_t unixNow = 0;
-    if (!ntp.synced() || ntp.status()) unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
-    else unixNow = ntp.unix();
+  uint32_t unixNow = 0;
+  if (!ntp.synced() || ntp.status()) unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
+  else unixNow = ntp.unix();
 
-    if (!firstStart) {
-      firstStart = true;
-      for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
-        climateAdd(sens.temp + mainSettings.tempCorrect, sens.hum, sens.press, unixNow);
-      }
-      climateReset(); //сброс усреднения
+  uint16_t temperature = (sens.temp) ? (sens.temp + mainSettings.tempCorrect) : 0;
+  if (!firstStart) {
+    firstStart = true;
+    for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
+      climateAdd(temperature, sens.hum, sens.press, unixNow);
+    }
+    climateReset(); //сброс усреднения
+  }
+  else {
+    if (settings.climateAvg && (settings.climateTime > 1)) {
+      climateTempAvg += temperature;
+      climateHumAvg += sens.hum;
+      climatePressAvg += sens.press;
     }
     else {
-      if (settings.climateAvg && (settings.climateTime > 1)) {
-        climateTempAvg += sens.temp + mainSettings.tempCorrect;
-        climateHumAvg += sens.hum;
-        climatePressAvg += sens.press;
-      }
-      else {
-        climateTempAvg = sens.temp + mainSettings.tempCorrect;
-        climateHumAvg = sens.hum;
-        climatePressAvg = sens.press;
-      }
+      climateTempAvg = temperature;
+      climateHumAvg = sens.hum;
+      climatePressAvg = sens.press;
+    }
 
-      if (++climateCountAvg >= settings.climateTime) {
-        if (settings.climateAvg && (settings.climateTime > 1)) {
-          if (climateTempAvg) climateTempAvg /= climateCountAvg;
-          if (climateHumAvg) climateHumAvg /= climateCountAvg;
-          if (climatePressAvg) climatePressAvg /= climateCountAvg;
-        }
-        climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
-        climateReset(); //сброс усреднения
+    if (++climateCountAvg >= settings.climateTime) {
+      if (settings.climateAvg && (settings.climateTime > 1)) {
+        if (climateTempAvg) climateTempAvg /= climateCountAvg;
+        if (climateHumAvg) climateHumAvg /= climateCountAvg;
+        if (climatePressAvg) climatePressAvg /= climateCountAvg;
       }
+      climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
+      climateReset(); //сброс усреднения
     }
   }
 }
@@ -1243,12 +1243,12 @@ void setup() {
 
   busSetComand(READ_DEVICE);
   busSetComand(WRITE_CHECK_SENS);
+  busSetComand(READ_TIME_DATE);
   busSetComand(READ_FAST_SET);
   busSetComand(READ_MAIN_SET);
   busSetComand(READ_EXTENDED_SET);
   busSetComand(READ_RADIO_SET);
   busSetComand(READ_ALARM_ALL);
-  busSetComand(READ_SENS_DATA);
   busSetComand(READ_SENS_INFO);
   busTimerSetInterval(5000);
 }
@@ -1273,22 +1273,31 @@ void loop() {
       mainDate.day = ntp.day();
       mainDate.month = ntp.month();
       mainDate.year = ntp.year();
-      if (settings.ntpSync) {
-        busSetComand(WRITE_TIME);
-        busSetComand(WRITE_DATE);
+      if (deviceInformation[HARDWARE_VERSION]) {
+        if (settings.ntpSync) {
+          busSetComand(WRITE_TIME);
+          busSetComand(WRITE_DATE);
+        }
       }
     }
   }
 
-  ui.tick();
-
   static uint32_t timer = millis();
+  static uint32_t timerWait = millis();
+
   if ((millis() - timer) >= 60000) {
     timer = millis();
-    if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) {
+    if (deviceInformation[HARDWARE_VERSION]) {
       busSetComand(WRITE_CHECK_SENS);
       if (!ntp.synced() || ntp.status()) busSetComand(READ_TIME_DATE);
-      busSetComand(READ_SENS_DATA);
+      if (!sensDataWait) timerWait = millis();
+      sensDataWait = true;
+    }
+  }
+  if ((millis() - timerWait) >= ((sensDataWait) ? 1000 : 5000)) {
+    timerWait = millis();
+    if (deviceInformation[HARDWARE_VERSION]) {
+      busSetComand(READ_STATUS);
     }
   }
 
@@ -1301,6 +1310,7 @@ void loop() {
           case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
           case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
           case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
+          case STATUS_UPDATE_SENS_DATA: busSetComand(READ_SENS_DATA); sensDataWait = false; break;
         }
       }
       deviceStatus >>= 1; //сместили буфер флагов
@@ -1309,5 +1319,7 @@ void loop() {
   }
 
   busUpdate();
+
+  ui.tick();
   memory.tick();
 }

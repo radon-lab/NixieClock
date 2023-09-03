@@ -75,13 +75,6 @@
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
-#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
-#if WIRE_PULL
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4) | 0x30)
-#else
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
-#endif
-
 #define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 #define DECODE_PCMSK(pin) ((pin < 8) ? PCMSK2 : PCMSK0)

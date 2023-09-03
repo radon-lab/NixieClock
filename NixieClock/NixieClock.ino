@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 01.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 03.09.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -420,6 +420,7 @@ enum {
   ANIM_SECS, //запуск анимации секунд
   ANIM_MINS, //запуск анимации минут
   ANIM_MAIN, //запуск основной анимации
+  ANIM_DEMO, //запуск демострации анимации
   ANIM_OTHER //запуск иной анимации
 };
 
@@ -531,6 +532,7 @@ struct busData {
 #define BUS_SET_MAIN_DOT 0x1D
 #define BUS_SET_ALARM_DOT 0x1E
 
+#define BUS_TEST_FLIP 0xFB
 #define BUS_TEST_SOUND 0xFC
 
 #define BUS_SELECT_BYTE 0xFD
@@ -561,6 +563,7 @@ enum {
   STATUS_UPDATE_RADIO_SET,
   STATUS_UPDATE_EXTENDED_SET,
   STATUS_UPDATE_ALARM_SET,
+  STATUS_UPDATE_SENS_DATA,
   STATUS_MAX_DATA
 };
 uint8_t deviceStatus; //состояние часов
@@ -1105,13 +1108,15 @@ void updateTemp(void) //обновить показания температур
 #if SENS_BME_ENABLE
       case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
-#if SENS_PORT_ENABLE
+#if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
       case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
+#endif
+#if (SENS_PORT_ENABLE == 2) || (SENS_PORT_ENABLE == 3)
       case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
 #endif
     }
     if (!sens.err) _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
-#if DS3231_ENABLE
+#if DS3231_ENABLE && (SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE)
     else readTempRTC(); //чтение температуры с датчика DS3231
 #endif
   }
@@ -2212,7 +2217,7 @@ uint8_t busCheck(void) //проверка статуса шины
       for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
-            case BUS_EXT_COMMAND_CHECK_TEMP: updateTemp(); break; //обновить показания температуры
+            case BUS_EXT_COMMAND_CHECK_TEMP: updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
           }
         }
@@ -2230,6 +2235,7 @@ void busCommand(void) //проверка команды шины
     uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
     bus.status &= (0x01 << BUS_COMMAND_WAIT); //сбросили статус
     if (status) { //если установлены флаги радио
+      if (status & ((0x01 << BUS_COMMAND_RADIO_MODE) | (0x01 << BUS_COMMAND_RADIO_POWER) | (0x01 << BUS_COMMAND_RADIO_SEEK_UP) | (0x01 << BUS_COMMAND_RADIO_SEEK_DOWN))) changeAnimState = 2; //установили сброс анимации
       for (uint8_t i = 0; i < BUS_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
@@ -2507,8 +2513,8 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WRITE_RADIO_FREQ: bus.status |= (0x01 << BUS_COMMAND_RADIO_FREQ); break; //настройка частоты радио
           case BUS_WRITE_RADIO_MODE: bus.status |= (0x01 << BUS_COMMAND_RADIO_MODE); break; //переключение питания радио
           case BUS_WRITE_RADIO_POWER: bus.status |= (0x01 << BUS_COMMAND_RADIO_POWER); break; //переключение питания радио
-          case BUS_SEEK_RADIO_UP: bus.status &= ~(0x01 << BUS_COMMAND_RADIO_SEEK_DOWN); bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_UP); break; //запуск автопоиска радио
-          case BUS_SEEK_RADIO_DOWN: bus.status &= ~(0x01 << BUS_COMMAND_RADIO_SEEK_UP); bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_DOWN); break; //запуск автопоиска радио
+          case BUS_SEEK_RADIO_UP: bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_UP); break; //запуск автопоиска радио
+          case BUS_SEEK_RADIO_DOWN: bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_DOWN); break; //запуск автопоиска радио
 #endif
           case BUS_CHECK_TEMP: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_CHECK_TEMP); break; //запрос температуры
           case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
@@ -2519,15 +2525,15 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SET_ALARM_DOT: //установка анимации точек будильника
             if ((bus.comand == BUS_SET_MAIN_DOT) || alarms.now) {
 #endif
-              changeAnimState = 2; //установили тип анимации
+              changeAnimState = 2; //установили сброс анимации
               bus.status |= (0x01 << BUS_COMMAND_UPDATE);
 #if ALARM_TYPE
             }
 #endif
             break;
-
-#if PLAYER_TYPE
+          case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
+#if PLAYER_TYPE
             if (!player.playbackMute) {
               bus.status |= (0x01 << BUS_COMMAND_UPDATE);
               playerStop(); //сброс воспроизведения плеера
@@ -2536,8 +2542,10 @@ uint8_t busUpdate(void) //обновление статуса шины
               playerRetVol(mainSettings.volumeSound);
             }
             else playerSetVolNow(mainSettings.volumeSound);
-            break;
+#else
+            melodyPlay(bus.buffer[1], SOUND_LINK(alarm_sound), REPLAY_ONCE); //воспроизводим мелодию
 #endif
+            break;
           default: TWCR |= (0x01 << TWINT); return 0; //возвращаем статус ожидания шины
         }
         bus.comand = BUS_WAIT_DATA;
@@ -4771,7 +4779,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
         break;
     }
   }
-  if (mode == 1) animIndi(fastSettings.flipMode, FLIP_DEMO); //демонстрация анимации цифр
+  if (mode == 1) animShow = ANIM_DEMO; //демонстрация анимации цифр
   setUpdateMemory(0x01 << MEM_UPDATE_FAST_SET); //записываем настройки в память
   return MAIN_PROGRAM; //выходим
 }
@@ -5850,7 +5858,7 @@ void dotFlash(void) //мигание точек
         dot.update = 1; //сбросили флаг секунд
         return; //выходим
       }
-      
+
       switch (dotGetMode()) { //режим точек
 #if NEON_DOT != 3
         case DOT_PULS:
@@ -6596,6 +6604,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 uint8_t mainScreen(void) //главный экран
 {
   if (animShow < ANIM_MAIN) animShow = 0; //сбрасываем флаг анимации цифр
+  else if (animShow == ANIM_DEMO) animIndi(fastSettings.flipMode, FLIP_DEMO); //демонстрация анимации цифр
   else if (animShow >= ANIM_OTHER) animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
 
   if (indi.sleepMode) { //если активен режим сна
