@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 03.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 04.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -28,7 +28,7 @@
 GyverPortal ui(&LittleFS);
 
 #include <GyverNTP.h>
-GyverNTP ntp(DEFAULT_GMT, NTP_TIME);
+GyverNTP ntp(DEFAULT_GMT, 5);
 
 struct settingsData {
   uint8_t climateTime;
@@ -51,6 +51,7 @@ boolean otaUpdate = true; //флаг запрета обновления
 boolean alarmSvgImage = false; //флаг локальных изоражений будильника
 
 boolean sensDataWait = true; //флаг ожидания температуры
+boolean sendNtpTime = false; //флаг отправки времени
 uint8_t alarmReload = 0; //флаг обновления страницы будильника
 
 uint8_t climateCountAvg;
@@ -105,14 +106,14 @@ void build(void) {
       GP.LABEL_BLOCK("Clock offline", "", UI_MENU_CLOCK_2_COLOR, 0, 1);
     }
     GP.BREAK();
-    if (ntp.synced()) {
+    if (ntp.status()) {
+      GP.LABEL_BLOCK("NTP disconnect", "", UI_MENU_NTP_3_COLOR, 0, 1);
+    }
+    else if (ntp.synced()) {
       GP.LABEL_BLOCK("NTP synced", "", UI_MENU_NTP_1_COLOR, 0, 1);
     }
-    else if (!ntp.status()) {
-      GP.LABEL_BLOCK("NTP connect", "", UI_MENU_NTP_2_COLOR, 0, 1);
-    }
     else {
-      GP.LABEL_BLOCK("NTP disconnect", "", UI_MENU_NTP_3_COLOR, 0, 1);
+      GP.LABEL_BLOCK("NTP connect", "", UI_MENU_NTP_2_COLOR, 0, 1);
     }
     GP.BREAK();
     GP.HR(UI_MENU_LINE_COLOR);
@@ -638,11 +639,15 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("syncTime")) {
-        if ((WiFi.status() != WL_CONNECTED) || !updateTime()) { //запросить текущее время
-          mainTime = ui.getSystemTime(); //запросить время браузера
+        if (!ntp.status()) {
+          ntp.setPeriod(1); //запросить текущее время
+          sendNtpTime = true;
         }
-        busSetComand(WRITE_TIME);
-        busSetComand(WRITE_DATE);
+        else {
+          mainTime = ui.getSystemTime(); //запросить время браузера
+          busSetComand(WRITE_TIME);
+          busSetComand(WRITE_DATE);
+        }
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
         memory.update(); //обновить данные в памяти
@@ -1113,18 +1118,6 @@ void climateUpdate(void) {
   }
 }
 
-boolean updateTime(void) {
-  if (!ntp.updateNow()) {
-    mainTime.second = ntp.second();
-    mainTime.minute = ntp.minute();
-    mainTime.hour = ntp.hour();
-    mainDate.day = ntp.day();
-    mainDate.month = ntp.month();
-    mainDate.year = ntp.year();
-    return true;
-  }
-  return false;
-}
 boolean setSyncTime(void) {
   if (ntp.synced() && !ntp.status()) {
     mainTime.second = ntp.second();
@@ -1241,7 +1234,6 @@ void setup() {
   }
   alarm.now = 0;
 
-  busSetComand(READ_DEVICE);
   busSetComand(WRITE_CHECK_SENS);
   busSetComand(READ_TIME_DATE);
   busSetComand(READ_FAST_SET);
@@ -1250,10 +1242,16 @@ void setup() {
   busSetComand(READ_RADIO_SET);
   busSetComand(READ_ALARM_ALL);
   busSetComand(READ_SENS_INFO);
+  busSetComand(READ_DEVICE);
   busTimerSetInterval(5000);
 }
 
 void loop() {
+  static uint32_t timerMs = millis();
+  static uint8_t timerWait = 5;
+  static uint8_t timerClimate = 60;
+  static uint8_t attemptsNtp = 0;
+
   if (!ui.state()) { //если портал не запущен
     //поключаемся к wifi
     wifi_config();
@@ -1265,57 +1263,72 @@ void loop() {
     ui.downloadAuto(true);
   }
 
-  if (ntp.tick()) {
-    if (ntp.synced() && !ntp.status()) {
-      mainTime.second = ntp.second();
-      mainTime.minute = ntp.minute();
-      mainTime.hour = ntp.hour();
-      mainDate.day = ntp.day();
-      mainDate.month = ntp.month();
-      mainDate.year = ntp.year();
-      if (deviceInformation[HARDWARE_VERSION]) {
-        if (settings.ntpSync) {
-          busSetComand(WRITE_TIME);
-          busSetComand(WRITE_DATE);
+  if (deviceInformation[HARDWARE_VERSION]) {
+    if (ntp.tick()) {
+      if (ntp.status()) {
+        if (attemptsNtp < 9) {
+          ntp.setPeriod(5);
+          attemptsNtp++;
+        }
+        else {
+          ntp.setPeriod(NTP_TIME);
+          attemptsNtp = 0;
         }
       }
-    }
-  }
-
-  static uint32_t timer = millis();
-  static uint32_t timerWait = millis();
-
-  if ((millis() - timer) >= 60000) {
-    timer = millis();
-    if (deviceInformation[HARDWARE_VERSION]) {
-      busSetComand(WRITE_CHECK_SENS);
-      if (!ntp.synced() || ntp.status()) busSetComand(READ_TIME_DATE);
-      if (!sensDataWait) timerWait = millis();
-      sensDataWait = true;
-    }
-  }
-  if ((millis() - timerWait) >= ((sensDataWait) ? 1000 : 5000)) {
-    timerWait = millis();
-    if (deviceInformation[HARDWARE_VERSION]) {
-      busSetComand(READ_STATUS);
-    }
-  }
-
-  if (deviceStatus) {
-    for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
-      if (deviceStatus & 0x01) { //если флаг установлен
-        switch (i) { //выбираем действие
-          case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE); break;
-          case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
-          case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
-          case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
-          case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
-          case STATUS_UPDATE_SENS_DATA: busSetComand(READ_SENS_DATA); sensDataWait = false; break;
+      else {
+        if (ntp.synced()) {
+          mainTime.second = ntp.second();
+          mainTime.minute = ntp.minute();
+          mainTime.hour = ntp.hour();
+          mainDate.day = ntp.day();
+          mainDate.month = ntp.month();
+          mainDate.year = ntp.year();
+          if (settings.ntpSync || sendNtpTime) {
+            sendNtpTime = false;
+            busSetComand(WRITE_TIME);
+            busSetComand(WRITE_DATE);
+          }
         }
+        ntp.setPeriod(NTP_TIME);
+        attemptsNtp = 0;
       }
-      deviceStatus >>= 1; //сместили буфер флагов
     }
-    deviceStatus = 0;
+
+    if ((millis() - timerMs) >= 1000) {
+      if (!timerClimate) {
+        timerClimate = 60;
+        busSetComand(WRITE_CHECK_SENS);
+        if (!ntp.synced() || ntp.status()) busSetComand(READ_TIME_DATE);
+        if (!sensDataWait) timerWait = 1;
+        sensDataWait = true;
+      }
+      else timerClimate--;
+
+      if (!timerWait) {
+        timerWait = (sensDataWait) ? 1 : 5;
+        busSetComand(READ_STATUS);
+      }
+      else timerWait--;
+
+      timerMs = millis();
+    }
+
+    if (deviceStatus) {
+      for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
+        if (deviceStatus & 0x01) { //если флаг установлен
+          switch (i) { //выбираем действие
+            case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE); break;
+            case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
+            case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
+            case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
+            case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
+            case STATUS_UPDATE_SENS_DATA: busSetComand(READ_SENS_DATA); sensDataWait = false; break;
+          }
+        }
+        deviceStatus >>= 1; //сместили буфер флагов
+      }
+      deviceStatus = 0;
+    }
   }
 
   busUpdate();
