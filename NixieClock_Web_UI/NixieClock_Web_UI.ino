@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 04.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 05.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -34,6 +34,7 @@ struct settingsData {
   uint8_t climateTime;
   boolean climateAvg;
   boolean ntpSync;
+  boolean ntpDst;
   int8_t ntpGMT;
   char ssid[20];
   char pass[20];
@@ -198,15 +199,16 @@ void build(void) {
           GP.BLOCK_BEGIN(GP_THIN, "", "Настройка времени", UI_BLOCK_COLOR);
           M_BOX(GP.LABEL("Время", "", UI_LABEL_COLOR); GP.TIME("mainTime"););
           M_BOX(GP.LABEL("Дата", "", UI_LABEL_COLOR); GP.DATE("mainDate"););
-          M_BOX(GP_JUSTIFY, GP.LABEL("Формат", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.LABEL("24ч", "", UI_LABEL_COLOR);  GP.SWITCH("mainTimeFormat", mainSettings.timeFormat, UI_SWITCH_COLOR); GP.LABEL("12ч", "", UI_LABEL_COLOR);););
+          M_BOX(GP.LABEL("Формат", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.LABEL("24ч", "", UI_LABEL_COLOR);  GP.SWITCH("mainTimeFormat", mainSettings.timeFormat, UI_SWITCH_COLOR); GP.LABEL("12ч", "", UI_LABEL_COLOR);););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Часовой пояс", "", UI_LABEL_COLOR); GP.SELECT("syncGmt", "GMT-12,GMT-11,GMT-10,GMT-9,GMT-8,GMT-7,GMT-6,GMT-5,GMT-4,GMT-3,GMT-2,GMT-1,GMT+0,GMT+1,GMT+2,GMT+3,GMT+4,GMT+5,GMT+6,GMT+7,GMT+8,GMT+9,GMT+10,GMT+11,GMT+12", settings.ntpGMT + 12, 0, (boolean)(ntp.status())););
-          M_BOX(GP_JUSTIFY, GP.LABEL("Автосинхронизация", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, (boolean)(ntp.status()));););
+          M_BOX(GP.LABEL("Автосинхронизация", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, (boolean)(ntp.status()));););
+          M_BOX(GP.LABEL("Учитывать летнее время", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, (boolean)(ntp.status()));););
           GP.BUTTON("syncTime", (ntp.status()) ? "Время с устройства" : "Синхронизация с сервером", "", UI_BUTTON_COLOR);
           GP.BLOCK_END();
 
           GP.BLOCK_BEGIN(GP_THIN, "", "Эффекты", UI_BLOCK_COLOR);
-          M_BOX(GP_JUSTIFY, GP.LABEL("Глюки", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR);););
+          M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR);););
           M_BOX(GP.LABEL("Точки", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
           M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
           M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("mainSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", mainSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
@@ -632,7 +634,7 @@ void action() {
       if (ui.click("syncGmt")) {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
-        if (setSyncTime()) {
+        if (settings.ntpSync && !ntp.status() && setSyncTime()) {
           busSetComand(WRITE_TIME);
           busSetComand(WRITE_DATE);
         }
@@ -650,6 +652,13 @@ void action() {
         }
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.clickBool("syncDst", settings.ntpDst)) {
+        if (settings.ntpSync && !ntp.status() && setSyncTime()) {
+          busSetComand(WRITE_TIME);
+          busSetComand(WRITE_DATE);
+        }
         memory.update(); //обновить данные в памяти
       }
     }
@@ -1051,14 +1060,73 @@ void action() {
 }
 
 const uint8_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
-//---------------------------------Получить день недели-----------------------------------
-uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) //получить день недели
+//------------------------------Максимальное количество дней------------------------------
+uint8_t maxDays(uint16_t YY, uint8_t MM) //максимальное количество дней
 {
+  return (((MM == 2) && !(YY % 4)) ? 1 : 0) + daysInMonth[MM - 1]; //возвращаем количество дней в месяце
+}
+//---------------------------------Получить день недели-----------------------------------
+uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) { //получить день недели
   if (YY >= 2000) YY -= 2000; //если год больше 2000
   uint16_t days = DD; //записываем дату
   for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
   if ((MM > 2) && !(YY % 4)) days++; //если високосный год, прибавляем день
   return (days + 365 * YY + (YY + 3) / 4 - 2 + 6) % 7 + 1; //возвращаем день недели
+}
+//--------------------------------Получить летнее время-----------------------------------
+boolean DST(uint8_t MM, uint8_t DD, uint8_t DW, uint8_t HH) { //получить летнее время
+  if (MM < 3 || MM > 10) return 0; //зима
+  switch (MM) {
+    case 3:
+      if (DD < 25) return 0; //зима
+      else if (DW == 7) {
+        if (HH >= 1) return 1; //лето
+        else return 0; //зима
+      }
+      else if ((DD - 25) < DW) return 0; //зима
+      else return 1; //лето
+      break;
+    case 10:
+      if (DD < 25) return 1; //лето
+      else if (DW == 7) {
+        if (HH >= 2) return 0; //зима
+        else return 1; //лето
+      }
+      else if ((DD - 25) < DW) return 1; //лето
+      else return 0; //зима
+      break;
+  }
+  return 1; //лето
+}
+
+boolean setSyncTime(void) {
+  if (ntp.synced()) {
+    mainTime.second = ntp.second();
+    mainTime.minute = ntp.minute();
+    mainTime.hour = ntp.hour();
+    mainDate.day = ntp.day();
+    mainDate.month = ntp.month();
+    mainDate.year = ntp.year();
+    uint8_t dayWeek = ntp.dayWeek();
+
+    if (!settings.ntpDst || !DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) return true;
+    if (mainTime.hour != 23) {
+      mainTime.hour += 1;
+      return true;
+    }
+    mainTime.hour = 0; //сбросили час
+    if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //день
+      mainDate.day = 1; //сбросили день
+      if (++mainDate.month > 12) { //месяц
+        mainDate.month = 1; //сбросили месяц
+        if (++mainDate.year > 2099) { //год
+          mainDate.year = 2000; //сбросили год
+        }
+      }
+    }
+    return true;
+  }
+  return false;
 }
 
 void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
@@ -1116,19 +1184,6 @@ void climateUpdate(void) {
       climateReset(); //сброс усреднения
     }
   }
-}
-
-boolean setSyncTime(void) {
-  if (ntp.synced() && !ntp.status()) {
-    mainTime.second = ntp.second();
-    mainTime.minute = ntp.minute();
-    mainTime.hour = ntp.hour();
-    mainDate.day = ntp.day();
-    mainDate.month = ntp.month();
-    mainDate.year = ntp.year();
-    return true;
-  }
-  return false;
 }
 
 void wifi_config(void) {
@@ -1221,7 +1276,7 @@ void setup() {
 
   //читаем логин пароль из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xA9) == 1) {
+  if (memory.begin(0, 0xAA) == 1) {
     for (uint8_t i = 0; i < 20; i++) {
       settings.ssid[i] = '\0';
       settings.pass[i] = '\0';
@@ -1230,6 +1285,7 @@ void setup() {
     settings.climateAvg = DEFAULT_CLIMATE_AVG;
     settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
     settings.ntpSync = false; //выключаем авто-синхронизацию
+    settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
     memory.update(); //обновить данные в памяти
   }
   alarm.now = 0;
@@ -1276,13 +1332,7 @@ void loop() {
         }
       }
       else {
-        if (ntp.synced()) {
-          mainTime.second = ntp.second();
-          mainTime.minute = ntp.minute();
-          mainTime.hour = ntp.hour();
-          mainDate.day = ntp.day();
-          mainDate.month = ntp.month();
-          mainDate.year = ntp.year();
+        if (setSyncTime()) {
           if (settings.ntpSync || sendNtpTime) {
             sendNtpTime = false;
             busSetComand(WRITE_TIME);
