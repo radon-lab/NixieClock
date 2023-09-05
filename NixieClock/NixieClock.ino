@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 03.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 05.09.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2707,7 +2707,7 @@ void dataUpdate(void) //обработка данных
             if (++RTC.MM > 12) { //месяц
               RTC.MM = 1; //сбросили месяц
               if (++RTC.YY > 2099) { //год
-                RTC.YY = 2021; //сбросили год
+                RTC.YY = 2000; //сбросили год
               }
             }
           }
@@ -2813,7 +2813,7 @@ uint8_t settings_time(void) //настройки времени
             break;
 
           //настройка года
-          case 4: if (RTC.YY > 2021) RTC.YY--; else RTC.YY = 2050; break; //год
+          case 4: if (RTC.YY > 2000) RTC.YY--; else RTC.YY = 2099; break; //год
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
@@ -2833,7 +2833,7 @@ uint8_t settings_time(void) //настройки времени
             break;
 
           //настройка года
-          case 4: if (RTC.YY < 2050) RTC.YY++; else RTC.YY = 2021; break; //год
+          case 4: if (RTC.YY < 2099) RTC.YY++; else RTC.YY = 2000; break; //год
         }
         _timer_ms[TMR_MS] = time_out = blink_data = 0; //сбрасываем флаги
         break;
