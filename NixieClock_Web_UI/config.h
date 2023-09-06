@@ -1,6 +1,8 @@
 //Основные настройки
 #define DEFAULT_GMT 3 //часовой пояс по умолчанияю(-12..12)
 #define DEFAULT_DST 0 //учитывать при синхронизации с ntp сервером летнее время(0 - летнее время не учитывается | 1 - летнее время учитывается)
+#define DEFAULT_NTP_HOST "pool.ntp.org" //хост ntp сервера("pool.ntp.org", "ntp1.stratum2.ru", "ntp2.stratum2.ru", "ntp.msk-ix.ru")
+#define DEFAULT_NTP_TIME 3600 //период запроса нового времени с ntp сервера(3600..86400)(сек)
 
 #define DEFAULT_CLIMATE_AVG 1 //усреднение климатических данных на графике за указанный интервал(0 - добавлять текущие данные | 1 - добавлять усредненные данные)
 #define DEFAULT_CLIMATE_TIME 30 //интервал отображения климатических данных на графике(1..60)(мин)
@@ -9,9 +11,6 @@
 #define AP_IP 192, 168, 4, 4 //адрес точки доступа
 #define AP_SSID "NixieClockAP" //имя точки доступа
 #define AP_PASS "1234567890" //пароль точки доступа
-
-#define NTP_HOST "pool.ntp.org" //хост ntp сервера("pool.ntp.org", "ntp1.stratum2.ru", "ntp2.stratum2.ru", "ntp.msk-ix.ru")
-#define NTP_TIME 3600 //период запроса нового времени с ntp сервера(3600..86400)(сек)
 
 //   Плата:                                     SDA        SCL
 //   ESP-01.................................... GPIO0      GPIO2

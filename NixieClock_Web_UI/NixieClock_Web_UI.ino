@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 05.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 06.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -35,7 +35,9 @@ struct settingsData {
   boolean climateAvg;
   boolean ntpSync;
   boolean ntpDst;
+  uint32_t ntpTime;
   int8_t ntpGMT;
+  char host[20];
   char ssid[20];
   char pass[20];
 } settings;
@@ -215,6 +217,9 @@ void build(void) {
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Подсветка", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
           M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]); ); );
+          GP.HR(UI_LINE_COLOR);
+          M_BOX(GP_JUSTIFY, GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR);););
+          M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, (deviceInformation[PLAYER_TYPE] == 2) ? 9 : 30, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
           GP.BLOCK_END();
         );
       }
@@ -434,7 +439,7 @@ void build(void) {
         GP.HR(UI_LINE_COLOR);
         GP.LABEL("Дополнительно", "", UI_HINT_COLOR);
         M_BOX(GP_LEFT, GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[SENS_TEMP]);););
-        M_BOX(GP_LEFT, GP.LABEL("Тип датчика", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.NUMBER("", (sens.err) ? "Ошибка" : tempSensList[sens.type], INT32_MAX, "", true);););
+        M_BOX(GP_LEFT, GP.LABEL("Тип датчика", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.NUMBER("", (deviceInformation[SENS_TEMP]) ? ((sens.err) ? "Ошибка" : tempSensList[sens.type]) : "Отсутсвует", INT32_MAX, "", true);););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
@@ -590,9 +595,9 @@ void build(void) {
       GP.PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
-      GP.SPAN("Здесь можно обновить прошивку и файловую систему ESP, формат файлов bin.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
-      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
-      GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //выравнивание (GP_CENTER, GP_LEFT, GP_RIGHT, GP_JUSTIFY), умолч. GP_CENTER
+      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.SPAN("Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       M_BOX(GP.LABEL("Обновить прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
       M_BOX(GP.LABEL("Обновить файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
@@ -619,6 +624,12 @@ void build(void) {
         GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
         GP.FORM_END();
       }
+      GP.BLOCK_END();
+
+      GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
+      GP.TEXT("syncHost", "Хост", settings.host);
+      GP.BREAK();
+      GP.TEXT("syncPer", "Период", String((settings.ntpDst) ? 3600 : settings.ntpTime), "", 0, "", (boolean)settings.ntpDst);
       GP.BLOCK_END();
     }
 
@@ -659,6 +670,16 @@ void action() {
           busSetComand(WRITE_TIME);
           busSetComand(WRITE_DATE);
         }
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("syncHost")) {
+        if (ui.getString("syncHost").length() > 0) strncpy(settings.host, ui.getString("syncHost").c_str(), 20); //копируем себе
+        else strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+        settings.host[19] = '\0'; //устанавливаем последний символ
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("syncPer")) {
+        settings.ntpTime = constrain(ui.getInt("syncPer"), 3600, 86400);
         memory.update(); //обновить данные в памяти
       }
     }
@@ -966,8 +987,10 @@ void action() {
     }
     else if (ui.form("/")) {
       if (WiFi.status() != WL_CONNECTED) {
-        ui.copyStr("login", settings.ssid); //копируем себе
-        ui.copyStr("pass", settings.pass);
+        strncpy(settings.ssid, ui.getString("login").c_str(), 20); //копируем себе
+        settings.ssid[19] = '\0'; //устанавливаем последний символ
+        strncpy(settings.pass, ui.getString("pass").c_str(), 20); //копируем себе
+        settings.pass[19] = '\0'; //устанавливаем последний символ
         memory.update(); //обновить данные в памяти
         ui.stop(); //остановили портал
       }
@@ -1205,7 +1228,7 @@ void wifi_config(void) {
         Serial.println(WiFi.localIP());
 
         ntp.begin(); //запустить ntp
-        ntp.setHost(NTP_HOST); //установить хост
+        ntp.setHost(settings.host); //установить хост
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
         break;
       }
@@ -1276,19 +1299,22 @@ void setup() {
 
   //читаем логин пароль из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xAA) == 1) {
-    for (uint8_t i = 0; i < 20; i++) {
-      settings.ssid[i] = '\0';
-      settings.pass[i] = '\0';
-    }
-    settings.climateTime = DEFAULT_CLIMATE_TIME;
-    settings.climateAvg = DEFAULT_CLIMATE_AVG;
+  if (memory.begin(0, 0xAC) == 1) {
+    settings.ssid[0] = '\0'; //устанавливаем последний символ
+    settings.pass[0] = '\0'; //устанавливаем последний символ
+
+    strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+    settings.host[19] = '\0'; //устанавливаем последний символ
+
+    settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
+    settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
     settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
     settings.ntpSync = false; //выключаем авто-синхронизацию
     settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
+    settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
     memory.update(); //обновить данные в памяти
   }
-  alarm.now = 0;
+  alarm.now = 0; //сбросить текущий будильник
 
   busSetComand(WRITE_CHECK_SENS);
   busSetComand(READ_TIME_DATE);
@@ -1327,7 +1353,7 @@ void loop() {
           attemptsNtp++;
         }
         else {
-          ntp.setPeriod(NTP_TIME);
+          ntp.setPeriod((settings.ntpDst) ? 3600 : settings.ntpTime);
           attemptsNtp = 0;
         }
       }
@@ -1339,7 +1365,7 @@ void loop() {
             busSetComand(WRITE_DATE);
           }
         }
-        ntp.setPeriod(NTP_TIME);
+        ntp.setPeriod((settings.ntpDst) ? 3600 : settings.ntpTime);
         attemptsNtp = 0;
       }
     }
