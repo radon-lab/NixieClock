@@ -1452,8 +1452,8 @@ void checkErrors(void) //проверка ошибок
           }
 #if !PLAYER_TYPE
           if (!_timer_ms[TMR_PLAYER] && (_sound_bit != 0x0F)) { //если звук не играет
-            buzz_pulse(ERROR_SOUND_FREQ, (_sound_bit & 0x01) ? ERROR_HIGH_SOUND_TIME : ERROR_LOW_SOUND_TIME); //воспроизводим звук
-            _timer_ms[TMR_PLAYER] = (_sound_bit & 0x01) ? ERROR_HIGH_SOUND_PAUSE : ERROR_LOW_SOUND_PAUSE; //установили таймер
+            buzz_pulse(ERROR_SOUND_FREQ, (_sound_bit & 0x01) ? ERROR_SOUND_HIGH_TIME : ERROR_SOUND_LOW_TIME); //воспроизводим звук
+            _timer_ms[TMR_PLAYER] = (_sound_bit & 0x01) ? ERROR_SOUND_HIGH_PAUSE : ERROR_SOUND_LOW_PAUSE; //установили таймер
             _sound_bit >>= 1; //сместили указатель
           }
 #endif
