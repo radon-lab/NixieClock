@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 05.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 06.09.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1440,7 +1440,7 @@ void checkErrors(void) //проверка ошибок
         playerSpeakNumber(i + 1); //воспроизводим номер ошибки
 #else
         uint8_t _sound_bit = ((i + 1) & 0x0F) | 0xF0; //указатель на бит ошибки
-        _timer_ms[TMR_PLAYER] = 0; //сбросили таймер
+        melodyStop(); //остановка воспроизведения мелодии
 #endif
         for (_timer_ms[TMR_MS] = ERROR_SHOW_TIME; _timer_ms[TMR_MS];) {
           dataUpdate(); //обработка данных
@@ -1452,7 +1452,8 @@ void checkErrors(void) //проверка ошибок
           }
 #if !PLAYER_TYPE
           if (!_timer_ms[TMR_PLAYER] && (_sound_bit != 0x0F)) { //если звук не играет
-            melodyPlay((boolean)(_sound_bit & 0x01), SOUND_LINK(error_sound), REPLAY_ONCE); //воспроизводим звук
+            buzz_pulse(ERROR_SOUND_FREQ, (_sound_bit & 0x01) ? ERROR_LOW_SOUND_TIME : ERROR_HIGH_SOUND_TIME); //воспроизводим звук
+            _timer_ms[TMR_PLAYER] = (_sound_bit & 0x01) ? ERROR_LOW_SOUND_PAUSE : ERROR_HIGH_SOUND_PAUSE; //установили таймер
             _sound_bit >>= 1; //сместили указатель
           }
 #endif
