@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 06.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 07.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -676,6 +676,7 @@ void action() {
         if (ui.getString("syncHost").length() > 0) strncpy(settings.host, ui.getString("syncHost").c_str(), 20); //копируем себе
         else strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
         settings.host[19] = '\0'; //устанавливаем последний символ
+        ntp.setHost(settings.host); //установить хост
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("syncPer")) {
