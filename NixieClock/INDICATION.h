@@ -397,10 +397,10 @@ void indiChangePwm(void) //установка нового значения ши
   OCR1B = CONSTRAIN(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
 #endif
 }
-//--------------------------------Инициализация индикаторов---------------------------------------
-void indiInit(void) //инициализация индикаторов
+//----------------------------Инициализация портов индикаторов------------------------------------
+void indiPortInit(void) //инициализация портов индикаторов
 {
-  PORTC |= 0x0F; //устанавливаем высокие уровени на катоды
+  PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
   DDRC |= 0x0F; //устанавливаем катоды как выходы
 
 #if (NEON_DOT != 3) && !INDI_DOT_TYPE
@@ -408,6 +408,14 @@ void indiInit(void) //инициализация индикаторов
 #endif
 #if (NEON_DOT == 2) && !INDI_DOT_TYPE
   DOT_2_INIT; //инициализация секундных точек
+#endif
+#if DOTS_PORT_ENABLE == 1
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
+  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
+#endif
+#if DOTS_TYPE != 1
+  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
+#endif
 #endif
 #if !INDI_PORT_TYPE
   ANODE_INIT(ANODE_1_PIN); //инициализация анода 1
@@ -418,19 +426,16 @@ void indiInit(void) //инициализация индикаторов
   ANODE_INIT(ANODE_5_PIN); //инициализация анода 5
   ANODE_INIT(ANODE_6_PIN); //инициализация анода 6
 #endif
-#if DOTS_PORT_ENABLE
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
-#endif
-#if DOTS_TYPE != 1
-  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
-#endif
-#endif
 #else
   REG_LATCH_INIT; //инициализация защелки сдвигового регистра
   REG_DATA_INIT; //инициализация линии ланных сдвигового регистра
   REG_SCK_INIT; //инициализация линии тактирования сдвигового регистра
-
+#endif
+}
+//---------------------------------Инициализация индикации----------------------------------------
+void indiInit(void) //инициализация индикации
+{
+#if INDI_PORT_TYPE
   DDRB |= 0x04; //установили D10 как выход
 
   SPSR = (0x01 << SPI2X); //включили удвоение скорости
@@ -605,46 +610,46 @@ void indiSetDotsMain(uint8_t _dot) //установка разделительн
 #if DOTS_TYPE == 2
 #if LAMP_NUM > 4
 #if DOTS_MAIN == 0
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
 #elif DOTS_MAIN == 1
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
 #elif DOTS_MAIN == 2
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
 #elif DOTS_MAIN == 3
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
 #else
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
 #endif
 #else
 #if DOTS_MAIN == 0
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
 #elif DOTS_MAIN == 1
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
 #else
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
 #endif
 #endif
 #elif DOTS_NUM > 4
 #if DOTS_TYPE == 1
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(3); //установка разделительной точки
 #else
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
-    if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(4); //установка разделительной точки
 #endif
 #else
 #if DOTS_TYPE == 1
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
 #else
-    if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
 #endif
 #endif
 }

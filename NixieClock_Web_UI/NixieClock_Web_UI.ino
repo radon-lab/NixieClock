@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.5 релиз от 07.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.6 релиз от 10.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -7,7 +7,7 @@
   Автор Radon-lab & Psyx86.
 
   Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
-  Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете последнюю версию!
+  Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
   В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить последние версии библиотек:
   GyverPortal
@@ -54,13 +54,16 @@ boolean otaUpdate = true; //флаг запрета обновления
 boolean alarmSvgImage = false; //флаг локальных изоражений будильника
 
 boolean sensDataWait = true; //флаг ожидания температуры
-boolean sendNtpTime = false; //флаг отправки времени
-uint8_t alarmReload = 0; //флаг обновления страницы будильника
+
+boolean sendNtpTime = false; //флаг отправки времени с ntp сервера
+uint8_t statusNtp = 0; //флаг состояние ntp сервера
+uint8_t attemptsNtp = 0; //текущее количество попыток подключение к ntp серверу
 
 uint8_t climateCountAvg;
 uint16_t climateTempAvg;
 uint16_t climateHumAvg;
 uint16_t climatePressAvg;
+uint32_t climateTimer;
 
 boolean climateLocal = false; //флаг локальных скриптов графика
 int16_t climateArrMain[2][CLIMATE_BUFFER];
@@ -74,8 +77,24 @@ const char *climateNamesMain[] = {"Температура", "Влажность"
 const char *climateNamesExt[] = {"Давление"};
 
 String tempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
+String alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
+String alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
+String statusNtpList[] = {"Подключение...", "Ожидание ответа...", "Синхронизировано", "Сервер не отвечает"};
+String dotModeList = "";
+String backlModeList = "";
+String alarmDotModeList = "";
+
+enum {
+  NTP_NOT_STATUS,
+  NTP_WAIT_ANSWER,
+  NTP_SYNCED,
+  NTP_ERROR,
+  NTP_TRYING
+};
 
 void build(void) {
+  static boolean listInit = false;
+
   GP.BUILD_BEGIN(UI_MAIN_THEME);
   GP.ONLINE_CHECK(); //проверять статус платы
 
@@ -109,56 +128,43 @@ void build(void) {
       GP.LABEL_BLOCK("Clock offline", "", UI_MENU_CLOCK_2_COLOR, 0, 1);
     }
     GP.BREAK();
-    if (ntp.status()) {
+    if (statusNtp == NTP_ERROR) {
       GP.LABEL_BLOCK("NTP disconnect", "", UI_MENU_NTP_3_COLOR, 0, 1);
     }
-    else if (ntp.synced()) {
+    else if (statusNtp == NTP_SYNCED) {
       GP.LABEL_BLOCK("NTP synced", "", UI_MENU_NTP_1_COLOR, 0, 1);
     }
     else {
-      GP.LABEL_BLOCK("NTP connect", "", UI_MENU_NTP_2_COLOR, 0, 1);
-    }
-    GP.BREAK();
-    GP.HR(UI_MENU_LINE_COLOR);
-
-    String backlModeList;
-
-    backlModeList += "Выключена";
-    if (deviceInformation[BACKL_TYPE]) {
-      backlModeList += ',';
-      backlModeList += "Статичная,Дыхание";
-    }
-    if (deviceInformation[BACKL_TYPE] >= 3) {
-      backlModeList += ',';
-      backlModeList += "Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
+      GP.LABEL_BLOCK("NTP connecting...", "", UI_MENU_NTP_2_COLOR, 0, 1);
     }
 
-    String dotModeList;
-
-    dotModeList += "Выключены,";
-    dotModeList += "Статичные";
-    if (deviceInformation[NEON_DOT] != 3) {
-      dotModeList += ',';
-      dotModeList += "Динамичные(плавно мигают)";
-    }
-    if (deviceInformation[NEON_DOT] == 2) {
-      dotModeList += ',';
-      dotModeList += "Маятник(неонки)";
-    }
-    if (deviceInformation[DOTS_PORT_ENABLE]) {
-      dotModeList += ',';
-      dotModeList += "Мигающие,";
-      dotModeList += "Бегущие,";
-      dotModeList += "Змейка,";
-      dotModeList += "Резинка";
-      if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
-        dotModeList += ',';
-        dotModeList += "Одинарный маятник";
+    if (!listInit) {
+      listInit = true;
+      backlModeList += "Выключена";
+      if (deviceInformation[BACKL_TYPE]) {
+        backlModeList += ",Статичная,Дыхание";
       }
-      if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
-        dotModeList += ',';
-        dotModeList += "Двойной маятник";
+      if (deviceInformation[BACKL_TYPE] >= 3) {
+        backlModeList += ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
       }
+
+      dotModeList += "Выключены,Статичные";
+      if (deviceInformation[NEON_DOT] != 3) {
+        dotModeList += ",Динамичные(плавно мигают)";
+      }
+      if (deviceInformation[NEON_DOT] == 2) {
+        dotModeList += ",Маятник(неонки)";
+      }
+      if (deviceInformation[DOTS_PORT_ENABLE]) {
+        dotModeList += ",Мигающие,Бегущие,Змейка,Резинка";
+        if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
+          dotModeList += ",Одинарный маятник";
+        }
+        if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
+          dotModeList += ",Двойной маятник";
+        }
+      }
+      alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
     }
 
     //обновления блоков
@@ -166,15 +172,12 @@ void build(void) {
 
     updateList += "barTime";
     if (deviceInformation[SENS_TEMP]) {
-      updateList += ',';
-      updateList += "barTemp";
+      updateList += ",barTemp";
       if (sens.hum) {
-        updateList += ',';
-        updateList += "barHum";
+        updateList += ",barHum";
       }
       if (sens.press) {
-        updateList += ',';
-        updateList += "barPress";
+        updateList += ",barPress";
       }
     }
     GP.UI_BODY(); //начать основное окно
@@ -225,24 +228,16 @@ void build(void) {
       }
 
       if (deviceInformation[ALARM_TYPE]) {
-        if (alarmReload >= 2) alarmReload = 0;
+        if (alarm.reload >= 2) alarm.reload = 0;
+
+        updateList += ",alarmReload";
+        GP.RELOAD("alarmReload");
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Будильник", UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
           GP.PAGE_TITLE("Настройка будильника");
 
-          updateList += ',';
-          updateList += "alarmVol";
-          updateList += ',';
-          updateList += "alarmSoundType";
-          updateList += ',';
-          updateList += "alarmSound";
-          updateList += ',';
-          updateList += "alarmRadio";
-          updateList += ',';
-          updateList += "alarmTime";
-          updateList += ',';
-          updateList += "alarmMode";
+          updateList += ",alarmVol,alarmSoundType,alarmSound,alarmRadio,alarmTime,alarmMode";
 
           String alarmSoundList;
           for (uint8_t i = 0; i < deviceInformation[PLAYER_MAX_SOUND]; i++) {
@@ -299,8 +294,7 @@ void build(void) {
             GP.TD(GP_CENTER);
             alarmDays >>= 1;
             GP.CHECK(String("alarmDay/") + i, (boolean)(alarmDays & 0x01), UI_CHECK_COLOR);
-            updateList += ',';
-            updateList += String("alarmDay/") + i;
+            updateList += String(",alarmDay/") + i;
           }
           GP.TD(GP_CENTER);
           GP.LABEL("");
@@ -309,17 +303,9 @@ void build(void) {
           boolean alarmDelStatus = (boolean)(alarm.all > 1);
 
           GP.HR(UI_LINE_COLOR);
-          M_BOX(GP_CENTER, M_BOX(GP_CENTER, GP.BUTTON_MINI("alarmBack", "Назад", "", UI_ALARM_BACK_COLOR, "", false, true); GP.BUTTON_MINI("alarmDel", "Удалить", "", (alarmDelStatus) ? UI_ALARM_DEL_COLOR : GP_GRAY, "", !alarmDelStatus);););
+          M_BOX(GP_CENTER, M_BOX(GP_CENTER, GP.BUTTON_MINI("alarmBack", (alarm.set == 1) ? "Назад" : "Добавить", "", UI_ALARM_BACK_COLOR, "", false, true); GP.BUTTON_MINI("alarmDel", (alarmDelStatus) ? ((alarm.set == 1) ? "Удалить" : "Отмена") : "Отключить", "", (alarmDelStatus) ? UI_ALARM_DEL_COLOR : UI_ALARM_DIS_COLOR, "", false, !alarmDelStatus);););
         }
         else { //иначе режим отображения
-          updateList += ',';
-          updateList += "alarmReload";
-
-          GP.RELOAD("alarmReload");
-
-          String alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
-          String alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
-
           String reloadList;
 
           for (uint8_t i = 0; i < alarm.all; i++) {
@@ -416,12 +402,7 @@ void build(void) {
     else if (ui.uri("/settings")) { //настройки
       GP.PAGE_TITLE("Настройки");
 
-      updateList += ',';
-      updateList += "mainAutoShow";
-      updateList += ',';
-      updateList += "mainAutoShowTime";
-
-      String alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
+      updateList += ",mainAutoShow,mainAutoShowTime";
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
@@ -541,12 +522,7 @@ void build(void) {
     else if (ui.uri("/radio")) { //радиоприемник
       GP.PAGE_TITLE("Радиоприёмник");
 
-      updateList += ',';
-      updateList += "radioVol";
-      updateList += ',';
-      updateList += "radioFreq";
-      updateList += ',';
-      updateList += "radioPower";
+      updateList += ",radioVol,radioFreq,radioPower";
 
       M_BOX(M_BOX(GP_LEFT, GP.BUTTON_MINI("radioMode", "Часы ↻ Радио", "", UI_RADIO_BACK_COLOR);); M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_COLOR););)
 
@@ -596,14 +572,17 @@ void build(void) {
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
       GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.BREAK();
       GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.BREAK();
       GP.SPAN("Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
-      M_BOX(GP.LABEL("Обновить прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
-      M_BOX(GP.LABEL("Обновить файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
+      GP.LABEL("Загрузить", "", UI_HINT_COLOR);
+      M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
+      M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
       GP.BLOCK_END();
     }
-    else if (ui.uri("/network")) { //подключение к роутеру
+    else { //подключение к роутеру
       GP.PAGE_TITLE("Сетевые настройки");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
@@ -611,26 +590,36 @@ void build(void) {
         GP.FORM_BEGIN("/");
         GP.TEXT("login", "Логин", settings.ssid);
         GP.BREAK();
-        GP.TEXT("pass", "Пароль", settings.pass);
+        GP.PASS_EYE("pass", "Пароль", settings.pass, "100%");
         GP.HR(UI_LINE_COLOR);
         GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
         GP.FORM_END();
       }
       else {
         GP.FORM_BEGIN("/network");
-        GP.LABEL("Подключено к \"" + String(settings.ssid) + "\"", "", UI_INFO_COLOR);
-        GP.LABEL("IP адрес \"" + WiFi.localIP().toString() + "\"", "", UI_INFO_COLOR);
+        GP.SPAN("Подключено к \"" + String(settings.ssid) + "\"", GP_CENTER, "", UI_INFO_COLOR);
+        GP.SPAN("IP адрес \"" + WiFi.localIP().toString() + "\"", GP_CENTER, "", UI_INFO_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
         GP.FORM_END();
       }
       GP.BLOCK_END();
 
-      GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
-      GP.TEXT("syncHost", "Хост", settings.host);
-      GP.BREAK();
-      GP.TEXT("syncPer", "Период", String((settings.ntpDst) ? 3600 : settings.ntpTime), "", 0, "", (boolean)settings.ntpDst);
-      GP.BLOCK_END();
+      if (ui.uri("/network")) { //сетевые настройки
+        updateList += ",syncStatus";
+
+        GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
+        GP.TEXT("syncHost", "Хост", settings.host);
+        GP.BREAK();
+        GP.TEXT("syncPer", "Период", String((settings.ntpDst) ? 3600 : settings.ntpTime), "", 0, "", (boolean)settings.ntpDst);
+        GP.BREAK();
+        GP.LABEL("Статус: " + ((statusNtp < NTP_TRYING) ? statusNtpList[statusNtp] : "Попытка[" + String((attemptsNtp >> 1) + 1) + "]..."), "syncStatus", UI_INFO_COLOR);
+        GP.HR(UI_LINE_COLOR);
+        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "",  (WiFi.status() != WL_CONNECTED) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(WiFi.status() != WL_CONNECTED));
+        GP.BLOCK_END();
+
+        GP.UPDATE_CLICK("syncStatus", "syncCheck");
+      }
     }
 
     GP.UPDATE(updateList);
@@ -653,11 +642,15 @@ void action() {
       }
       if (ui.click("syncTime")) {
         if (!ntp.status()) {
-          ntp.setPeriod(1); //запросить текущее время
-          sendNtpTime = true;
+          if (!sendNtpTime) {
+            ntp.setPeriod(1); //запросить текущее время
+            sendNtpTime = true;
+            statusNtp = NTP_NOT_STATUS;
+          }
         }
         else {
           mainTime = ui.getSystemTime(); //запросить время браузера
+          mainDate = ui.getSystemDate(); //запросить дату браузера
           busSetComand(WRITE_TIME);
           busSetComand(WRITE_DATE);
         }
@@ -682,6 +675,12 @@ void action() {
       if (ui.click("syncPer")) {
         settings.ntpTime = constrain(ui.getInt("syncPer"), 3600, 86400);
         memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("syncCheck")) {
+        ntp.setPeriod(1); //запросить текущее время
+        sendNtpTime = true;
+        attemptsNtp = 0;
+        statusNtp = NTP_NOT_STATUS;
       }
     }
     //--------------------------------------------------------------------
@@ -727,15 +726,18 @@ void action() {
           else alarm_data[alarm.now][ALARM_DATA_DAYS] &= ~(0x01 << day);
           busSetComand(WRITE_SELECT_ALARM, ALARM_DAYS);
         }
-        if (ui.click("alarmDel") && !alarmReload) {
+        if (ui.click("alarmDel") && !alarm.reload) {
           if (alarm.all > 1) {
             alarm.all--;
+            alarm.reload = 1;
             busSetComand(DEL_ALARM, alarm.now);
-            if (alarm.now >= alarm.all) alarm.now = alarm.all - 1;
-            alarm.set = 0;
-            alarmReload = 1;
             busSetComand(READ_ALARM_ALL);
           }
+          else {
+            alarm_data[alarm.now][ALARM_DATA_MODE] = 0;
+            busSetComand(WRITE_SELECT_ALARM, ALARM_MODE);
+          }
+          alarm.set = 0;
         }
         if (ui.click("alarmBack")) {
           alarm.set = 0;
@@ -746,12 +748,12 @@ void action() {
           alarm.now = constrain(ui.clickNameSub(1).toInt(), 0, MAX_ALARMS - 1);
           alarm.set = 1;
         }
-        if (ui.click("alarmAdd") && !alarmReload) {
+        if (ui.click("alarmAdd") && !alarm.reload) {
           if (alarm.all < MAX_ALARMS) {
+            alarm.now = alarm.all;
             alarm.all++;
-            alarm.now = alarm.all - 1;
-            alarm.set = 0;
-            alarmReload = 1;
+            alarm.set = 2;
+            alarm.reload = 1;
             busSetComand(NEW_ALARM);
             busSetComand(READ_ALARM_ALL);
           }
@@ -999,6 +1001,11 @@ void action() {
   }
   /**************************************************************************/
   if (ui.update()) {
+    if (ui.updateSub("sync")) {
+      if (ui.update("syncStatus")) {   //начинается
+        ui.answer("Статус: " + ((statusNtp < NTP_TRYING) ? statusNtpList[statusNtp] : "Попытка[" + String((attemptsNtp >> 1) + 1) + "]..."));
+      }
+    }
     if (ui.updateSub("bar")) {
       if (ui.update("barTime")) {   //начинается
         ui.answer(ui.getSystemTime().encode());
@@ -1051,11 +1058,9 @@ void action() {
           ui.answer((boolean)(alarm_data[alarm.now][ALARM_DATA_DAYS] & (0x01 << day)));
         }
       }
-      else {
-        if (ui.update("alarmReload") && (alarmReload == 2)) { //если было обновление
-          ui.answer(1);
-          alarmReload = 0;
-        }
+      if (ui.update("alarmReload") && (alarm.reload >= 2)) { //если было обновление
+        ui.answer(1);
+        alarm.reload = 0;
       }
     }
     //--------------------------------------------------------------------
@@ -1181,6 +1186,7 @@ void climateUpdate(void) {
   uint16_t temperature = (sens.temp) ? (sens.temp + mainSettings.tempCorrect) : 0;
   if (!firstStart) {
     firstStart = true;
+    climateTimer = millis();
     for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
       climateAdd(temperature, sens.hum, sens.press, unixNow);
     }
@@ -1330,10 +1336,7 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t timerMs = millis();
-  static uint8_t timerWait = 5;
-  static uint8_t timerClimate = 60;
-  static uint8_t attemptsNtp = 0;
+  static uint32_t timerWait = millis();
 
   if (!ui.state()) { //если портал не запущен
     //поключаемся к wifi
@@ -1352,42 +1355,41 @@ void loop() {
         if (attemptsNtp < 9) {
           ntp.setPeriod(5);
           attemptsNtp++;
+          statusNtp = NTP_TRYING;
         }
         else {
           ntp.setPeriod((settings.ntpDst) ? 3600 : settings.ntpTime);
+          sendNtpTime = false;
           attemptsNtp = 0;
+          statusNtp = NTP_ERROR;
         }
       }
-      else {
+      else if (!ntp.busy()) {
         if (setSyncTime()) {
           if (settings.ntpSync || sendNtpTime) {
-            sendNtpTime = false;
             busSetComand(WRITE_TIME);
             busSetComand(WRITE_DATE);
           }
         }
         ntp.setPeriod((settings.ntpDst) ? 3600 : settings.ntpTime);
+        sendNtpTime = false;
         attemptsNtp = 0;
+        statusNtp = NTP_SYNCED;
       }
+      else statusNtp = NTP_WAIT_ANSWER;
     }
 
-    if ((millis() - timerMs) >= 1000) {
-      if (!timerClimate) {
-        timerClimate = 60;
-        busSetComand(WRITE_CHECK_SENS);
-        if (!ntp.synced() || ntp.status()) busSetComand(READ_TIME_DATE);
-        if (!sensDataWait) timerWait = 1;
-        sensDataWait = true;
-      }
-      else timerClimate--;
+    if ((millis() - climateTimer) >= 60000) {
+      climateTimer = millis();
+      busSetComand(WRITE_CHECK_SENS);
+      if (!ntp.synced() || ntp.status()) busSetComand(READ_TIME_DATE);
+      if (!sensDataWait) timerWait = millis();
+      sensDataWait = true;
+    }
 
-      if (!timerWait) {
-        timerWait = (sensDataWait) ? 1 : 5;
-        busSetComand(READ_STATUS);
-      }
-      else timerWait--;
-
-      timerMs = millis();
+    if ((millis() - timerWait) >= ((sensDataWait) ? 1000 : 5000)) {
+      timerWait = millis();
+      busSetComand(READ_STATUS);
     }
 
     if (deviceStatus) {

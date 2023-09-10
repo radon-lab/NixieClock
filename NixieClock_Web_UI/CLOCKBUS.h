@@ -112,6 +112,7 @@ struct alarmData {
   uint8_t all; //всего будильников
   uint8_t now; //текущий будильник
   uint8_t num; //текущий будильник
+  uint8_t reload; //флаг обновления страницы будильника
   uint8_t volume; //текущая громкость
 } alarm;
 
@@ -221,9 +222,9 @@ enum {
   READ_MAIN_SET,
   WRITE_MAIN_SET,
 
-  READ_ALARM,
   READ_ALARM_ALL,
   READ_ALARM_NUM,
+  READ_ALARM_DATA,
   READ_SELECT_ALARM,
   WRITE_SELECT_ALARM,
   DEL_ALARM,
@@ -477,12 +478,34 @@ void busUpdate(void) {
         }
         break;
 
-      case READ_ALARM: {
-          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_SELECT_ALARM, alarm.num)) { //начинаем передачу
-            if (++alarm.num >= alarm.all) {
-              alarmReload = 2;
-              busShiftBuffer(); //сместили буфер команд
+      case READ_ALARM_ALL: {
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
+            busShiftBuffer(); //сместили буфер команд
+            uint8_t tempAll = twi_read_byte(TWI_NACK);
+            if (tempAll > MAX_ALARMS) tempAll = MAX_ALARMS;
+            else if (alarm.all != tempAll) {
+              alarm.now = alarm.set = 0;
+              alarm.reload = 1;
             }
+            alarm.num = 0;
+            alarm.all = tempAll;
+            twi_write_stop(); //завершаем передачу
+            busWriteBuffer(READ_ALARM_DATA);
+          }
+        }
+        break;
+      case READ_ALARM_NUM: {
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
+            busShiftBuffer(); //сместили буфер команд
+            uint8_t tempAll = twi_read_byte(TWI_NACK);
+            if (alarm.all != tempAll) alarm.now = 0;
+            alarm.all = tempAll;
+            twi_write_stop(); //завершаем передачу
+          }
+        }
+        break;
+      case READ_ALARM_DATA: {
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_SELECT_ALARM, alarm.num)) { //начинаем передачу
             alarm_data[alarm.num][ALARM_DATA_HOUR] = twi_read_byte(TWI_ACK);
             alarm_data[alarm.num][ALARM_DATA_MINS] = twi_read_byte(TWI_ACK);
             alarm_data[alarm.num][ALARM_DATA_MODE] = twi_read_byte(TWI_ACK);
@@ -499,29 +522,10 @@ void busUpdate(void) {
               alarm_data[alarm.num][ALARM_DATA_VOLUME] = ((100.0 / 30.0) * tempVolume);
             }
             twi_write_stop(); //завершаем передачу
-          }
-        }
-        break;
-      case READ_ALARM_ALL: {
-          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
-            busShiftBuffer(); //сместили буфер команд
-            uint8_t tempAll = twi_read_byte(TWI_NACK);
-            if (alarm.all != tempAll) alarm.now = alarm.set = 0;
-            if (tempAll > MAX_ALARMS) tempAll = MAX_ALARMS;
-            alarm.num = 0;
-            alarm.all = tempAll;
-            twi_write_stop(); //завершаем передачу
-            busWriteBuffer(READ_ALARM);
-          }
-        }
-        break;
-      case READ_ALARM_NUM: {
-          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
-            busShiftBuffer(); //сместили буфер команд
-            uint8_t tempAll = twi_read_byte(TWI_NACK);
-            if (alarm.all != tempAll) alarm.now = 0;
-            alarm.all = tempAll;
-            twi_write_stop(); //завершаем передачу
+            if (++alarm.num >= alarm.all) {
+              if (alarm.reload || !alarm.set) alarm.reload = 2;
+              busShiftBuffer(); //сместили буфер команд
+            }
           }
         }
         break;

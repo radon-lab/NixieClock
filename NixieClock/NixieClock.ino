@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.5 релиз от 06.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.6 релиз от 10.09.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -712,7 +712,7 @@ void INIT_SYSTEM(void) //инициализация
   RIGHT_INIT; //инициализация правой кнопки
 #endif
 
-#if (BTN_ADD_TYPE == 1)
+#if BTN_ADD_TYPE == 1
   ADD_INIT; //инициализация дополнительной кнопки
 #endif
 
@@ -732,10 +732,22 @@ void INIT_SYSTEM(void) //инициализация
   irInit();
 #endif
 
-#if (GEN_ENABLE && (GEN_FEEDBACK == 2))
+#if GEN_ENABLE && (GEN_FEEDBACK == 2)
   FB_INIT; //инициализация обратной связи
   ACSR = (0x01 << ACBG); //включаем компаратор
 #endif
+
+#if PLAYER_TYPE == 1
+  DF_BUSY_INIT; //инициализация busy
+  DF_RX_INIT; //инициализация rx
+#elif PLAYER_TYPE == 2
+  SD_CS_INIT; //иничиализация CS
+  SD_SCK_INIT; //иничиализация SCK
+  SD_MISO_INIT; //иничиализация MISO
+  SD_MOSI_INIT; //иничиализация MOSI
+#endif
+
+  indiPortInit(); //инициализация портов индикаторов
 
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
   if (checkByte(EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR)) updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //если контрольная сумма расширеных ошибок не совпала
@@ -803,11 +815,10 @@ void INIT_SYSTEM(void) //инициализация
   }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
-#if GEN_ENABLE && (GEN_FEEDBACK == 1)
+#if GEN_ENABLE
+#if GEN_FEEDBACK == 1
   updateTresholdADC(); //обновление предела удержания напряжения
 #endif
-
-#if GEN_ENABLE
   indiChangeCoef(); //обновление коэффициента линейного регулирования
 #endif
 
@@ -818,7 +829,7 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
   wireInit(); //инициализация шины wire
-  indiInit(); //инициализация индикаторов
+  indiInit(); //инициализация индикации
 
   backlAnimDisable(); //запретили эффекты подсветки
   changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
@@ -2685,7 +2696,7 @@ void dataUpdate(void) //обработка данных
     secUpd = dot.update = 0; //очищаем флаги секунды и точек
 
 #if LAMP_NUM > 4
-    if (mainSettings.secsMode && (animShow == ANIM_NULL)) animShow = ANIM_SECS; //показать анимацию переключения цифр
+    if (animShow == ANIM_NULL) animShow = ANIM_SECS; //показать анимацию переключения цифр
 #endif
 
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
@@ -6136,21 +6147,21 @@ void glitchIndi(void) //имитация глюков
 {
   if (mainSettings.glitchMode) { //если глюки включены
     if (!_timer_sec[TMR_GLITCH] && RTC.s >= GLITCH_PHASE_MIN && RTC.s < GLITCH_PHASE_MAX) { //если пришло время
-      boolean indiState = 0; //состояние индикатора
+      uint8_t indiSave = 0; //текущая цифра в индикаторе
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
-      uint8_t indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
       _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
       while (!buttonState()) { //если не нажата кнопка
         dataUpdate(); //обработка данных
 #if LAMP_NUM > 4
-        if (!indiState || mainSettings.secsMode == SECS_BRIGHT) flipSecs(); //анимация секунд
+        flipSecs(); //анимация секунд
 #endif
-
         if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-          if (!indiState) indiClr(glitchIndic); //выключаем индикатор
+          if (indiGet(glitchIndic) != INDI_NULL) { //если индикатр включен
+            indiSave = indiGet(glitchIndic); //сохраняем текущую цифру в индикаторе
+            indiClr(glitchIndic); //выключаем индикатор
+          }
           else indiSet(indiSave, glitchIndic); //включаем индикатор
-          indiState = !indiState; //меняем состояние глюка лампы
           _timer_ms[TMR_ANIM] = random(1, 6) * GLITCH_TIME; //перезапускаем таймер глюка
           if (!glitchCounter--) break; //выходим если закончились глюки
         }
@@ -6209,7 +6220,7 @@ void flipSecs(void) //анимация секунд
   switch (mainSettings.secsMode) {
     case SECS_BRIGHT: //плавное угасание и появление
       if (animShow == ANIM_SECS) { //если сменились секунды
-        animShow = 0; //сбрасываем флаг анимации цифр
+        animShow = ANIM_NULL; //сбрасываем флаг анимации цифр
         _timer_ms[TMR_MS] = 0; //сбрасываем таймер
         anim.timeBright = SECONDS_ANIM_1_TIME / indi.maxBright; //расчёт шага яркости режима 2
         anim.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
@@ -6245,7 +6256,7 @@ void flipSecs(void) //анимация секунд
     case SECS_ORDER_OF_NUMBERS: //перемотка по порядку числа
     case SECS_ORDER_OF_CATHODES: //перемотка по порядку катодов в лампе
       if (animShow == ANIM_SECS) { //если сменились секунды
-        animShow = 0; //сбрасываем флаг анимации цифр
+        animShow = ANIM_NULL; //сбрасываем флаг анимации цифр
         _timer_ms[TMR_MS] = 0; //сбрасываем таймер
         anim.flipSeconds = (RTC.s) ? (RTC.s - 1) : 59; //предыдущая секунда
         anim.flipBuffer[0] = anim.flipSeconds % 10; //старые секунды
@@ -6276,6 +6287,12 @@ void flipSecs(void) //анимация секунд
         }
       }
       break;
+    default:
+      if (animShow == ANIM_SECS) { //если сменились секунды
+        animShow = ANIM_NULL; //сбрасываем флаг анимации цифр
+        indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+      }
+      break;
   }
 }
 #endif
@@ -6292,7 +6309,7 @@ void animUpdateTime(void) //обновить буфер анимации тек�
 void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   switch (mode) {
-    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = 0; return;  //без анимации
+    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = ANIM_NULL; return;  //без анимации
     case 1: if (type == FLIP_DEMO) return; else mode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
   }
 
@@ -6301,7 +6318,7 @@ void animIndi(uint8_t mode, uint8_t type) //анимация цифр
   if (mode == FLIP_BRIGHT) indiSetBright(indi.maxBright); //возвращаем максимальную яркость
 
   animPrintBuff(0, 6, LAMP_NUM); //отрисовали буфер
-  animShow = 0; //сбрасываем флаг анимации
+  animShow = ANIM_NULL; //сбрасываем флаг анимации
 }
 //----------------------------------Анимация цифр-----------------------------------
 void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
@@ -6397,7 +6414,6 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 
     if (!_timer_ms[TMR_MS]) break; //выходим если тайм-аут
     if (!_timer_ms[TMR_ANIM]) { //если таймер истек
-
       switch (mode) { //режим анимации перелистывания
         case FLIP_BRIGHT: { //плавное угасание и появление
             if (!changeIndi) { //если режим уменьшения яркости
@@ -6597,6 +6613,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
             else return; //выходим
           }
           break;
+        default: return; //неизвестная анимация
       }
     }
   }
@@ -6604,7 +6621,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
 //-----------------------------Главный экран------------------------------------------------
 uint8_t mainScreen(void) //главный экран
 {
-  if (animShow < ANIM_MAIN) animShow = 0; //сбрасываем флаг анимации цифр
+  if (animShow < ANIM_MAIN) animShow = ANIM_NULL; //сбрасываем флаг анимации цифр
   else if (animShow == ANIM_DEMO) animIndi(fastSettings.flipMode, FLIP_DEMO); //демонстрация анимации цифр
   else if (animShow >= ANIM_OTHER) animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
 
@@ -6663,7 +6680,7 @@ uint8_t mainScreen(void) //главный экран
 
         if (animShow >= ANIM_MINS) animIndi(fastSettings.flipMode, FLIP_TIME); //анимация минут
       }
-      else animShow = 0; //сбрасываем флаг анимации
+      else animShow = ANIM_NULL; //сбрасываем флаг анимации
       if (indi.sleepMode && !_timer_sec[TMR_SLEEP]) return SLEEP_PROGRAM; //режим сна индикаторов
 
       indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов

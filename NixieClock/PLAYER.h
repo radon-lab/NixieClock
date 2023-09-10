@@ -456,9 +456,6 @@ void playerUpdate(void)
 //------------------------------------Инициализация DF плеера------------------------------------
 void dfPlayerInit(void)
 {
-  DF_BUSY_INIT; //инициализация busy
-  DF_RX_INIT; //инициализация rx
-
 #if !PLAYER_UART_MODE
   UBRR0 = (F_CPU / (8UL * PLAYER_UART_SPEED)) - 1; //устанавливаем битрейт
   UCSR0A = (0x01 << U2X0); //устанавливаем удвоение скорости
