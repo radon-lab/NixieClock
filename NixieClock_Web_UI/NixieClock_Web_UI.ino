@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.6 релиз от 10.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.6 релиз от 11.09.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -410,39 +410,41 @@ void build(void) {
         M_BOX(GP_CENTER, GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.SPINNER("mainAutoShowTime", mainSettings.autoShowTime, 1, 15, 1, 0, UI_SPINNER_COLOR);););
         M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
         GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Тип данных", "", UI_HINT_COLOR);
-        GP.SPAN("(источник и время в сек)", GP_CENTER, "", UI_HINT_COLOR);
+        GP.LABEL("Отображение", "hint4", UI_HINT_COLOR);
+        GP.HINT("hint4", "Источник и время в секундах"); //всплывающая подсказка
+        //GP.SPAN("(источник и время в сек)", GP_CENTER, "", UI_HINT_COLOR);
         M_BOX(GP.LABEL("1", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/0", "Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1, 0, UI_SPINNER_COLOR);););
-        M_BOX(GP.LABEL("2", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/1", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[1]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/1", extendedSettings.autoShowTimes[1], 1, 5, 1, 0, UI_SPINNER_COLOR);););
-        M_BOX(GP.LABEL("3", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/2", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[2]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/2", extendedSettings.autoShowTimes[2], 1, 5, 1, 0, UI_SPINNER_COLOR);););
-        M_BOX(GP.LABEL("4", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/3", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[3]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/3", extendedSettings.autoShowTimes[3], 1, 5, 1, 0, UI_SPINNER_COLOR);););
-        M_BOX(GP.LABEL("5", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/4", "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[4]); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/4", extendedSettings.autoShowTimes[4], 1, 5, 1, 0, UI_SPINNER_COLOR);););
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Дополнительно", "", UI_HINT_COLOR);
-        M_BOX(GP_LEFT, GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[SENS_TEMP]);););
-        M_BOX(GP_LEFT, GP.LABEL("Тип датчика", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.NUMBER("", (deviceInformation[SENS_TEMP]) ? ((sens.err) ? "Ошибка" : tempSensList[sens.type]) : "Отсутсвует", INT32_MAX, "", true);););
-        GP.BLOCK_END();
+      for (uint8_t i = 1; i < 5; i++) {
+      M_BOX(GP.LABEL(String(i + 1), "", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, "Пусто,Температура,Влажность,Давление,Температура и влажность,Дата,Год,Дата и год", extendedSettings.autoShowModes[i]); M_BOX(GP_RIGHT, GP.SPINNER(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);););
+      }
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Дополнительно", "", UI_HINT_COLOR);
+      M_BOX(GP_LEFT, GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[SENS_TEMP]);););
+      M_BOX(GP_LEFT, GP.LABEL("Тип датчика", "", UI_LABEL_COLOR);  M_BOX(GP_RIGHT, GP.NUMBER("", (deviceInformation[SENS_TEMP]) ? ((sens.err) ? "Ошибка" : tempSensList[sens.type]) : "Отсутсвует", INT32_MAX, "", true);););
+      GP.BLOCK_END();
 
-        GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
-        GP.LABEL("Яркость", "", UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtDay", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR); ); );//Ползунки
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtNight", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR); ); );//Ползунки
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Эффекты", "", UI_HINT_COLOR);
-        M_BOX(GP_JUSTIFY, GP.LABEL("Глюки", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR);););
-        M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
-        M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("mainSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", mainSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Антиотравление", "", UI_HINT_COLOR);
-        M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP.SPINNER("extBurnTime", extendedSettings.burnTime, 10, 180, 1, 0, UI_SPINNER_COLOR););
-        M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Время смены яркости", "", UI_HINT_COLOR);
-        M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Режим сна", "", UI_HINT_COLOR);
-        M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
-        GP.BLOCK_END();
+      GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
+      GP.LABEL("Яркость", "", UI_HINT_COLOR);
+      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtDay", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR);););//Ползунки
+      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("mainIndiBrtNight", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR);););//Ползунки
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Эффекты", "", UI_HINT_COLOR);
+      M_BOX(GP_JUSTIFY, GP.LABEL("Глюки", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR);););
+      M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
+      M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("mainSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", mainSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Антиотравление", "", UI_HINT_COLOR);
+      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP.SPINNER("extBurnTime", extendedSettings.burnTime, 10, 180, 1, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Время смены яркости", "hint1", UI_HINT_COLOR);
+      GP.HINT("hint1", "Одниаковое время - отключить смену яркости или активировать датчик освещения"); //всплывающая подсказка
+      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Режим сна", "hint2", UI_HINT_COLOR);
+      GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
+      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
+      GP.BLOCK_END();
       );
 
       M_GRID(
@@ -469,7 +471,8 @@ void build(void) {
         M_BOX(GP_JUSTIFY, GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR);););
         M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, (deviceInformation[PLAYER_TYPE] == 2) ? 9 : 30, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
         GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Звук смены часа ", "", UI_HINT_COLOR);
+        GP.LABEL("Звук смены часа ", "hint3", UI_HINT_COLOR);
+        GP.HINT("hint3", "Одниаковое время - отключить звук смены часа"); //всплывающая подсказка
         M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);  GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
         GP.HR(UI_LINE_COLOR);
         GP.LABEL("Озвучка смены часа", "", UI_HINT_COLOR);
@@ -597,8 +600,9 @@ void build(void) {
       }
       else {
         GP.FORM_BEGIN("/network");
-        GP.SPAN("Подключено к \"" + String(settings.ssid) + "\"", GP_CENTER, "", UI_INFO_COLOR);
-        GP.SPAN("IP адрес \"" + WiFi.localIP().toString() + "\"", GP_CENTER, "", UI_INFO_COLOR);
+        GP.LABEL("Подключено к \"" + String(settings.ssid) + "\"", "", UI_INFO_COLOR, 25, false, true);
+        GP.BREAK();
+        GP.LABEL("IP адрес \"" + WiFi.localIP().toString() + "\"", "", UI_INFO_COLOR, 25, false, true);
         GP.HR(UI_LINE_COLOR);
         GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
         GP.FORM_END();
