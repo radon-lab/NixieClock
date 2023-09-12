@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.6 релиз от 10.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.6 релиз от 12.09.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -303,6 +303,18 @@ enum {
   FAST_FLIP_MODE, //режим перелистывания
   FAST_DOT_MODE, //режим точек
   FAST_BACKL_COLOR //цвет подсветки
+};
+
+//перечисления режимов автопоказа
+enum {
+  SHOW_NULL, //показ отключен
+  SHOW_TEMP, //показ температуры
+  SHOW_HUM, //показ влажности
+  SHOW_PRESS, //показ давления
+  SHOW_TEMP_HUM, //показ температуры и влажности
+  SHOW_DATE, //показ даты
+  SHOW_YEAR, //показ года
+  SHOW_DATE_YEAR //показ даты и года
 };
 
 //перечисления анимаций перебора цифр
@@ -641,7 +653,9 @@ int main(void) //главный цикл программ
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
       case TEMP_PROGRAM: mainTask = showTemp(); break; //показать температуру
+#endif
       case DATE_PROGRAM: mainTask = showDate(); break; //показать дату
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
       case WARN_PROGRAM: mainTask = timerWarn(); break; //предупреждение таймера
@@ -3775,6 +3789,7 @@ uint8_t settings_main(void) //настроки основные
                 if (!blink_data) indiPrintNum((boolean)mainSettings.dotBright[TIME_NIGHT], 3); //вывод яркости ночь
 #endif
                 break;
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
               case SET_TEMP_SENS:
                 updateTemp(); //обновить показания температуры
                 if (!blink_data) {
@@ -3783,6 +3798,7 @@ uint8_t settings_main(void) //настроки основные
                 }
                 indiPrintNum(sens.type, 3); //вывод сенсора температуры
                 break;
+#endif
               case SET_AUTO_SHOW:
                 if (!blink_data || cur_indi) indiPrintNum(mainSettings.autoShowTime, 0, 2, 0); //вывод времени автопоказа температуры
                 if (!blink_data || !cur_indi) indiPrintNum(mainSettings.autoShowFlip, 2, 2, 0); //вывод анимации автопоказа температуры
@@ -3903,9 +3919,11 @@ uint8_t settings_main(void) //настроки основные
                 mainSettings.dotBright[TIME_NIGHT] = 0;
 #endif
                 break;
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
+#endif
               case SET_AUTO_SHOW: //автопоказ температуры
                 switch (cur_indi) {
                   case 0:
@@ -3932,8 +3950,7 @@ uint8_t settings_main(void) //настроки основные
                 }
 #else
                 if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
-                burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                dotSetBright(dot.menuBright); //включаем точки
+                animDemo = 2; //установили флаг демонстрации анимации
 #endif
                 break;
               case SET_SLEEP_TIME: //время ухода в сон
@@ -4023,9 +4040,11 @@ uint8_t settings_main(void) //настроки основные
                 mainSettings.dotBright[TIME_NIGHT] = 1;
 #endif
                 break;
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
+#endif
               case SET_AUTO_SHOW: //автопоказ
                 switch (cur_indi) {
                   case 0:
@@ -4055,8 +4074,7 @@ uint8_t settings_main(void) //настроки основные
                 }
 #else
                 if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
-                burnIndi(mainSettings.burnMode, BURN_DEMO); //демонстрация антиотравления индикаторов
-                dotSetBright(dot.menuBright); //включаем точки
+                animDemo = 2; //установили флаг демонстрации анимации
 #endif
                 break;
               case SET_SLEEP_TIME: //время ухода в сон
@@ -4074,8 +4092,6 @@ uint8_t settings_main(void) //настроки основные
       case SET_KEY_PRESS: //клик средней кнопкой
         set = !set;
         if (set) {
-          changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
-          dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
           switch (cur_mode) {
             case SET_INDI_BRIGHT: indiSetBright(mainSettings.indiBright[TIME_NIGHT]); break; //установка общей яркости индикаторов
             case SET_BACKL_BRIGHT: //яркость подсветки
@@ -4086,9 +4102,9 @@ uint8_t settings_main(void) //настроки основные
               backlSetBright(mainSettings.backlBright[TIME_NIGHT]); //если посветка статичная, устанавливаем яркость
 #else
               set = 0; //заблокировали пункт меню
-              dotSetBright(0); //выключаем точки
 #endif
               break;
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
@@ -4098,6 +4114,15 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
 #endif
+#else
+            case SET_TEMP_SENS: //настройка коррекции температуры
+              set = 0; //заблокировали пункт меню
+              break;
+#endif
+          }
+          if (set) {
+            changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
+            dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
           }
         }
         else {
@@ -4130,7 +4155,9 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_NIGHT]); break;//яркость точек
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
+#endif
           }
         }
         _timer_ms[TMR_MS] = time_out = animDemo = blink_data = 0; //сбрасываем флаги
@@ -4149,7 +4176,9 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_DAY]); break;//яркость точек
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
+#endif
           }
         }
         _timer_ms[TMR_MS] = time_out = animDemo = blink_data = 0; //сбрасываем флаги
@@ -4483,7 +4512,8 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
     animClearBuff(); //очистка буфера анимации
     switch (extendedSettings.autoShowModes[mode]) {
-      case 1: //режим отображения температуры
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+      case SHOW_TEMP: //режим отображения температуры
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if DOTS_PORT_ENABLE
@@ -4503,7 +4533,7 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         break;
 
-      case 2: //режим отображения влажности
+      case SHOW_HUM: //режим отображения влажности
         if (!sens.hum) continue; //возвращаемся назад
         animPrintNum(sens.hum, 0, 4, ' '); //вывод влажности
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
@@ -4512,7 +4542,7 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         break;
 
-      case 3: //режим отображения давления
+      case SHOW_PRESS: //режим отображения давления
         if (!sens.press) continue; //возвращаемся назад
         animPrintNum(sens.press, 0, 4, ' '); //вывод давления
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
@@ -4522,7 +4552,7 @@ void autoShowMenu(void) //меню автоматического показа
         break;
 
 #if LAMP_NUM > 4
-      case 4: //режим отображения температуры и влажности
+      case SHOW_TEMP_HUM: //режим отображения температуры и влажности
         animPrintNum(sens.temp + mainSettings.tempCorrect, 0, 3, ' '); //вывод температуры
         if (sens.hum) animPrintNum(sens.hum, 4, 2, ' '); //вывод влажности
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
@@ -4547,8 +4577,9 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         break;
 #endif
+#endif
 
-      case 5: //режим отображения даты
+      case SHOW_DATE: //режим отображения даты
 #if (SHOW_DATE_TYPE == 1) || (SHOW_DATE_TYPE == 3)
         animPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
         animPrintNum(RTC.DD, 2, 2, 0); //вывод даты
@@ -4574,7 +4605,7 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         break;
 
-      case 6: //режим отображения года
+      case SHOW_YEAR: //режим отображения года
         animPrintNum(RTC.YY, 0); //вывод года
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
@@ -4583,7 +4614,7 @@ void autoShowMenu(void) //меню автоматического показа
         break;
 
 #if LAMP_NUM > 4
-      case 7: //режим отображения даты и года
+      case SHOW_DATE_YEAR: //режим отображения даты и года
 #if (SHOW_DATE_TYPE == 1) || (SHOW_DATE_TYPE == 3)
         animPrintNum(RTC.MM, 0, 2, 0); //вывод месяца
         animPrintNum(RTC.DD, 2, 2, 0); //вывод даты
@@ -6699,8 +6730,10 @@ uint8_t mainScreen(void) //главный экран
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
       case LEFT_KEY_PRESS: //клик левой кнопкой
         return TEMP_PROGRAM; //показать температуру
+#endif
 
 #if ALARM_TYPE
       case LEFT_KEY_HOLD: //удержание левой кнопки
