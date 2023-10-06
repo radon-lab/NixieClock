@@ -1,6 +1,7 @@
 # <p align="center">Страница проекта [NixieClock](https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/) на форуме.</p> 
 
-![Sheet_2](https://user-images.githubusercontent.com/71728333/174530369-60ad7431-a8fc-4c99-abe0-559c530fc2a1.png)
+![Schematic_Nixie_clock](https://github.com/radon-lab/NixieClock/assets/71728333/de56ddff-cd35-4555-a52b-ee8f81ab29dc)
+
 
 Модуль ESP8266 подключается к шине I2C, пины которые модуль ESP8266 использует в качестве SCL/SDA нужно указать в прошивке модуля ESP8266. При использовании модуля ESP8266 подтяжка шины I2C должна быть организована к источнику 3.3в!
 Так-же обязательно должен быть отключен WIRE_PULL в config.h!
