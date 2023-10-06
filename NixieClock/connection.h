@@ -1,10 +1,10 @@
 //Соединения периферии с пинами МК
 
 //Дешифратор ламп
-#define DECODER_1 3 //пин дешефратора X1(0..3)(pin A)
-#define DECODER_2 1 //пин дешефратора X2(0..3)(pin A)
-#define DECODER_3 0 //пин дешефратора X4(0..3)(pin A)
-#define DECODER_4 2 //пин дешефратора X8(0..3)(pin A)
+#define DECODER_1 3 //пин дешифратора X1(0..3)(pin A)
+#define DECODER_2 1 //пин дешифратора X2(0..3)(pin A)
+#define DECODER_3 0 //пин дешифратора X4(0..3)(pin A)
+#define DECODER_4 2 //пин дешифратора X8(0..3)(pin A)
 
 //Аноды ламп
 #define ANODE_1_PIN 3  //пин анода 1(ЧЧ)(0..13)(pin D)

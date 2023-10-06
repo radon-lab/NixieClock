@@ -98,8 +98,7 @@ struct Settings_5 {
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
   uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
   uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
-  uint8_t min_light = LIGHT_SENS_START_MIN; //минимальный шим
-  uint8_t max_light = LIGHT_SENS_START_MAX; //максимальный шим
+  uint8_t light_zone[2][3]; //зоны яркости датчика освещения
   int8_t hvCorrect; //коррекция напряжения
   int8_t aging; //коррекция регистра старения
 } debugSettings;
@@ -108,9 +107,9 @@ uint8_t pwm_coef; //коэффициент линейного регулиров
 uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
 
 uint8_t adc_light; //значение АЦП сенсора яркости освещения
-boolean state_light = 1; //состояние сенсора яркости освещения
+uint8_t state_light = 2; //состояние сенсора яркости освещения
 
-const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешефратора(0, 1, 2, 3)
+const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешифратора(0, 1, 2, 3)
 #if INDI_PORT_TYPE
 const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << DOT_1_PIN) : ANODE_OFF, (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
 #endif

@@ -129,7 +129,6 @@ void readTempBME(void) //чтение температуры/давления/в
   if (!typeBME) { //если датчик не определен
 #if SENS_BME_ENABLE == 1
     if (readCalibrationBMP180()) typeBME = BMP180_ADDR; //установлили тип датчика
-    else return; //иначе выходим
 #elif SENS_BME_ENABLE == 2
     if (readCalibrationBME280()) { //если BME280
       typeBME = BME280_ADDR; //установлили тип датчика
@@ -137,8 +136,7 @@ void readTempBME(void) //чтение температуры/давления/в
       writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
       writeREG(BME280_ADDR, BME280_CONFIG_REG, ((BME280_STANDBY << 5) | (BME280_FILTER_COEF << 2))); //устанавливаем частоту опроса и коэффициент фильтрации
     }
-    else return; //иначе выходим
-#elif SENS_BME_ENABLE == 3
+#else
     if (readCalibrationBMP180()) typeBME = BMP180_ADDR; //установлили тип датчика
     else if (readCalibrationBME280()) { //если BME280
       typeBME = BME280_ADDR; //установлили тип датчика
@@ -146,12 +144,12 @@ void readTempBME(void) //чтение температуры/давления/в
       writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
       writeREG(BME280_ADDR, BME280_CONFIG_REG, ((BME280_STANDBY << 5) | (BME280_FILTER_COEF << 2))); //устанавливаем частоту опроса и коэффициент фильтрации
     }
-    else return; //иначе выходим
 #endif
+    else return; //иначе выходим
   }
 
   switch (typeBME) { //чтение данных
-#if (SENS_BME_ENABLE == 1) || (SENS_BME_ENABLE == 3)
+#if (SENS_BME_ENABLE == 1) || (SENS_BME_ENABLE != 2)
     case BMP180_ADDR: {
         int32_t temp_raw; //регистр температуры
         int32_t press_raw; //регистр давления
@@ -209,7 +207,7 @@ void readTempBME(void) //чтение температуры/давления/в
       }
       break;
 #endif
-#if (SENS_BME_ENABLE == 2) || (SENS_BME_ENABLE == 3)
+#if (SENS_BME_ENABLE == 2) || (SENS_BME_ENABLE != 1)
     case BME280_ADDR: {
         _timer_ms[TMR_SENS] = BME_CHECK_TIMEOUT; //установили таймаут
 

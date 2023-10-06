@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.6 релиз от 12.09.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.7 релиз от 06.10.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -483,6 +483,9 @@ const uint8_t deviceInformation[] = { //комплектация часов
   DOTS_PORT_ENABLE,
   DOTS_NUM,
   DOTS_TYPE,
+  LIGHT_SENS_ENABLE,
+  (BTN_ADD_TYPE | IR_PORT_ENABLE),
+  TIMER_ENABLE,
   RADIO_ENABLE,
   ALARM_TYPE,
   PLAYER_TYPE,
@@ -541,8 +544,11 @@ struct busData {
 
 #define BUS_SET_SHOW_TIME 0x1B
 #define BUS_SET_BURN_TIME 0x1C
-#define BUS_SET_MAIN_DOT 0x1D
-#define BUS_SET_ALARM_DOT 0x1E
+#define BUS_SET_UPDATE 0x1E
+
+#define BUS_WRITE_TIMER_SET 0x1F
+#define BUS_READ_TIMER_SET 0x20
+#define BUS_WRITE_TIMER_MODE 0x21
 
 #define BUS_TEST_FLIP 0xFB
 #define BUS_TEST_SOUND 0xFC
@@ -552,19 +558,30 @@ struct busData {
 #define BUS_READ_DEVICE 0xFF
 
 enum {
+  BUS_COMMAND_BIT_0,
+  BUS_COMMAND_BIT_1,
+  BUS_COMMAND_BIT_2,
+  BUS_COMMAND_BIT_3,
+  BUS_COMMAND_BIT_4,
+  BUS_COMMAND_BIT_5,
   BUS_COMMAND_WAIT,
-  BUS_COMMAND_UPDATE,
-  BUS_COMMAND_RADIO_VOL,
-  BUS_COMMAND_RADIO_FREQ,
+  BUS_COMMAND_UPDATE
+};
+enum {
+  BUS_COMMAND_NULL,
   BUS_COMMAND_RADIO_MODE,
   BUS_COMMAND_RADIO_POWER,
   BUS_COMMAND_RADIO_SEEK_UP,
   BUS_COMMAND_RADIO_SEEK_DOWN,
-  BUS_MAX_DATA
+  BUS_COMMAND_TIMER_MODE
 };
 enum {
   BUS_EXT_COMMAND_CHECK_TEMP,
   BUS_EXT_COMMAND_SEND_TIME,
+#if RADIO_ENABLE
+  BUS_EXT_COMMAND_RADIO_VOL,
+  BUS_EXT_COMMAND_RADIO_FREQ,
+#endif
   BUS_EXT_MAX_DATA
 };
 
@@ -643,7 +660,7 @@ int main(void) //главный цикл программ
 #if ESP_ENABLE
     busCommand(); //проверка статуса шины
 #endif
-    dotReset(); //сброс анимации точек
+    dotReset(changeAnimState); //сброс анимации точек
 #if BACKL_TYPE
     backlAnimEnable(); //разрешили эффекты подсветки
 #endif
@@ -822,7 +839,12 @@ void INIT_SYSTEM(void) //инициализация
 #endif
   }
 
-  if (checkDebugSettingsCRC()) updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
+  if (checkDebugSettingsCRC()) { //проверяем настройки отладки по умолчанию
+    updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
+#if LIGHT_SENS_ENABLE
+    lightSensZoneUpdate(LIGHT_SENS_START_MIN, LIGHT_SENS_START_MAX); //обновление зон сенсора яркости освещения
+#endif
+  }
   if (checkData(sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG)) { //проверяем настройки отладки
     updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
     SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
@@ -1196,7 +1218,11 @@ void analogUpdate(void) //обработка аналоговых входов
 #endif
 #if LIGHT_SENS_ENABLE
       case ANALOG_LIGHT_PIN:
+#if !LIGHT_SENS_PULL
         adc_light = ADCH; //записываем результат опроса
+#else
+        adc_light = 255 - ADCH; //записываем результат опроса
+#endif
         ADMUX = 0; //сбросли признак чтения АЦП
         break;
 #endif
@@ -1261,17 +1287,34 @@ void checkVCC(void) //чтение напряжения питания
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
 }
+//----------------Обновление зон  сенсора яркости освещения------------------------
+void lightSensZoneUpdate(uint8_t min, uint8_t max) //обновление зон сенсора яркости освещения
+{
+  debugSettings.light_zone[0][2] = min;
+  debugSettings.light_zone[1][0] = max;
+
+  min = (max - min) / 3;
+  max = min * 2;
+
+  debugSettings.light_zone[1][2] = min + LIGHT_SENS_GIST;
+  debugSettings.light_zone[0][1] = min - LIGHT_SENS_GIST;
+  debugSettings.light_zone[1][1] = max + LIGHT_SENS_GIST;
+  debugSettings.light_zone[0][0] = max - LIGHT_SENS_GIST;
+}
 //-------------------Обработка сенсора яркости освещения---------------------------
 void lightSensUpdate(void) //обработка сенсора яркости освещения
 {
-  static boolean now_state_light;
+  static uint8_t now_state_light;
   if (mainSettings.timeBright[0] == mainSettings.timeBright[1]) { //если разрешена робота сенсора
     _timer_ms[TMR_LIGHT] = (1000 - LIGHT_SENS_TIME); //установили таймер
-#if LIGHT_SENS_PULL
-    now_state_light = (adc_light < debugSettings.min_light) ? 0 : ((adc_light > debugSettings.max_light) ? 1 : now_state_light);
-#else
-    now_state_light = (adc_light < debugSettings.min_light) ? 1 : ((adc_light > debugSettings.max_light) ? 0 : now_state_light);
-#endif
+
+    if (adc_light < debugSettings.light_zone[0][now_state_light]) {
+      if (now_state_light < 2) now_state_light++;
+    }
+    else if (adc_light > debugSettings.light_zone[1][now_state_light]) {
+      if (now_state_light) now_state_light--;
+    }
+
     if (now_state_light != state_light) {
       state_light = now_state_light;
       changeBright(); //установка яркости
@@ -1842,12 +1885,7 @@ void debug_menu(void) //отладка
               break;
 #endif
 #if LIGHT_SENS_ENABLE
-            case DEB_LIGHT_SENS: { //калибровка датчика освещения
-                uint8_t temp_mid = ((temp_max - temp_min) / 2) + temp_min;
-                debugSettings.min_light = temp_mid - LIGHT_SENS_GIST;
-                debugSettings.max_light = temp_mid + LIGHT_SENS_GIST;
-              }
-              break;
+            case DEB_LIGHT_SENS: lightSensZoneUpdate(temp_min, temp_max); break; //обновление зон сенсора яркости освещения
 #endif
             case DEB_RESET: //сброс настроек отладки
               if (cur_reset) { //подтверждение
@@ -1870,6 +1908,9 @@ void debug_menu(void) //отладка
 #endif
 #if DS3231_ENABLE
                 writeAgingRTC(debugSettings.aging); //запись коррекции хода
+#endif
+#if LIGHT_SENS_ENABLE
+                lightSensZoneUpdate(LIGHT_SENS_START_MIN, LIGHT_SENS_START_MAX); //обновление зон сенсора яркости освещения
 #endif
 #if PLAYER_TYPE
                 playerSetTrack(PLAYER_RESET_SOUND, PLAYER_GENERAL_FOLDER);
@@ -1962,6 +2003,7 @@ void alarmReset(void) //сброс будильника
   _timer_sec[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
   alarms.now = 0; //сбрасываем флаг тревоги
   checkAlarms(1); //проверка будильников
+  dotReset(1); //сброс анимации точек
 }
 //-----------------------------Получить основные данные будильника-----------------------------------------
 uint8_t alarmRead(uint8_t almNum, uint8_t almDataPos) //получить основные данные будильника
@@ -2052,14 +2094,14 @@ void alarmDataUpdate(void) //обновление данных будильни�
 
     if (extendedSettings.alarmWaitTime && (alarms.now == 2)) { //если будильник в режиме ожидания
       if (!_timer_sec[TMR_ALM_WAIT]) { //если пришло время повторно включить звук
-        _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60);
+        _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
         alarms.now = 3; //сбрасываем флаг ожидания
       }
     }
     else if (extendedSettings.alarmSoundTime) { //если таймаут тревоги включен
       if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
         if (extendedSettings.alarmWaitTime) { //если время ожидания включено
-          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
+          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60); //установили таймер таймаута ожидания будильника
           alarms.now = 2; //устанавливаем флаг ожидания тревоги
         }
         else alarmReset(); //сброс будильника
@@ -2245,6 +2287,10 @@ uint8_t busCheck(void) //проверка статуса шины
           switch (i) { //выбираем действие
             case BUS_EXT_COMMAND_CHECK_TEMP: updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
+#if RADIO_ENABLE
+            case BUS_EXT_COMMAND_RADIO_VOL: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
+            case BUS_EXT_COMMAND_RADIO_FREQ: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); break;
+#endif
           }
         }
         status >>= 1; //сместили флаги
@@ -2257,31 +2303,30 @@ uint8_t busCheck(void) //проверка статуса шины
 void busCommand(void) //проверка команды шины
 {
   if (bus.status & ~(0x01 << BUS_COMMAND_WAIT)) {
-#if RADIO_ENABLE
+#if RADIO_ENABLE || (TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE))
     uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
     bus.status &= (0x01 << BUS_COMMAND_WAIT); //сбросили статус
-    if (status) { //если установлены флаги радио
-      if (status & ((0x01 << BUS_COMMAND_RADIO_MODE) | (0x01 << BUS_COMMAND_RADIO_POWER) | (0x01 << BUS_COMMAND_RADIO_SEEK_UP) | (0x01 << BUS_COMMAND_RADIO_SEEK_DOWN))) changeAnimState = 2; //установили сброс анимации
-      for (uint8_t i = 0; i < BUS_MAX_DATA; i++) { //проверяем все флаги
-        if (status & 0x01) { //если флаг установлен
-          switch (i) { //выбираем действие
-            case BUS_COMMAND_RADIO_VOL: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
-            case BUS_COMMAND_RADIO_FREQ: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); break;
-            case BUS_COMMAND_RADIO_MODE: if (mainTask != RADIO_PROGRAM) mainTask = RADIO_PROGRAM; else mainTask = MAIN_PROGRAM; break;
-            case BUS_COMMAND_RADIO_POWER:
+    if (status) { //если установлены флаги
+      changeAnimState = 2; //установили сброс анимации
+
+      switch (status) { //выбираем действие
+#if RADIO_ENABLE
+        case BUS_COMMAND_RADIO_MODE: if (mainTask != RADIO_PROGRAM) mainTask = RADIO_PROGRAM; else mainTask = MAIN_PROGRAM; break;
+        case BUS_COMMAND_RADIO_POWER:
 #if PLAYER_TYPE
-              playerStop(); //сброс воспроизведения плеера
+          playerStop(); //сброс воспроизведения плеера
 #else
-              melodyStop(); //сброс воспроизведения мелодии
+          melodyStop(); //сброс воспроизведения мелодии
 #endif
-              radioPowerSwitch();
-              mainTask = MAIN_PROGRAM;
-              break;
-            case BUS_COMMAND_RADIO_SEEK_UP: radioSeekUp(); mainTask = RADIO_PROGRAM; break;
-            case BUS_COMMAND_RADIO_SEEK_DOWN: radioSeekDown(); mainTask = RADIO_PROGRAM; break;
-          }
-        }
-        status >>= 1; //сместили флаги
+          radioPowerSwitch();
+          mainTask = MAIN_PROGRAM;
+          break;
+        case BUS_COMMAND_RADIO_SEEK_UP: radioSeekUp(); mainTask = RADIO_PROGRAM; break;
+        case BUS_COMMAND_RADIO_SEEK_DOWN: radioSeekDown(); mainTask = RADIO_PROGRAM; break;
+#endif
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+        case BUS_COMMAND_TIMER_MODE: mainTask = TIMER_PROGRAM; break;
+#endif
       }
     }
 #else
@@ -2323,15 +2368,15 @@ uint8_t busUpdate(void) //обновление статуса шины
               case BUS_WRITE_ALARM_DATA:
               case BUS_DEL_ALARM:
               case BUS_NEW_ALARM:
+#endif
+#if RADIO_ENABLE
+              case BUS_WRITE_RADIO_VOL:
+              case BUS_WRITE_RADIO_FREQ:
+#endif
+#if ALARM_TYPE || RADIO_ENABLE
                 if (mainTask == ALARM_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); //настройки будильника
                 break;
 #endif
-              case BUS_WRITE_RADIO_MODE:
-              case BUS_WRITE_RADIO_POWER:
-              case BUS_SEEK_RADIO_UP:
-              case BUS_SEEK_RADIO_DOWN:
-                bus.status &= ~((0x01 << BUS_COMMAND_RADIO_SEEK_DOWN) | (0x01 << BUS_COMMAND_RADIO_SEEK_UP) | (0x01 << BUS_COMMAND_RADIO_POWER) | (0x01 << BUS_COMMAND_RADIO_MODE));
-                break;
             }
             break;
           case BUS_WRITE_TIME: //прием настроек времени
@@ -2402,6 +2447,14 @@ uint8_t busUpdate(void) //обновление статуса шины
               bus.counter++; //сместили указатель
             }
             break;
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          case BUS_WRITE_TIMER_SET: //прием настроек таймера
+            if (bus.counter < sizeof(timer)) {
+              *((uint8_t*)&timer + bus.counter) = TWDR;
+              bus.counter++; //сместили указатель
+            }
+            break;
+#endif
 #if PLAYER_TYPE
           case BUS_TEST_SOUND:
             if (bus.counter < 3) {
@@ -2480,6 +2533,14 @@ uint8_t busUpdate(void) //обновление статуса шины
               bus.counter++; //сместили указатель
             }
             break;
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          case BUS_READ_TIMER_SET: //передача настроек таймера
+            if (bus.counter < sizeof(timer)) {
+              TWDR = *((uint8_t*)&timer + bus.counter);
+              bus.counter++; //сместили указатель
+            }
+            break;
+#endif
           case BUS_READ_STATUS: //передача статуса часов
             if (!bus.counter) {
               TWDR = deviceStatus;
@@ -2535,28 +2596,21 @@ uint8_t busUpdate(void) //обновление статуса шины
 #endif
 #if RADIO_ENABLE
           case BUS_WRITE_RADIO_STA: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки радио
-          case BUS_WRITE_RADIO_VOL: bus.status |= (0x01 << BUS_COMMAND_RADIO_VOL); break; //настройка громкости радио
-          case BUS_WRITE_RADIO_FREQ: bus.status |= (0x01 << BUS_COMMAND_RADIO_FREQ); break; //настройка частоты радио
-          case BUS_WRITE_RADIO_MODE: bus.status |= (0x01 << BUS_COMMAND_RADIO_MODE); break; //переключение питания радио
-          case BUS_WRITE_RADIO_POWER: bus.status |= (0x01 << BUS_COMMAND_RADIO_POWER); break; //переключение питания радио
-          case BUS_SEEK_RADIO_UP: bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_UP); break; //запуск автопоиска радио
-          case BUS_SEEK_RADIO_DOWN: bus.status |= (0x01 << BUS_COMMAND_RADIO_SEEK_DOWN); break; //запуск автопоиска радио
+          case BUS_WRITE_RADIO_VOL: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_VOL); break; //настройка громкости радио
+          case BUS_WRITE_RADIO_FREQ: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_FREQ); break; //настройка частоты радио
+          case BUS_WRITE_RADIO_MODE: bus.status |= BUS_COMMAND_RADIO_MODE; break; //переключение режима радио
+          case BUS_WRITE_RADIO_POWER: bus.status |= BUS_COMMAND_RADIO_POWER; break; //переключение питания радио
+          case BUS_SEEK_RADIO_UP: bus.status |= BUS_COMMAND_RADIO_SEEK_UP; break; //запуск автопоиска радио
+          case BUS_SEEK_RADIO_DOWN: bus.status |= BUS_COMMAND_RADIO_SEEK_DOWN; break; //запуск автопоиска радио
 #endif
           case BUS_CHECK_TEMP: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_CHECK_TEMP); break; //запрос температуры
           case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
           case BUS_SET_SHOW_TIME: _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); break; //установка таймера показа температуры
           case BUS_SET_BURN_TIME: _timer_sec[TMR_BURN] = getPhaseTime(extendedSettings.burnTime, BURN_PHASE); break; //установка таймера антиотравления
-          case BUS_SET_MAIN_DOT: //установка анимации точек
-#if ALARM_TYPE
-          case BUS_SET_ALARM_DOT: //установка анимации точек будильника
-            if ((bus.comand == BUS_SET_MAIN_DOT) || alarms.now) {
+          case BUS_SET_UPDATE: bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //установка флага обновления
+#if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
+          case BUS_WRITE_TIMER_MODE: bus.status |= BUS_COMMAND_TIMER_MODE; break; //переключение в режим таймера
 #endif
-              changeAnimState = 2; //установили сброс анимации
-              bus.status |= (0x01 << BUS_COMMAND_UPDATE);
-#if ALARM_TYPE
-            }
-#endif
-            break;
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
 #if PLAYER_TYPE
@@ -5472,7 +5526,10 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   static uint8_t millisCnt; //счетчик миллисекун
 
   if (timer.mode & 0x7F) mode = (timer.mode & 0x7F) - 1; //если таймер был запущен
-  else timer.count = 0; //иначе сбрасываем таймер
+  else { //иначе таймер выключен
+    timer.count = 0; //сбрасываем таймер
+    millisCnt = 0; //сбрасываем счетчик миллисекунд
+  }
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow((mode) ? PLAYER_TIMER_SOUND : PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
@@ -5640,31 +5697,47 @@ void changeBright(void) //установка яркости от времени 
   indi.sleepMode = SLEEP_DISABLE; //сбросили флаг режима сна индикаторов
 
 #if LIGHT_SENS_ENABLE
-  if ((mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY]) ? (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) : state_light)
-#else
-  if (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY]))
+  if (mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY])
 #endif
-  { //ночной режим
-    dot.maxBright = mainSettings.dotBright[TIME_NIGHT]; //установка максимальной яркости точек
-    dot.menuBright = (dot.maxBright) ? dot.maxBright : 10; //установка максимальной яркости точек в меню
-#if BACKL_TYPE
-    backl.maxBright = mainSettings.backlBright[TIME_NIGHT]; //установка максимальной яркости подсветки
-    backl.menuBright = (backl.maxBright) ? backl.maxBright : 10; //установка максимальной яркости подсветки в меню
-#endif
-    indi.maxBright = mainSettings.indiBright[TIME_NIGHT]; //установка максимальной яркости индикаторов
-    if (mainSettings.timeSleep[TIME_NIGHT]) indi.sleepMode = SLEEP_NIGHT; //установили флаг режима сна индикаторов
-  }
-  else { //дневной режим
+    state_light = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
+
+  switch (state_light) {
+    case 0 : //дневной режим
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-    dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
+      dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
-    dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
+      dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
 #endif
 #if BACKL_TYPE
-    backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
+      backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_DAY]; //установка максимальной яркости подсветки
 #endif
-    indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
-    if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
+      indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
+      if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
+      break;
+#if LIGHT_SENS_ENABLE
+    case 1 : //промежуточный режим
+#if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
+      dot.maxBright = dot.menuBright = mainSettings.dotBright[TIME_NIGHT] + ((mainSettings.dotBright[TIME_DAY] - mainSettings.dotBright[TIME_NIGHT]) >> 1); //установка максимальной яркости точек
+#else
+      dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
+#endif
+#if BACKL_TYPE
+      backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_NIGHT] + ((mainSettings.backlBright[TIME_DAY] - mainSettings.backlBright[TIME_NIGHT]) >> 1); //установка максимальной яркости подсветки
+#endif
+      indi.maxBright = mainSettings.indiBright[TIME_NIGHT] + ((mainSettings.indiBright[TIME_DAY] - mainSettings.indiBright[TIME_NIGHT]) >> 1); //установка максимальной яркости индикаторов
+      if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
+      break;
+#endif
+    case 2: //ночной режим
+      dot.maxBright = mainSettings.dotBright[TIME_NIGHT]; //установка максимальной яркости точек
+      dot.menuBright = (dot.maxBright) ? dot.maxBright : 10; //установка максимальной яркости точек в меню
+#if BACKL_TYPE
+      backl.maxBright = mainSettings.backlBright[TIME_NIGHT]; //установка максимальной яркости подсветки
+      backl.menuBright = (backl.maxBright) ? backl.maxBright : 10; //установка максимальной яркости подсветки в меню
+#endif
+      indi.maxBright = mainSettings.indiBright[TIME_NIGHT]; //установка максимальной яркости индикаторов
+      if (mainSettings.timeSleep[TIME_NIGHT]) indi.sleepMode = SLEEP_NIGHT; //установили флаг режима сна индикаторов
+      break;
   }
 
   if (changeBrightState) { //если разрешено менять яркость
@@ -6106,19 +6179,18 @@ uint8_t dotGetMode(void) //получить анимацию точек
 {
 #if ALARM_TYPE
   switch (alarms.now) {
-    default: return fastSettings.dotMode;
-    case 1: return (extendedSettings.alarmDotOn != DOT_EFFECT_NUM) ? extendedSettings.alarmDotOn : fastSettings.dotMode;
-    case 2: return (extendedSettings.alarmDotWait != DOT_EFFECT_NUM) ? extendedSettings.alarmDotWait : fastSettings.dotMode;
+    case 1: if (extendedSettings.alarmDotOn != DOT_EFFECT_NUM) return extendedSettings.alarmDotOn; break;
+    case 2: if (extendedSettings.alarmDotWait != DOT_EFFECT_NUM) return extendedSettings.alarmDotWait; break;
   }
-  return 0;
-#else
-  return fastSettings.dotMode;
 #endif
+  return fastSettings.dotMode;
 }
 //-----------------------------Сброс анимации точек--------------------------------
-void dotReset(void) //сброс анимации точек
+void dotReset(uint8_t state) //сброс анимации точек
 {
-  if (changeAnimState != 1) { //если нужно сбросить анимацию точек
+  static uint8_t mode; //предыдущий режим точек
+
+  if ((state != 1) || (mode != dotGetMode())) { //если нужно сбросить анимацию точек
 #if DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
@@ -6135,6 +6207,7 @@ void dotReset(void) //сброс анимации точек
 #endif
     }
   }
+  mode = dotGetMode(); //запоминаем анимацию точек
 }
 //---------------------------------Режим сна индикаторов---------------------------------
 uint8_t sleepIndi(void) //режим сна индикаторов

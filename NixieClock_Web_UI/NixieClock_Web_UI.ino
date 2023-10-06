@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.6 релиз от 11.09.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.7 релиз от 04.10.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -61,6 +61,7 @@ uint8_t statusNtp = 0; //флаг состояние ntp сервера
 uint8_t attemptsNtp = 0; //текущее количество попыток подключение к ntp серверу
 
 uint8_t climateCountAvg;
+uint8_t climateTimeAvg;
 uint16_t climateTempAvg;
 uint16_t climateHumAvg;
 uint16_t climatePressAvg;
@@ -1175,6 +1176,7 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
 }
 
 void climateReset(void) {
+  climateTimeAvg = 0;
   climateTempAvg = 0;
   climateHumAvg = 0;
   climatePressAvg = 0;
@@ -1198,24 +1200,20 @@ void climateUpdate(void) {
     climateReset(); //сброс усреднения
   }
   else {
-    if (settings.climateAvg && (settings.climateTime > 1)) {
-      climateTempAvg += temperature;
-      climateHumAvg += sens.hum;
-      climatePressAvg += sens.press;
-    }
-    else {
-      climateTempAvg = temperature;
-      climateHumAvg = sens.hum;
-      climatePressAvg = sens.press;
-    }
+    climateTimeAvg++;
+
+    climateTempAvg += temperature;
+    climateHumAvg += sens.hum;
+    climatePressAvg += sens.press;
 
     if (++climateCountAvg >= settings.climateTime) {
-      if (settings.climateAvg && (settings.climateTime > 1)) {
+      if (settings.climateAvg && (climateTimeAvg > 1)) {
         if (climateTempAvg) climateTempAvg /= climateCountAvg;
         if (climateHumAvg) climateHumAvg /= climateCountAvg;
         if (climatePressAvg) climatePressAvg /= climateCountAvg;
+        climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
       }
-      climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
+      else climateAdd(temperature, sens.hum, sens.press, unixNow);
       climateReset(); //сброс усреднения
     }
   }

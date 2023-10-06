@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x04 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x05 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -35,8 +35,11 @@
 
 #define BUS_SET_SHOW_TIME 0x1B
 #define BUS_SET_BURN_TIME 0x1C
-#define BUS_SET_MAIN_DOT 0x1D
-#define BUS_SET_ALARM_DOT 0x1E
+#define BUS_SET_UPDATE 0x1E
+
+#define BUS_WRITE_TIMER_SET 0x1F
+#define BUS_READ_TIMER_SET 0x20
+#define BUS_WRITE_TIMER_MODE 0x21
 
 #define BUS_TEST_FLIP 0xFB
 #define BUS_TEST_SOUND 0xFC
@@ -106,6 +109,13 @@ struct sensorData {
   boolean err; //ошибка сенсора
 } sens;
 
+//------------Таймера/Секундомер-----------
+struct timerData {
+  uint8_t mode; //режим таймера/секундомера
+  uint16_t count; //счетчик таймера/секундомера
+  uint16_t time; //время таймера сек
+} timer;
+
 //----------------Будильники--------------
 struct alarmData {
   uint8_t set; //настройка текущего будильника
@@ -153,6 +163,9 @@ enum {
   DOTS_PORT_ENABLE,
   DOTS_NUM,
   DOTS_TYPE,
+  LIGHT_SENS_ENABLE,
+  EXT_BTN_ENABLE,
+  TIMER_ENABLE,
   RADIO_ENABLE,
   ALARM_TYPE,
   PLAYER_TYPE,
@@ -258,8 +271,13 @@ enum {
 
   SET_SHOW_TIME,
   SET_BURN_TIME,
-  SET_ALARM_DOT,
-  SET_MAIN_DOT,
+  SET_UPDATE,
+
+  READ_TIMER_STATE,
+  WRITE_TIMER_STATE,
+  READ_TIMER_SET,
+  WRITE_TIMER_SET,
+  WRITE_TIMER_MODE,
 
   WRITE_TEST_MAIN_VOL,
   WRITE_TEST_ALARM_VOL,
@@ -291,7 +309,7 @@ void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos) {
     twi_write_byte(BUS_SELECT_BYTE);
     twi_write_byte(pos);
   }
-  twi_write_byte(command); //регистр времени
+  twi_write_byte(command); //регистр команды
   twi_write_byte(data); //отправляем дополнительные натройки
 }
 //--------------------------------------------------------------------
@@ -300,7 +318,7 @@ void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos) {
     twi_write_byte(BUS_SELECT_BYTE);
     twi_write_byte(pos * 2);
   }
-  twi_write_byte(command); //регистр времени
+  twi_write_byte(command); //регистр команды
   twi_write_byte(data & 0xFF); //отправляем дополнительные натройки
   twi_write_byte((data >> 8) & 0xFF); //отправляем дополнительные натройки
 }
@@ -373,7 +391,7 @@ void busUpdate(void) {
       case WRITE_TIME:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_WRITE_TIME); //регистр времени
+          twi_write_byte(BUS_WRITE_TIME); //регистр команды
           twi_write_byte(mainTime.second); //отправляем время
           twi_write_byte(mainTime.minute);
           twi_write_byte(mainTime.hour);
@@ -385,7 +403,7 @@ void busUpdate(void) {
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_SELECT_BYTE);
           twi_write_byte(0x03);
-          twi_write_byte(BUS_WRITE_TIME); //регистр времени
+          twi_write_byte(BUS_WRITE_TIME); //регистр команды
           twi_write_byte(mainDate.day); //отправляем дату
           twi_write_byte(mainDate.month);
           twi_write_byte(mainDate.year & 0xFF);
@@ -411,7 +429,7 @@ void busUpdate(void) {
             case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); busWriteBuffer(WRITE_TEST_MAIN_FLIP); break; //отправляем дополнительные натройки
             case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
             case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
-            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); busWriteBuffer(SET_MAIN_DOT); break; //отправляем дополнительные натройки
+            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -574,8 +592,8 @@ void busUpdate(void) {
       case DEL_ALARM:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_DEL_ALARM); //регистр времени
-          twi_write_byte(busReadBuffer()); //регистр времени
+          twi_write_byte(BUS_DEL_ALARM); //регистр команды
+          twi_write_byte(busReadBuffer()); //регистр команды
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
         }
@@ -583,7 +601,7 @@ void busUpdate(void) {
       case NEW_ALARM:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_NEW_ALARM); //регистр времени
+          twi_write_byte(BUS_NEW_ALARM); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -627,8 +645,8 @@ void busUpdate(void) {
       case WRITE_RADIO_VOL:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_WRITE_RADIO_VOL); //регистр времени
-          twi_write_byte(radioSettings.volume); //регистр времени
+          twi_write_byte(BUS_WRITE_RADIO_VOL); //регистр команды
+          twi_write_byte(radioSettings.volume); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -642,8 +660,8 @@ void busUpdate(void) {
       case WRITE_RADIO_FREQ:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_WRITE_RADIO_FREQ); //регистр времени
-          twi_write_byte(radioSettings.stationsFreq & 0xFF); //регистр времени
+          twi_write_byte(BUS_WRITE_RADIO_FREQ); //регистр команды
+          twi_write_byte(radioSettings.stationsFreq & 0xFF); //регистр команды
           twi_write_byte((radioSettings.stationsFreq >> 8) & 0xFF);
           twi_write_stop(); //завершаем передачу
         }
@@ -651,14 +669,14 @@ void busUpdate(void) {
       case WRITE_RADIO_MODE:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_WRITE_RADIO_MODE); //регистр времени
+          twi_write_byte(BUS_WRITE_RADIO_MODE); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
       case WRITE_RADIO_POWER:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_WRITE_RADIO_POWER); //регистр времени
+          twi_write_byte(BUS_WRITE_RADIO_POWER); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -688,14 +706,14 @@ void busUpdate(void) {
       case RADIO_SEEK_UP:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SEEK_RADIO_UP); //регистр времени
+          twi_write_byte(BUS_SEEK_RADIO_UP); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
       case RADIO_SEEK_DOWN:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SEEK_RADIO_DOWN); //регистр времени
+          twi_write_byte(BUS_SEEK_RADIO_DOWN); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -722,7 +740,7 @@ void busUpdate(void) {
       case WRITE_CHECK_SENS:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_CHECK_TEMP); //регистр времени
+          twi_write_byte(BUS_CHECK_TEMP); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -776,8 +794,8 @@ void busUpdate(void) {
             case EXT_ALARM_TIMEOUT: busWriteTwiRegByte(extendedSettings.alarmTime, BUS_WRITE_EXTENDED_SET, 11); break; //отправляем дополнительные натройки
             case EXT_ALARM_WAIT: busWriteTwiRegByte(extendedSettings.alarmWaitTime, BUS_WRITE_EXTENDED_SET, 12); break; //отправляем дополнительные натройки
             case EXT_ALARM_TIMEOUT_SOUND: busWriteTwiRegByte(extendedSettings.alarmSoundTime, BUS_WRITE_EXTENDED_SET, 13); break; //отправляем дополнительные натройки
-            case EXT_ALARM_DOT_ON: busWriteTwiRegByte(extendedSettings.alarmDotOn, BUS_WRITE_EXTENDED_SET, 14); busWriteBuffer(SET_ALARM_DOT); break; //отправляем дополнительные натройки
-            case EXT_ALARM_DOT_WAIT: busWriteTwiRegByte(extendedSettings.alarmDotWait, BUS_WRITE_EXTENDED_SET, 15); busWriteBuffer(SET_ALARM_DOT); break; //отправляем дополнительные натройки
+            case EXT_ALARM_DOT_ON: busWriteTwiRegByte(extendedSettings.alarmDotOn, BUS_WRITE_EXTENDED_SET, 14); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
+            case EXT_ALARM_DOT_WAIT: busWriteTwiRegByte(extendedSettings.alarmDotWait, BUS_WRITE_EXTENDED_SET, 15); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -787,28 +805,65 @@ void busUpdate(void) {
       case SET_SHOW_TIME:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SET_SHOW_TIME); //регистр времени
+          twi_write_byte(BUS_SET_SHOW_TIME); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
       case SET_BURN_TIME:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SET_BURN_TIME); //регистр времени
+          twi_write_byte(BUS_SET_BURN_TIME); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
-      case SET_ALARM_DOT:
+      case SET_UPDATE:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SET_ALARM_DOT); //регистр времени
+          twi_write_byte(BUS_SET_UPDATE); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
-      case SET_MAIN_DOT:
+
+      case READ_TIMER_STATE:
+        if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TIMER_SET)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          timer.mode = twi_read_byte(TWI_ACK); //принимаем время
+          timer.count = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TIMER_STATE:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_SET_MAIN_DOT); //регистр времени
+          twi_write_byte(BUS_WRITE_TIMER_SET); //регистр команды
+          twi_write_byte(timer.mode);
+          twi_write_byte(timer.count & 0xFF);
+          twi_write_byte((timer.count >> 8) & 0xFF);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case READ_TIMER_SET:
+        if (!twi_requestFrom(CLOCK_ADDRESS, BUS_SELECT_BYTE, 0x03, BUS_READ_TIMER_SET)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          timer.time = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TIMER_SET:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_SELECT_BYTE); //регистр команды
+          twi_write_byte(0x03);
+          twi_write_byte(BUS_WRITE_TIMER_SET); //регистр команды
+          twi_write_byte(timer.time & 0xFF);
+          twi_write_byte((timer.time >> 8) & 0xFF);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TIMER_MODE:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_WRITE_TIMER_MODE); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -816,7 +871,7 @@ void busUpdate(void) {
       case WRITE_TEST_MAIN_VOL:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_TEST_SOUND); //регистр времени
+          twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte(mainSettings.volumeSound); //громкость
           twi_write_byte(21); //номер трека
           twi_write_byte(4); //номер папки
@@ -826,7 +881,7 @@ void busUpdate(void) {
       case WRITE_TEST_ALARM_VOL:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_TEST_SOUND); //регистр времени
+          twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
           twi_write_byte(21); //номер трека
           twi_write_byte(4); //номер папки
@@ -836,7 +891,7 @@ void busUpdate(void) {
       case WRITE_TEST_ALARM_SOUND:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_TEST_SOUND); //регистр времени
+          twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
           twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + 1); //номер трека
           twi_write_byte(5); //номер папки
@@ -846,7 +901,7 @@ void busUpdate(void) {
       case WRITE_TEST_MAIN_FLIP:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          twi_write_byte(BUS_TEST_FLIP); //регистр времени
+          twi_write_byte(BUS_TEST_FLIP); //регистр команды
           twi_write_stop(); //завершаем передачу
         }
         break;
