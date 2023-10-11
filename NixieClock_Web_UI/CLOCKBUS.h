@@ -927,6 +927,9 @@ void busUpdate(void) {
           deviceInformation[DOTS_PORT_ENABLE] = twi_read_byte(TWI_ACK);
           deviceInformation[DOTS_NUM] = twi_read_byte(TWI_ACK);
           deviceInformation[DOTS_TYPE] = twi_read_byte(TWI_ACK);
+          deviceInformation[LIGHT_SENS_ENABLE] = twi_read_byte(TWI_ACK);
+          deviceInformation[EXT_BTN_ENABLE] = twi_read_byte(TWI_ACK);
+          deviceInformation[TIMER_ENABLE] = twi_read_byte(TWI_ACK);
           deviceInformation[RADIO_ENABLE] = twi_read_byte(TWI_ACK);
           deviceInformation[ALARM_TYPE] = twi_read_byte(TWI_ACK);
           deviceInformation[PLAYER_TYPE] = twi_read_byte(TWI_ACK);
