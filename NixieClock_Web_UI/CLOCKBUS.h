@@ -114,6 +114,9 @@ struct timerData {
   uint8_t mode; //режим таймера/секундомера
   uint16_t count; //счетчик таймера/секундомера
   uint16_t time; //время таймера сек
+  uint8_t hour;
+  uint8_t mins;
+  uint8_t secs;
 } timer;
 
 //----------------Будильники--------------
@@ -275,6 +278,8 @@ enum {
 
   READ_TIMER_STATE,
   WRITE_TIMER_STATE,
+  READ_TIMER_TIME,
+  WRITE_TIMER_TIME,
   READ_TIMER_SET,
   WRITE_TIMER_SET,
   WRITE_TIMER_MODE,
@@ -827,12 +832,28 @@ void busUpdate(void) {
       case READ_TIMER_STATE:
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TIMER_SET)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          timer.mode = twi_read_byte(TWI_ACK); //принимаем время
-          timer.count = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+          timer.mode = twi_read_byte(TWI_ACK); //принимаем данные
           twi_write_stop(); //завершаем передачу
         }
         break;
       case WRITE_TIMER_STATE:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_WRITE_TIMER_SET); //регистр команды
+          twi_write_byte(timer.mode);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+
+      case READ_TIMER_TIME:
+        if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TIMER_SET)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          timer.mode = twi_read_byte(TWI_ACK); //принимаем данные
+          timer.count = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TIMER_TIME:
         if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_WRITE_TIMER_SET); //регистр команды
@@ -842,6 +863,7 @@ void busUpdate(void) {
           twi_write_stop(); //завершаем передачу
         }
         break;
+
       case READ_TIMER_SET:
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_SELECT_BYTE, 0x03, BUS_READ_TIMER_SET)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд

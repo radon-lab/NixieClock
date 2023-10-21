@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.7 релиз от 06.10.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.7 релиз от 20.10.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -395,6 +395,7 @@ enum {
   ALARM_SOUND, //мелодия будильника
   ALARM_VOLUME, //громкость будильника
   ALARM_RADIO, //радиобудильник
+  ALARM_STATUS, //статус будильника
   ALARM_MAX_ARR //максимальное количество данных
 };
 
@@ -906,7 +907,7 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
 #if ALARM_TYPE
-  checkAlarms(0); //проверка будильников
+  checkAlarms(2); //проверка будильников
 #endif
 
 #if ESP_ENABLE
@@ -2040,6 +2041,7 @@ void newAlarm(void) //создать новый будильник
     EEPROM_UpdateByte(newCell + ALARM_SOUND, 0); //устанавливаем мелодию по умолчанию
     EEPROM_UpdateByte(newCell + ALARM_VOLUME, 0); //устанавливаем громкость по умолчанию
     EEPROM_UpdateByte(newCell + ALARM_RADIO, 0); //устанавливаем радиобудильник по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_STATUS, 0); //устанавливаем статус по умолчанию
     updateByte(++alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
 }
@@ -2056,22 +2058,58 @@ void delAlarm(uint8_t alarm) //удалить будильник
   }
 }
 //----------------------------------Проверка будильников----------------------------------------------------
-void checkAlarms(boolean check) //проверка будильников
+void checkAlarms(uint8_t check) //проверка будильников
 {
   if (alarms.now < 2) { //если тревога не активна
     alarms.now = 0; //сбрасываем флаг включенных точек будильника
+    int16_t time_now = 1440 + ((int16_t)RTC.h * 60) + RTC.m; //рассчитали текущее время
     for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
-      if (alarmRead(alm, ALARM_MODE)) { //если будильник включен
+      uint8_t mode_alarm = alarmRead(alm, ALARM_MODE); //считали режим будильника
+      if (mode_alarm) { //если будильник включен
         alarms.now = 1; //мигание точек при включенном будильнике
-        if (check) return; //выходим
-        if (RTC.h == alarmRead(alm, ALARM_HOURS) && RTC.m == alarmRead(alm, ALARM_MINS) && (alarmRead(alm, ALARM_MODE) < 3 || (alarmRead(alm, ALARM_MODE) == 3 && RTC.DW < 6) || (alarmRead(alm, ALARM_DAYS) & (0x01 << RTC.DW)))) {
+        if (check == 1) return; //выходим
+
+        uint8_t days_alarm = alarmRead(alm, ALARM_DAYS); //считали дни недели будильника
+        int16_t time_alarm = ((int16_t)alarmRead(alm, ALARM_HOURS) * 60) + alarmRead(alm, ALARM_MINS);
+        switch (mode_alarm) { //устанавливаем дни в зависимости от режима
+          case 3: days_alarm = 0x3E; break; //по будням
+          case 4: if (!days_alarm) days_alarm = 0xFF; else if (days_alarm & 0x80) days_alarm |= 0x01; break; //по дням недели
+          default: days_alarm = 0xFF; break; //каждый день
+        }
+
+        uint8_t start_alarm = 0; //установили первоначальное время до будильника
+        for (uint8_t dw = RTC.DW - 1; dw <= RTC.DW; dw++) { //проверяем все дни недели
+          if (days_alarm & (0x01 << dw)) { //если активирован день недели
+            int16_t time_buf = time_now - time_alarm; //расчет интервала
+            if (!time_buf) start_alarm = 1; //если будильник в зоне активации
+            else if ((time_buf > 0) && (time_buf < 30)) start_alarm = 2; //если будильник в зоне активации
+          }
+          time_alarm += 1440; //прибавили время будильнику
+        }
+
+        uint8_t status_alarm = alarmRead(alm, ALARM_STATUS); //считали статус будильника
+
+        if (status_alarm) { //если будильник заблокирован автоматически
+          if (status_alarm == 255) { //если будильник заблокирован пользователем
+            if ((check == 2) || (start_alarm < 2)) {
+              status_alarm = 0; //сбросили статус блокировки пользователем
+              alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
+            }
+          }
+          else if ((status_alarm != RTC.DW) && !start_alarm) { //если вышли из зоны активации будильника
+            status_alarm = 0; //устанавливаем статус блокировки будильника
+            alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
+          }
+        }
+        if (!status_alarm && start_alarm) { //если будильник не был заблокирован
           alarms.now = 3; //устанавливаем флаг тревоги
-          if (alarmRead(alm, ALARM_MODE) == 1) { //если был установлен режим одиночный
+          if (mode_alarm == 1) { //если был установлен режим одиночный
 #if ESP_ENABLE
             deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
             alarmWrite(alm, ALARM_MODE, 0); //выключаем будильник
           }
+          alarmWrite(alm, ALARM_STATUS, RTC.DW); //сбрасываем статус активности будильник
           alarms.sound = alarmRead(alm, ALARM_SOUND); //номер мелодии
           alarms.radio = alarmRead(alm, ALARM_RADIO); //текущий режим звука
           alarms.volume = alarmRead(alm, ALARM_VOLUME); //текущая громкость
@@ -2285,7 +2323,9 @@ uint8_t busCheck(void) //проверка статуса шины
       for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case BUS_EXT_COMMAND_CHECK_TEMP: updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
+#endif
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
 #if RADIO_ENABLE
             case BUS_EXT_COMMAND_RADIO_VOL: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
@@ -2407,7 +2447,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             else bus.comand = BUS_READ_ALARM_DATA; //перешли в режим настроек будильника
             break;
           case BUS_WRITE_ALARM_DATA: //прием настроек будильника
-            if (bus.counter < ALARM_MAX_ARR) {
+            if (bus.counter < (ALARM_MAX_ARR - 1)) {
               bus.buffer[bus.counter] = TWDR;
               bus.counter++; //сместили указатель
             }
@@ -2495,7 +2535,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #if ALARM_TYPE
           case BUS_READ_ALARM_DATA: //передача настроек будильника
-            if (bus.counter < ALARM_MAX_ARR) {
+            if (bus.counter < (ALARM_MAX_ARR - 1)) {
               TWDR = bus.buffer[bus.counter];
               bus.counter++; //сместили указатель
             }
@@ -2521,12 +2561,14 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
 #endif
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
           case BUS_READ_TEMP: //передача температуры
             if (bus.counter < sizeof(sens)) {
               TWDR = *((uint8_t*)&sens + bus.counter);
               bus.counter++; //сместили указатель
             }
             break;
+#endif
           case BUS_READ_EXTENDED_SET: //передача расширенных настроек
             if (bus.counter < sizeof(extendedSettings)) {
               TWDR = *((uint8_t*)&extendedSettings + bus.counter);
@@ -2583,7 +2625,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_NEW_ALARM:
             TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
             switch (bus.comand) {
-              case BUS_WRITE_ALARM_DATA: alarmWriteBlock(bus.position, bus.buffer); break; //записываем настройки будильника
+              case BUS_WRITE_ALARM_DATA: bus.buffer[ALARM_STATUS] = 255; alarmWriteBlock(bus.position, bus.buffer); break; //записываем настройки будильника
               case BUS_DEL_ALARM: delAlarm(bus.position); break; //удаляем выбранный будильник
               case BUS_NEW_ALARM: newAlarm(); break; //добавляем новый будильник
             }
@@ -2603,7 +2645,9 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SEEK_RADIO_UP: bus.status |= BUS_COMMAND_RADIO_SEEK_UP; break; //запуск автопоиска радио
           case BUS_SEEK_RADIO_DOWN: bus.status |= BUS_COMMAND_RADIO_SEEK_DOWN; break; //запуск автопоиска радио
 #endif
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
           case BUS_CHECK_TEMP: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_CHECK_TEMP); break; //запрос температуры
+#endif
           case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
           case BUS_SET_SHOW_TIME: _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); break; //установка таймера показа температуры
           case BUS_SET_BURN_TIME: _timer_sec[TMR_BURN] = getPhaseTime(extendedSettings.burnTime, BURN_PHASE); break; //установка таймера антиотравления
@@ -3269,6 +3313,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #if ESP_ENABLE
         deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
+        alarm[ALARM_STATUS] = 255; //установили статус изменения будильника
         alarmWriteBlock(1, alarm); //записать блок основных данных будильника и выйти
         return MAIN_PROGRAM;
 
@@ -3685,6 +3730,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #if ESP_ENABLE
           deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
+          alarm[ALARM_STATUS] = 255; //установили статус изменения будильника
           alarmWriteBlock(curAlarm, alarm); //записать блок основных данных будильника
           dotSetBright(0); //выключаем точки
           cur_mode = 0; //выбор будильника
@@ -3913,7 +3959,9 @@ uint8_t settings_main(void) //настроки основные
               case SET_GLITCH: //глюки
 #if PLAYER_TYPE
                 switch (cur_indi) {
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
                   case 0: if (mainSettings.hourSound & 0x80) mainSettings.hourSound &= ~0x80; else mainSettings.hourSound |= 0x80; break; //установили тип озвучки
+#endif
                   case 1: mainSettings.glitchMode = 0; break; //глюки
                 }
 #else
@@ -4555,7 +4603,9 @@ void autoShowMenu(void) //меню автоматического показа
   boolean state = 0; //состояние подсветки
 #endif
 
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
   updateTemp(); //обновить показания температуры
+#endif
 
   for (uint8_t mode = 0; mode < sizeof(extendedSettings.autoShowModes); mode++) {
 #if DOTS_PORT_ENABLE
@@ -5432,6 +5482,9 @@ uint8_t timerWarn(void) //тревога таймера
 #endif
   while (!buttonState()) { //ждем
     dataUpdate(); //обработка данных
+#if ESP_ENABLE
+    if (!timer.mode) break;
+#endif
 #if PLAYER_TYPE
     if (!playerPlaybackStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
@@ -5681,10 +5734,12 @@ void hourSound(void) //звук смены часа
       }
       if (temp & 0x01) playerSetTrack(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
       if (temp & 0x02) speakTime(1); //воспроизвести время
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
         updateTemp(); //обновить показания температуры
         speakTemp(1); //воспроизвести целую температуру
       }
+#endif
 #else
       if (mainSettings.knockSound) melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
 #endif
@@ -6282,7 +6337,11 @@ void burnIndi(uint8_t mode, boolean demo) //антиотравление инд�
 
   if (mode != BURN_SINGLE_TIME) { //если режим без отображения времени
 #if DOTS_PORT_ENABLE
+#if BURN_DOTS
+    indiSetDots(0, DOTS_ALL); //установка разделительных точек
+#else
     indiClrDots(); //выключаем разделительные точки
+#endif
 #endif
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем секундные точки

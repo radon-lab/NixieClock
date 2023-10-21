@@ -63,6 +63,12 @@
 #define UI_RADIO_FREQ_2_COLOR "#e67b09" //цвет кнопок настройки частоты радио
 #define UI_RADIO_CHANNEL_COLOR "#e67b09" //цвет кнопок выбора канала радио
 
+#define UI_TIMER_BLOCK_COLOR GP_GRAY //цвет блока информации о таймере/секундомере
+#define UI_TIMER_TIME_COLOR GP_DEFAULT //цвет времени таймера/секундомера
+#define UI_TIMER_INFO_COLOR GP_DEFAULT //цвет состояния таймера/секундомера
+#define UI_TIMER_SET_COLOR "#e67b09" //цвет кнопок настройки таймера/секундомера
+#define UI_TIMER_CTRL_COLOR "#e67b09" //цвет кнопок управления таймером/секундомером
+
 #define UI_BAR_CLOCK_COLOR GP_WHITE //цвет времени в статус баре
 #define UI_BAR_TEMP_COLOR GP_GREEN //цвет температуры в статус баре
 #define UI_BAR_HUM_COLOR GP_BLUE //цвет влажности в статус баре
@@ -73,4 +79,4 @@
 #define MAX_ALARMS 7 //максимум будильников(3..15)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.0.6" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.0.7" //версия прошивки модуля esp
