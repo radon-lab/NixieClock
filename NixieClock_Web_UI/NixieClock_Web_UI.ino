@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.7 релиз от 20.10.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.7 релиз от 22.10.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1425,7 +1425,7 @@ void wifiStartAP(void) {
   //задаем настройки сети
   WiFi.softAPConfig(apIP, apIP, subnet);
   //включаем wifi в режиме точки доступа с именем и паролем по умолчанию
-  WiFi.softAP(AP_SSID, AP_PASS);
+  WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL);
 }
 
 void setup() {

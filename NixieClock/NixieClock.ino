@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.7 релиз от 20.10.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.7 релиз от 22.10.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -5483,7 +5483,17 @@ uint8_t timerWarn(void) //тревога таймера
   while (!buttonState()) { //ждем
     dataUpdate(); //обработка данных
 #if ESP_ENABLE
-    if (!timer.mode) break;
+    if (!timer.mode) { //если таймер отключен
+#if PLAYER_TYPE
+      playerStop(); //сброс воспроизведения плеера
+#else
+      melodyStop(); //сброс воспроизведения мелодии
+#endif
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
+      radioPowerRet(); //вернуть питание радиоприемника
+#endif
+      return MAIN_PROGRAM; //выходим
+    }
 #endif
 #if PLAYER_TYPE
     if (!playerPlaybackStatus()) playerSetTrack(PLAYER_TIMER_WARN_SOUND, PLAYER_GENERAL_FOLDER);
