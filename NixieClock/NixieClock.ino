@@ -4042,7 +4042,10 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
                 switch (cur_indi) {
-                  case 0: if (mainSettings.burnTime > 10) mainSettings.burnTime -= 5; else mainSettings.burnTime = 180; break;
+                  case 0:
+                    if (mainSettings.burnTime > 10) mainSettings.burnTime -= 5; else mainSettings.burnTime = 180;
+                    _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); //установка таймера антиотравления
+                    break;
                   case 1:
                     if (mainSettings.burnMode) mainSettings.burnMode--; else mainSettings.burnMode = (BURN_EFFECT_NUM - 1);
                     anim_demo = 2; //установили флаг демонстрации анимации
@@ -4171,7 +4174,10 @@ uint8_t settings_main(void) //настроки основные
                 break;
               case SET_BURN_MODE: //анимация антиотравления индикаторов
                 switch (cur_indi) {
-                  case 0: if (mainSettings.burnTime < 180) mainSettings.burnTime += 5; else mainSettings.burnTime = 10; break;
+                  case 0:
+                    if (mainSettings.burnTime < 180) mainSettings.burnTime += 5; else mainSettings.burnTime = 10;
+                    _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); //установка таймера антиотравления
+                    break;
                   case 1:
                     if (mainSettings.burnMode < (BURN_EFFECT_NUM - 1)) mainSettings.burnMode++; else mainSettings.burnMode = 0;
                     anim_demo = 2; //установили флаг демонстрации анимации
