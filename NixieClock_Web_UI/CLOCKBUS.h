@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x05 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x09 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -66,25 +66,26 @@ struct Settings_1 {
   boolean knockSound; //звук кнопок или озвучка
   uint8_t hourSound; //тип озвучки смены часа
   uint8_t volumeSound; //громкость озвучки
+  uint8_t voiceSound; //голос озвучки
   int8_t tempCorrect; //коррекция температуры
   boolean glitchMode; //режим глюков
   uint8_t autoShowTime; //интервал времени автопоказа
   uint8_t autoShowFlip; //режим анимации автопоказа
   uint8_t burnMode; //режим антиотравления индикаторов
-  uint8_t secsMode; //режим анимации секунд индикаторов
+  uint8_t burnTime; //интервал антиотравления индикаторов
 } mainSettings;
 
 struct Settings_2 {
-  uint8_t flipMode; //режим анимации
+  uint8_t flipMode; //режим анимации минут
+  uint8_t secsMode; //режим анимации секунд
+  uint8_t dotMode; //режим точек
   uint8_t backlMode; //режим подсветки
   uint8_t backlColor; //цвет подсветки
-  uint8_t dotMode; //режим точек
 } fastSettings;
 
 struct Settings_3 { //расширенные настройки
   uint8_t autoShowModes[5];
   uint8_t autoShowTimes[5];
-  uint8_t burnTime;
   uint8_t alarmTime;
   uint8_t alarmWaitTime;
   uint8_t alarmSoundTime;
@@ -173,6 +174,7 @@ enum {
   ALARM_TYPE,
   PLAYER_TYPE,
   PLAYER_MAX_SOUND,
+  PLAYER_MAX_VOICE,
   PLAYER_MAX_VOL,
   INFORMATION_MAX
 };
@@ -195,19 +197,21 @@ enum {
   MAIN_KNOCK_SOUND,
   MAIN_HOUR_SOUND,
   MAIN_VOLUME_SOUND,
+  MAIN_VOICE_SOUND,
   MAIN_TEMP_CORRECT,
   MAIN_GLITCH_MODE,
   MAIN_AUTO_SHOW_TIME,
   MAIN_AUTO_SHOW_FLIP,
   MAIN_BURN_MODE,
-  MAIN_SECS_MODE
+  MAIN_BURN_TIME
 };
 
 enum {
   FAST_FLIP_MODE,
+  FAST_SECS_MODE,
+  FAST_DOT_MODE,
   FAST_BACKL_MODE,
-  FAST_BACKL_COLOR,
-  FAST_DOT_MODE
+  FAST_BACKL_COLOR
 };
 
 enum {
@@ -269,7 +273,6 @@ enum {
   READ_EXTENDED_SET,
   WRITE_EXTENDED_SHOW_MODE,
   WRITE_EXTENDED_SHOW_TIME,
-  WRITE_EXTENDED_BURN_TIME,
   WRITE_EXTENDED_ALARM,
 
   SET_SHOW_TIME,
@@ -287,6 +290,7 @@ enum {
   WRITE_TEST_MAIN_VOL,
   WRITE_TEST_ALARM_VOL,
   WRITE_TEST_ALARM_SOUND,
+  WRITE_TEST_MAIN_VOICE,
   WRITE_TEST_MAIN_FLIP,
 
   READ_STATUS,
@@ -421,9 +425,10 @@ void busUpdate(void) {
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_FAST_SET)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
           fastSettings.flipMode = twi_read_byte(TWI_ACK); //принимаем дополнительные натройки
+          fastSettings.secsMode = twi_read_byte(TWI_ACK);
+          fastSettings.dotMode = twi_read_byte(TWI_ACK);
           fastSettings.backlMode = twi_read_byte(TWI_ACK);
-          fastSettings.backlColor = twi_read_byte(TWI_ACK);
-          fastSettings.dotMode = twi_read_byte(TWI_NACK);
+          fastSettings.backlColor = twi_read_byte(TWI_NACK);
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -432,9 +437,10 @@ void busUpdate(void) {
           busShiftBuffer(); //сместили буфер команд
           switch (busReadBuffer()) {
             case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); busWriteBuffer(WRITE_TEST_MAIN_FLIP); break; //отправляем дополнительные натройки
-            case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
-            case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
-            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
+            case FAST_SECS_MODE: busWriteTwiRegByte(fastSettings.secsMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
+            case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
+            case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
+            case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -460,12 +466,13 @@ void busUpdate(void) {
           mainSettings.knockSound = twi_read_byte(TWI_ACK);
           mainSettings.hourSound = twi_read_byte(TWI_ACK);
           mainSettings.volumeSound = twi_read_byte(TWI_ACK);
+          mainSettings.voiceSound = twi_read_byte(TWI_ACK);
           mainSettings.tempCorrect = twi_read_byte(TWI_ACK);
           mainSettings.glitchMode = twi_read_byte(TWI_ACK);
           mainSettings.autoShowTime = twi_read_byte(TWI_ACK);
           mainSettings.autoShowFlip = twi_read_byte(TWI_ACK);
           mainSettings.burnMode = twi_read_byte(TWI_ACK);
-          mainSettings.secsMode = twi_read_byte(TWI_NACK);
+          mainSettings.burnTime = twi_read_byte(TWI_NACK);
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -489,12 +496,13 @@ void busUpdate(void) {
             case MAIN_KNOCK_SOUND: busWriteTwiRegByte(mainSettings.knockSound, BUS_WRITE_MAIN_SET, 13); break; //отправляем дополнительные натройки
             case MAIN_HOUR_SOUND: busWriteTwiRegByte(mainSettings.hourSound, BUS_WRITE_MAIN_SET, 14); break; //отправляем дополнительные натройки
             case MAIN_VOLUME_SOUND: busWriteTwiRegByte(mainSettings.volumeSound, BUS_WRITE_MAIN_SET, 15); break; //отправляем дополнительные натройки
-            case MAIN_TEMP_CORRECT: busWriteTwiRegByte(mainSettings.tempCorrect, BUS_WRITE_MAIN_SET, 16); break; //отправляем дополнительные натройки
-            case MAIN_GLITCH_MODE: busWriteTwiRegByte(mainSettings.glitchMode, BUS_WRITE_MAIN_SET, 17); break; //отправляем дополнительные натройки
-            case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte(mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 18); busWriteBuffer(SET_SHOW_TIME); break; //отправляем дополнительные натройки
-            case MAIN_AUTO_SHOW_FLIP: busWriteTwiRegByte(mainSettings.autoShowFlip, BUS_WRITE_MAIN_SET, 19); break; //отправляем дополнительные натройки
-            case MAIN_BURN_MODE: busWriteTwiRegByte(mainSettings.burnMode, BUS_WRITE_MAIN_SET, 20); break; //отправляем дополнительные натройки
-            case MAIN_SECS_MODE: busWriteTwiRegByte(mainSettings.secsMode, BUS_WRITE_MAIN_SET, 21); break; //отправляем дополнительные натройки
+            case MAIN_VOICE_SOUND: busWriteTwiRegByte(mainSettings.voiceSound, BUS_WRITE_MAIN_SET, 16); break; //отправляем дополнительные натройки
+            case MAIN_TEMP_CORRECT: busWriteTwiRegByte(mainSettings.tempCorrect, BUS_WRITE_MAIN_SET, 17); break; //отправляем дополнительные натройки
+            case MAIN_GLITCH_MODE: busWriteTwiRegByte(mainSettings.glitchMode, BUS_WRITE_MAIN_SET, 18); break; //отправляем дополнительные натройки
+            case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte(mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 19); busWriteBuffer(SET_SHOW_TIME); break; //отправляем дополнительные натройки
+            case MAIN_AUTO_SHOW_FLIP: busWriteTwiRegByte(mainSettings.autoShowFlip, BUS_WRITE_MAIN_SET, 20); break; //отправляем дополнительные натройки
+            case MAIN_BURN_MODE: busWriteTwiRegByte(mainSettings.burnMode, BUS_WRITE_MAIN_SET, 21); break; //отправляем дополнительные натройки
+            case MAIN_BURN_TIME: busWriteTwiRegByte(mainSettings.burnTime, BUS_WRITE_MAIN_SET, 22); break; //отправляем дополнительные натройки
           }
           busShiftBuffer(); //сместили буфер команд
           twi_write_stop(); //завершаем передачу
@@ -759,7 +767,6 @@ void busUpdate(void) {
           for (uint8_t i = 0; i < 5; i++) {
             extendedSettings.autoShowTimes[i] = twi_read_byte(TWI_ACK);
           }
-          extendedSettings.burnTime = twi_read_byte(TWI_ACK);
           extendedSettings.alarmTime = twi_read_byte(TWI_ACK);
           extendedSettings.alarmWaitTime = twi_read_byte(TWI_ACK);
           extendedSettings.alarmSoundTime = twi_read_byte(TWI_ACK);
@@ -781,14 +788,6 @@ void busUpdate(void) {
           busShiftBuffer(); //сместили буфер команд
           busWriteTwiRegByte(extendedSettings.autoShowTimes[busReadBuffer()], BUS_WRITE_EXTENDED_SET, busReadBuffer() + 5);
           busShiftBuffer(); //сместили буфер команд
-          twi_write_stop(); //завершаем передачу
-        }
-        break;
-      case WRITE_EXTENDED_BURN_TIME:
-        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-          busShiftBuffer(); //сместили буфер команд
-          busWriteTwiRegByte(extendedSettings.burnTime, BUS_WRITE_EXTENDED_SET, 10);
-          busWriteBuffer(SET_BURN_TIME);
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -895,8 +894,8 @@ void busUpdate(void) {
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte(mainSettings.volumeSound); //громкость
-          twi_write_byte(21); //номер трека
-          twi_write_byte(4); //номер папки
+          twi_write_byte(22); //номер трека
+          twi_write_byte(5); //номер папки
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -905,8 +904,8 @@ void busUpdate(void) {
           busShiftBuffer(); //сместили буфер команд
           twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
-          twi_write_byte(21); //номер трека
-          twi_write_byte(4); //номер папки
+          twi_write_byte(22); //номер трека
+          twi_write_byte(5); //номер папки
           twi_write_stop(); //завершаем передачу
         }
         break;
@@ -916,6 +915,16 @@ void busUpdate(void) {
           twi_write_byte(BUS_TEST_SOUND); //регистр команды
           twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
           twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + 1); //номер трека
+          twi_write_byte(1); //номер папки
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+      case WRITE_TEST_MAIN_VOICE:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_TEST_SOUND); //регистр команды
+          twi_write_byte(mainSettings.volumeSound); //громкость
+          twi_write_byte(18); //номер трека
           twi_write_byte(5); //номер папки
           twi_write_stop(); //завершаем передачу
         }
@@ -956,6 +965,7 @@ void busUpdate(void) {
           deviceInformation[ALARM_TYPE] = twi_read_byte(TWI_ACK);
           deviceInformation[PLAYER_TYPE] = twi_read_byte(TWI_ACK);
           deviceInformation[PLAYER_MAX_SOUND] = twi_read_byte(TWI_ACK);
+          deviceInformation[PLAYER_MAX_VOICE] = twi_read_byte(TWI_ACK);
           deviceInformation[PLAYER_MAX_VOL] = twi_read_byte(TWI_NACK);
           twi_write_stop(); //завершаем передачу
         }

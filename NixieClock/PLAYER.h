@@ -49,6 +49,7 @@ enum {
 struct playerData { //буфер обмена
   uint8_t playbackVol; //текущая громкость звука
   uint8_t playbackRetVol; //флаг возврата громкости звука
+  uint8_t playbackVoice; //текущий голос озвучки
   boolean playbackMute; //флаг работы без звука
   boolean playbackNow; //флаг срочной отправки данных
   uint8_t playbackEnd; //последний байт буфера воспроизведения
@@ -235,11 +236,13 @@ void playerStopTrack(void)
 //-----------------------------------Воспроизвести трек в папке----------------------------------
 void playerSetTrack(uint8_t _track, uint8_t _folder)
 {
+  if (_folder > 1) _folder += player.playbackVoice;
   playerSendData(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
 }
 //----------------------------Воспроизвести трек в папке без очереди----------------------------
 void playerSetTrackNow(uint8_t _track, uint8_t _folder)
 {
+  if (_folder > 1) _folder += player.playbackVoice;
   playerSendDataNow(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
 }
 //-------------------------------------Установить громкость-------------------------------------
@@ -282,6 +285,11 @@ void playerSetMuteNow(boolean _mute)
     else BUZZ_OUT;
 #endif
   }
+}
+//----------------------------------Установить голос озвучки------------------------------------
+void playerSetVoice(uint8_t _voice)
+{
+  if (_voice < PLAYER_MAX_VOICE) player.playbackVoice = _voice * 4;
 }
 //-------------------------------------Воспроизвести число--------------------------------------
 void playerSpeakNumber(uint16_t _num, boolean _type)

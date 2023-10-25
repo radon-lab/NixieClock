@@ -691,13 +691,19 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char 
     }
   }
 }
-//------------------------------------Вывод чисел-------------------------------------------------
+//-------------------------------------Вывод чисел-----------------------------------------------
 void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //вывод чисел
 {
   printNum(_num, indi_buf, _indi, _length, _filler); //печать чисел
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
+}
+//---------------------------------Вывод аргументов меню------------------------------------------
+void indiPrintMenuData(boolean blink, boolean state, uint8_t arg1, uint8_t pos1, uint8_t arg2, uint8_t pos2) //вывод аргументов меню
+{
+  if (!blink || state) indiPrintNum(arg1, pos1, (pos1 & 0x01) ? 1 : 2, 0); //вывод первого аргумента
+  if (!blink || !state) indiPrintNum(arg2, pos2, (pos2 & 0x01) ? 1 : 2, 0); //вывод второго аргумента
 }
 //-----------------------------Декодирование чисел индикации--------------------------------------
 uint8_t animDecodeNum(uint8_t _num) //декодирование чисел индикации
@@ -788,13 +794,15 @@ boolean backlIncBright(uint8_t _step, uint8_t _max)
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
 {
-#if NEON_DOT
-  return dot_dimm;
+#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
+  return indi_dot_l | indi_dot_r; //возвращаем состояние точек
+#elif NEON_DOT
+  return dot_dimm; //возвращаем яркость
 #else
 #if DOT_1_PIN == 9
-  return OCR1A;
+  return OCR1A; //возвращаем яркость
 #elif DOT_1_PIN == 10
-  return OCR1B;
+  return OCR1B; //возвращаем яркость
 #endif
 #endif
 }

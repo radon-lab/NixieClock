@@ -72,11 +72,17 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки треков плеера
-#define PLAYER_NUMBERS_FOLDER 1      //папка с озвучкой цифр(1..16)
+#define PLAYER_MAX_VOICE 2           //максимум голосов озвучки(1..5)
+
+#define PLAYER_ALARM_FOLDER 1        //папка с озвучкой будильника(только 1)
+#define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
+#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..99)
+
+#define PLAYER_NUMBERS_FOLDER 2      //папка с озвучкой цифр(1..16)
 #define PLAYER_NUMBERS_START 3       //первый трек озвучки цифр(1..255)("ноль".."девятнадцать", "двадцать".."девяносто", "сто".."тысяча")
 #define PLAYER_NUMBERS_OTHER 1       //первый трек дополнительной озвучки цифр(1..255)("одна", "две")
 
-#define PLAYER_END_NUMBERS_FOLDER 2  //папка с озвучкой окончаний цифр(1..16)
+#define PLAYER_END_NUMBERS_FOLDER 3  //папка с озвучкой окончаний цифр(1..16)
 #define PLAYER_TIME_MINS_START 1     //первый трек озвучки минут(1..255)("минута", "минуты", "минут")
 #define PLAYER_TIME_HOUR_START 4     //первый трек озвучки часа(1..255)("час", "часа", "часов")
 #define PLAYER_SENS_TEMP_START 7     //первый трек озвучки температуры(1..255)("градус", "градуса", "градусов")
@@ -86,12 +92,13 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_SENS_PRESS_START 17   //первый трек озвучки давления(1..255)("миллиметр", "миллиметра", "миллиметров")
 #define PLAYER_SENS_PRESS_OTHER 20   //трек дополнительной озвучки давления(1..255)("ртутного столба")
 
-#define PLAYER_MENU_FOLDER 3         //папка с озвучкой меню(1..16)
+#define PLAYER_MENU_FOLDER 4         //папка с озвучкой меню(1..16)
 #define PLAYER_MAIN_MENU_START 1     //первый трек озвучки основного меню(1..255)
 #define PLAYER_FAST_MENU_START 13    //первый трек озвучки быстрого меню(1..255)
-#define PLAYER_DEBUG_MENU_START 17   //первый трек озвучки меню отладки(1..255)
+#define PLAYER_DEBUG_MENU_START 18   //первый трек озвучки меню отладки(1..255)
+#define PLAYER_MAIN_MENU_OTHER 26    //первый трек дополнительной озвучки основного меню(1..255)
 
-#define PLAYER_GENERAL_FOLDER 4      //папка с основной озвучкой(1..16)
+#define PLAYER_GENERAL_FOLDER 5      //папка с основной озвучкой(1..16)
 #define PLAYER_ALARM_DISABLE_SOUND 1 //трек озвучки оповещения отключения будильника(1..255)("будильник отключен")
 #define PLAYER_ALARM_WAIT_SOUND 2    //трек озвучки оповещения ожидания будильника(1..255)("будильник отложен")
 #define PLAYER_TIME_NOW_SOUND 3      //трек озвучки текущего времени(1..255)("текущее время")
@@ -109,14 +116,11 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_ALARM_SET_SOUND 15    //трек озвучки меню настройки будильника(1..255)("настройка будильника")
 #define PLAYER_TIME_SET_SOUND 16     //трек озвучки меню настройки времени(1..255)("настройка времени")
 #define PLAYER_TIMER_SET_SOUND 17    //трек озвучки меню настройки таймера(1..255)("настйрока таймера")
-#define PLAYER_PASS_SOUND 18         //трек озвучки неверного пароля(1..255)
-#define PLAYER_HOUR_SOUND 19         //трек озвучки смены часа(1..255)
-#define PLAYER_TIMER_WARN_SOUND 20   //трек озвучки окончания таймера(1..255)
-#define PLAYER_TEST_VOL_SOUND 21     //трек проверки громкости озвучки(1..255)
-
-#define PLAYER_ALARM_FOLDER 5        //папка с озвучкой будильника(1..16)
-#define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
-#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..99)
+#define PLAYER_VOICE_SOUND 18        //трек озвучки превью голоса(1..255)
+#define PLAYER_PASS_SOUND 19         //трек озвучки неверного пароля(1..255)
+#define PLAYER_HOUR_SOUND 20         //трек озвучки смены часа(1..255)
+#define PLAYER_TIMER_WARN_SOUND 21   //трек озвучки окончания таймера(1..255)
+#define PLAYER_TEST_VOL_SOUND 22     //трек проверки громкости озвучки(1..255)
 
 
 //Настройки плеера
@@ -161,11 +165,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define MENU_SHOW_NUMBER 1           //выводить номер пункта меню на 6-ти лампах(0 - не выводить | 1 - выводить)
 
 //Настройки быстрого меню
-#define FAST_ANIM_TIME 150           //время анимации быстрого меню(2..65500)(мс)
-
-#define FAST_BACKL_TIME 3000         //время отображения настройки режима подсветки(1000..5000)(мс)
-#define FAST_FLIP_TIME 1500          //время отображения настройки перелистывания цифр(1000..5000)(мс)
-#define FAST_DOT_TIME 1500           //время отображения настройки режима точек(1000..5000)(мс)
+#define FAST_SHOW_TIME 5000          //время отображения быстрого меню(1000..10000)(мс)
 
 //Настройки сброса таймеров
 #define RESET_TIME_GLITCH 5          //время ожидания глюков если таймер истек и была перезагрузка основной программы(5..15)(сек)
@@ -266,5 +266,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.0.7"     //версия прошивки для отображения и озвучки
-#define HARDWARE_VERSION 0x05        //версия прошивки для интерфейса wire
+#define FIRMWARE_VERSION "2.0.8"     //версия прошивки для отображения и озвучки
+#define HARDWARE_VERSION 0x09        //версия прошивки для интерфейса wire
