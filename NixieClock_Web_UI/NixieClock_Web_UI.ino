@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.8 релиз от 25.10.23
+  Arduino IDE 1.8.13 версия прошивки 1.0.9 релиз от 28.10.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -113,21 +113,31 @@ enum {
   NTP_TRYING
 };
 
+void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
+  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + "' onclick='location.href=\"" + url + "\";'>" + text + "</button>");
+}
+
 void build(void) {
   static boolean listInit = false;
 
-  GP.BUILD_BEGIN(UI_MAIN_THEME);
+  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP.ONLINE_CHECK(); //проверять статус платы
 
   if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
-    GP.SPAN("Внимание! Эта версия веб-интерфейса не может взаимодействовать с этим устройством!", GP_CENTER, "", UI_INFO_COLOR);
-    GP.SPAN("Для обновления перейдите по ссылке /ota_update", GP_CENTER, "", UI_INFO_COLOR);
+    GP.BLOCK_BEGIN(GP_THIN, "", "Предупреждение", UI_BLOCK_COLOR);
+    GP.SPAN("<big><b>Эта версия веб-интерфейса не может взаимодействовать с этим устройством!</b></big>", GP_CENTER, "", UI_INFO_COLOR);
     GP.BREAK();
     GP.LABEL("Clock HW: 0x" + String(deviceInformation[HARDWARE_VERSION], HEX));
     GP.BREAK();
     GP.LABEL("WebUI HW: 0x" + String(HW_VERSION, HEX));
+    if (otaUpdate) {
+      GP.HR(UI_LINE_COLOR);
+      GP.BUTTON_MINI_LINK("/ota_update", "Обновить прошивку", UI_BUTTON_COLOR);
+    }
+    GP.BLOCK_END();
   }
   else {
+    GP.SEND("<style>.headbar{z-index:3;}</style>"); //фикс меню в мобильной версии
     GP.UI_MENU("Nixie clock", UI_MENU_COLOR); //начать меню
 
     //ссылки меню
@@ -193,9 +203,8 @@ void build(void) {
     }
 
     //обновления блоков
-    String updateList;
+    String updateList = "barTime";
 
-    updateList += "barTime";
     if (deviceInformation[SENS_TEMP]) {
       updateList += ",barTemp";
       if (sens.hum) {
@@ -570,18 +579,21 @@ void build(void) {
       int heightSize = 500;
       if (sens.press) heightSize = 300;
 
+      GP.BLOCK_BEGIN(GP_THIN, "", "Климат", UI_BLOCK_COLOR);
+      GP.SEND("<style>.chartBlock{width:95%;}</style>");
       if (sens.hum) {
         GP.PLOT_STOCK_DARK<2, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
       }
       else {
         GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
       }
-
       if (sens.press) {
         GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataExt", climateNamesExt, climateDates, climateArrExt, 0, heightSize, climateLocal);
       }
+      GP.BREAK();
 
-      GP.BLOCK_BEGIN(GP_DIV_RAW, "92.3%");
+      GP.HR(UI_LINE_COLOR);
+      GP.BLOCK_BEGIN(GP_DIV_RAW, "98%");
       M_GRID(
         M_BLOCK_THIN(
           M_BOX(GP.LABEL("Усреднение", "", UI_LABEL_COLOR); GP.SWITCH("climateAvg", settings.climateAvg, UI_SWITCH_COLOR););
@@ -591,6 +603,7 @@ void build(void) {
           M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP.SPINNER("climateTime", settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR););
         );
       );
+      GP.BLOCK_END();
       GP.BLOCK_END();
     }
     else if (ui.uri("/radio")) { //радиоприемник
@@ -659,8 +672,8 @@ void build(void) {
       GP.SPAN("Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Загрузить", "", UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE(""););
-      M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM(""););
+      M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+      M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
       GP.BLOCK_END();
     }
     else { //подключение к роутеру
@@ -711,6 +724,33 @@ void build(void) {
     GP.UPDATE(updateList);
     GP.UI_END();    //завершить окно панели управления
   }
+  GP.BUILD_END();
+}
+
+void buildUpdater(bool UpdateEnd, const String& UpdateError) {
+  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
+  GP.PAGE_TITLE("Обновление");
+
+  GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
+  if (!UpdateEnd) {
+    GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описани
+    GP.HR(UI_LINE_COLOR);
+    M_BOX(GP_CENTER, GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+  }
+  else if (UpdateError.length()) {
+    GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+    GP.HR(UI_LINE_COLOR);
+    M_BOX(GP_CENTER, GP_BUTTON_MINI_LINK("/ota_update", "⠀<big><big>↻</big></big>⠀", UI_BUTTON_COLOR); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+  }
+  else {
+    GP.SPAN("<big><b>Выполняется обновление прошивки...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
+    GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
+    GP.HR(UI_LINE_COLOR);
+    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    GP.UPDATE("syncUpdate,syncWarn");
+  }
+  GP.BLOCK_END();
+
   GP.BUILD_END();
 }
 
@@ -1147,6 +1187,12 @@ void action() {
       if (ui.update("syncStatus")) { //если было обновление
         ui.answer(getNtpState());
       }
+      if (ui.update("syncUpdate")) { //если было обновление
+        ui.answer("<big><b>Обновление прошивки завершено!</b></big>");
+      }
+      if (ui.update("syncWarn")) { //если было обновление
+        ui.answer(" ");
+      }
     }
     if (ui.updateSub("bar")) {
       if (ui.update("barTime")) { //если было обновление
@@ -1511,7 +1557,10 @@ void setup() {
   ui.start();
 
   //обновление без пароля
-  if (otaUpdate) ui.enableOTA();
+  if (otaUpdate) {
+    ui.enableOTA();
+    ui.OTA.attachUpdateBuild(buildUpdater);
+  }
   ui.downloadAuto(true);
 
   //остановили ntp

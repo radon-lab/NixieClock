@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.0.8 релиз от 25.10.23
+  Arduino IDE 1.8.13 версия прошивки 2.0.9 релиз от 29.10.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -881,6 +881,10 @@ void INIT_SYSTEM(void) //инициализация
 
   mainEnableWDT(); //основной запуск WDT
 
+#if PLAYER_TYPE
+  playerSetVoice(mainSettings.voiceSound); //установили голос озвучки
+#endif
+
   if (!LEFT_CHK) { //если левая кнопка зажата
 #if DEBUG_PASS_ENABLE
     if (check_pass()) //если пароль верный
@@ -898,7 +902,6 @@ void INIT_SYSTEM(void) //инициализация
 
 #if PLAYER_TYPE
   playerSetVolNow(mainSettings.volumeSound); //установили громкость
-  playerSetVoice(mainSettings.voiceSound); //установили голос озвучки
 #endif
 
   alarmInit(); //инициализация будильника
@@ -5796,8 +5799,9 @@ void hourSound(void) //звук смены часа
         if (mainSettings.knockSound) temp |= 0x02;
         else temp = 0x01;
       }
-      if (temp & 0x01) playerSetTrack(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
-      if (temp & 0x02) speakTime(1); //воспроизвести время
+      playerStop(); //сброс воспроизведения плеера
+      if (temp & 0x01) playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+      if (temp & 0x02) speakTime(temp & 0x01); //воспроизвести время
 #if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
         updateTemp(); //обновить показания температуры
