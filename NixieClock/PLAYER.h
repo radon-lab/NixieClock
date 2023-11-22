@@ -289,7 +289,7 @@ void playerSetMuteNow(boolean _mute)
 //----------------------------------Установить голос озвучки------------------------------------
 void playerSetVoice(uint8_t _voice)
 {
-  if (_voice < PLAYER_MAX_VOICE) player.playbackVoice = _voice * 4;
+  if (_voice < PLAYER_VOICE_MAX) player.playbackVoice = _voice * 4;
 }
 //-------------------------------------Воспроизвести число--------------------------------------
 void playerSpeakNumber(uint16_t _num, boolean _type)

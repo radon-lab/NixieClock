@@ -72,11 +72,8 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки треков плеера
-#define PLAYER_MAX_VOICE 2           //максимум голосов озвучки(1..5)
-
 #define PLAYER_ALARM_FOLDER 1        //папка с озвучкой будильника(только 1)
 #define PLAYER_ALARM_START 1         //первый трек будильника(1..255)
-#define PLAYER_ALARM_MAX 3           //количество треков будильника(1..99)
 
 #define PLAYER_NUMBERS_FOLDER 2      //папка с озвучкой цифр(1..16)
 #define PLAYER_NUMBERS_START 3       //первый трек озвучки цифр(1..255)("ноль".."девятнадцать", "двадцать".."девяносто", "сто".."тысяча")
@@ -86,6 +83,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_TIME_MINS_START 1     //первый трек озвучки минут(1..255)("минута", "минуты", "минут")
 #define PLAYER_TIME_HOUR_START 4     //первый трек озвучки часа(1..255)("час", "часа", "часов")
 #define PLAYER_SENS_TEMP_START 7     //первый трек озвучки температуры(1..255)("градус", "градуса", "градусов")
+#define PLAYER_SENS_TEMP_OTHER 21    //трек дополнительной озвучки давления(1..255)("минус")
 #define PLAYER_SENS_CEIL_START 10    //первый трек озвучки целых чисел(1..255)("целая", "целых")
 #define PLAYER_SENS_DEC_START 12     //первый трек озвучки десятых долей чисел(1..255)("десятая", "десятых")
 #define PLAYER_SENS_HUM_START 14     //первый трек озвучки влажности(1..255)("процент", "процента", "процентов")
@@ -201,6 +199,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 //Настройки обновления температуры
 #define TEMP_UPDATE_TIME 2000        //таймаут обновления датчика температуры(2000..5000)(мс)
+#define TEMP_ESP_UPDATE_TIME 65000   //таймаут ожидания данных о температуре от есп(60000..65000)(мс)
 
 //Настройки проверки сигнала SQW
 #define SQW_TEST_TIME 2000           //время проверки сигнала с пина SQW(1500..5000)(мс)
@@ -250,6 +249,10 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define KNOCK_SOUND_FREQ 1000        //частота звука клавиш(10..10000)(Гц)
 #define KNOCK_SOUND_TIME 30          //длительность звука клавиш(10..500)(мс)
 
+//Настройки звука радио
+#define RADIO_SAVE_SOUND_FREQ 2000   //частота звука успешной записи радиостанции в память(10..10000)(Гц)
+#define RADIO_SAVE_SOUND_TIME 300    //длительность звука успешной записи радиостанции в память(10..500)(мс)
+
 //Настройки SD плеера
 #define DAC_BUFF_SIZE 128            //размер буфера ЦАП(128..254)
 #define DAC_READ_DEPTH 8             //глубина буферизации чтения данных ЦАП(8..16)(шаг 8)
@@ -266,5 +269,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.0.9"     //версия прошивки для отображения и озвучки
-#define HARDWARE_VERSION 0x09        //версия прошивки для интерфейса wire
+#define FIRMWARE_VERSION "2.1.0"     //версия прошивки для отображения и озвучки
+#define HARDWARE_VERSION 0x10        //версия прошивки для интерфейса wire

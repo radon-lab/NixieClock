@@ -124,8 +124,8 @@ uint8_t indi_dimm[7]; //яркость индикаторов
 volatile uint8_t indiState; //текущей номер отрисовки индикатора
 
 void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //установка общей яркости
-void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
-void animPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, char filler = ' '); //отрисовка чисел
+void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
+void animPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
 #if NEON_DOT == 2
 boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //умегьшение яркости точек
 boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //увеличение яркости точек
@@ -665,11 +665,19 @@ void indiClrDots(void) //очистка разделительных точек
   indi_dot_l = 0x00; //выключаем левые точки
 #endif
 }
+//----------------------------Состояние разделительных точек---------------------------------------
+boolean indiGetDots(void) //состояние разделительных точек
+{
+  return indi_dot_l | indi_dot_r;
+}
 //------------------------------------Печать чисел-------------------------------------------------
-void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char _filler) //печать чисел
+void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, uint8_t _filler) //печать чисел
 {
   uint8_t buff[6]; //временный буфер
   uint8_t count = 0; //счетчик символов
+
+  _filler -= '0';
+  if (_filler > 9) _filler = 10;
 
   if (!_num) { //если ноль
     buff[0] = digitMask[0]; //устанавливаем ноль
@@ -682,7 +690,7 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char 
     }
   }
 
-  while ((_length > count) && (count < 6)) buff[count++] = digitMask[(_filler != ' ') ? _filler : 10]; //заполняем символами заполнителями
+  while ((_length > count) && (count < 6)) buff[count++] = digitMask[_filler]; //заполняем символами заполнителями
 
   while (count) { //расшивровка символов
     count--; //убавили счетчик символов
@@ -692,7 +700,7 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, char 
   }
 }
 //-------------------------------------Вывод чисел-----------------------------------------------
-void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //вывод чисел
+void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //вывод чисел
 {
   printNum(_num, indi_buf, _indi, _length, _filler); //печать чисел
 #if GEN_ENABLE
@@ -712,7 +720,7 @@ uint8_t animDecodeNum(uint8_t _num) //декодирование чисел ин
   return 10;
 }
 //-----------------------------Запись чисел в буфер анимации----------------------------------------
-void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, char _filler) //запись чисел в буфер анимации
+void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //запись чисел в буфер анимации
 {
   printNum(_num, (anim.flipBuffer + 5), _indi, _length, _filler); //печать чисел
 }

@@ -3,7 +3,6 @@
 #define AHT10_MEASURE_START 0xAC
 #define AHT10_MEASURE_DATA 0x33
 
-#define AHT20_CALIBRATE_START 0xBE
 #define AHT10_CALIBRATE_START 0xE1
 #define AHT10_CALIBRATE_DATA 0x08
 
@@ -20,11 +19,7 @@ void readTempAHT(void) //чтение температуры/влажности
 
   if (!typeAHT) { //если датчик не определен
     if (!wireBeginTransmission(AHT10_ADDR)) { //если AHT10
-#if SENS_AHT_ENABLE == 2
-      wireWrite(AHT20_CALIBRATE_START); //начинаем калибровку для AHT20
-#else
       wireWrite(AHT10_CALIBRATE_START); //начинаем калибровку для AHT10
-#endif
       wireWrite(AHT10_CALIBRATE_DATA); //записываем настройку
       wireWrite(AHT10_NOP_DATA); //записываем настройку
       wireEnd(); //остановка шины wire
@@ -33,7 +28,7 @@ void readTempAHT(void) //чтение температуры/влажности
       while (1) { //ждем окончания калибровки
         dataUpdate(); //обработка данных
         if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
-        if ((wireReadEndByte() & 0x68) == 0x08) break;
+        if ((wireReadEndByte() & 0x88) == 0x08) break;
         if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
       }
       typeAHT = AHT10_ADDR; //установлили тип датчика

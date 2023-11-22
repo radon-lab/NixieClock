@@ -1,10 +1,13 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<svg fill="#000000" width="800px" height="800px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" transform="matrix(-1, 0, 0, 1, 0, 0)">
-<g id="SVGRepo_bgCarrier" stroke-width="0"/>
-<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-<g id="SVGRepo_iconCarrier">
-<title>ionicons-v5-b</title>
-<path d="M464,256c0-114.87-93.13-208-208-208S48,141.13,48,256s93.13,208,208,208S464,370.87,464,256ZM212,330.14V181.86a16,16,0,0,1,26.23-12.29l89.09,74.13a16,16,0,0,1,0,24.6l-89.09,74.13A16,16,0,0,1,212,330.14Z"/>
-</g>
-</svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Creator: CorelDRAW 2018 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="300px" height="300px" version="1.0" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd"
+viewBox="0 0 300 300"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <g id="Слой_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="SVGRepo_iconCarrier">
+   <path fill="black" d="M0 150c0,82.84 67.16,150 150,150 82.84,0 150,-67.16 150,-150 0,-82.84 -67.16,-150 -150,-150 -82.84,0 -150,67.16 -150,150zm181.73 -53.46l0 106.93c-0.01,6.36 -5.17,11.53 -11.54,11.53 -2.69,0 -5.31,-0.95 -7.37,-2.67l-64.26 -53.46c-2.63,-2.19 -4.15,-5.44 -4.15,-8.86 0,-3.44 1.52,-6.69 4.15,-8.87l64.26 -53.46c2.06,-1.73 4.68,-2.68 7.37,-2.68 6.37,0 11.53,5.17 11.54,11.54l0 0 0 0z"/>
+  </g>
+ </g>
+</svg>

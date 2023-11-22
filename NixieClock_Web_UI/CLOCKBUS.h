@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x09 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x10 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -40,6 +40,8 @@
 #define BUS_WRITE_TIMER_SET 0x1F
 #define BUS_READ_TIMER_SET 0x20
 #define BUS_WRITE_TIMER_MODE 0x21
+
+#define BUS_WRITE_SENS_DATA 0x22
 
 #define BUS_TEST_FLIP 0xFB
 #define BUS_TEST_SOUND 0xFC
@@ -102,12 +104,18 @@ struct Settings_4 { //настройки радио
 
 //----------------Температура--------------
 struct sensorData {
-  uint16_t temp; //температура
-  uint16_t press; //давление
-  uint8_t hum; //влажность
+  int16_t temp[4]; //температура
+  uint16_t press[4]; //давление
+  uint8_t hum[4]; //влажность
+  uint8_t search; //флаги найденых датчиков температуры
+  uint8_t status; //флаги активных датчиков температуры
+  uint8_t update; //флаги опрошенных датчиков температуры
   uint8_t type; //тип датчика температуры
   boolean init; //флаг инициализации порта
   boolean err; //ошибка сенсора
+  int16_t mainTemp; //основная температура
+  uint16_t mainPress; //основное давление
+  uint8_t mainHum; //основная влажность
 } sens;
 
 //------------Таймера/Секундомер-----------
@@ -161,6 +169,7 @@ enum {
   FIRMWARE_VERSION_3,
   HARDWARE_VERSION,
   SENS_TEMP,
+  SHOW_TEMP_MODE,
   LAMP_NUM,
   BACKL_TYPE,
   NEON_DOT,
@@ -232,7 +241,9 @@ enum {
 };
 
 enum {
+  SYNC_TIME_DATE,
   READ_TIME_DATE,
+  WRITE_TIME_DATE,
   WRITE_TIME,
   WRITE_DATE,
 
@@ -294,7 +305,13 @@ enum {
   WRITE_TEST_MAIN_FLIP,
 
   READ_STATUS,
-  READ_DEVICE
+  READ_DEVICE,
+
+  WRITE_SENS_DATA,
+
+  CHECK_INTERNAL_AHT,
+  CHECK_INTERNAL_SHT,
+  CHECK_INTERNAL_BME
 };
 
 struct busData {
@@ -308,10 +325,56 @@ struct busData {
   uint32_t timerStart = 0;
 } bus;
 
-void climateUpdate(void);
+#define SENS_EXT 0x01
+#define SENS_AHT 0x02
+#define SENS_SHT 0x04
+#define SENS_BME 0x08
+
+#include "AHT.h"
+#include "SHT.h"
+#include "BME.h"
+
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos = 0x00);
 void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos = 0x00);
 
+const uint8_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
+//------------------------------Максимальное количество дней------------------------------
+uint8_t maxDays(uint16_t YY, uint8_t MM) { //максимальное количество дней
+  return (((MM == 2) && !(YY % 4)) ? 1 : 0) + daysInMonth[MM - 1]; //возвращаем количество дней в месяце
+}
+//---------------------------------Получить день недели-----------------------------------
+uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) { //получить день недели
+  if (YY >= 2000) YY -= 2000; //если год больше 2000
+  uint16_t days = DD; //записываем дату
+  for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
+  if ((MM > 2) && !(YY % 4)) days++; //если високосный год, прибавляем день
+  return (days + 365 * YY + (YY + 3) / 4 - 2 + 6) % 7 + 1; //возвращаем день недели
+}
+//--------------------------------Получить летнее время-----------------------------------
+boolean DST(uint8_t MM, uint8_t DD, uint8_t DW, uint8_t HH) { //получить летнее время
+  if (MM < 3 || MM > 10) return 0; //зима
+  switch (MM) {
+    case 3:
+      if (DD < 25) return 0; //зима
+      else if (DW == 7) {
+        if (HH >= 1) return 1; //лето
+        else return 0; //зима
+      }
+      else if ((DD - 25) < DW) return 0; //зима
+      else return 1; //лето
+      break;
+    case 10:
+      if (DD < 25) return 1; //лето
+      else if (DW == 7) {
+        if (HH >= 2) return 0; //зима
+        else return 1; //лето
+      }
+      else if ((DD - 25) < DW) return 1; //лето
+      else return 0; //зима
+      break;
+  }
+  return 1; //лето
+}
 //--------------------------------------------------------------------
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos) {
   if (pos) {
@@ -382,9 +445,49 @@ void busSetComand(uint8_t cmd, uint8_t arg) {
 }
 //--------------------------------------------------------------------
 void busUpdate(void) {
-  if (busStatusBuffer() && busTimerCheck()) {
-    busTimerSetInterval(30);
+  if (busStatusBuffer() && busTimerCheck()) { //если есть новая команда и таймаут истек
     switch (busReadBuffer()) {
+      case SYNC_TIME_DATE: {
+          busShiftBuffer(); //сместили буфер команд
+          if (ntp.synced()) {
+            mainTime.second = ntp.second();
+            mainTime.minute = ntp.minute();
+            mainTime.hour = ntp.hour();
+            mainDate.day = ntp.day();
+            mainDate.month = ntp.month();
+            mainDate.year = ntp.year();
+            uint8_t dayWeek = ntp.dayWeek();
+
+            if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) {
+              if (mainTime.hour != 23) mainTime.hour += 1;
+              else {
+                mainTime.hour = 0; //сбросили час
+                if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //день
+                  mainDate.day = 1; //сбросили день
+                  if (++mainDate.month > 12) { //месяц
+                    mainDate.month = 1; //сбросили месяц
+                    if (++mainDate.year > 2099) { //год
+                      mainDate.year = 2000; //сбросили год
+                    }
+                  }
+                }
+              }
+            }
+            if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+              twi_write_byte(BUS_WRITE_TIME); //регистр команды
+              twi_write_byte(mainTime.second); //отправляем время
+              twi_write_byte(mainTime.minute);
+              twi_write_byte(mainTime.hour);
+              twi_write_byte(mainDate.day); //отправляем дату
+              twi_write_byte(mainDate.month);
+              twi_write_byte(mainDate.year & 0xFF);
+              twi_write_byte((mainDate.year >> 8) & 0xFF);
+              twi_write_stop(); //завершаем передачу
+              timeState = 0x03; //установили флаги актуального времени
+            }
+          }
+        }
+        break;
       case READ_TIME_DATE:
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TIME)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
@@ -395,6 +498,23 @@ void busUpdate(void) {
           mainDate.month = twi_read_byte(TWI_ACK);
           mainDate.year = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
           twi_write_stop(); //завершаем передачу
+          if (busReadBuffer()) timeState = 0x03; //установили флаги актуального времени
+          busShiftBuffer(); //сместили буфер команд
+        }
+        break;
+      case WRITE_TIME_DATE:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_WRITE_TIME); //регистр команды
+          twi_write_byte(mainTime.second); //отправляем время
+          twi_write_byte(mainTime.minute);
+          twi_write_byte(mainTime.hour);
+          twi_write_byte(mainDate.day); //отправляем дату
+          twi_write_byte(mainDate.month);
+          twi_write_byte(mainDate.year & 0xFF);
+          twi_write_byte((mainDate.year >> 8) & 0xFF);
+          twi_write_stop(); //завершаем передачу
+          timeState = 0x03; //установили флаги актуального времени
         }
         break;
       case WRITE_TIME:
@@ -405,6 +525,7 @@ void busUpdate(void) {
           twi_write_byte(mainTime.minute);
           twi_write_byte(mainTime.hour);
           twi_write_stop(); //завершаем передачу
+          timeState |= 0x01; //установили флаг актуального времени
         }
         break;
       case WRITE_DATE:
@@ -418,6 +539,7 @@ void busUpdate(void) {
           twi_write_byte(mainDate.year & 0xFF);
           twi_write_byte((mainDate.year >> 8) & 0xFF);
           twi_write_stop(); //завершаем передачу
+          timeState |= 0x02; //установили флаг актуальной даты
         }
         break;
 
@@ -734,11 +856,12 @@ void busUpdate(void) {
       case READ_SENS_DATA:
         if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TEMP)) { //начинаем передачу
           busShiftBuffer(); //сместили буфер команд
-          sens.temp = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
-          sens.press = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
-          sens.hum = twi_read_byte(TWI_NACK);
+          sens.update |= SENS_EXT;
+          sens.temp[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+          sens.press[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+          sens.hum[0] = twi_read_byte(TWI_NACK);
+          sens.status |= SENS_EXT;
           twi_write_stop(); //завершаем передачу
-          climateUpdate(); //обновляем показания графиков
         }
         break;
       case READ_SENS_INFO:
@@ -952,6 +1075,7 @@ void busUpdate(void) {
           deviceInformation[FIRMWARE_VERSION_3] = twi_read_byte(TWI_ACK);
           deviceInformation[HARDWARE_VERSION] = twi_read_byte(TWI_ACK);
           deviceInformation[SENS_TEMP] = twi_read_byte(TWI_ACK);
+          deviceInformation[SHOW_TEMP_MODE] = twi_read_byte(TWI_ACK);
           deviceInformation[LAMP_NUM] = twi_read_byte(TWI_ACK);
           deviceInformation[BACKL_TYPE] = twi_read_byte(TWI_ACK);
           deviceInformation[NEON_DOT] = twi_read_byte(TWI_ACK);
@@ -970,7 +1094,37 @@ void busUpdate(void) {
           twi_write_stop(); //завершаем передачу
         }
         break;
+
+      case WRITE_SENS_DATA:
+        if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+          busShiftBuffer(); //сместили буфер команд
+          twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
+          twi_write_byte(sens.mainTemp & 0xFF);
+          twi_write_byte((sens.mainTemp >> 8) & 0xFF);
+          twi_write_byte(sens.mainPress & 0xFF);
+          twi_write_byte((sens.mainPress >> 8) & 0xFF);
+          twi_write_byte(sens.mainHum);
+          twi_write_stop(); //завершаем передачу
+        }
+        break;
+
+      case CHECK_INTERNAL_AHT:
+        busShiftBuffer(); //сместили буфер команд
+        if (readTempAHT() == 1) busSetComand(CHECK_INTERNAL_AHT); //чтение температуры/влажности
+        else sens.update |= SENS_AHT;
+        break;
+      case CHECK_INTERNAL_SHT:
+        busShiftBuffer(); //сместили буфер команд
+        if (readTempSHT() == 1) busSetComand(CHECK_INTERNAL_SHT); //чтение температуры/влажности
+        else sens.update |= SENS_SHT;
+        break;
+      case CHECK_INTERNAL_BME:
+        busShiftBuffer(); //сместили буфер команд
+        if (readTempBME() == 1) busSetComand(CHECK_INTERNAL_BME); //чтение температуры/давления/влажности
+        else sens.update |= SENS_BME;
+        break;
       default: busShiftBuffer(); break; //сместили буфер команд
     }
+    busTimerSetInterval(35); //установили интервал выполнения следующей команды
   }
 }

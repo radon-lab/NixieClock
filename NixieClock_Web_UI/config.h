@@ -57,7 +57,8 @@
 #define UI_ALARM_WEEK_1_COLOR GP_BLUE //цвет будних дней в настройке будильника
 #define UI_ALARM_WEEK_2_COLOR GP_RED //цвет выходных дней в настройке будильника
 
-#define UI_RADIO_POWER_COLOR GP_RED //цвет переключателя питания радио
+#define UI_RADIO_POWER_1_COLOR GP_RED //цвет выключенной кнопки питания радио
+#define UI_RADIO_POWER_2_COLOR GP_GREEN //цвет включеной переключателя питания радио
 #define UI_RADIO_BACK_COLOR "#e67b09" //цвет кнопки переключения режима радио
 #define UI_RADIO_VOL_COLOR "#e67b09" //цвет слайдера настройки громкости радио
 #define UI_RADIO_FREQ_1_COLOR "#e67b09" //цвет слайдера настройки частоты радио
@@ -80,4 +81,4 @@
 #define MAX_ALARMS 7 //максимум будильников(3..15)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.0.9" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.0" //версия прошивки модуля esp

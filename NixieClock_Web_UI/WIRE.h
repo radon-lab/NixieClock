@@ -74,7 +74,6 @@ boolean dataStretch(void)
 {
   int8_t pollCounter = TWI_SDA_STRCH_LIMIT;
 
-  /* SDA is low, I2C bus is locked */
   while (SDA_READ() == LOW) {
     if (pollCounter-- < 0) return false;
 
@@ -150,12 +149,12 @@ int8_t twi_write_start(void)
   return TWI_OK;
 }
 //--------------------------------------------------------------------
-int8_t twi_write_bit(boolean txBit)
+int8_t twi_write_bit(boolean _bit)
 {
   SCL_LOW();
   twi_delay(TWI_CLOCK_DCOUNT - 5);
 
-  switch (txBit) {
+  switch (_bit) {
     case HIGH: SDA_HIGH(); break;
     case LOW: SDA_LOW(); break;
   }
@@ -165,6 +164,7 @@ int8_t twi_write_bit(boolean txBit)
   if (clockStretch() == false) return TWI_BUSY;
   twi_delay(TWI_CLOCK_DCOUNT - 5);
   SCL_LOW();
+  SDA_LOW();
 
   return TWI_OK;
 }
@@ -174,53 +174,50 @@ int8_t twi_read_bit(void)
   boolean rxBit = 0;
 
   SCL_LOW();
+  SDA_HIGH();
   twi_delay(TWI_CLOCK_DCOUNT - 3);
 
-  SDA_HIGH();
   SCL_HIGH();
   if (clockStretch() == false) return TWI_BUSY;
 
   rxBit = SDA_READ();
   twi_delay(TWI_CLOCK_DCOUNT - 6);
-  switch (rxBit) {
-    case HIGH: SDA_HIGH(); break;
-    case LOW: SDA_LOW(); break;
-  }
   SCL_LOW();
+  SDA_LOW();
 
   return rxBit;
 }
 //--------------------------------------------------------------------
-boolean twi_write_byte(uint8_t txByte)
+boolean twi_write_byte(uint8_t _byte)
 {
   for (uint8_t i = 0; i < 8; i++) {
-    if (twi_write_bit(txByte & 0x80) != TWI_OK) return TWI_NACK;
-    txByte <<= 1;
+    if (twi_write_bit(_byte & 0x80) != TWI_OK) return TWI_NACK;
+    _byte <<= 1;
   }
 
   if (twi_read_bit() == TWI_ACK) return TWI_ACK;
   return TWI_NACK;
 }
 //--------------------------------------------------------------------
-uint8_t twi_read_byte(boolean ack_nack)
+uint8_t twi_read_byte(boolean _answer)
 {
-  uint8_t rxByte = 0;
+  uint8_t _byte = 0;
 
   for (uint8_t i = 0; i < 8; i++) {
-    rxByte <<= 1;
+    _byte <<= 1;
     switch (twi_read_bit()) {
-      case HIGH: rxByte |= 0x01; break;
+      case HIGH: _byte |= 0x01; break;
       case TWI_BUSY: twi_collision = true; return 0;
     }
   }
 
-  if (twi_write_bit(ack_nack) != TWI_OK) {
+  if (twi_write_bit(_answer) != TWI_OK) {
     twi_collision = true;
     return 0;
   }
 
   twi_collision = false;
-  return rxByte;
+  return _byte;
 }
 //--------------------------------------------------------------------
 boolean twi_beginTransmission(uint8_t addr, boolean rw) //запуск передачи

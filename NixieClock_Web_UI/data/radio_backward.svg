@@ -1,7 +1,13 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#000000" class="bi bi-skip-forward-circle-fill" transform="matrix(-1, 0, 0, 1, 0, 0)">
-<g id="SVGRepo_bgCarrier" stroke-width="0"/>
-<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-<g id="SVGRepo_iconCarrier"> <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM4.79 5.093A.5.5 0 0 0 4 5.5v5a.5.5 0 0 0 .79.407L7.5 8.972V10.5a.5.5 0 0 0 .79.407L11 8.972V10.5a.5.5 0 0 0 1 0v-5a.5.5 0 0 0-1 0v1.528L8.29 5.093a.5.5 0 0 0-.79.407v1.528L4.79 5.093z"/> </g>
-</svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Creator: CorelDRAW 2018 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="300px" height="300px" version="1.0" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd"
+viewBox="0 0 300 300"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <g id="Слой_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="SVGRepo_iconCarrier">
+   <path fill="black" d="M150 0c-82.84,0 -150,67.16 -150,150 0,82.84 67.16,150 150,150 82.84,0 150,-67.16 150,-150 0,-82.84 -67.16,-150 -150,-150zm-21.54 218.08c5.06,3.62 12.08,2.44 15.69,-2.61 3.61,-5.06 2.44,-12.08 -2.61,-15.69l-48.33 -34.52c-10.46,-7.48 -10.46,-23.04 0,-30.52l48.33 -34.51c5.05,-3.61 6.22,-10.64 2.61,-15.7 -3.61,-5.05 -10.63,-6.22 -15.69,-2.61l-48.32 34.51c-23.04,16.46 -23.04,50.69 0,67.14l48.32 34.51zm89.04 -115.06l0 93.95c0,11.98 -13.35,19.12 -23.32,12.48l-70.46 -46.97c-8.91,-5.94 -8.91,-19.03 0,-24.97l70.46 -46.97c9.97,-6.64 23.32,0.5 23.32,12.48z"/>
+  </g>
+ </g>
+</svg>
