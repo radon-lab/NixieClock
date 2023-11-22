@@ -662,7 +662,7 @@ void build(void) {
         if (i) dataList += ',';
         dataList += sensDataList[i + (((i == 3) && sens.hum[3]) ? 1 : 0)];
         dataList += ": ";
-        dataList += (sens.temp[i]) ? String(sens.temp[i] / 10.0, 1) : "--";
+        dataList += (sens.search & (0x01 << i)) ? String(sens.temp[i] / 10.0, 1) : "--";
         if (sens.search & (0x01 << i)) dataAll++;
       }
       M_BOX(GP.LABEL("Температура", "", UI_LABEL_COLOR); GP.SELECT("climateTemp", dataList, settings.climateType[0], 0, (boolean)(dataAll <= 1)););

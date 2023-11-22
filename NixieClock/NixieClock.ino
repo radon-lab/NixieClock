@@ -1207,8 +1207,12 @@ void updateTemp(void) //обновить показания температур
 //------------------------Получить показания температуры---------------------------
 int16_t getTemperatureData(void)
 {
-#if ESP_ENABLE && !SHOW_TEMP_MODE
+#if ESP_ENABLE
+#if SHOW_TEMP_MODE <= 1
   return mainSens.temp + mainSettings.tempCorrect;
+#else
+  return sens.temp;
+#endif
 #else
   return sens.temp + mainSettings.tempCorrect;
 #endif
@@ -1227,7 +1231,7 @@ uint16_t getTemperature(void)
 //--------------------------Получить показания давления----------------------------
 uint16_t getPressure(void)
 {
-#if ESP_ENABLE && !SHOW_TEMP_MODE
+#if ESP_ENABLE && (SHOW_TEMP_MODE <= 1)
   return mainSens.press;
 #else
   return sens.press;
@@ -1236,7 +1240,7 @@ uint16_t getPressure(void)
 //-------------------------Получить показания влажности----------------------------
 uint8_t getHumidity(void)
 {
-#if ESP_ENABLE && !SHOW_TEMP_MODE
+#if ESP_ENABLE && (SHOW_TEMP_MODE <= 1)
   return mainSens.hum;
 #else
   return sens.hum;
@@ -1246,7 +1250,7 @@ uint8_t getHumidity(void)
 int16_t getTemperatureData(uint8_t data)
 {
   if (data >= SHOW_TEMP_ESP) return mainSens.temp + mainSettings.tempCorrect;
-  return sens.temp + mainSettings.tempCorrect;
+  return sens.temp;
 }
 //--------------------------Получить знак температуры------------------------------
 boolean getTemperatureSign(uint8_t data)
@@ -3993,20 +3997,28 @@ uint8_t settings_main(void) //настроки основные
               break;
 #if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case SET_TEMP_SENS: {
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
                 if (!blink_data) {
+#if SHOW_TEMP_MODE > 1
                   uint16_t temperature = getTemperature(SHOW_TEMP_ESP); //буфер температуры
+#else
+                  uint16_t temperature = getTemperature(); //буфер температуры
+#endif
                   if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
-                  else indiPrintNum(temperature, 1, 2, '0'); //вывод температуры
+                  else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
 #else
                 updateTemp(); //обновить показания температуры
                 if (!blink_data) {
                   if (sens.err) indiPrintNum(0, 0); //вывод ошибки
                   else {
+#if SENS_PORT_ENABLE
                     uint16_t temperature = getTemperature(); //буфер температуры
                     if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
-                    else indiPrintNum(temperature, 1, 2, '0'); //вывод температуры
+                    else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
+#else
+                    indiPrintNum(getTemperature(), 0, 3); //вывод температуры
+#endif
                   }
                 }
                 indiPrintNum(sens.type, 3); //вывод сенсора температуры
@@ -4545,26 +4557,26 @@ uint8_t showTemp(void) //показать температуру
 #endif
       switch (mode) {
         case 0: {
-#if ESP_ENABLE && (SHOW_TEMP_MODE == 1)
-            uint16_t temperature = getTemperature(SHOW_TEMP_ESP); //буфер температуры
-#else
+#if ESP_ENABLE || SENS_PORT_ENABLE
             uint16_t temperature = getTemperature(); //буфер температуры
+            if (temperature >= 10) indiPrintNum(temperature, 0, 3);
+            else indiPrintNum(temperature, 1, 2, 0);
+#else
+            indiPrintNum(getTemperature(), 0, 3);
 #endif
-            if (temperature >= 10) indiPrintNum(temperature, 0, 3, ' ');
-            else indiPrintNum(temperature, 1, 2, '0');
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
             setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
 #endif
           }
           break;
         case 1:
-          indiPrintNum(getHumidity(), 0, 4, ' ');
+          indiPrintNum(getHumidity(), 0, 4);
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
           break;
         case 2:
-          indiPrintNum(getPressure(), 0, 4, ' ');
+          indiPrintNum(getPressure(), 0, 4);
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
@@ -4816,16 +4828,20 @@ void autoShowMenu(void) //меню автоматического показа
         humidity = getHumidity();
 #endif
 #endif
-        if (temperature >= 10) animPrintNum(temperature, 0, 3, ' '); //вывод температуры
-        else animPrintNum(temperature, 1, 2, '0'); //вывод температуры
+#if ESP_ENABLE || SENS_PORT_ENABLE
+        if (temperature >= 10) animPrintNum(temperature, 0, 3); //вывод температуры
+        else animPrintNum(temperature, 1, 2, 0); //вывод температуры
+#else
+        animPrintNum(temperature, 0, 3); //вывод температуры
+#endif
 #if LAMP_NUM > 4
-        if (humidity && ((show_mode != SHOW_TEMP) || (show_mode != SHOW_TEMP_ESP))) animPrintNum(humidity, 4, 2, ' '); //вывод влажности
+        if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) animPrintNum(humidity, 4, 2); //вывод влажности
 #endif
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
         setDivDot(1); //установить точку температуры
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
-        if (humidity && ((show_mode != SHOW_TEMP) || (show_mode != SHOW_TEMP_ESP))) { //если режим отображения температуры и влажности
+        if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
           setBacklHue(4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T); //установили цвет температуры и влажности
           setLedHue(3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
         }
@@ -4844,7 +4860,7 @@ void autoShowMenu(void) //меню автоматического показа
         humidity = getHumidity();
 #endif
         if (!humidity) continue; //возвращаемся назад
-        animPrintNum(humidity, 0, 4, ' '); //вывод влажности
+        animPrintNum(humidity, 0, 4); //вывод влажности
 
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
@@ -4860,7 +4876,7 @@ void autoShowMenu(void) //меню автоматического показа
         pressure = getPressure();
 #endif
         if (!pressure) continue; //возвращаемся назад
-        animPrintNum(pressure, 0, 4, ' '); //вывод давления
+        animPrintNum(pressure, 0, 4); //вывод давления
 
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
@@ -4949,12 +4965,25 @@ void autoShowMenu(void) //меню автоматического показа
 #if ESP_ENABLE || SENS_PORT_ENABLE
     boolean dot = 0; //флаг мигания точками
     boolean sign = 0; //знак температуры
-#if ESP_ENABLE && SHOW_TEMP_MODE
-    if (getTemperatureSign(show_mode) && ((show_mode != SHOW_TEMP) || (show_mode != SHOW_TEMP_ESP))) sign = 1;
-#else
-    if (getTemperatureSign() && ((show_mode != SHOW_TEMP) || (show_mode != SHOW_TEMP_ESP))) sign = 1;
+    switch (show_mode) {
+      case SHOW_TEMP: //режим отображения температуры
+#if LAMP_NUM > 4
+      case SHOW_TEMP_HUM: //режим отображения температуры и влажности
 #endif
-    _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+#if ESP_ENABLE && SHOW_TEMP_MODE
+      case SHOW_TEMP_ESP:
+#if LAMP_NUM > 4
+      case SHOW_TEMP_HUM_ESP:
+#endif
+#endif
+#if ESP_ENABLE && SHOW_TEMP_MODE
+        if (getTemperatureSign(show_mode)) sign = 1;
+#else
+        if (getTemperatureSign()) sign = 1;
+#endif
+        _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+        break;
+    }
 #endif
     _timer_ms[TMR_MS] = (uint16_t)extendedSettings.autoShowTimes[mode] * 1000; //устанавливаем таймер
     while (_timer_ms[TMR_MS]) { //если таймер истек

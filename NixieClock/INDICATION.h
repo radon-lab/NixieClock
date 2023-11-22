@@ -676,7 +676,6 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, uint8
   uint8_t buff[6]; //временный буфер
   uint8_t count = 0; //счетчик символов
 
-  _filler -= '0';
   if (_filler > 9) _filler = 10;
 
   if (!_num) { //если ноль
