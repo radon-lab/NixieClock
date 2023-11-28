@@ -5354,8 +5354,11 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
 #endif
       if (radio.powerState) {
         if (_state <= ADD_KEY_HOLD) {
-          if ((_state == SET_KEY_PRESS) && (mainTask == RADIO_PROGRAM)) _state = KEY_MAX_ITEMS; //установили режим просмотра громкости
-          else if (_state != ADD_KEY_PRESS) return 0; //иначе выходим
+          if (mainTask == RADIO_PROGRAM) { //если текущая подпрограмма радио
+            if (_state == SET_KEY_PRESS) _state = KEY_MAX_ITEMS; //установили режим просмотра громкости
+            else if (_state != ADD_KEY_PRESS) return 0; //иначе выходим
+          }
+          return 0; //иначе выходим
         }
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
         else if (mainTask != RADIO_PROGRAM) { //если текущая подпрограмма не радио
