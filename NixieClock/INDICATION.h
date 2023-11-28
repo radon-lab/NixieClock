@@ -88,6 +88,18 @@ enum {
   VOL_DOWN_KEY_PRESS, //клик кнопки громкости вниз
   STATION_UP_KEY_PRESS, //клик кнопки станции вверх
   STATION_DOWN_KEY_PRESS, //клик кнопки станции вниз
+#if IR_EXT_BTN_ENABLE == 2
+  STATION_CELL_0_PRESS, //клик кнопки станции 0
+  STATION_CELL_1_PRESS, //клик кнопки станции 1
+  STATION_CELL_2_PRESS, //клик кнопки станции 2
+  STATION_CELL_3_PRESS, //клик кнопки станции 3
+  STATION_CELL_4_PRESS, //клик кнопки станции 4
+  STATION_CELL_5_PRESS, //клик кнопки станции 5
+  STATION_CELL_6_PRESS, //клик кнопки станции 6
+  STATION_CELL_7_PRESS, //клик кнопки станции 7
+  STATION_CELL_8_PRESS, //клик кнопки станции 8
+  STATION_CELL_9_PRESS, //клик кнопки станции 9
+#endif
 #endif
 #endif
   KEY_MAX_ITEMS //максимум кнопок

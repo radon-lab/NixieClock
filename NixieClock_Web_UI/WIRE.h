@@ -1,6 +1,6 @@
-#define TWI_SCL_STRCH_LIMIT 0    //максимальное время ожидания освобождения SCL линии(мкс)
-#define TWI_SDA_STRCH_LIMIT 20   //количество попыток освободить SDA
 #define TWI_BUS_POLLING_LIMIT 20 //максимальное время ожидания освобождения шины(мкс)
+#define TWI_SCL_STRCH_LIMIT 5000 //максимальное время ожидания освобождения SCL линии(мкс)
+#define TWI_SDA_STRCH_LIMIT 20   //количество попыток освободить SDA
 
 #define TWI_NACK HIGH
 #define TWI_ACK LOW
@@ -55,6 +55,16 @@ void twi_delay(int16_t value)
 #pragma GCC diagnostic pop
 }
 //--------------------------------------------------------------------
+boolean twi_error(void)
+{
+  return twi_collision;
+}
+//--------------------------------------------------------------------
+boolean twi_running(void)
+{
+  return twi_state;
+}
+//--------------------------------------------------------------------
 boolean clockStretch(void)
 {
 #if TWI_SCL_STRCH_LIMIT
@@ -93,10 +103,10 @@ int8_t checkBus(void)
   int32_t pollCounter = (TWI_BUS_POLLING_LIMIT * TWI_CLOCK_STRETCH_MULTIPLIER);
 
   while ((SDA_READ() == HIGH) && (SCL_READ() == HIGH)) {
-    if (pollCounter-- < 0) return TWI_OK; //bus released!!!
+    if (pollCounter-- < 0) return TWI_OK;
   }
 
-  return TWI_BUSY; //error handler, bus busy!!!
+  return TWI_BUSY;
 }
 //--------------------------------------------------------------------
 void twi_init(void)
@@ -105,10 +115,12 @@ void twi_init(void)
   SDA_HIGH();
   delay(20);
   twi_state = false;
+  twi_collision = false;
 }
 //--------------------------------------------------------------------
 int8_t twi_write_stop(void)
 {
+  twi_collision = false;
   if (twi_state == true) {
     SCL_LOW();
     SDA_HIGH();
@@ -190,18 +202,28 @@ int8_t twi_read_bit(void)
 //--------------------------------------------------------------------
 boolean twi_write_byte(uint8_t _byte)
 {
+  if (twi_collision == true) return TWI_NACK;
+  
   for (uint8_t i = 0; i < 8; i++) {
-    if (twi_write_bit(_byte & 0x80) != TWI_OK) return TWI_NACK;
+    if (twi_write_bit(_byte & 0x80) != TWI_OK) {
+      twi_collision = true;
+      return TWI_NACK;
+    }
     _byte <<= 1;
   }
 
-  if (twi_read_bit() == TWI_ACK) return TWI_ACK;
-  return TWI_NACK;
+  if (twi_read_bit() != TWI_ACK) {
+    twi_collision = true;
+    return TWI_NACK;
+  }
+  return TWI_ACK;
 }
 //--------------------------------------------------------------------
 uint8_t twi_read_byte(boolean _answer)
 {
   uint8_t _byte = 0;
+
+  if (twi_collision == true) return 0;
 
   for (uint8_t i = 0; i < 8; i++) {
     _byte <<= 1;
@@ -216,16 +238,15 @@ uint8_t twi_read_byte(boolean _answer)
     return 0;
   }
 
-  twi_collision = false;
   return _byte;
 }
 //--------------------------------------------------------------------
 boolean twi_beginTransmission(uint8_t addr, boolean rw) //запуск передачи
 {
   if (twi_write_start() != TWI_OK) return TWI_NACK; //запуск шины wire
-  if (twi_write_byte((addr << 0x01) | rw) != TWI_ACK) {
+  if (twi_write_byte((addr << 0x01) | rw) != TWI_ACK) { //отправка устройству адреса с битом read/write
     twi_write_stop(); //остановили шину
-    return TWI_NACK; //отправка устройству адреса с битом read/write
+    return TWI_NACK;
   }
   return TWI_ACK;
 }
@@ -234,6 +255,7 @@ boolean twi_requestFrom(uint8_t addr, uint8_t reg) //запрос чтения �
 {
   if (twi_beginTransmission(addr) != TWI_ACK) return TWI_NACK; //отправка устройству адреса с битом write
   twi_write_byte(reg); //отправка устройству начального адреса чтения
+  if (twi_error()) return TWI_NACK; //проверка статуса отправки
   if (twi_beginTransmission(addr, 0x01) != TWI_ACK) return TWI_NACK; //отправка устройству адреса с битом read
 
   return TWI_ACK;
@@ -244,6 +266,7 @@ boolean twi_requestFrom(uint8_t addr, uint8_t cmd, uint8_t arg) //запрос �
   if (twi_beginTransmission(addr) != TWI_ACK) return TWI_NACK; //отправка устройству адреса с битом write
   twi_write_byte(cmd); //отправка устройству начального адреса чтения
   twi_write_byte(arg); //отправка устройству начального адреса чтения
+  if (twi_error()) return TWI_NACK; //проверка статуса отправки
   if (twi_beginTransmission(addr, 0x01) != TWI_ACK) return TWI_NACK; //отправка устройству адреса с битом read
 
   return TWI_ACK;
@@ -255,6 +278,7 @@ boolean twi_requestFrom(uint8_t addr, uint8_t cmd, uint8_t arg, uint8_t reg) //�
   twi_write_byte(cmd); //отправка устройству начального адреса чтения
   twi_write_byte(arg); //отправка устройству начального адреса чтения
   twi_write_byte(reg); //отправка устройству начального адреса чтения
+  if (twi_error()) return TWI_NACK; //проверка статуса отправки
   if (twi_beginTransmission(addr, 0x01) != TWI_ACK) return TWI_NACK; //отправка устройству адреса с битом read
 
   return TWI_ACK;
