@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.0 релиз от 28.11.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.0 релиз от 29.11.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -5589,6 +5589,15 @@ uint8_t radioMenu(void) //радиоприемник
 
     while (1) {
       dataUpdate(); //обработка данных
+
+      switch (radioFastSettings()) { //быстрые настройки радио
+        case 1:
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+        case 2: return MAIN_PROGRAM; //выходим
+      }
+
       if (!secUpd) { //если прошла секунда
         secUpd = 1; //сбросили флаг секунды
 #if ESP_ENABLE
@@ -5614,15 +5623,6 @@ uint8_t radioMenu(void) //радиоприемник
           animShow = ANIM_MAIN; //установили флаг анимации
           return MAIN_PROGRAM; //выходим по тайм-ауту
         }
-      }
-
-      uint8_t _state = radioFastSettings(); //быстрые настройки радио
-      switch (_state) { //в зависимости от состояния
-        case 1:
-          time_out = 0; //сбросили таймер
-          _timer_ms[TMR_MS] = 0; //сбросили таймер
-          break;
-        case 2: return MAIN_PROGRAM; //выходим
       }
 
       if (!_timer_ms[TMR_MS]) { //если таймер истек
