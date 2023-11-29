@@ -5350,150 +5350,149 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
       buttonState(); //сбросили состояние кнопки
       return 2; //выходим
     }
-    else
 #endif
-      if (radio.powerState) {
-        if (_state <= ADD_KEY_HOLD) {
-          if (mainTask == RADIO_PROGRAM) { //если текущая подпрограмма радио
-            if (_state == SET_KEY_PRESS) _state = KEY_MAX_ITEMS; //установили режим просмотра громкости
-            else if (_state != ADD_KEY_PRESS) return 0; //иначе выходим
-          }
-          else return 0; //иначе выходим
-        }
+    if (radio.powerState) { //если питание радио включено
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-        else if (mainTask != RADIO_PROGRAM) { //если текущая подпрограмма не радио
-          mainTask = RADIO_PROGRAM; //подмена текущей программы
-#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-          backlAnimDisable(); //запретили эффекты подсветки
-#if RADIO_BACKL_TYPE == 1
-          changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-          setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
-#else
-          setLedBright(backl.menuBright); //установили максимальную яркость
+      if (_state <= ADD_KEY_HOLD) { //если нажата кнопка из стандартного набора
+        if (mainTask == RADIO_PROGRAM) { //если текущая подпрограмма радио
 #endif
-#endif
+          if (_state == SET_KEY_PRESS) _state = KEY_MAX_ITEMS; //установили режим просмотра громкости
+          else if (_state != ADD_KEY_PRESS) return 0; //иначе выходим
+#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
         }
-#else
         else return 0; //иначе выходим
+      }
+      else if (mainTask != RADIO_PROGRAM) { //если текущая подпрограмма не радио
+        mainTask = RADIO_PROGRAM; //подмена текущей программы
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
+        backlAnimDisable(); //запретили эффекты подсветки
+#if RADIO_BACKL_TYPE == 1
+        changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
+        setLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+#else
+        setLedBright(backl.menuBright); //установили максимальную яркость
+#endif
+#endif
+      }
 #endif
 
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-        setBacklHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+      setBacklHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
 #endif
 
-        dotSetBright(0); //выключаем точки
+      dotSetBright(0); //выключаем точки
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE
-        indiClrDots(); //очистка разделителных точек
+      indiClrDots(); //очистка разделителных точек
 #endif
 
-        buttonState(); //сбросили состояние кнопки
-        radioSeekStop(); //остановка автопоиска радиостанции
+      buttonState(); //сбросили состояние кнопки
+      radioSeekStop(); //остановка автопоиска радиостанции
 
-        while (1) {
-          dataUpdate(); //обработка данных
+      while (1) {
+        dataUpdate(); //обработка данных
 
-          switch (_state) {
-            case KEY_NULL:
-            case KEY_MAX_ITEMS:
-              break;
-            case SET_KEY_PRESS: return 2; //выходим
-            case RIGHT_KEY_PRESS: //прибавить громкость
+        switch (_state) {
+          case KEY_NULL:
+          case KEY_MAX_ITEMS:
+            break;
+          case SET_KEY_PRESS: return 2; //выходим
+          case RIGHT_KEY_PRESS: //прибавить громкость
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case VOL_UP_KEY_PRESS: //прибавить громкость
+          case VOL_UP_KEY_PRESS: //прибавить громкость
 #endif
-              if (radioSettings.volume < RADIO_MAX_VOL) {
-                setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
-                setVolumeRDA(++radioSettings.volume); //прибавитиь громкость
-              }
-              break;
-            case LEFT_KEY_PRESS: //убавить громкость
+            if (radioSettings.volume < RADIO_MAX_VOL) {
+              setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
+              setVolumeRDA(++radioSettings.volume); //прибавитиь громкость
+            }
+            break;
+          case LEFT_KEY_PRESS: //убавить громкость
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case VOL_DOWN_KEY_PRESS: //убавить громкость
+          case VOL_DOWN_KEY_PRESS: //убавить громкость
 #endif
-              if (radioSettings.volume > RADIO_MIN_VOL) {
-                setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
-                setVolumeRDA(--radioSettings.volume); //убавить громкость
-              }
-              break;
-            case ADD_KEY_PRESS: //следующая станция
+            if (radioSettings.volume > RADIO_MIN_VOL) {
+              setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
+              setVolumeRDA(--radioSettings.volume); //убавить громкость
+            }
+            break;
+          case ADD_KEY_PRESS: //следующая станция
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case STATION_UP_KEY_PRESS: //следующая станция
+          case STATION_UP_KEY_PRESS: //следующая станция
 #endif
-              radioSwitchStation(1); //переключить радиостанцию в памяти
-              break;
+            radioSwitchStation(1); //переключить радиостанцию в памяти
+            break;
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case STATION_DOWN_KEY_PRESS: //предыдущая станция
-              radioSwitchStation(0); //переключить радиостанцию в памяти
-              break;
+          case STATION_DOWN_KEY_PRESS: //предыдущая станция
+            radioSwitchStation(0); //переключить радиостанцию в памяти
+            break;
 #if IR_EXT_BTN_ENABLE == 2
-            case STATION_CELL_0_PRESS: //клик кнопки станции 0
-            case STATION_CELL_1_PRESS: //клик кнопки станции 1
-            case STATION_CELL_2_PRESS: //клик кнопки станции 2
-            case STATION_CELL_3_PRESS: //клик кнопки станции 3
-            case STATION_CELL_4_PRESS: //клик кнопки станции 4
-            case STATION_CELL_5_PRESS: //клик кнопки станции 5
-            case STATION_CELL_6_PRESS: //клик кнопки станции 6
-            case STATION_CELL_7_PRESS: //клик кнопки станции 7
-            case STATION_CELL_8_PRESS: //клик кнопки станции 8
-            case STATION_CELL_9_PRESS: //клик кнопки станции 9
-              if (radioSettings.stationsSave[_state - STATION_CELL_0_PRESS]) { //если в памяти записана частота
-                radioSettings.stationNum = _state - STATION_CELL_0_PRESS; //установили номер ячейки
-                radioSettings.stationsFreq = radioSettings.stationsSave[radioSettings.stationNum]; //прочитали частоту
-                setFreqRDA(radioSettings.stationsFreq); //установили частоту
-                setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
-              }
-              break;
+          case STATION_CELL_0_PRESS: //клик кнопки станции 0
+          case STATION_CELL_1_PRESS: //клик кнопки станции 1
+          case STATION_CELL_2_PRESS: //клик кнопки станции 2
+          case STATION_CELL_3_PRESS: //клик кнопки станции 3
+          case STATION_CELL_4_PRESS: //клик кнопки станции 4
+          case STATION_CELL_5_PRESS: //клик кнопки станции 5
+          case STATION_CELL_6_PRESS: //клик кнопки станции 6
+          case STATION_CELL_7_PRESS: //клик кнопки станции 7
+          case STATION_CELL_8_PRESS: //клик кнопки станции 8
+          case STATION_CELL_9_PRESS: //клик кнопки станции 9
+            if (radioSettings.stationsSave[_state - STATION_CELL_0_PRESS]) { //если в памяти записана частота
+              radioSettings.stationNum = _state - STATION_CELL_0_PRESS; //установили номер ячейки
+              radioSettings.stationsFreq = radioSettings.stationsSave[radioSettings.stationNum]; //прочитали частоту
+              setFreqRDA(radioSettings.stationsFreq); //установили частоту
+              setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
+            }
+            break;
 #endif
 #endif
-            default: return 1; //выходим
-          }
-
-          switch (_state) {
-            case RIGHT_KEY_PRESS:
-            case LEFT_KEY_PRESS:
-            case KEY_MAX_ITEMS:
-#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case VOL_UP_KEY_PRESS:
-            case VOL_DOWN_KEY_PRESS:
-              _timer_ms[TMR_MS] = ((_state == VOL_UP_KEY_PRESS) || (_state == VOL_DOWN_KEY_PRESS)) ? RADIO_FAST_TIME : RADIO_VOL_TIME; //устанавливаем таймер
-#else
-              _timer_ms[TMR_MS] = RADIO_VOL_TIME; //устанавливаем таймер
-#endif
-              indiClr(); //очистка индикаторов
-              indiPrintNum(radioSettings.volume, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
-              break;
-            case ADD_KEY_PRESS:
-#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-            case STATION_UP_KEY_PRESS:
-            case STATION_DOWN_KEY_PRESS:
-#endif
-              _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
-              indiClr(); //очистка индикаторов
-              indiPrintNum(radioSettings.stationNum, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
-              break;
-#if RADIO_ENABLE && IR_PORT_ENABLE && (IR_EXT_BTN_ENABLE == 2)
-            case STATION_CELL_0_PRESS: //клик кнопки станции 0
-            case STATION_CELL_1_PRESS: //клик кнопки станции 1
-            case STATION_CELL_2_PRESS: //клик кнопки станции 2
-            case STATION_CELL_3_PRESS: //клик кнопки станции 3
-            case STATION_CELL_4_PRESS: //клик кнопки станции 4
-            case STATION_CELL_5_PRESS: //клик кнопки станции 5
-            case STATION_CELL_6_PRESS: //клик кнопки станции 6
-            case STATION_CELL_7_PRESS: //клик кнопки станции 7
-            case STATION_CELL_8_PRESS: //клик кнопки станции 8
-            case STATION_CELL_9_PRESS: //клик кнопки станции 9
-              _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
-              indiClr(); //очистка индикаторов
-              indiPrintNum(_state - STATION_CELL_0_PRESS, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
-              break;
-#endif
-          }
-
-          _state = buttonState(); //прочитали кнопку
-
-          if (!_timer_ms[TMR_MS]) return 1; //выходим
+          default: return 1; //выходим
         }
+
+        switch (_state) {
+          case RIGHT_KEY_PRESS:
+          case LEFT_KEY_PRESS:
+          case KEY_MAX_ITEMS:
+#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+          case VOL_UP_KEY_PRESS:
+          case VOL_DOWN_KEY_PRESS:
+            _timer_ms[TMR_MS] = ((_state == VOL_UP_KEY_PRESS) || (_state == VOL_DOWN_KEY_PRESS)) ? RADIO_FAST_TIME : RADIO_VOL_TIME; //устанавливаем таймер
+#else
+            _timer_ms[TMR_MS] = RADIO_VOL_TIME; //устанавливаем таймер
+#endif
+            indiClr(); //очистка индикаторов
+            indiPrintNum(radioSettings.volume, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
+            break;
+          case ADD_KEY_PRESS:
+#if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
+          case STATION_UP_KEY_PRESS:
+          case STATION_DOWN_KEY_PRESS:
+#endif
+            _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
+            indiClr(); //очистка индикаторов
+            indiPrintNum(radioSettings.stationNum, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
+            break;
+#if RADIO_ENABLE && IR_PORT_ENABLE && (IR_EXT_BTN_ENABLE == 2)
+          case STATION_CELL_0_PRESS: //клик кнопки станции 0
+          case STATION_CELL_1_PRESS: //клик кнопки станции 1
+          case STATION_CELL_2_PRESS: //клик кнопки станции 2
+          case STATION_CELL_3_PRESS: //клик кнопки станции 3
+          case STATION_CELL_4_PRESS: //клик кнопки станции 4
+          case STATION_CELL_5_PRESS: //клик кнопки станции 5
+          case STATION_CELL_6_PRESS: //клик кнопки станции 6
+          case STATION_CELL_7_PRESS: //клик кнопки станции 7
+          case STATION_CELL_8_PRESS: //клик кнопки станции 8
+          case STATION_CELL_9_PRESS: //клик кнопки станции 9
+            _timer_ms[TMR_MS] = RADIO_FAST_TIME; //устанавливаем таймер
+            indiClr(); //очистка индикаторов
+            indiPrintNum(_state - STATION_CELL_0_PRESS, ((LAMP_NUM / 2) - 1), 2, 0); //вывод настройки
+            break;
+#endif
+        }
+
+        _state = buttonState(); //прочитали кнопку
+
+        if (!_timer_ms[TMR_MS]) return 1; //выходим
       }
+    }
   }
   return 0;
 }
