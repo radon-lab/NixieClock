@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.0 релиз от 29.11.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.2 релиз от 03.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -520,7 +520,7 @@ struct busData {
   uint8_t comand; //текущая команда
   uint8_t status; //статус шины
   uint8_t statusExt; //статус шины
-  uint8_t buffer[ALARM_MAX_ARR]; //буфер шины
+  uint8_t buffer[10]; //буфер шины
 } bus;
 
 #define BUS_WAIT_DATA 0x00
@@ -748,7 +748,9 @@ void INIT_SYSTEM(void) //инициализация
   CONV_INIT; //инициализация преобразователя
 #endif
 
-  wireInit(); //инициализация шины wire
+#if ESP_ENABLE
+  wireDisable(); //отключение шины
+#endif
 
 #if (PLAYER_TYPE != 1) || PLAYER_UART_MODE
   uartDisable(); //отключение uart
@@ -889,10 +891,17 @@ void INIT_SYSTEM(void) //инициализация
   sdPlayerInit(); //инициализация SD плеера
 #endif
 
+#if DS3231_ENABLE || ESP_ENABLE || RADIO_ENABLE || SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE
+  wireInit(); //инициализация шины wire
+#endif
   indiInit(); //инициализация индикации
 
   backlAnimDisable(); //запретили эффекты подсветки
   changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
+
+#if RADIO_ENABLE
+  radioPowerOff(); //выключить питание радиоприемника
+#endif
 
   checkRTC(); //проверка модуля часов
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
@@ -2531,17 +2540,20 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WAIT_DATA: //установка команды
             bus.comand = TWDR; //записали команду
             switch (bus.comand) {
-              case BUS_WRITE_TIME: if (mainTask == CLOCK_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //настройки времени
+              case BUS_WRITE_TIME: //настройки времени
+              case BUS_READ_TIME:
+                for (uint8_t i = 0; i < sizeof(RTC); i++) bus.buffer[i] = *((uint8_t*)&RTC + i); //копируем время
+                break;
               case BUS_WRITE_FAST_SET: if (mainTask == FAST_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //быстрые настройки
               case BUS_WRITE_MAIN_SET: if (mainTask == MAIN_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //основные настройки
 #if ALARM_TYPE
-              case BUS_WRITE_SELECT_ALARM:
+              case BUS_WRITE_SELECT_ALARM: //настройки будильника
               case BUS_WRITE_ALARM_DATA:
               case BUS_DEL_ALARM:
               case BUS_NEW_ALARM:
 #endif
 #if RADIO_ENABLE
-              case BUS_WRITE_RADIO_VOL:
+              case BUS_WRITE_RADIO_VOL: //настройки радио
               case BUS_WRITE_RADIO_FREQ:
 #endif
 #if ALARM_TYPE || RADIO_ENABLE
@@ -2552,7 +2564,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
           case BUS_WRITE_TIME: //прием настроек времени
             if (bus.counter < sizeof(RTC)) {
-              *((uint8_t*)&RTC + bus.counter) = TWDR;
+              bus.buffer[bus.counter] = TWDR;
               bus.counter++; //сместили указатель
             }
             break;
@@ -2660,7 +2672,7 @@ uint8_t busUpdate(void) //обновление статуса шины
         switch (bus.comand) {
           case BUS_READ_TIME: //передача настроек времени
             if (bus.counter < sizeof(RTC)) {
-              TWDR = *((uint8_t*)&RTC + bus.counter);
+              TWDR = bus.buffer[bus.counter];
               bus.counter++; //сместили указатель
             }
             break;
@@ -2746,7 +2758,7 @@ uint8_t busUpdate(void) //обновление статуса шины
         TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
 #endif
-      //case 0xA0: WCR |= (0x01 << TWINT); break; //принят сигнал STOP
+      //case 0xA0: TWCR |= (0x01 << TWINT); break; //принят сигнал STOP
       case 0x08: //передан START
       case 0x10: //передан REPEATED START
       case 0x18: //передан SLA+W - принят ACK
@@ -2759,7 +2771,11 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if ESP_ENABLE
         bus.status &= ~(0x01 << BUS_COMMAND_WAIT); //сбросили статус
         switch (bus.comand) {
-          case BUS_WRITE_TIME: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки времени
+          case BUS_WRITE_TIME: //настройки времени
+            bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
+            bus.status |= (0x01 << BUS_COMMAND_UPDATE);
+            for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
+            break;
           case BUS_WRITE_FAST_SET: memoryCheck |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
           case BUS_WRITE_MAIN_SET: memoryCheck |= (0x01 << MEM_UPDATE_MAIN_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //основные настройки
 #if ALARM_TYPE
@@ -2842,7 +2858,9 @@ void dataUpdate(void) //обработка данных
 {
   static uint16_t timeClock; //счетчик реального времени
   static uint16_t timerCorrect; //остаток для коррекции времени
+#if DS3231_ENABLE || SQW_PORT_ENABLE
   static uint16_t timerSQW = SQW_MIN_TIME; //таймер контроля сигнала SQW
+#endif
 #if BACKL_TYPE == 3
   backlEffect(); //анимация подсветки
   showLeds(); //отрисовка светодиодов
@@ -2912,6 +2930,7 @@ void dataUpdate(void) //обработка данных
     }
     timerCorrect %= 1000; //оставляем коррекцию
 
+#if DS3231_ENABLE || SQW_PORT_ENABLE
     if (EIMSK) { //если работаем от внешнего тактирования
       timerSQW += msDec; //прибавили время
       if (timerSQW > SQW_MAX_TIME) { //если сигнал слишком длинный
@@ -2921,12 +2940,15 @@ void dataUpdate(void) //обработка данных
       }
     }
     else { //если внешние тактирование не обнаружено
+#endif
       timeClock += msDec; //добавляем ко времени период таймера
       if (timeClock >= 1000) { //если прошла секунда
         timeClock -= 1000; //оставляем остаток
         tick_sec++; //прибавляем секунду
       }
+#if DS3231_ENABLE || SQW_PORT_ENABLE
     }
+#endif
     RESET_WDT; //сбрасываем таймер WDT
   }
 
@@ -2946,6 +2968,7 @@ void dataUpdate(void) //обработка данных
     alarmDataUpdate(); //проверка таймеров будильников
 #endif
 
+#if DS3231_ENABLE || SQW_PORT_ENABLE
     if (EIMSK) { //если работаем от внешнего тактирования
       if (timerSQW < SQW_MIN_TIME) { //если сигнал слишком короткий
         EIMSK = 0; //перешли на внутреннее тактирование
@@ -2956,6 +2979,7 @@ void dataUpdate(void) //обработка данных
       }
       timerSQW = 0; //сбросили таймер
     }
+#endif
 #if DS3231_ENABLE
     else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
       _timer_sec[TMR_SYNC] = ((uint16_t)RTC_SYNC_TIME * 60); //установили таймер
@@ -5589,14 +5613,6 @@ uint8_t radioMenu(void) //радиоприемник
     while (1) {
       dataUpdate(); //обработка данных
 
-      switch (radioFastSettings()) { //быстрые настройки радио
-        case 1:
-          time_out = 0; //сбросили таймер
-          _timer_ms[TMR_MS] = 0; //сбросили таймер
-          break;
-        case 2: return MAIN_PROGRAM; //выходим
-      }
-
       if (!secUpd) { //если прошла секунда
         secUpd = 1; //сбросили флаг секунды
 #if ESP_ENABLE
@@ -5713,6 +5729,14 @@ uint8_t radioMenu(void) //радиоприемник
         }
       }
 #endif
+
+      switch (radioFastSettings()) { //быстрые настройки радио
+        case 1: //клик
+          time_out = 0; //сбросили таймер
+          _timer_ms[TMR_MS] = 0; //сбросили таймер
+          break;
+        case 2: return MAIN_PROGRAM; //выходим
+      }
 
       switch (buttonState()) {
         case RIGHT_KEY_PRESS: //клик правой кнопкой

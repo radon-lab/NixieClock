@@ -385,9 +385,9 @@ void playerUpdate(void)
 
         switch (player.transferBuff[_COMMAND]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
-            if (!player.playbackMute) playState = 1;
-            else return;
-            if (busyState) busyState = 0;
+            if (player.playbackMute) return;
+            playState = 1;
+            busyState = 0;
             break;
           case PLAYER_CMD_MUTE: player.playbackMute = player.transferBuff[_DATA_L]; break;
           case PLAYER_CMD_SET_VOL: player.playbackVol = player.transferBuff[_DATA_L]; break;

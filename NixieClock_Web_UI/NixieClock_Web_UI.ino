@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.1 релиз от 28.11.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.2 релиз от 03.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -82,11 +82,11 @@ int8_t clockState; //флаги состояния соединения с ча�
 
 uint8_t timerWait; //таймер ожидания опроса шины
 
-uint8_t climateTimer;
-uint8_t climateCountAvg;
-int16_t climateTempAvg;
-uint16_t climateHumAvg;
-uint16_t climatePressAvg;
+uint8_t climateTimer; //таймер обновления микроклимата
+uint8_t climateCountAvg; //счетчик циклов обновления микроклимата
+int16_t climateTempAvg; //буфер средней температуры микроклимата
+uint16_t climateHumAvg; //буфер средней влажности микроклимата
+uint16_t climatePressAvg; //буфер среднего давления микроклимата
 
 boolean climateLocal = false; //флаг локальных скриптов графика
 int8_t climateState = -1; //флаг состояние активации микроклимата
@@ -127,6 +127,12 @@ enum {
   NTP_ERROR,
   NTP_TRYING
 };
+
+#if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
+#undef STATUS_LED
+#define STATUS_LED -1
+#endif
+
 void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
@@ -1586,12 +1592,12 @@ void climateReset(void) {
 }
 
 void climateUpdate(void) {
-  static boolean firstStart;
+  static uint8_t firstStart = 0xFF;
 
   uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, settings.ntpGMT);
 
-  if (!firstStart) {
-    firstStart = true;
+  if (firstStart != timeState) {
+    firstStart = timeState;
     for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
       climateAdd(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
     }
@@ -1689,16 +1695,20 @@ void ntpStartSettings(void) {
 }
 
 void setup() {
-  //инициализация шины
-  twi_init();
-
   //инициализация индикатора
+#if STATUS_LED > 0
   pinMode(LED_BUILTIN, OUTPUT);
 #if STATUS_LED < 2
   digitalWrite(LED_BUILTIN, HIGH);
 #else
   digitalWrite(LED_BUILTIN, LOW);
 #endif
+#endif
+
+  //инициализация шины
+  pinMode(TWI_SDA_PIN, INPUT_PULLUP);
+  pinMode(TWI_SCL_PIN, INPUT_PULLUP);
+  twi_init();
 
   Serial.begin(115200);
   Serial.println F("");
@@ -1899,12 +1909,8 @@ void loop() {
           }
           busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
         }
-        timerSeconds += 1000; //прибавили секунду
-      }
-      if (timer.mode) busSetComand(READ_TIMER_TIME);
-      if (climateState != 0) {
-        if (!climateTimer) {
-          if (timeState == 0x03) {
+        if (climateState != 0) {
+          if (!climateTimer) {
             climateTimer = 59;
             sens.status = 0;
             if (deviceInformation[SENS_TEMP]) {
@@ -1912,9 +1918,11 @@ void loop() {
             }
             else sens.update |= SENS_EXT;
           }
+          else climateTimer--;
         }
-        else climateTimer--;
+        timerSeconds += 1000; //прибавили секунду
       }
+      if (timer.mode) busSetComand(READ_TIMER_TIME);
       if (!timerWait) { //если пришло время опросить статус часов
         timerWait = 4; //установили таймер ожидания
         if (clockState > 0) clockState--; //если есть попытки подключения
@@ -1924,7 +1932,7 @@ void loop() {
       else timerWait--;
 #if STATUS_LED == 1
       if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#else
+#elif STATUS_LED == 2
       digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif
     }

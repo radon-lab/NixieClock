@@ -474,6 +474,7 @@ void busUpdate(void) {
                 if (mainTime.hour != 23) mainTime.hour += 1;
                 else {
                   mainTime.hour = 0; //сбросили час
+                  if (++dayWeek > 7) dayWeek = 1; //день недели
                   if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //день
                     mainDate.day = 1; //сбросили день
                     if (++mainDate.month > 12) { //месяц
@@ -494,7 +495,9 @@ void busUpdate(void) {
                 twi_write_byte(mainDate.month);
                 twi_write_byte(mainDate.year & 0xFF);
                 twi_write_byte((mainDate.year >> 8) & 0xFF);
+                twi_write_byte(dayWeek); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
+                  if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
                   timeState = 0x03; //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
                 }
@@ -512,7 +515,10 @@ void busUpdate(void) {
             mainDate.month = twi_read_byte(TWI_ACK);
             mainDate.year = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
             if (!twi_error()) { //если передача была успешной
-              if (busReadBufferArg()) timeState = 0x03; //установили флаги актуального времени
+              if (busReadBufferArg()) { //если время обновлено в часах
+                if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+                timeState = 0x03; //установили флаги актуального времени
+              }
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
             }
@@ -529,6 +535,7 @@ void busUpdate(void) {
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
             if (!twi_error()) { //если передача была успешной
+              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState = 0x03; //установили флаги актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
@@ -541,6 +548,7 @@ void busUpdate(void) {
             twi_write_byte(mainTime.minute);
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
+              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x01; //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
@@ -556,6 +564,7 @@ void busUpdate(void) {
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
             if (!twi_error()) { //если передача была успешной
+              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x02; //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
             }
