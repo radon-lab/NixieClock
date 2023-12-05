@@ -106,10 +106,6 @@ void readTempDS(void)
 {
   static uint8_t typeDS; //тип датчика DS
 
-  if (!sens.init) { //если порт не инициализирован
-    sens.init = 1; //устанавливаем флаг инициализации
-    SENS_INIT; //инициализируем порт
-  }
   if (!typeDS) { //если тип датчика не определен
     typeDS = readSensCode(); //читаем тип датчика
     switch (typeDS) {

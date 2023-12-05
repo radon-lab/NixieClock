@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.2 релиз от 04.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.2 релиз от 05.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -62,7 +62,7 @@ struct sensorData {
   uint16_t press; //давление со встроенного сенсора
   uint8_t hum; //влажность со встроенного сенсора
   uint8_t type; //тип встроенного датчика температуры
-  boolean init; //флаг инициализации порта датчика температуры
+  boolean init; //флаг инициализации встроенного датчика температуры
   boolean err; //ошибка встроенного датчика температуры
 } sens;
 
@@ -764,6 +764,10 @@ void INIT_SYSTEM(void) //инициализация
   BUZZ_INIT; //инициализация бузера
 #endif
 
+#if SENS_PORT_ENABLE
+  SENS_INIT; //инициализация порта датчиков температуры
+#endif
+
 #if !BTN_TYPE
   SET_INIT; //инициализация средней кнопки
   LEFT_INIT; //инициализация левой кнопки
@@ -787,12 +791,7 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
 #if IR_PORT_ENABLE
-  irInit();
-#endif
-
-#if GEN_ENABLE && (GEN_FEEDBACK == 2)
-  FB_INIT; //инициализация обратной связи
-  ACSR = (0x01 << ACBG); //включаем компаратор
+  irInit(); //инициализация ик приемника
 #endif
 
 #if PLAYER_TYPE == 1
@@ -803,6 +802,11 @@ void INIT_SYSTEM(void) //инициализация
   SD_SCK_INIT; //иничиализация SCK
   SD_MISO_INIT; //иничиализация MISO
   SD_MOSI_INIT; //иничиализация MOSI
+#endif
+
+#if GEN_ENABLE && (GEN_FEEDBACK == 2)
+  FB_INIT; //инициализация обратной связи
+  ACSR = (0x01 << ACBG); //включаем компаратор
 #endif
 
   indiPortInit(); //инициализация портов индикаторов
