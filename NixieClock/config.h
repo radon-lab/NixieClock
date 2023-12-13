@@ -265,8 +265,9 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 //Настройки памяти
 #define EEPROM_BLOCK_NULL 0          //начальный блок памяти(0..511)
-#define EEPROM_BLOCK_MAX 1023        //максимальная ячейка памяти(1023)
+#define EEPROM_BLOCK_MAX 1000        //максимальная ячейка памяти(1000)
+#define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.1.2"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "2.1.3"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x10        //версия прошивки для интерфейса wire

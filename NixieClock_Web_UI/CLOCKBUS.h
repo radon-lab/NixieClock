@@ -53,6 +53,7 @@
 #define BUS_READ_DEVICE 0xFF
 
 #define DEVICE_RESET 0xCC
+#define DEVICE_UPDATE 0xDD
 #define DEVICE_REBOOT 0xEE
 
 //-----------------Настройки----------------
@@ -315,6 +316,7 @@ enum {
   WRITE_SENS_DATA,
 
   CONTROL_DEVICE,
+  UPDATE_FIRMWARE,
 
   CHECK_INTERNAL_AHT,
   CHECK_INTERNAL_SHT,
@@ -1194,6 +1196,16 @@ void busUpdate(void) {
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
               if (!twi_running()) ESP.reset(); //перезагрузка
+            }
+          }
+          break;
+        case UPDATE_FIRMWARE:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            twi_write_byte(BUS_CONTROL_DEVICE); //регистр команды
+            twi_write_byte(DEVICE_UPDATE);
+            if (!twi_error()) { //если передача была успешной
+              updeterStart(); //запуск обновления
+              busShiftBuffer(); //сместили буфер команд
             }
           }
           break;

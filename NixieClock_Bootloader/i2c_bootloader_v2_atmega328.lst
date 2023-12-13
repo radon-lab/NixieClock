@@ -1,0 +1,458 @@
+
+i2c_bootloader_v2_atmega328.elf:     file format elf32-avr
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000200  00007e00  00007e00  00000074  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .bss          00000082  00800100  00800100  00000274  2**0
+                  ALLOC
+  2 .debug_aranges 00000028  00000000  00000000  00000274  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  3 .debug_pubnames 00000078  00000000  00000000  0000029c  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  4 .debug_info   00000251  00000000  00000000  00000314  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  5 .debug_abbrev 0000013c  00000000  00000000  00000565  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_line   0000034a  00000000  00000000  000006a1  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_frame  00000050  00000000  00000000  000009ec  2**2
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_str    0000016d  00000000  00000000  00000a3c  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  9 .debug_loc    000001d5  00000000  00000000  00000ba9  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 10 .debug_ranges 00000090  00000000  00000000  00000d7e  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .text:
+
+00007e00 <main>:
+void EEPROM_WriteByte(uint16_t addr, uint8_t data);
+
+volatile uint16_t ram_page_address = 0;
+uint8_t ram_page_buff[BOOTLOADER_PAGE_BUFF];
+
+int main(void) {
+    7e00:	f8 94       	cli
+  uint8_t ram_page_crc = 0;
+
+  uint8_t status = 0;
+  uint8_t twi_buffer = 0;
+
+  RESET_WDT; //сбрасываем таймер WDT
+    7e02:	a8 95       	wdr
+  status = MCUSR; //запомнили статус
+    7e04:	14 b7       	in	r17, 0x34	; 52
+  MCUSR = 0; //сбросли флаги перезагрузки
+    7e06:	14 be       	out	0x34, r1	; 52
+  WDTCSR = (0x01 << WDCE) | (0x01 << WDE); //разрешаем изменения WDT
+    7e08:	88 e1       	ldi	r24, 0x18	; 24
+    7e0a:	80 93 60 00 	sts	0x0060, r24
+  WDTCSR = (0x01 << WDE) | (0x01 << WDP3) | (0x01 << WDP0); //устанавливаем таймер WDT на 8сек
+    7e0e:	89 e2       	ldi	r24, 0x29	; 41
+    7e10:	80 93 60 00 	sts	0x0060, r24
+
+  PORTC = 0x00; //отключаем подтяжку SDA и SCL
+    7e14:	18 b8       	out	0x08, r1	; 8
+  DDRC = 0x00; //устанавливаем SDA и SCL как входы
+    7e16:	17 b8       	out	0x07, r1	; 7
+
+  LED_DDR |= (0x01 << LED);
+    7e18:	25 9a       	sbi	0x04, 5	; 4
+  ledFlash(2);
+    7e1a:	82 e0       	ldi	r24, 0x02	; 2
+    7e1c:	de d0       	rcall	.+444    	; 0x7fda <ledFlash>
+
+  if (status & (0x01 << EXTRF)) status = BOOTLOADER_START; //если нажата кнопка ресет начинаем загрузку
+    7e1e:	11 ff       	sbrs	r17, 1
+    7e20:	02 c0       	rjmp	.+4      	; 0x7e26 <main+0x26>
+    7e22:	1b eb       	ldi	r17, 0xBB	; 187
+    7e24:	10 c0       	rjmp	.+32     	; 0x7e46 <main+0x46>
+  else { //иначе проверяем флаги в памяти
+    status = EEPROM_ReadByte(BOOTLOADER_EEPROM); //чтение байта из EEPROM
+    7e26:	8f ef       	ldi	r24, 0xFF	; 255
+    7e28:	93 e0       	ldi	r25, 0x03	; 3
+    7e2a:	d0 d0       	rcall	.+416    	; 0x7fcc <EEPROM_ReadByte>
+    7e2c:	18 2f       	mov	r17, r24
+    if (status != BOOTLOADER_FLASH) { //если память не была измененена
+    7e2e:	8c 3c       	cpi	r24, 0xCC	; 204
+    7e30:	51 f0       	breq	.+20     	; 0x7e46 <main+0x46>
+      if (status != BOOTLOADER_OK) EEPROM_WriteByte(BOOTLOADER_EEPROM, BOOTLOADER_OK); //запись байта в EEPROM
+    7e32:	8a 3a       	cpi	r24, 0xAA	; 170
+    7e34:	31 f0       	breq	.+12     	; 0x7e42 <main+0x42>
+    7e36:	8f ef       	ldi	r24, 0xFF	; 255
+    7e38:	93 e0       	ldi	r25, 0x03	; 3
+    7e3a:	6a ea       	ldi	r22, 0xAA	; 170
+    7e3c:	bf d0       	rcall	.+382    	; 0x7fbc <EEPROM_WriteByte>
+      if (status != BOOTLOADER_START) RESET_SYSTEM; //переход к основной программе
+    7e3e:	1b 3b       	cpi	r17, 0xBB	; 187
+    7e40:	11 f0       	breq	.+4      	; 0x7e46 <main+0x46>
+    7e42:	0c 94 00 00 	jmp	0	; 0x0 <__tmp_reg__>
+    }
+  }
+
+  ledFlash(4);
+    7e46:	84 e0       	ldi	r24, 0x04	; 4
+    7e48:	c8 d0       	rcall	.+400    	; 0x7fda <ledFlash>
+
+  TWAR = (BOOTLOADER_ADDR << 0x01); //установили адрес шины
+    7e4a:	80 ef       	ldi	r24, 0xF0	; 240
+    7e4c:	80 93 ba 00 	sts	0x00BA, r24
+  TWCR = (0x01 << TWEN) | (0x01 << TWINT) | (0x01 << TWEA); //включили шину
+    7e50:	84 ec       	ldi	r24, 0xC4	; 196
+    7e52:	80 93 bc 00 	sts	0x00BC, r24
+    7e56:	ee 24       	eor	r14, r14
+    7e58:	dd 24       	eor	r13, r13
+    7e5a:	90 e0       	ldi	r25, 0x00	; 0
+          if (ram_page_cnt < BOOTLOADER_PAGE_BUFF) {
+            twi_buffer = TWDR;
+            ram_page_buff[ram_page_cnt] = twi_buffer;
+            uint8_t cnt = 8;
+            while (cnt) { //считаем для всех бит
+              ram_page_crc = ((ram_page_crc ^ twi_buffer) & 0x01) ? (ram_page_crc >> 0x01) ^ 0x8C : (ram_page_crc >> 0x01); //рассчитываем значение
+    7e5c:	4c e8       	ldi	r20, 0x8C	; 140
+    7e5e:	b4 2e       	mov	r11, r20
+  for (;;) {
+    if (TWCR & (0x01 << TWINT)) {
+      twi_buffer = (TWSR & 0xF8); //прочитали статус шины
+
+      if (twi_buffer == 0x00) { //ошибка шины
+        TWCR = (0x01 << TWSTO) | (0x01 << TWEN) | (0x01 << TWINT) | (0x01 << TWEA); //отправляем команду стоп и устанавливаем флаг выполнить задачу
+    7e60:	34 ed       	ldi	r19, 0xD4	; 212
+    7e62:	c3 2e       	mov	r12, r19
+
+  TWAR = (BOOTLOADER_ADDR << 0x01); //установили адрес шины
+  TWCR = (0x01 << TWEN) | (0x01 << TWINT) | (0x01 << TWEA); //включили шину
+
+  for (;;) {
+    if (TWCR & (0x01 << TWINT)) {
+    7e64:	80 91 bc 00 	lds	r24, 0x00BC
+    7e68:	87 ff       	sbrs	r24, 7
+    7e6a:	fc cf       	rjmp	.-8      	; 0x7e64 <main+0x64>
+      twi_buffer = (TWSR & 0xF8); //прочитали статус шины
+    7e6c:	80 91 b9 00 	lds	r24, 0x00B9
+    7e70:	88 7f       	andi	r24, 0xF8	; 248
+
+      if (twi_buffer == 0x00) { //ошибка шины
+    7e72:	19 f4       	brne	.+6      	; 0x7e7a <main+0x7a>
+        TWCR = (0x01 << TWSTO) | (0x01 << TWEN) | (0x01 << TWINT) | (0x01 << TWEA); //отправляем команду стоп и устанавливаем флаг выполнить задачу
+    7e74:	c0 92 bc 00 	sts	0x00BC, r12
+    7e78:	9a c0       	rjmp	.+308    	; 0x7fae <block_done+0x36>
+      }
+      else if (twi_buffer == 0x60) { //принят SLA+W - передан ACK
+    7e7a:	80 36       	cpi	r24, 0x60	; 96
+    7e7c:	19 f4       	brne	.+6      	; 0x7e84 <main+0x84>
+    7e7e:	dd 24       	eor	r13, r13
+    7e80:	90 e0       	ldi	r25, 0x00	; 0
+    7e82:	95 c0       	rjmp	.+298    	; 0x7fae <block_done+0x36>
+        ram_page_cnt = 0;
+        ram_page_crc = 0;
+      }
+      else if (twi_buffer == 0x80) { //принят байт данных - передан ACK
+    7e84:	80 38       	cpi	r24, 0x80	; 128
+    7e86:	09 f0       	breq	.+2      	; 0x7e8a <main+0x8a>
+    7e88:	8e c0       	rjmp	.+284    	; 0x7fa6 <block_done+0x2e>
+        if (ram_page < BOOTLOADER_PAGE_ALL) {
+    7e8a:	8b ef       	ldi	r24, 0xFB	; 251
+    7e8c:	8e 15       	cp	r24, r14
+    7e8e:	08 f4       	brcc	.+2      	; 0x7e92 <main+0x92>
+    7e90:	83 c0       	rjmp	.+262    	; 0x7f98 <block_done+0x20>
+          if (ram_page_cnt < BOOTLOADER_PAGE_BUFF) {
+    7e92:	d7 fc       	sbrc	r13, 7
+    7e94:	13 c0       	rjmp	.+38     	; 0x7ebc <main+0xbc>
+            twi_buffer = TWDR;
+    7e96:	30 91 bb 00 	lds	r19, 0x00BB
+            ram_page_buff[ram_page_cnt] = twi_buffer;
+    7e9a:	ed 2d       	mov	r30, r13
+    7e9c:	f0 e0       	ldi	r31, 0x00	; 0
+    7e9e:	ee 5f       	subi	r30, 0xFE	; 254
+    7ea0:	fe 4f       	sbci	r31, 0xFE	; 254
+    7ea2:	30 83       	st	Z, r19
+    7ea4:	28 e0       	ldi	r18, 0x08	; 8
+            uint8_t cnt = 8;
+            while (cnt) { //считаем для всех бит
+              ram_page_crc = ((ram_page_crc ^ twi_buffer) & 0x01) ? (ram_page_crc >> 0x01) ^ 0x8C : (ram_page_crc >> 0x01); //рассчитываем значение
+    7ea6:	89 2f       	mov	r24, r25
+    7ea8:	83 27       	eor	r24, r19
+    7eaa:	96 95       	lsr	r25
+    7eac:	80 fd       	sbrc	r24, 0
+    7eae:	9b 25       	eor	r25, r11
+              twi_buffer >>= 0x01; //сдвигаем буфер
+              cnt--;
+    7eb0:	21 50       	subi	r18, 0x01	; 1
+        if (ram_page < BOOTLOADER_PAGE_ALL) {
+          if (ram_page_cnt < BOOTLOADER_PAGE_BUFF) {
+            twi_buffer = TWDR;
+            ram_page_buff[ram_page_cnt] = twi_buffer;
+            uint8_t cnt = 8;
+            while (cnt) { //считаем для всех бит
+    7eb2:	11 f0       	breq	.+4      	; 0x7eb8 <main+0xb8>
+              ram_page_crc = ((ram_page_crc ^ twi_buffer) & 0x01) ? (ram_page_crc >> 0x01) ^ 0x8C : (ram_page_crc >> 0x01); //рассчитываем значение
+              twi_buffer >>= 0x01; //сдвигаем буфер
+    7eb4:	36 95       	lsr	r19
+    7eb6:	f7 cf       	rjmp	.-18     	; 0x7ea6 <main+0xa6>
+              cnt--;
+            }
+            ram_page_cnt++;
+    7eb8:	d3 94       	inc	r13
+    7eba:	79 c0       	rjmp	.+242    	; 0x7fae <block_done+0x36>
+          }
+          else {
+            if (TWDR == ram_page_crc) {
+    7ebc:	f0 90 bb 00 	lds	r15, 0x00BB
+    7ec0:	f9 16       	cp	r15, r25
+    7ec2:	09 f0       	breq	.+2      	; 0x7ec6 <main+0xc6>
+    7ec4:	74 c0       	rjmp	.+232    	; 0x7fae <block_done+0x36>
+              if (status != BOOTLOADER_FLASH) { //если память не была измененена
+    7ec6:	1c 3c       	cpi	r17, 0xCC	; 204
+    7ec8:	21 f0       	breq	.+8      	; 0x7ed2 <main+0xd2>
+                status = BOOTLOADER_FLASH; //устанавливаем статус
+                EEPROM_WriteByte(BOOTLOADER_EEPROM, BOOTLOADER_FLASH); //запись байта в EEPROM
+    7eca:	8f ef       	ldi	r24, 0xFF	; 255
+    7ecc:	93 e0       	ldi	r25, 0x03	; 3
+    7ece:	6c ec       	ldi	r22, 0xCC	; 204
+    7ed0:	75 d0       	rcall	.+234    	; 0x7fbc <EEPROM_WriteByte>
+              }
+              while (EECR & (0x01 << EEPE)); //ждем окончания записи
+    7ed2:	f9 99       	sbic	0x1f, 1	; 31
+    7ed4:	fe cf       	rjmp	.-4      	; 0x7ed2 <main+0xd2>
+			  
+			  ram_page_address = (uint16_t)ram_page * BOOTLOADER_PAGE_BUFF;
+    7ed6:	8e 2d       	mov	r24, r14
+    7ed8:	90 e0       	ldi	r25, 0x00	; 0
+    7eda:	96 95       	lsr	r25
+    7edc:	98 2f       	mov	r25, r24
+    7ede:	88 27       	eor	r24, r24
+    7ee0:	97 95       	ror	r25
+    7ee2:	87 95       	ror	r24
+    7ee4:	90 93 01 01 	sts	0x0101, r25
+    7ee8:	80 93 00 01 	sts	0x0100, r24
+
+              //запись флеш памяти
+              asm volatile(
+    7eec:	11 27       	eor	r17, r17
+    7eee:	e0 91 00 01 	lds	r30, 0x0100
+    7ef2:	f0 91 01 01 	lds	r31, 0x0101
+    7ef6:	c2 e0       	ldi	r28, 0x02	; 2
+    7ef8:	d1 e0       	ldi	r29, 0x01	; 1
+    7efa:	80 e8       	ldi	r24, 0x80	; 128
+    7efc:	90 e0       	ldi	r25, 0x00	; 0
+
+00007efe <length_loop>:
+    7efe:	10 30       	cpi	r17, 0x00	; 0
+    7f00:	91 f4       	brne	.+36     	; 0x7f26 <no_page_erase>
+
+00007f02 <wait_spm1>:
+    7f02:	00 91 57 00 	lds	r16, 0x0057
+    7f06:	01 70       	andi	r16, 0x01	; 1
+    7f08:	01 30       	cpi	r16, 0x01	; 1
+    7f0a:	d9 f3       	breq	.-10     	; 0x7f02 <wait_spm1>
+    7f0c:	03 e0       	ldi	r16, 0x03	; 3
+    7f0e:	00 93 57 00 	sts	0x0057, r16
+    7f12:	e8 95       	spm
+
+00007f14 <wait_spm2>:
+    7f14:	00 91 57 00 	lds	r16, 0x0057
+    7f18:	01 70       	andi	r16, 0x01	; 1
+    7f1a:	01 30       	cpi	r16, 0x01	; 1
+    7f1c:	d9 f3       	breq	.-10     	; 0x7f14 <wait_spm2>
+    7f1e:	01 e1       	ldi	r16, 0x11	; 17
+    7f20:	00 93 57 00 	sts	0x0057, r16
+    7f24:	e8 95       	spm
+
+00007f26 <no_page_erase>:
+    7f26:	09 90       	ld	r0, Y+
+    7f28:	19 90       	ld	r1, Y+
+
+00007f2a <wait_spm3>:
+    7f2a:	00 91 57 00 	lds	r16, 0x0057
+    7f2e:	01 70       	andi	r16, 0x01	; 1
+    7f30:	01 30       	cpi	r16, 0x01	; 1
+    7f32:	d9 f3       	breq	.-10     	; 0x7f2a <wait_spm3>
+    7f34:	01 e0       	ldi	r16, 0x01	; 1
+    7f36:	00 93 57 00 	sts	0x0057, r16
+    7f3a:	e8 95       	spm
+    7f3c:	13 95       	inc	r17
+    7f3e:	10 34       	cpi	r17, 0x40	; 64
+    7f40:	98 f0       	brcs	.+38     	; 0x7f68 <same_page>
+
+00007f42 <write_page>:
+    7f42:	11 27       	eor	r17, r17
+
+00007f44 <wait_spm4>:
+    7f44:	00 91 57 00 	lds	r16, 0x0057
+    7f48:	01 70       	andi	r16, 0x01	; 1
+    7f4a:	01 30       	cpi	r16, 0x01	; 1
+    7f4c:	d9 f3       	breq	.-10     	; 0x7f44 <wait_spm4>
+    7f4e:	05 e0       	ldi	r16, 0x05	; 5
+    7f50:	00 93 57 00 	sts	0x0057, r16
+    7f54:	e8 95       	spm
+
+00007f56 <wait_spm5>:
+    7f56:	00 91 57 00 	lds	r16, 0x0057
+    7f5a:	01 70       	andi	r16, 0x01	; 1
+    7f5c:	01 30       	cpi	r16, 0x01	; 1
+    7f5e:	d9 f3       	breq	.-10     	; 0x7f56 <wait_spm5>
+    7f60:	01 e1       	ldi	r16, 0x11	; 17
+    7f62:	00 93 57 00 	sts	0x0057, r16
+    7f66:	e8 95       	spm
+
+00007f68 <same_page>:
+    7f68:	32 96       	adiw	r30, 0x02	; 2
+    7f6a:	02 97       	sbiw	r24, 0x02	; 2
+    7f6c:	09 f0       	breq	.+2      	; 0x7f70 <final_write>
+    7f6e:	c7 cf       	rjmp	.-114    	; 0x7efe <length_loop>
+
+00007f70 <final_write>:
+    7f70:	10 30       	cpi	r17, 0x00	; 0
+    7f72:	11 f0       	breq	.+4      	; 0x7f78 <block_done>
+    7f74:	02 96       	adiw	r24, 0x02	; 2
+    7f76:	e5 cf       	rjmp	.-54     	; 0x7f42 <write_page>
+
+00007f78 <block_done>:
+    7f78:	11 24       	eor	r1, r1
+                : "=m" (SPMCSR)
+                : "M" (BOOTLOADER_PAGE_SIZE)
+                : "r0", "r16", "r17", "r24", "r25", "r28", "r29", "r30", "r31"
+              );
+              
+              ram_page++; //сместили указатель страницы
+    7f7a:	e3 94       	inc	r14
+
+              if (ram_page >= BOOTLOADER_PAGE_ALL) { //если страницы закончились
+    7f7c:	8c ef       	ldi	r24, 0xFC	; 252
+    7f7e:	e8 16       	cp	r14, r24
+    7f80:	11 f0       	breq	.+4      	; 0x7f86 <block_done+0xe>
+    7f82:	9f 2d       	mov	r25, r15
+    7f84:	07 c0       	rjmp	.+14     	; 0x7f94 <block_done+0x1c>
+                ram_page = 0xFF; //конец памяти
+                EEPROM_WriteByte(BOOTLOADER_EEPROM, BOOTLOADER_OK); //запись байта в EEPROM
+    7f86:	8f ef       	ldi	r24, 0xFF	; 255
+    7f88:	93 e0       	ldi	r25, 0x03	; 3
+    7f8a:	6a ea       	ldi	r22, 0xAA	; 170
+    7f8c:	17 d0       	rcall	.+46     	; 0x7fbc <EEPROM_WriteByte>
+    7f8e:	9f 2d       	mov	r25, r15
+    7f90:	ee 24       	eor	r14, r14
+    7f92:	ea 94       	dec	r14
+    7f94:	1c ec       	ldi	r17, 0xCC	; 204
+    7f96:	0b c0       	rjmp	.+22     	; 0x7fae <block_done+0x36>
+              }
+            }
+          }
+        }
+        else if (TWDR == 0xFF) {
+    7f98:	80 91 bb 00 	lds	r24, 0x00BB
+    7f9c:	8f 3f       	cpi	r24, 0xFF	; 255
+    7f9e:	39 f4       	brne	.+14     	; 0x7fae <block_done+0x36>
+          RESET_SYSTEM; //переход к основной программе
+    7fa0:	0c 94 00 00 	jmp	0	; 0x0 <__tmp_reg__>
+    7fa4:	04 c0       	rjmp	.+8      	; 0x7fae <block_done+0x36>
+        }
+      }
+      else if (twi_buffer == 0xA8) { //принят SLA+R - передан ACK
+    7fa6:	88 3a       	cpi	r24, 0xA8	; 168
+    7fa8:	11 f4       	brne	.+4      	; 0x7fae <block_done+0x36>
+        TWDR = ram_page;
+    7faa:	e0 92 bb 00 	sts	0x00BB, r14
+      }
+      TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
+    7fae:	80 91 bc 00 	lds	r24, 0x00BC
+    7fb2:	80 68       	ori	r24, 0x80	; 128
+    7fb4:	80 93 bc 00 	sts	0x00BC, r24
+      RESET_WDT; //сбрасываем таймер WDT
+    7fb8:	a8 95       	wdr
+    7fba:	54 cf       	rjmp	.-344    	; 0x7e64 <main+0x64>
+
+00007fbc <EEPROM_WriteByte>:
+  return 0;
+}
+//--------------------------Запись байта в EEPROM-----------------------------------
+void EEPROM_WriteByte(uint16_t addr, uint8_t data) //запись байта в EEPROM
+{
+  while (EECR & (0x01 << EEPE)); //ждем окончания записи
+    7fbc:	f9 99       	sbic	0x1f, 1	; 31
+    7fbe:	fe cf       	rjmp	.-4      	; 0x7fbc <EEPROM_WriteByte>
+  EEAR = addr; //загружаем адрес
+    7fc0:	92 bd       	out	0x22, r25	; 34
+    7fc2:	81 bd       	out	0x21, r24	; 33
+  EEDR = data; //загружаем байт данных
+    7fc4:	60 bd       	out	0x20, r22	; 32
+  EECR |= 1 << EEMPE; //разрешаем запись
+    7fc6:	fa 9a       	sbi	0x1f, 2	; 31
+  EECR |= 1 << EEPE; //сбрасываем флаг записи
+    7fc8:	f9 9a       	sbi	0x1f, 1	; 31
+}
+    7fca:	08 95       	ret
+
+00007fcc <EEPROM_ReadByte>:
+//-------------------------Чтение байта из EEPROM-----------------------------------
+uint8_t EEPROM_ReadByte(uint16_t addr) //чтение байта из EEPROM
+{
+  while (EECR & (0x01 << EEPE)); //ждем окончания записи
+    7fcc:	f9 99       	sbic	0x1f, 1	; 31
+    7fce:	fe cf       	rjmp	.-4      	; 0x7fcc <EEPROM_ReadByte>
+  EEAR = addr; //загружаем адрес
+    7fd0:	92 bd       	out	0x22, r25	; 34
+    7fd2:	81 bd       	out	0x21, r24	; 33
+  EECR |= (0x01 << EERE); //запускаем чтение
+    7fd4:	f8 9a       	sbi	0x1f, 0	; 31
+  return EEDR; //возвращаем результат
+    7fd6:	80 b5       	in	r24, 0x20	; 32
+}
+    7fd8:	08 95       	ret
+
+00007fda <ledFlash>:
+//----------------------------------------------------------------------------------
+void ledFlash(uint8_t count)
+{
+    7fda:	28 2f       	mov	r18, r24
+  while (count--) {
+    LED_PORT ^= (0x01 << LED);
+    7fdc:	30 e2       	ldi	r19, 0x20	; 32
+    milliseconds can be achieved.
+ */
+void
+_delay_loop_2(uint16_t __count)
+{
+	__asm__ volatile (
+    7fde:	40 e9       	ldi	r20, 0x90	; 144
+    7fe0:	51 e0       	ldi	r21, 0x01	; 1
+    7fe2:	0b c0       	rjmp	.+22     	; 0x7ffa <ledFlash+0x20>
+    7fe4:	85 b1       	in	r24, 0x05	; 5
+    7fe6:	83 27       	eor	r24, r19
+    7fe8:	85 b9       	out	0x05, r24	; 5
+    7fea:	88 ee       	ldi	r24, 0xE8	; 232
+    7fec:	93 e0       	ldi	r25, 0x03	; 3
+    7fee:	fa 01       	movw	r30, r20
+    7ff0:	31 97       	sbiw	r30, 0x01	; 1
+    7ff2:	f1 f7       	brne	.-4      	; 0x7ff0 <ledFlash+0x16>
+		__ticks = (uint16_t) (__ms * 10.0);
+		while(__ticks)
+		{
+			// wait 1/10 ms
+			_delay_loop_2(((F_CPU) / 4e3) / 10);
+			__ticks --;
+    7ff4:	01 97       	sbiw	r24, 0x01	; 1
+		__ticks = 1;
+	else if (__tmp > 65535)
+	{
+		//	__ticks = requested delay in 1/10 ms
+		__ticks = (uint16_t) (__ms * 10.0);
+		while(__ticks)
+    7ff6:	d9 f7       	brne	.-10     	; 0x7fee <ledFlash+0x14>
+    7ff8:	21 50       	subi	r18, 0x01	; 1
+  return EEDR; //возвращаем результат
+}
+//----------------------------------------------------------------------------------
+void ledFlash(uint8_t count)
+{
+  while (count--) {
+    7ffa:	22 23       	and	r18, r18
+    7ffc:	99 f7       	brne	.-26     	; 0x7fe4 <ledFlash+0xa>
+    LED_PORT ^= (0x01 << LED);
+    _delay_ms(100);
+  }
+}
+    7ffe:	08 95       	ret

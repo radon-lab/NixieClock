@@ -14,6 +14,7 @@
 #define HV_ADC(vcc) (uint16_t)((1023.0 / (float)vcc) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
 #define GET_VCC(ref, adc) (float)((ref * 1023.0) / (float)adc) //расчет напряжения питания
 
+#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 

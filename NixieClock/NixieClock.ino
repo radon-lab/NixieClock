@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.2 релиз от 05.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.3 релиз от 13.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -578,7 +578,12 @@ struct busData {
 #define BUS_READ_DEVICE 0xFF
 
 #define DEVICE_RESET 0xCC
+#define DEVICE_UPDATE 0xDD
 #define DEVICE_REBOOT 0xEE
+
+#define BOOTLOADER_OK 0xAA
+#define BOOTLOADER_START 0xBB
+#define BOOTLOADER_FLASH 0xCC
 
 enum {
   BUS_COMMAND_BIT_0,
@@ -810,6 +815,10 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
   indiPortInit(); //инициализация портов индикаторов
+
+#if ESP_ENABLE
+  if (EEPROM_ReadByte(EEPROM_BLOCK_BOOT) == BOOTLOADER_START) RESET_BOOTLOADER; //переход к загрузчику
+#endif
 
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
   if (checkByte(EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR)) updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //если контрольная сумма расширеных ошибок не совпала
@@ -2825,6 +2834,10 @@ uint8_t busUpdate(void) //обновление статуса шины
               switch (bus.buffer[0]) {
                 case DEVICE_RESET:
                   EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) ^ 0xFF); //сбрасываем настройки
+                  RESET_SYSTEM; //перезагрузка
+                  break;
+                case DEVICE_UPDATE:
+                  EEPROM_UpdateByte(EEPROM_BLOCK_BOOT, BOOTLOADER_START); //сбрасываем настройки
                   RESET_SYSTEM; //перезагрузка
                   break;
                 case DEVICE_REBOOT: RESET_SYSTEM; break; //перезагрузка

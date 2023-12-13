@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.2 релиз от 04.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.3 релиз от 13.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -95,6 +95,7 @@ int16_t climateArrExt[1][CLIMATE_BUFFER];
 uint32_t climateDates[CLIMATE_BUFFER];
 
 #include "WIRE.h"
+#include "UPDATER.h"
 #include "CLOCKBUS.h"
 
 const char *climateNamesMain[] = {"Температура", "Влажность"};
@@ -188,7 +189,17 @@ void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP.ONLINE_CHECK(); //проверять статус платы
 
-  if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
+  if (updeterState()) {
+    GP_PAGE_TITLE("Обновление прошивки часов");
+    GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
+    GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
+    GP.SPAN(String("<small>Не выключайте устройство до завершения обновления!</small>") + ((deviceInformation[HARDWARE_VERSION]) ? "" : "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"), GP_CENTER, "syncWarn", GP_RED); //описание
+    GP.HR(UI_LINE_COLOR);
+    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    GP.BLOCK_END();
+    GP.UPDATE("syncUpdater,syncWarn");
+  }
+  else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
     GP_PAGE_TITLE("Ошибка совместимости");
     GP.BLOCK_BEGIN(GP_THIN, "", "Предупреждение", UI_BLOCK_COLOR);
     GP.SPAN("<big><b>Эта версия веб-интерфейса не может взаимодействовать с этим устройством!</b></big>", GP_CENTER, "", UI_INFO_COLOR);
@@ -207,6 +218,7 @@ void build(void) {
     GP.SEND("<style>output{min-width:50px;}</style>\n"); //фикс слайдеров
     GP.SEND("<style>button{line-height:90%;}</style>\n"); //фикс кнопок
     GP.SEND("<style>select{width:200px;}</style>\n"); //фикс выпадающего списка
+    GP.SEND("<style>#ubtn {min-width:34px;}</style>\n"); //фикс кнопок загрузки
     GP.UI_MENU("Nixie clock", UI_MENU_COLOR); //начать меню
     if (settings.nameMenu && settings.name[0]) {
       GP.LABEL(settings.name, "", UI_MENU_NAME_COLOR);
@@ -791,6 +803,7 @@ void build(void) {
       GP.SPAN("Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Загрузить", "", UI_HINT_COLOR);
+      M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("file_upl", "", ".hex", UI_BUTTON_COLOR););
       M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
       M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
       GP.BLOCK_END();
@@ -1366,8 +1379,11 @@ void action() {
       if (ui.update("syncUpdate")) { //если было обновление
         ui.answer("<big><b>Обновление прошивки завершено!</b></big>");
       }
-      if (ui.update("syncWarn")) { //если было обновление
+      if (ui.update("syncWarn") && !updeterState()) { //если было обновление
         ui.answer(" ");
+      }
+      if (ui.update("syncUpdater")) { //если было обновление
+        ui.answer(getUpdaterState());
       }
     }
     //--------------------------------------------------------------------
@@ -1471,8 +1487,26 @@ void action() {
       }
     }
   }
+  /**************************************************************************/
+  if (ui.uploadEnd()) {
+    updeterSetFile(ui.fileName());
+    if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
+    else updeterStart(); //запуск обновления
+  }
 }
 
+//--------------------------Получить состояние загрузчика--------------------------------
+String getUpdaterState(void) { //получить состояние загрузчика
+  String data = "<big><b>";
+  switch (updeterStatus()) {
+    case UPDATER_IDLE: data += "Обновление завершено!"; break;
+    case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
+    case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
+    default: data += (updeterProgress()) ? ("Загрузка прошивки..." + String(map(updeterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
+  }
+  data += "</b></big>";
+  return data;
+}
 //------------------------------Получить состояние ntp-----------------------------------
 String getNtpState(void) { //получить состояние ntp
   String data = "Статус: " + ((statusNtp < NTP_TRYING) ? statusNtpList[statusNtp] : "Попытка[" + String((attemptsNtp >> 1) + 1) + "]...");
@@ -1774,6 +1808,7 @@ void setup() {
     ui.OTA.attachUpdateBuild(buildUpdater);
   }
   ui.downloadAuto(true);
+  ui.uploadAuto(true);
 
   //остановили ntp
   ntp.end();
@@ -1970,7 +2005,8 @@ void loop() {
     }
   }
 
-  busUpdate(); //обработка шины
+  if (!updeterState()) busUpdate(); //обработка шины
+  else updeterRun(); //загрузчик прошивки
 
   ui.tick(); //обработка веб интерфейса
   memory.tick(); //обработка еепром
