@@ -2804,6 +2804,7 @@ uint8_t busUpdate(void) //обновление статуса шины
               checkAlarms(1); //проверяем будильники на совпадение
               bus.status |= (0x01 << BUS_COMMAND_UPDATE);
             }
+            break;
 #endif
 #if RADIO_ENABLE
           case BUS_WRITE_RADIO_STA: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки радио
