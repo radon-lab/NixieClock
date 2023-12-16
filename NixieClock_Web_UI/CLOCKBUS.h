@@ -463,7 +463,9 @@ void busUpdate(void) {
     if (busStatusBuffer()) { //если есть новая команда
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
-            if (ntp.synced()) {
+            int32_t unixDiff = ntp.unix() - GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
+            if (unixDiff < 0) unixDiff = -unixDiff;
+            if (ntp.synced() && ((timeState != 0x03) || (unixDiff < 60))) {
               mainTime.second = ntp.second();
               mainTime.minute = ntp.minute();
               mainTime.hour = ntp.hour();
@@ -505,7 +507,10 @@ void busUpdate(void) {
                 }
               }
             }
-            else busShiftBuffer(); //сместили буфер команд
+            else {
+              statusNtp = NTP_DESYNCED;
+              busShiftBuffer(); //сместили буфер команд
+            }
           }
           break;
         case READ_TIME_DATE:
@@ -908,12 +913,13 @@ void busUpdate(void) {
 
         case READ_SENS_DATA:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TEMP)) { //начинаем передачу
-            sens.update |= SENS_EXT;
             sens.temp[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
             sens.press[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
             sens.hum[0] = twi_read_byte(TWI_NACK);
-            sens.status |= SENS_EXT;
             if (!twi_error()) { //если передача была успешной
+              if (sens.temp[0] != 0x7FFF) sens.status |= SENS_EXT;
+              else sens.temp[0] = 0;
+              sens.update |= SENS_EXT;
               busShiftBuffer(); //сместили буфер команд
             }
           }

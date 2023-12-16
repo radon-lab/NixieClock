@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.3 релиз от 13.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 16.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -65,7 +65,8 @@ GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
 GPtime alarmTime; //время будильника
 
-boolean otaUpdate = true; //флаг запрета обновления
+boolean clockUpdate = true; //флаг запрета обновления часов
+boolean otaUpdate = true; //флаг запрета обновления есп
 boolean alarmSvgImage = false; //флаг локальных изоражений будильника
 boolean timerSvgImage = false; //флаг локальных изоражений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изоражений радиоприемника
@@ -94,6 +95,16 @@ int16_t climateArrMain[2][CLIMATE_BUFFER];
 int16_t climateArrExt[1][CLIMATE_BUFFER];
 uint32_t climateDates[CLIMATE_BUFFER];
 
+enum {
+  NTP_STOPPED,
+  NTP_CONNECTION,
+  NTP_WAIT_ANSWER,
+  NTP_SYNCED,
+  NTP_DESYNCED,
+  NTP_ERROR,
+  NTP_TRYING
+};
+
 #include "WIRE.h"
 #include "UPDATER.h"
 #include "CLOCKBUS.h"
@@ -104,13 +115,13 @@ const char *climateNamesExt[] = {"Давление"};
 const char *climateFsData[] = {"/gp_data/PLOT_STOCK.js"};
 const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg"};
 const char *timerFsData[] = {"/timer_play.svg", "/timer_stop.svg", "/timer_pause.svg", "/timer_up.svg", "/timer_down.svg"};
-const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "radio_mode.svg", "radio_power.svg"};
+const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "/radio_mode.svg", "/radio_power.svg"};
 
 const char *tempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
 const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
-const char *statusNtpList[] = {"Нет сети", "Подключение...", "Ожидание ответа...", "Синхронизировано", "Сервер не отвечает"};
+const char *statusNtpList[] = {"Нет сети", "Подключение...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
 String sensorsList = "Отсутсвует"; //список подключенных сенсоров температуры
@@ -119,15 +130,6 @@ String backlModeList = "Выключена"; //список режимов по�
 String alarmDotModeList = "Выключены"; //список режимов разделительных точек будильника
 String playerVoiceList = "Алёна,Филипп"; //список голосов для озвучки
 String showModeList = "Дата,Год,Дата и год,Температура,Влажность,Давление,Температура и влажность"; //список режимов автопоказа
-
-enum {
-  NTP_STOPPED,
-  NTP_CONNECTION,
-  NTP_WAIT_ANSWER,
-  NTP_SYNCED,
-  NTP_ERROR,
-  NTP_TRYING
-};
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -231,7 +233,7 @@ void build(void) {
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
     GP.UI_LINK("/information", "О системе");
-    if (otaUpdate) GP.UI_LINK("/update", "Обновление");
+    if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/network", "Сетевые настройки");
 
     //состояние соединения
@@ -250,6 +252,9 @@ void build(void) {
     }
     else if (statusNtp == NTP_SYNCED) {
       GP.LABEL_BLOCK("NTP synced", "", UI_MENU_NTP_1_COLOR, 0, 1);
+    }
+    else if (statusNtp == NTP_DESYNCED) {
+      GP.LABEL_BLOCK("NTP desynced", "", UI_MENU_NTP_2_COLOR, 0, 1);
     }
     else {
       GP.LABEL_BLOCK("NTP connecting...", "", UI_MENU_NTP_2_COLOR, 0, 1);
@@ -288,19 +293,6 @@ void build(void) {
       for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
         playerVoiceList += ",Голос_";
         playerVoiceList += i;
-      }
-
-      if (sens.status) {
-        sensorsList = "";
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.status & (0x01 << i)) {
-            if (i) {
-              if (sensorsList.length() > 0) sensorsList += "+";
-              sensorsList += tempSensList[i];
-            }
-            else sensorsList += (sens.err) ? "Ошибка" : tempSensList[sens.type];
-          }
-        }
       }
     }
 
@@ -792,20 +784,30 @@ void build(void) {
       GP.UPDATE_CLICK("extReboot", "rebootButton");
       GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
-    else if (ui.uri("/update") && otaUpdate) { //обновление ESP
+    else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
       GP_PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
       GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.BREAK();
-      GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
-      GP.BREAK();
-      GP.SPAN("Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
+      String formatText = "Поддерживаемые форматы файлов: ";
+      if (clockUpdate) formatText += "hex";
+      if (otaUpdate) {
+        if (clockUpdate) formatText += ", ";
+        formatText += "bin и bin.gz.";
+        GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
+        GP.BREAK();
+      }
+      GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Загрузить", "", UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("file_upl", "", ".hex", UI_BUTTON_COLOR););
-      M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
-      M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
+      if (clockUpdate) {
+        M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("file_upl", "", ".hex", UI_BUTTON_COLOR););
+      }
+      if (otaUpdate) {
+        M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+        M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
+      }
       GP.BLOCK_END();
     }
     else { //подключение к роутеру
@@ -896,6 +898,7 @@ void action() {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
         ntp.setGMT(settings.ntpGMT); //установить часовой пояс в часах
         if (settings.ntpSync && (statusNtp == NTP_SYNCED)) {
+          timeState = 0x00;
           busSetComand(SYNC_TIME_DATE);
         }
         memory.update(); //обновить данные в памяти
@@ -919,6 +922,7 @@ void action() {
       }
       if (ui.clickBool("syncDst", settings.ntpDst)) {
         if (settings.ntpSync && (statusNtp == NTP_SYNCED)) {
+          timeState = 0x00;
           busSetComand(SYNC_TIME_DATE);
         }
         memory.update(); //обновить данные в памяти
@@ -1598,7 +1602,19 @@ void climateSet(void) {
         }
       }
 
+      sensorsList = "";
       memory.update(); //обновить данные в памяти
+    }
+
+    for (uint8_t i = 0; i < 4; i++) {
+      if (sens.status & (0x01 << i)) {
+        if (i) {
+          if (sensorsList.length() > 0) sensorsList += "+";
+          sensorsList += tempSensList[i];
+        }
+        else sensorsList += (sens.err) ? "Ошибка" : tempSensList[sens.type];
+      }
+      else if (!i && deviceInformation[SENS_TEMP]) sensorsList = "Ошибка";
     }
   }
 
@@ -1626,11 +1642,11 @@ void climateReset(void) {
 }
 
 void climateUpdate(void) {
-  static uint8_t firstStart = 0xFF;
+  static int8_t firstStart = -1;
 
   uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, settings.ntpGMT);
 
-  if (firstStart != timeState) {
+  if (firstStart < timeState) {
     firstStart = timeState;
     for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
       climateAdd(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
@@ -1755,6 +1771,15 @@ void setup() {
   if (!LittleFS.begin()) Serial.println F("File system error");
   else {
     Serial.println F("File system init");
+
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
+      clockUpdate = false; //выключаем обновление
+      Serial.println("Clock update disable, running out of memory");
+    }
+    else Serial.println F("Clock update enable");
+
     if (checkFsData(climateFsData, 1)) {
       climateLocal = true; //работаем локально
       Serial.println F("Script file found");
@@ -1912,6 +1937,7 @@ void loop() {
       }
       else if (!ntp.busy()) {
         if (settings.ntpSync || sendNtpTime) {
+          if (sendNtpTime) timeState = 0x00;
           busSetComand(SYNC_TIME_DATE);
         }
         ntp.setPeriod(ntpSyncTime[(settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime]);
@@ -1998,9 +2024,9 @@ void loop() {
         break;
       case (SENS_AHT | SENS_SHT | SENS_BME):
         sens.update = 0; //сбрасываем флаги опроса
-        busSetComand(WRITE_SENS_DATA);
         climateSet(); //установить показания датчиков
         climateUpdate(); //обновляем показания графиков
+        if (climateState != 0) busSetComand(WRITE_SENS_DATA);
         break;
     }
   }

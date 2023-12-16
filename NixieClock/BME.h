@@ -260,6 +260,6 @@ void readTempBME(void) //чтение температуры/давления/в
       break;
 #endif
   }
-  if (sens.temp > 850) sens.temp = 0; //если вышли за предел
+  if ((uint16_t)sens.temp > 850) sens.temp = 0; //если вышли за предел
   sens.err = 0; //сбросили ошибку датчика температуры
 }

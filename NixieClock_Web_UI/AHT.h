@@ -69,7 +69,7 @@ uint8_t readTempAHT(void) //чтение температуры/влажност
   sens.press[1] = 0; //сбросили давление
   sens.status |= SENS_AHT;
 
-  if (sens.temp[1] > 850) sens.temp[1] = 0; //если вышли за предел
+  if ((uint16_t)sens.temp[1] > 850) sens.temp[1] = 0; //если вышли за предел
   if (sens.hum[1] > 99) sens.hum[1] = 99; //если вышли за предел
 
   attemptsAHT = 0; //сбросили попытки запроса

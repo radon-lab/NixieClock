@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.3 релиз от 13.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 16.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -58,7 +58,7 @@ volatile uint8_t tick_sec; //счетчик тиков от RTC
 
 //----------------Температура--------------
 struct sensorData {
-  int16_t temp; //температура со встроенного сенсора
+  int16_t temp = 0x7FFF; //температура со встроенного сенсора
   uint16_t press; //давление со встроенного сенсора
   uint8_t hum; //влажность со встроенного сенсора
   uint8_t type; //тип встроенного датчика температуры
@@ -483,7 +483,7 @@ const uint8_t deviceInformation[] = { //комплектация часов
   CONVERT_CHAR(FIRMWARE_VERSION[2]),
   CONVERT_CHAR(FIRMWARE_VERSION[4]),
   HARDWARE_VERSION,
-  (DS3231_ENABLE | SENS_AHT_ENABLE | SENS_SHT_ENABLE | SENS_BME_ENABLE | SENS_PORT_ENABLE),
+  ((DS3231_ENABLE == 2) | SENS_AHT_ENABLE | SENS_SHT_ENABLE | SENS_BME_ENABLE | SENS_PORT_ENABLE),
   SHOW_TEMP_MODE,
   LAMP_NUM,
   BACKL_TYPE,
@@ -508,7 +508,7 @@ const uint8_t deviceInformation[] = { //комплектация часов
 
 //переменные работы с температурой
 struct mainSensorData {
-  int16_t temp; //температура
+  int16_t temp = 0x7FFF; //температура
   uint16_t press; //давление
   uint8_t hum; //влажность
 } mainSens;
@@ -698,7 +698,7 @@ int main(void) //главный цикл программ
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       case TEMP_PROGRAM: mainTask = showTemp(); break; //показать температуру
 #endif
       case DATE_PROGRAM: mainTask = showDate(); break; //показать дату
@@ -1215,7 +1215,7 @@ void updateTemp(void) //обновить показания температур
     }
 #endif
     if (!sens.err) _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
-#if DS3231_ENABLE
+#if DS3231_ENABLE == 2
     else if (readTempRTC() && !(sens.type & 0x7F)) sens.err = 0; //чтение температуры с датчика DS3231
 #endif
 #if ESP_ENABLE
@@ -2471,7 +2471,7 @@ uint8_t busCheck(void) //проверка статуса шины
       for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case BUS_EXT_COMMAND_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; sens.type |= 0x80; updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
 #endif
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
@@ -2729,7 +2729,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
 #endif
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
           case BUS_READ_TEMP: //передача температуры
             if (bus.counter < sizeof(sens)) {
               TWDR = *((uint8_t*)&sens + bus.counter);
@@ -2815,7 +2815,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SEEK_RADIO_UP: bus.status |= BUS_COMMAND_RADIO_SEEK_UP; break; //запуск автопоиска радио
           case BUS_SEEK_RADIO_DOWN: bus.status |= BUS_COMMAND_RADIO_SEEK_DOWN; break; //запуск автопоиска радио
 #endif
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
           case BUS_CHECK_TEMP: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_CHECK_TEMP); break; //запрос температуры
 #endif
           case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
@@ -4074,7 +4074,7 @@ uint8_t settings_main(void) //настроки основные
               if (!blink_data) indiPrintNum((boolean)mainSettings.dotBright[TIME_NIGHT], 3); //вывод яркости ночь
 #endif
               break;
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
             case SET_TEMP_SENS: {
 #if ESP_ENABLE
                 if (!blink_data) {
@@ -4083,7 +4083,8 @@ uint8_t settings_main(void) //настроки основные
 #else
                   uint16_t temperature = getTemperature(); //буфер температуры
 #endif
-                  if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
+                  if (temperature == 0x7FFF) indiPrintNum(0, 0); //вывод ошибки
+                  else if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
 #else
@@ -4187,7 +4188,7 @@ uint8_t settings_main(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
                   case 0: if (mainSettings.hourSound & 0x80) mainSettings.hourSound &= ~0x80; else mainSettings.hourSound |= 0x80; break; //установили озвучку темепературы
 #endif
                   case 1: mainSettings.knockSound = 0; break; //выключили озвучку действий
@@ -4240,7 +4241,7 @@ uint8_t settings_main(void) //настроки основные
                 mainSettings.dotBright[TIME_NIGHT] = 0;
 #endif
                 break;
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
@@ -4372,7 +4373,7 @@ uint8_t settings_main(void) //настроки основные
                 mainSettings.dotBright[TIME_NIGHT] = 1;
 #endif
                 break;
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
               case SET_TEMP_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
@@ -4428,7 +4429,7 @@ uint8_t settings_main(void) //настроки основные
               set = 0; //заблокировали пункт меню
 #endif
               break;
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE
             case SET_TEMP_SENS: //настройка коррекции температуры
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
@@ -4482,7 +4483,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_NIGHT]); break; //установка ночной яркости точек
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
 #endif
           }
@@ -4509,7 +4510,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_DAY]); break; //установка дневной яркости точек
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
             case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
 #endif
           }
@@ -4589,9 +4590,11 @@ uint8_t showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
 
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
   updateTemp(); //обновить показания температуры
 #endif
+
+  if (getTemperature() == 0x7FFF) return MAIN_PROGRAM; //выходим
 
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
@@ -4868,8 +4871,8 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
   uint8_t show_mode = 0; //текущий режим
 
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
   updateTemp(); //обновить показания температуры
 #endif
   uint16_t temperature = 0; //буфер температуры
@@ -4887,7 +4890,7 @@ void autoShowMenu(void) //меню автоматического показа
     animClearBuff(); //очистка буфера анимации
     show_mode = extendedSettings.autoShowModes[mode];
     switch (show_mode) {
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       case SHOW_TEMP: //режим отображения температуры
 #if LAMP_NUM > 4
       case SHOW_TEMP_HUM: //режим отображения температуры и влажности
@@ -4907,6 +4910,7 @@ void autoShowMenu(void) //меню автоматического показа
         humidity = getHumidity();
 #endif
 #endif
+        if (temperature == 0x7FFF) continue; //возвращаемся назад
 #if ESP_ENABLE || SENS_PORT_ENABLE
         if (temperature >= 10) animPrintNum(temperature, 0, 3); //вывод температуры
         else animPrintNum(temperature, 1, 2, 0); //вывод температуры
@@ -5724,18 +5728,21 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
 #endif
         indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
-#if LAMP_NUM > 4
-        if (radioSettings.stationNum < RADIO_MAX_STATIONS) indiPrintNum(radioSettings.stationNum, 5); //номер станции
-#endif
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
         if (!radio.seekRun) { //если не идет поиск
-          setBacklHue(0, 3, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+          boolean freq_backl = (radioSettings.stationsFreq >= 1000);
+          setBacklHue((freq_backl) ? 0 : 1, (freq_backl) ? 3 : 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
           setLedHue(3, RADIO_BACKL_COLOR_3, WHITE_ON);
+        }
+        else setBacklHue((radio.seekAnim >> 1) - 1, 1, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2); //иначе анимация
+#endif
 #if LAMP_NUM > 4
+        if (radioSettings.stationNum < RADIO_MAX_STATIONS) {
+          indiPrintNum(radioSettings.stationNum, 5); //номер станции
+#if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
           setLedHue(5, RADIO_BACKL_COLOR_3, WHITE_ON);
 #endif
         }
-        else setBacklHue((radio.seekAnim >> 1) - 1, 1, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2); //иначе анимация
 #endif
       }
 
@@ -6114,10 +6121,12 @@ void hourSound(void) //звук смены часа
       playerStop(); //сброс воспроизведения плеера
       if (temp & 0x01) playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
       if (temp & 0x02) speakTime(temp & 0x01); //воспроизвести время
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
         updateTemp(); //обновить показания температуры
-        speakTemp(1); //воспроизвести целую температуру
+#endif
+        if (getTemperature() != 0x7FFF) speakTemp(1); //воспроизвести целую температуру
       }
 #endif
 #else
@@ -7246,7 +7255,7 @@ uint8_t mainScreen(void) //главный экран
 
     //+++++++++++++++++++++  опрос кнопок  +++++++++++++++++++++++++++
     switch (buttonState()) {
-#if ESP_ENABLE || DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       case LEFT_KEY_PRESS: //клик левой кнопкой
         return TEMP_PROGRAM; //показать температуру
 #endif

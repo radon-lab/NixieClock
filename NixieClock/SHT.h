@@ -106,7 +106,7 @@ void readTempSHT(void) //чтение температуры/влажности
 #endif
   }
 
-  if (sens.temp > 850) sens.temp = 0; //если вышли за предел
+  if ((uint16_t)sens.temp > 850) sens.temp = 0; //если вышли за предел
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
   sens.press = 0; //сбросили давление
   sens.err = 0; //сбросили ошибку датчика температуры

@@ -250,7 +250,7 @@ uint8_t readTempBME(void) //чтение температуры/давления
   }
   sens.status |= SENS_BME;
   
-  if (sens.temp[3] > 850) sens.temp[3] = 0; //если вышли за предел
+  if ((uint16_t)sens.temp[3] > 850) sens.temp[3] = 0; //если вышли за предел
 
   attemptsBME = 0; //сбросили попытки запроса
   return 0; //выходим
