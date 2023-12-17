@@ -464,8 +464,9 @@ void busUpdate(void) {
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
             int32_t unixDiff = ntp.unix() - GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
+            if (syncState == 1) unixDiff -= 3600;
             if (unixDiff < 0) unixDiff = -unixDiff;
-            if (ntp.synced() && ((timeState != 0x03) || (unixDiff < 60))) {
+            if (ntp.synced() && (!syncState || (timeState != 0x03) || (unixDiff < 60))) {
               mainTime.second = ntp.second();
               mainTime.minute = ntp.minute();
               mainTime.hour = ntp.hour();
@@ -474,8 +475,9 @@ void busUpdate(void) {
               mainDate.year = ntp.year();
               uint8_t dayWeek = ntp.dayWeek();
 
-              if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) {
-                if (mainTime.hour != 23) mainTime.hour += 1;
+              if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) { //если учет летнего времени включен
+                syncState = 1; //летнее время
+                if (mainTime.hour != 23) mainTime.hour += 1; //прибавили час
                 else {
                   mainTime.hour = 0; //сбросили час
                   if (++dayWeek > 7) dayWeek = 1; //день недели
@@ -490,6 +492,8 @@ void busUpdate(void) {
                   }
                 }
               }
+              else syncState = 2; //зимнее время
+              
               if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
                 twi_write_byte(BUS_WRITE_TIME); //регистр команды
                 twi_write_byte(mainTime.second); //отправляем время
