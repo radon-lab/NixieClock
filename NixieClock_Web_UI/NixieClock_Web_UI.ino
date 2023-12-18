@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 17.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 18.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -81,6 +81,8 @@ uint8_t attemptsNtp = 0; //текущее количество попыток п
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t syncState = 0; //флаг состояния синхронизации времени
 uint8_t timeState = 0; //флаг состояния актуальности времени
+
+uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
 uint8_t timerWait = 0; //таймер ожидания опроса шины
 
@@ -192,15 +194,21 @@ void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP.ONLINE_CHECK(); //проверять статус платы
 
-  if (updeterState()) {
+  if (updeterState() || uploadState) {
     GP_PAGE_TITLE("Обновление прошивки часов");
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
-    GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
-    GP.SPAN(String("<small>Не выключайте устройство до завершения обновления!</small>") + ((deviceInformation[HARDWARE_VERSION]) ? "" : "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"), GP_CENTER, "syncWarn", GP_RED); //описание
+    if (uploadState) {
+      GP.SPAN(String("<big><b>Ошибка - ") + ((uploadState == 1) ? "расширение файла не поддерживается!" : ((uploadState == 3) ? "невозможно открыть файл!" : "загрузка файла прервана!")) + "</b></big>", GP_CENTER, "syncUpdater", GP_YELLOW); //описание
+      uploadState = 0; //сбросили флаг ошибки
+    }
+    else {
+      GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
+      GP.SPAN(String("<small>Не выключайте устройство до завершения обновления!</small>") + ((deviceInformation[HARDWARE_VERSION]) ? "" : "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"), GP_CENTER, "syncWarn", GP_RED); //описание
+      GP.UPDATE("syncUpdater,syncWarn");
+    }
     GP.HR(UI_LINE_COLOR);
     M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
     GP.BLOCK_END();
-    GP.UPDATE("syncUpdater,syncWarn");
   }
   else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
     GP_PAGE_TITLE("Ошибка совместимости");
@@ -799,11 +807,12 @@ void build(void) {
         GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
         GP.BREAK();
       }
+      else formatText += ".";
       GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Загрузить", "", UI_HINT_COLOR);
       if (clockUpdate) {
-        M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("file_upl", "", ".hex", UI_BUTTON_COLOR););
+        M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
       }
       if (otaUpdate) {
         M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
@@ -894,6 +903,9 @@ void buildUpdater(bool UpdateEnd, const String& UpdateError) {
 
 void action() {
   if (ui.click()) {
+    if (ui.click("file_upl")) {
+      Serial.println("Upload click");
+    }
     if (ui.clickSub("sync")) {
       if (ui.click("syncGmt")) {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
@@ -1493,10 +1505,27 @@ void action() {
     }
   }
   /**************************************************************************/
+  if (ui.upload()) {
+    uploadState = 2; //установили флаг ошибки загрузки
+    ui.saveFile(LittleFS.open("/update/firmware.hex", "w"));
+  }
   if (ui.uploadEnd()) {
-    updeterSetFile(ui.fileName());
-    if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
-    else updeterStart(); //запуск обновления
+    if (ui.fileName().endsWith(".hex") || ui.fileName().endsWith(".HEX")) {
+      uploadState = 0; //сбросили флаг ошибки
+      Serial.println("Updater load file: " + ui.fileName());
+      if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
+      else updeterStart(); //запуск обновления
+    }
+    else {
+      uploadState = 1; //установили флаг ошибки расширения
+      LittleFS.remove("/update/firmware.hex"); //удаляем файл
+      Serial.println("Updater file extension error " + ui.fileName());
+    }
+  }
+  if (ui.uploadAbort()) {
+    uploadState = 2; //установили флаг ошибки расширения
+    LittleFS.remove("/update/firmware.hex"); //удаляем файл
+    Serial.println("Updater file upload abort");
   }
 }
 
@@ -1773,6 +1802,8 @@ void setup() {
   else {
     Serial.println F("File system init");
 
+    if (LittleFS.remove("/update/firmware.hex")) Serial.println("Clock update file remove"); //удаляем файл прошивки
+
     FSInfo fs_info;
     LittleFS.info(fs_info);
     if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
@@ -1834,7 +1865,7 @@ void setup() {
     ui.OTA.attachUpdateBuild(buildUpdater);
   }
   ui.downloadAuto(true);
-  ui.uploadAuto(true);
+  ui.uploadAuto(false);
 
   //остановили ntp
   ntp.end();
