@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 18.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 19.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -15,11 +15,11 @@
   EEManager
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
-  1МБ - FS:64KB OTA:~470KB(только обновление по OTA).
-  1МБ - FS:512KB OTA:~246KB(только локальные файлы FS(в папке data должно быть только - alarm_add, alarm_set, favicon и папка gp_data(с её содержимым))).
-  2МБ - FS:1MB OTA:~512KB(обновление по OTA и локальные файлы FS).
-  4МБ - FS:2MB OTA:~1019KB(обновление по OTA и локальные файлы FS).
-  8МБ - FS:6MB OTA:~1019KB(обновление по OTA и локальные файлы FS).
+  1МБ - FS:64KB OTA:~470KB(только обновление esp по OTA).
+  1МБ - FS:512KB OTA:~246KB(только локальные файлы FS и обновление прошивки часов).
+  2МБ - FS:1MB OTA:~512KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS ).
+  4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
+  8МБ - FS:6MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
 
   Папку с плагином "ESP8266LittleFS" необходимо поместить в .../Program Files/Arduino/tools, затем нужно перезапустить Arduino IDE(если была запущена).
   Сначала загружаете прошивку, затем "Инструменты -> ESP8266 LittleFS Data Upload".
@@ -115,7 +115,7 @@ enum {
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
 
-const char *climateFsData[] = {"/gp_data/PLOT_STOCK.js"};
+const char *climateFsData[] = {"/gp_data/PLOT_STOCK.js.gz"};
 const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg"};
 const char *timerFsData[] = {"/timer_play.svg", "/timer_stop.svg", "/timer_pause.svg", "/timer_up.svg", "/timer_down.svg"};
 const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "/radio_mode.svg", "/radio_power.svg"};
@@ -194,12 +194,11 @@ void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP.ONLINE_CHECK(); //проверять статус платы
 
-  if (updeterState() || uploadState) {
+  if (updeterState()) {
     GP_PAGE_TITLE("Обновление прошивки часов");
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
-    if (uploadState) {
-      GP.SPAN(String("<big><b>Ошибка - ") + ((uploadState == 1) ? "расширение файла не поддерживается!" : ((uploadState == 3) ? "невозможно открыть файл!" : "загрузка файла прервана!")) + "</b></big>", GP_CENTER, "syncUpdater", GP_YELLOW); //описание
-      uploadState = 0; //сбросили флаг ошибки
+    if (!updeterFlash()) {
+      GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdater", GP_YELLOW); //описание
     }
     else {
       GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
@@ -857,7 +856,7 @@ void build(void) {
         GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
         GP.TEXT("syncHost", "Хост", settings.host, "", 20);
         GP.BREAK();
-        GP.SELECT("syncPer", "Каждые 15 мин,Каждые 30 мин,Каждый 1 час,Каждые 2 часа,Каждые 3 часа", (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime, 0, (boolean)settings.ntpDst);
+        GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.BREAK();
         GP.LABEL(getNtpState(), "syncStatus", UI_INFO_COLOR);
         GP.HR(UI_LINE_COLOR);
@@ -1506,24 +1505,24 @@ void action() {
   }
   /**************************************************************************/
   if (ui.upload()) {
-    uploadState = 2; //установили флаг ошибки загрузки
+    updeterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
     ui.saveFile(LittleFS.open("/update/firmware.hex", "w"));
   }
   if (ui.uploadEnd()) {
     if (ui.fileName().endsWith(".hex") || ui.fileName().endsWith(".HEX")) {
-      uploadState = 0; //сбросили флаг ошибки
+      updeterSetIdle(); //сбросили флаг ошибки
       Serial.println("Updater load file: " + ui.fileName());
       if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
       else updeterStart(); //запуск обновления
     }
     else {
-      uploadState = 1; //установили флаг ошибки расширения
+      updeterSetStatus(UPDATER_NOT_HEX); //установили флаг ошибки расширения
       LittleFS.remove("/update/firmware.hex"); //удаляем файл
       Serial.println("Updater file extension error " + ui.fileName());
     }
   }
   if (ui.uploadAbort()) {
-    uploadState = 2; //установили флаг ошибки расширения
+    updeterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
     LittleFS.remove("/update/firmware.hex"); //удаляем файл
     Serial.println("Updater file upload abort");
   }
@@ -1536,9 +1535,13 @@ String getUpdaterState(void) { //получить состояние загру�
     case UPDATER_IDLE: data += "Обновление завершено!"; break;
     case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
     case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
+    case UPDATER_NO_FILE: data += "Ошибка!<br><small>Невозможно открыть файл!</small>"; break;
+    case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
+    case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
     default: data += (updeterProgress()) ? ("Загрузка прошивки..." + String(map(updeterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
   }
   data += "</b></big>";
+  updeterSetIdle();
   return data;
 }
 //------------------------------Получить состояние ntp-----------------------------------
@@ -1654,14 +1657,19 @@ void climateSet(void) {
 }
 
 void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
-  GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
-  if (hum) {
-    GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
+  if (climateDates[CLIMATE_BUFFER - 1] > unix) {
+    climateDefault(temp, hum, press, unix);
   }
-  if (press) {
-    GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
+  else {
+    GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
+    if (hum) {
+      GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
+    }
+    if (press) {
+      GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
+    }
+    GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
   }
-  GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
 }
 
 void climateReset(void) {
@@ -1671,6 +1679,12 @@ void climateReset(void) {
   climateCountAvg = 0;
 }
 
+void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
+  for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
+    climateAdd(temp, hum, press, unix);
+  }
+}
+
 void climateUpdate(void) {
   static int8_t firstStart = -1;
 
@@ -1678,9 +1692,7 @@ void climateUpdate(void) {
 
   if (firstStart < timeState) {
     firstStart = timeState;
-    for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
-      climateAdd(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
-    }
+    climateDefault(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
     climateReset(); //сброс усреднения
   }
   else {
@@ -2063,7 +2075,7 @@ void loop() {
     }
   }
 
-  if (!updeterState()) busUpdate(); //обработка шины
+  if (!updeterFlash()) busUpdate(); //обработка шины
   else updeterRun(); //загрузчик прошивки
 
   ui.tick(); //обработка веб интерфейса

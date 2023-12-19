@@ -12,6 +12,9 @@ enum {
   UPDATER_IDLE,
   UPDATER_ERROR,
   UPDATER_TIMEOUT,
+  UPDATER_NO_FILE,
+  UPDATER_NOT_HEX,
+  UPDATER_UPL_ABORT,
   UPDETER_LOAD,
   UPDATER_WRITE,
   UPDATER_CHECK,
@@ -69,6 +72,10 @@ uint8_t getFileData(void) {
   return 0xFF;
 }
 //---------------------------------------------------------------------------------
+boolean updeterFlash(void) {
+  return (updater_state > UPDATER_UPL_ABORT);
+}
+//---------------------------------------------------------------------------------
 boolean updeterState(void) {
   return (updater_state > UPDATER_TIMEOUT);
 }
@@ -79,6 +86,16 @@ uint8_t updeterStatus(void) {
 //---------------------------------------------------------------------------------
 uint8_t updeterProgress(void) {
   return updater_page_cnt;
+}
+//---------------------------------------------------------------------------------
+void updeterSetStatus(uint8_t status) {
+  if (!updeterFlash()) {
+    if ((status >= UPDATER_NO_FILE) && (status <= UPDATER_UPL_ABORT)) updater_state = status;
+  }
+}
+//---------------------------------------------------------------------------------
+void updeterSetIdle(void) {
+  if ((updater_state >= UPDATER_NO_FILE) && (updater_state <= UPDATER_UPL_ABORT)) updater_state = UPDATER_IDLE;
 }
 //---------------------------------------------------------------------------------
 void updeterStart(void) {
@@ -93,7 +110,7 @@ void updeterStart(void) {
       Serial.println("Updater start programming");
     }
     else {
-      uploadState = 3; //установили флаг ошибки файла
+      updater_state = UPDATER_NO_FILE; //установили флаг ошибки файла
       LittleFS.remove("/update/firmware.hex"); //удаляем файл
       Serial.println("Updater error opening file");
     }
