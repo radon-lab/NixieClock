@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 16.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 20.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -4083,7 +4083,7 @@ uint8_t settings_main(void) //настроки основные
 #else
                   uint16_t temperature = getTemperature(); //буфер температуры
 #endif
-                  if (temperature == 0x7FFF) indiPrintNum(0, 0); //вывод ошибки
+                  if (temperature > 990) indiPrintNum(0, 0); //вывод ошибки
                   else if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
@@ -4536,7 +4536,9 @@ void speakTemp(boolean mode) //воспроизвести температуру
 
   if (!mode) playerSetTrackNow(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
   else playerSetTrack(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
+#if ESP_ENABLE || SENS_PORT_ENABLE
   if (getTemperatureSign()) playerSetTrack(PLAYER_SENS_TEMP_OTHER, PLAYER_END_NUMBERS_FOLDER);
+#endif
   if (_dec && !mode) {
     playerSpeakNumber(_ceil, OTHER_NUM);
     playerSetTrack(PLAYER_SENS_CEIL_START + (boolean)playerGetSpeak(_ceil), PLAYER_END_NUMBERS_FOLDER);
@@ -4550,18 +4552,18 @@ void speakTemp(boolean mode) //воспроизвести температуру
   }
 }
 //------------------------------Воспроизвести влажность---------------------------------------
-void speakHum(void) //воспроизвести влажность
+void speakHum(uint8_t hum) //воспроизвести влажность
 {
   playerSetTrackNow(PLAYER_HUM_SOUND, PLAYER_GENERAL_FOLDER);
-  playerSpeakNumber(getHumidity());
-  playerSetTrack(PLAYER_SENS_HUM_START + playerGetSpeak(getHumidity()), PLAYER_END_NUMBERS_FOLDER);
+  playerSpeakNumber(hum);
+  playerSetTrack(PLAYER_SENS_HUM_START + playerGetSpeak(hum), PLAYER_END_NUMBERS_FOLDER);
 }
 //-------------------------------Воспроизвести давление---------------------------------------
-void speakPress(void) //воспроизвести давление
+void speakPress(uint16_t press) //воспроизвести давление
 {
   playerSetTrackNow(PLAYER_PRESS_SOUND, PLAYER_GENERAL_FOLDER);
-  playerSpeakNumber(getPressure());
-  playerSetTrack(PLAYER_SENS_PRESS_START + playerGetSpeak(getPressure()), PLAYER_END_NUMBERS_FOLDER);
+  playerSpeakNumber(press);
+  playerSetTrack(PLAYER_SENS_PRESS_START + playerGetSpeak(press), PLAYER_END_NUMBERS_FOLDER);
   playerSetTrack(PLAYER_SENS_PRESS_OTHER, PLAYER_END_NUMBERS_FOLDER);
 }
 //-----------------------------Установить разделяющую точку-----------------------------------
@@ -4594,7 +4596,11 @@ uint8_t showTemp(void) //показать температуру
   updateTemp(); //обновить показания температуры
 #endif
 
-  if (getTemperature() == 0x7FFF) return MAIN_PROGRAM; //выходим
+  uint16_t temperature = getTemperature(); //буфер температуры
+  uint16_t pressure = getPressure(); //буфер давления
+  uint8_t humidity = getHumidity(); //буфер влажности
+
+  if (temperature > 990) return MAIN_PROGRAM; //выходим
 
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
   backlAnimDisable(); //запретили эффекты подсветки
@@ -4640,11 +4646,10 @@ uint8_t showTemp(void) //показать температуру
       switch (mode) {
         case 0: {
 #if ESP_ENABLE || SENS_PORT_ENABLE
-            uint16_t temperature = getTemperature(); //буфер температуры
             if (temperature >= 10) indiPrintNum(temperature, 0, 3);
             else indiPrintNum(temperature, 1, 2, 0);
 #else
-            indiPrintNum(getTemperature(), 0, 3);
+            indiPrintNum(temperature, 0, 3);
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
             setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
@@ -4652,13 +4657,13 @@ uint8_t showTemp(void) //показать температуру
           }
           break;
         case 1:
-          indiPrintNum(getHumidity(), 0, 4);
+          indiPrintNum(humidity, 0, 4);
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
           break;
         case 2:
-          indiPrintNum(getPressure(), 0, 4);
+          indiPrintNum(pressure, 0, 4);
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
@@ -4671,34 +4676,29 @@ uint8_t showTemp(void) //показать температуру
         if (++mode > 2) mode = 0;
         switch (mode) {
           case 1:
-            if (!getHumidity()) {
-              if (!getPressure()) mode = 0;
+            if (!humidity) {
+              if (!pressure) mode = 0;
               else mode = 2;
             }
             break;
-          case 2: if (!getPressure()) mode = 0; break;
+          case 2: if (!pressure) mode = 0; break;
         }
         if (!mode) { //если режим отображения температуры
           setDivDot(1); //установить точку температуры
 #if ESP_ENABLE || SENS_PORT_ENABLE
           dot = 0; //установили флаг мигания точками
-          sign = getTemperatureSign(); //установили знак температуры
           _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
 #endif
         }
         else { //иначе давление или влажность
-#if DOTS_PORT_ENABLE
-          indiClrDots(); //выключаем разделительные точки
-#else
-          dotSetBright(0); //выключаем точки
-#endif
+          setDivDot(0); //очистить точку температуры
         }
 #if PLAYER_TYPE
         if (mainSettings.knockSound) {
           switch (mode) {
             case 0: speakTemp(0); break; //воспроизвести температуру
-            case 1: speakHum(); break; //воспроизвести влажность
-            case 2: speakPress(); break; //воспроизвести давление
+            case 1: speakHum(humidity); break; //воспроизвести влажность
+            case 2: speakPress(pressure); break; //воспроизвести давление
           }
         }
 #endif
@@ -4910,7 +4910,7 @@ void autoShowMenu(void) //меню автоматического показа
         humidity = getHumidity();
 #endif
 #endif
-        if (temperature == 0x7FFF) continue; //возвращаемся назад
+        if (temperature > 990) continue; //возвращаемся назад
 #if ESP_ENABLE || SENS_PORT_ENABLE
         if (temperature >= 10) animPrintNum(temperature, 0, 3); //вывод температуры
         else animPrintNum(temperature, 1, 2, 0); //вывод температуры
@@ -6126,7 +6126,7 @@ void hourSound(void) //звук смены часа
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
         updateTemp(); //обновить показания температуры
 #endif
-        if (getTemperature() != 0x7FFF) speakTemp(1); //воспроизвести целую температуру
+        if (getTemperature() <= 990) speakTemp(1); //воспроизвести целую температуру
       }
 #endif
 #else
