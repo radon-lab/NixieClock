@@ -52,6 +52,9 @@
 #define UI_MENU_NTP_1_COLOR GP_GREEN //цвет блока меню ntp "Синхронизирован" веб интерфейса
 #define UI_MENU_NTP_2_COLOR GP_YELLOW //цвет блока меню ntp "Подключен" веб интерфейса
 #define UI_MENU_NTP_3_COLOR GP_RED //цвет блока меню ntp "Отключен" веб интерфейса
+#define UI_MENU_RTC_1_COLOR GP_GREEN //цвет блока меню rtc "Синхронизирован" веб интерфейса
+#define UI_MENU_RTC_2_COLOR GP_YELLOW //цвет блока меню rtc "Батарея разряжена" веб интерфейса
+#define UI_MENU_RTC_3_COLOR GP_RED //цвет блока меню rtc "Отключен" веб интерфейса
 #define UI_MENU_CLOCK_1_COLOR GP_GREEN //цвет блока меню часы "Подключены" веб интерфейса
 #define UI_MENU_CLOCK_2_COLOR GP_RED //цвет блока меню часы "Отключены" веб интерфейса
 
@@ -90,4 +93,4 @@
 #define MAX_ALARMS 7 //максимум будильников(3..15)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.1.4" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.5" //версия прошивки модуля esp

@@ -454,6 +454,12 @@ void indiInit(void) //инициализация индикации
   SPCR = (0x01 << SPE) | (0x01 << MSTR); //запустили SPI в режиме ведущего
 #endif
 
+  EIMSK = 0; //запретили прерывания INT0/INT1
+
+#if !IR_PORT_ENABLE
+  PCICR = 0; //запретили прерывания PCINT0/PCINT1/PCINT2
+#endif
+
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем буферы
     indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
     indi_dimm[i] = (LIGHT_MAX - 1); //устанавливаем максимальную яркость

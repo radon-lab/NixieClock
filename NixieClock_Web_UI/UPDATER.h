@@ -72,34 +72,34 @@ uint8_t getFileData(void) {
   return 0xFF;
 }
 //---------------------------------------------------------------------------------
-boolean updeterFlash(void) {
+boolean updaterFlash(void) {
   return (updater_state > UPDATER_UPL_ABORT);
 }
 //---------------------------------------------------------------------------------
-boolean updeterState(void) {
+boolean updaterState(void) {
   return (updater_state > UPDATER_TIMEOUT);
 }
 //---------------------------------------------------------------------------------
-uint8_t updeterStatus(void) {
+uint8_t updaterStatus(void) {
   return updater_state;
 }
 //---------------------------------------------------------------------------------
-uint8_t updeterProgress(void) {
+uint8_t updaterProgress(void) {
   return updater_page_cnt;
 }
 //---------------------------------------------------------------------------------
-void updeterSetStatus(uint8_t status) {
-  if (!updeterFlash()) {
+void updaterSetStatus(uint8_t status) {
+  if (!updaterFlash()) {
     if ((status >= UPDATER_NO_FILE) && (status <= UPDATER_UPL_ABORT)) updater_state = status;
   }
 }
 //---------------------------------------------------------------------------------
-void updeterSetIdle(void) {
+void updaterSetIdle(void) {
   if ((updater_state >= UPDATER_NO_FILE) && (updater_state <= UPDATER_UPL_ABORT)) updater_state = UPDATER_IDLE;
 }
 //---------------------------------------------------------------------------------
-void updeterStart(void) {
-  if (!updeterState()) {
+void updaterStart(void) {
+  if (!updaterState()) {
     firmwareFile = LittleFS.open("/update/firmware.hex", "r");
     if (firmwareFile && (firmwareFile.size() != 0)) {
       page.pos = 0;
@@ -107,17 +107,17 @@ void updeterStart(void) {
       updater_page_cnt = 0;
       updater_timer = millis();
       updater_state = UPDETER_LOAD;
-      Serial.println("Updater start programming");
+      Serial.println F("Updater start programming");
     }
     else {
       updater_state = UPDATER_NO_FILE; //установили флаг ошибки файла
       LittleFS.remove("/update/firmware.hex"); //удаляем файл
-      Serial.println("Updater error opening file");
+      Serial.println F("Updater error opening file");
     }
   }
 }
 //---------------------------------------------------------------------------------
-void updeterRun(void) {
+void updaterRun(void) {
   if ((millis() - updater_timer) >= 10000) {
     updater_state = UPDATER_TIMEOUT;
     LittleFS.remove("/update/firmware.hex"); //удаляем файл
@@ -176,7 +176,7 @@ void updeterRun(void) {
           updater_state = UPDATER_IDLE;
           firmwareFile.close();
           LittleFS.remove("/update/firmware.hex"); //удаляем файл
-          Serial.println("Updater end, reboot...");
+          Serial.println F("Updater end, reboot...");
           ESP.reset(); //перезагрузка
         }
       }

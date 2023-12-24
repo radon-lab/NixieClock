@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 19.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 24.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -85,6 +85,7 @@ uint8_t timeState = 0; //флаг состояния актуальности в
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
 uint8_t timerWait = 0; //таймер ожидания опроса шины
+int8_t timerPlayback = -1; //таймер остановки воспроизведения
 
 uint8_t climateTimer = 0; //таймер обновления микроклимата
 uint8_t climateCountAvg = 0; //счетчик циклов обновления микроклимата
@@ -194,10 +195,10 @@ void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP.ONLINE_CHECK(); //проверять статус платы
 
-  if (updeterState()) {
+  if (updaterState()) {
     GP_PAGE_TITLE("Обновление прошивки часов");
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
-    if (!updeterFlash()) {
+    if (!updaterFlash()) {
       GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdater", GP_YELLOW); //описание
     }
     else {
@@ -253,6 +254,18 @@ void build(void) {
     }
     else {
       GP.LABEL_BLOCK("Clock offline", "", UI_MENU_CLOCK_2_COLOR, 0, 1);
+    }
+    if (!deviceInformation[DS3231_ENABLE]) {
+      GP.BREAK();
+      if (rtc_status == RTC_ONLINE) {
+        GP.LABEL_BLOCK("RTC synced", "", UI_MENU_RTC_1_COLOR, 0, 1);
+      }
+      else if (rtc_status == RTC_BAT_LOW) {
+        GP.LABEL_BLOCK("RTC low battery", "", UI_MENU_RTC_2_COLOR, 0, 1);
+      }
+      else {
+        GP.LABEL_BLOCK("RTC disconnect", "", UI_MENU_RTC_3_COLOR, 0, 1);
+      }
     }
     GP.BREAK();
     if ((statusNtp == NTP_ERROR) || (statusNtp == NTP_STOPPED)) {
@@ -333,6 +346,8 @@ void build(void) {
         );
     GP.HR(UI_BAR_LINE_COLOR);
 
+    if (timerPlayback > -1) timerPlayback = 0; //сбросили воспроизведение
+
     if (ui.uri("/")) { //основная страница
       if (!alarm.set || !deviceInformation[ALARM_TYPE]) { //если не режим настройки будильника
         GP_PAGE_TITLE("Главная");
@@ -393,7 +408,7 @@ void build(void) {
           M_BOX(GP.LABEL("Звук", "", UI_LABEL_COLOR); GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
           M_BOX(GP.LABEL("Мелодия", "", UI_LABEL_COLOR); GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0););
           M_BOX(GP.LABEL("Радиостанция", "", UI_LABEL_COLOR); GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP.SLIDER("alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 10, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE]));); //Ползунки
+          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 10, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE])););); //ползунки
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Время", "", UI_LABEL_COLOR); GP.TIME("alarmTime", alarmTime););
@@ -780,6 +795,14 @@ void build(void) {
       M_BOX(GP.LABEL("Префикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePrefix", settings.namePrefix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Постфикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePostfix", settings.namePostfix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Точка доступа", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceAp", settings.nameAp, UI_SWITCH_COLOR););
+
+      if (rtc_status != RTC_NOT_FOUND) {
+        GP.HR(UI_LINE_COLOR);
+        GP.LABEL("Модуль RTC", "", UI_HINT_COLOR);
+        M_BOX(GP.LABEL("Коррекция", "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
+        GP.UPDATE_CLICK("syncAging", "syncAging");
+      }
+
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Управление", "", UI_HINT_COLOR);
       M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR););
@@ -927,6 +950,7 @@ void action() {
           mainTime = ui.getSystemTime(); //запросить время браузера
           mainDate = ui.getSystemDate(); //запросить дату браузера
           busSetComand(WRITE_TIME_DATE);
+          if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
         }
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
@@ -957,6 +981,13 @@ void action() {
         attemptsNtp = 0;
         statusNtp = NTP_CONNECTION;
       }
+
+      if (ui.click("syncAging")) {
+        if (rtc_status != RTC_NOT_FOUND) {
+          rtc_aging = constrain(ui.getInt("syncAging"), -128, 127);
+          busSetComand(WRITE_RTC_AGING);
+        }
+      }
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("alarm")) {
@@ -967,6 +998,7 @@ void action() {
           busSetComand(WRITE_SELECT_ALARM, ALARM_VOLUME);
           if (!alarm_data[alarm.now][ALARM_DATA_RADIO] && alarm_data[alarm.now][ALARM_DATA_VOLUME] && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetComand(WRITE_TEST_ALARM_VOL);
         }
+        else if (timerPlayback > -1) timerPlayback = 0; //сбросили воспроизведение
         if (ui.click("alarmSoundType")) {
           alarm_data[alarm.now][ALARM_DATA_RADIO] = ui.getBool("alarmSoundType");
           busSetComand(WRITE_SELECT_ALARM, ALARM_RADIO);
@@ -976,8 +1008,11 @@ void action() {
         if (ui.click("alarmSound")) {
           if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
             alarm_data[alarm.now][ALARM_DATA_SOUND] = ui.getInt("alarmSound");
+            if ((!deviceInformation[PLAYER_TYPE] || alarm_data[alarm.now][ALARM_DATA_VOLUME]) && (!deviceInformation[RADIO_ENABLE] || !radioSettings.powerState)) {
+              busSetComand(WRITE_TEST_ALARM_SOUND);
+              timerPlayback = 5;
+            }
             busSetComand(WRITE_SELECT_ALARM, ALARM_SOUND);
-            busSetComand(WRITE_TEST_ALARM_SOUND);
           }
         }
         if (ui.click("alarmRadio")) {
@@ -1395,11 +1430,14 @@ void action() {
       if (ui.update("syncUpdate")) { //если было обновление
         ui.answer("<big><b>Обновление прошивки завершено!</b></big>");
       }
-      if (ui.update("syncWarn") && !updeterState()) { //если было обновление
+      if (ui.update("syncWarn") && !updaterState()) { //если было обновление
         ui.answer(" ");
       }
       if (ui.update("syncUpdater")) { //если было обновление
         ui.answer(getUpdaterState());
+      }
+      if (ui.update("syncAging")) { //если было обновление
+        ui.answer(rtc_aging);
       }
     }
     //--------------------------------------------------------------------
@@ -1505,43 +1543,43 @@ void action() {
   }
   /**************************************************************************/
   if (ui.upload()) {
-    updeterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
+    updaterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
     ui.saveFile(LittleFS.open("/update/firmware.hex", "w"));
   }
   if (ui.uploadEnd()) {
     if (ui.fileName().endsWith(".hex") || ui.fileName().endsWith(".HEX")) {
-      updeterSetIdle(); //сбросили флаг ошибки
+      updaterSetIdle(); //сбросили флаг ошибки
       Serial.println("Updater load file: " + ui.fileName());
       if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
-      else updeterStart(); //запуск обновления
+      else updaterStart(); //запуск обновления
     }
     else {
-      updeterSetStatus(UPDATER_NOT_HEX); //установили флаг ошибки расширения
+      updaterSetStatus(UPDATER_NOT_HEX); //установили флаг ошибки расширения
       LittleFS.remove("/update/firmware.hex"); //удаляем файл
       Serial.println("Updater file extension error " + ui.fileName());
     }
   }
   if (ui.uploadAbort()) {
-    updeterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
+    updaterSetStatus(UPDATER_UPL_ABORT); //установили флаг ошибки загрузки файла
     LittleFS.remove("/update/firmware.hex"); //удаляем файл
-    Serial.println("Updater file upload abort");
+    Serial.println F("Updater file upload abort");
   }
 }
 
 //--------------------------Получить состояние загрузчика--------------------------------
 String getUpdaterState(void) { //получить состояние загрузчика
   String data = "<big><b>";
-  switch (updeterStatus()) {
+  switch (updaterStatus()) {
     case UPDATER_IDLE: data += "Обновление завершено!"; break;
     case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
     case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
     case UPDATER_NO_FILE: data += "Ошибка!<br><small>Невозможно открыть файл!</small>"; break;
     case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
     case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
-    default: data += (updeterProgress()) ? ("Загрузка прошивки..." + String(map(updeterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
+    default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(map(updaterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
   }
   data += "</b></big>";
-  updeterSetIdle();
+  updaterSetIdle();
   return data;
 }
 //------------------------------Получить состояние ntp-----------------------------------
@@ -1814,16 +1852,6 @@ void setup() {
   else {
     Serial.println F("File system init");
 
-    if (LittleFS.remove("/update/firmware.hex")) Serial.println("Clock update file remove"); //удаляем файл прошивки
-
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
-      clockUpdate = false; //выключаем обновление
-      Serial.println("Clock update disable, running out of memory");
-    }
-    else Serial.println F("Clock update enable");
-
     if (checkFsData(climateFsData, 1)) {
       climateLocal = true; //работаем локально
       Serial.println F("Script file found");
@@ -1840,6 +1868,16 @@ void setup() {
       radioSvgImage = true; //работаем локально
       Serial.println F("Radio svg files found");
     }
+
+    if (LittleFS.remove("/update/firmware.hex")) Serial.println F("Clock update file remove"); //удаляем файл прошивки
+
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
+      clockUpdate = false; //выключаем обновление
+      Serial.println F("Clock update disable, running out of memory");
+    }
+    else Serial.println F("Clock update enable");
   }
 
   if (ESP.getFreeSketchSpace() < ESP.getSketchSize()) {
@@ -1892,7 +1930,9 @@ void setup() {
   busSetComand(READ_TIME_DATE, 0);
   busSetComand(READ_DEVICE);
 
-  busTimerSetInterval(5000);
+  busSetComand(WRITE_RTC_INIT);
+
+  busTimerSetInterval(1500);
 }
 
 void loop() {
@@ -2012,7 +2052,8 @@ void loop() {
               }
             }
           }
-          busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
+          if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
+          else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
         }
         if (climateState != 0) {
           if (!climateTimer) {
@@ -2035,6 +2076,10 @@ void loop() {
         busSetComand(READ_STATUS); //запрос статуса часов
       }
       else timerWait--;
+      if (timerPlayback > -1) {
+        if (!timerPlayback) busSetComand(WRITE_STOP_SOUND); //остановка воспроизведения
+        timerPlayback--;
+      }
 #if STATUS_LED == 1
       if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #elif STATUS_LED == 2
@@ -2046,11 +2091,11 @@ void loop() {
       for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
         if (deviceStatus & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
-            case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
             case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
             case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
             case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
             case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
+            case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
             case STATUS_UPDATE_SENS_DATA: busSetComand(READ_SENS_DATA); break;
           }
         }
@@ -2075,8 +2120,8 @@ void loop() {
     }
   }
 
-  if (!updeterFlash()) busUpdate(); //обработка шины
-  else updeterRun(); //загрузчик прошивки
+  if (!updaterFlash()) busUpdate(); //обработка шины
+  else updaterRun(); //загрузчик прошивки
 
   ui.tick(); //обработка веб интерфейса
   memory.tick(); //обработка еепром

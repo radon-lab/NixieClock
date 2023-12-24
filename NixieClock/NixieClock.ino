@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 24.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.5 релиз от 24.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -493,6 +493,7 @@ const uint8_t deviceInformation[] = { //комплектация часов
   DOTS_TYPE,
   LIGHT_SENS_ENABLE,
   (BTN_ADD_TYPE | IR_PORT_ENABLE),
+  DS3231_ENABLE,
   TIMER_ENABLE,
   RADIO_ENABLE,
   ALARM_TYPE,
@@ -568,10 +569,11 @@ struct busData {
 
 #define BUS_WRITE_SENS_DATA 0x22
 
-#define BUS_CONTROL_DEVICE 0xFA
+#define BUS_TEST_FLIP 0xEA
+#define BUS_TEST_SOUND 0xEB
+#define BUS_STOP_SOUND 0xEC
 
-#define BUS_TEST_FLIP 0xFB
-#define BUS_TEST_SOUND 0xFC
+#define BUS_CONTROL_DEVICE 0xFA
 
 #define BUS_SELECT_BYTE 0xFD
 #define BUS_READ_STATUS 0xFE
@@ -614,19 +616,18 @@ enum {
 };
 
 enum {
-  STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_MAIN_SET,
   STATUS_UPDATE_FAST_SET,
   STATUS_UPDATE_RADIO_SET,
   STATUS_UPDATE_EXTENDED_SET,
   STATUS_UPDATE_ALARM_SET,
+  STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_SENS_DATA,
   STATUS_MAX_DATA
 };
 uint8_t deviceStatus; //состояние часов
 
 enum {
-  MEM_UPDATE_TIME_SET,
   MEM_UPDATE_MAIN_SET,
   MEM_UPDATE_FAST_SET,
   MEM_UPDATE_RADIO_SET,
@@ -653,8 +654,7 @@ enum {
 };
 uint8_t mainTask = INIT_PROGRAM; //переключатель подпрограмм
 
-#define EEPROM_BLOCK_TIME EEPROM_BLOCK_NULL //блок памяти времени
-#define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_TIME + sizeof(RTC)) //блок памяти настроек свечения
+#define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_NULL + 8) //блок памяти быстрых настроек
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио
 #define EEPROM_BLOCK_SETTINGS_DEBUG (EEPROM_BLOCK_SETTINGS_RADIO + sizeof(radioSettings)) //блок памяти настроек отладки
@@ -664,8 +664,7 @@ uint8_t mainTask = INIT_PROGRAM; //переключатель подпрогра
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_EXT_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + 1) //блок памяти контрольной суммы настроек
-#define EEPROM_BLOCK_CRC_TIME (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы времени
-#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_TIME + 1) //блок памяти контрольной суммы быстрых настроек
+#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_DEFAULT + 2) //блок памяти контрольной суммы быстрых настроек
 #define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы основных настроек
 #define EEPROM_BLOCK_CRC_RADIO (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы настроек радио
 #define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы настроек отладки
@@ -826,7 +825,6 @@ void INIT_SYSTEM(void) //инициализация
   checkVCC(); //чтение напряжения питания
 
   if (checkSettingsCRC() || !SET_CHK) { //если контрольная сумма не совпала или зажата средняя кнопка то восстанавливаем настройеи по умолчанию
-    updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
     updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем настройки яркости в память
     updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
     updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
@@ -843,11 +841,6 @@ void INIT_SYSTEM(void) //инициализация
 #endif
   }
   else { //иначе загружаем настройки из памяти
-    if (checkData(sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME)) { //проверяем дату и время в памяти
-      updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); //записываем дату и время в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
-    }
-    else EEPROM_ReadBlock((uint16_t)&RTC, EEPROM_BLOCK_TIME, sizeof(RTC)); //считываем дату и время из памяти
     if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) { //проверяем быстрые настройки
       updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем быстрые настройки в память
       SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
@@ -916,7 +909,9 @@ void INIT_SYSTEM(void) //инициализация
   radioPowerOff(); //выключить питание радиоприемника
 #endif
 
+#if DS3231_ENABLE || SQW_PORT_ENABLE
   checkRTC(); //проверка модуля часов
+#endif
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #endif
@@ -1122,7 +1117,6 @@ boolean checkSettingsCRC(void) //проверка контрольной сум�
 {
   uint8_t CRC = 0; //буфер контрольной суммы
 
-  for (uint8_t i = 0; i < sizeof(RTC); i++) checkCRC(&CRC, *((uint8_t*)&RTC + i));
   for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
   for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
   for (uint8_t i = 0; i < sizeof(radioSettings); i++) checkCRC(&CRC, *((uint8_t*)&radioSettings + i));
@@ -1157,13 +1151,10 @@ void updateMemory(void) //обновить данные в памяти
   static uint8_t tmrUpdate; //таймер следующего обновления
   if (tmrUpdate) tmrUpdate--; //убавляем таймер
   else if (memoryCheck) { //если нужно сохранить настройки
-    uint8_t temp = memoryCheck; //копируем флаги
-    memoryCheck = 0; //сбрасываем флаги
     tmrUpdate = 3; //установили таймер
     for (uint8_t i = 0; i < MEM_MAX_DATA; i++) { //проверяем все флаги
-      if (temp & 0x01) { //если флаг установлен
+      if (memoryCheck & 0x01) { //если флаг установлен
         switch (i) { //выбираем действие
-          case MEM_UPDATE_TIME_SET: sendTime(); updateData((uint8_t*)&RTC, sizeof(RTC), EEPROM_BLOCK_TIME, EEPROM_BLOCK_CRC_TIME); break; //записываем дату и время в память
           case MEM_UPDATE_MAIN_SET: updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); break; //записываем основные настройки в память
           case MEM_UPDATE_FAST_SET: updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); break; //записываем быстрые настройки в память
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
@@ -1174,8 +1165,9 @@ void updateMemory(void) //обновить данные в памяти
 #endif
         }
       }
-      temp >>= 1; //сместили буфер флагов
+      memoryCheck >>= 1; //сместили буфер флагов
     }
+    memoryCheck = 0; //сбрасываем флаги
   }
 }
 //-----------------Проверка установленного датчика температуры----------------------
@@ -1597,7 +1589,6 @@ void checkRTC(void) //проверка модуля часов реальног�
 #if DS3231_ENABLE
   if (!setSQW()) return; //установка SQW на 1Гц
 #endif
-  EIMSK = 0; //запретили прерывание INT0
   EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
   EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
 
@@ -2461,6 +2452,7 @@ uint8_t alarmWarn(void) //тревога будильника
 //-------------------------------------Проверка статуса шины-------------------------------------------
 uint8_t busCheck(void) //проверка статуса шины
 {
+#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || RADIO_ENABLE
   if (bus.statusExt) {
     uint8_t status = bus.statusExt;
     bus.statusExt = 0; //сбросили статус
@@ -2471,7 +2463,9 @@ uint8_t busCheck(void) //проверка статуса шины
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
             case BUS_EXT_COMMAND_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; sens.type |= 0x80; updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
 #endif
+#if DS3231_ENABLE
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
+#endif
 #if RADIO_ENABLE
             case BUS_EXT_COMMAND_RADIO_VOL: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
             case BUS_EXT_COMMAND_RADIO_FREQ: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); if (mainTask == RADIO_PROGRAM) radioSearchStation(); break;
@@ -2482,6 +2476,7 @@ uint8_t busCheck(void) //проверка статуса шины
       }
     }
   }
+#endif
   return bus.status;
 }
 //-------------------------------------Проверка команды шины-------------------------------------------
@@ -2494,15 +2489,16 @@ void busCommand(void) //проверка команды шины
     if (status) { //если установлены флаги
       changeAnimState = 2; //установили сброс анимации
 
+#if PLAYER_TYPE
+      playerStop(); //сброс воспроизведения плеера
+#else
+      melodyStop(); //сброс воспроизведения мелодии
+#endif
+
       switch (status) { //выбираем действие
 #if RADIO_ENABLE
         case BUS_COMMAND_RADIO_MODE: if (mainTask != RADIO_PROGRAM) mainTask = RADIO_PROGRAM; else mainTask = MAIN_PROGRAM; break;
         case BUS_COMMAND_RADIO_POWER:
-#if PLAYER_TYPE
-          playerStop(); //сброс воспроизведения плеера
-#else
-          melodyStop(); //сброс воспроизведения мелодии
-#endif
           radioPowerSwitch(); //переключили питание радио
           if (radio.powerState == RDA_ON) { //если питание радио включено
             if (mainTask == MAIN_PROGRAM) mainTask = RADIO_PROGRAM;
@@ -2551,9 +2547,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             bus.comand = TWDR; //записали команду
             switch (bus.comand) {
               case BUS_WRITE_TIME: //настройки времени
-              case BUS_READ_TIME:
-                for (uint8_t i = 0; i < sizeof(RTC); i++) bus.buffer[i] = *((uint8_t*)&RTC + i); //копируем время
-                break;
+              case BUS_READ_TIME: for (uint8_t i = 0; i < sizeof(RTC); i++) bus.buffer[i] = *((uint8_t*)&RTC + i); break; //копируем время
               case BUS_WRITE_FAST_SET: if (mainTask == FAST_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //быстрые настройки
               case BUS_WRITE_MAIN_SET: if (mainTask == MAIN_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //основные настройки
 #if ALARM_TYPE
@@ -2780,7 +2774,9 @@ uint8_t busUpdate(void) //обновление статуса шины
         bus.status &= ~(0x01 << BUS_COMMAND_WAIT); //сбросили статус
         switch (bus.comand) {
           case BUS_WRITE_TIME: //настройки времени
+#if DS3231_ENABLE
             bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
+#endif
             bus.status |= (0x01 << BUS_COMMAND_UPDATE);
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
             break;
@@ -2820,9 +2816,39 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
           case BUS_WRITE_TIMER_MODE: bus.status |= BUS_COMMAND_TIMER_MODE; break; //переключение в режим таймера
 #endif
-          case BUS_WRITE_SENS_DATA: //копирование температуры
-            for (uint8_t i = 0; i < sizeof(mainSens); i++) {
-              *((uint8_t*)&mainSens + i) = bus.buffer[i];
+          case BUS_WRITE_SENS_DATA: for (uint8_t i = 0; i < sizeof(mainSens); i++) *((uint8_t*)&mainSens + i) = bus.buffer[i]; break; //копирование температуры
+          case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
+          case BUS_TEST_SOUND: //тест звука
+            if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
+#if PLAYER_TYPE
+              playerSetVoice(mainSettings.voiceSound);
+              if (!player.playbackMute) {
+                bus.status |= (0x01 << BUS_COMMAND_UPDATE);
+                playerStop(); //сброс воспроизведения плеера
+                playerSetVolNow(bus.buffer[0]);
+                playerSetTrackNow(bus.buffer[1], bus.buffer[2]);
+                playerRetVol(mainSettings.volumeSound);
+              }
+              else playerSetVolNow(mainSettings.volumeSound);
+#else
+#if RADIO_ENABLE
+              if (radio.powerState == RDA_OFF) { //если радио выключено
+#endif
+                bus.status |= (0x01 << BUS_COMMAND_UPDATE);
+                melodyPlay(bus.buffer[1], SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#if RADIO_ENABLE
+              }
+#endif
+#endif
+            }
+            break;
+          case BUS_STOP_SOUND: //остановка звука
+            if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
+#if PLAYER_TYPE
+              playerStop(); //сброс воспроизведения плеера
+#else
+              melodyStop(); //сброс воспроизведения мелодии
+#endif
             }
             break;
           case BUS_CONTROL_DEVICE:
@@ -2839,22 +2865,6 @@ uint8_t busUpdate(void) //обновление статуса шины
                 case DEVICE_REBOOT: RESET_SYSTEM; break; //перезагрузка
               }
             }
-            break;
-          case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
-          case BUS_TEST_SOUND: //тест звука
-#if PLAYER_TYPE
-            playerSetVoice(mainSettings.voiceSound);
-            if (!player.playbackMute) {
-              bus.status |= (0x01 << BUS_COMMAND_UPDATE);
-              playerStop(); //сброс воспроизведения плеера
-              playerSetVolNow(bus.buffer[0]);
-              playerSetTrackNow(bus.buffer[1], bus.buffer[2]);
-              playerRetVol(mainSettings.volumeSound);
-            }
-            else playerSetVolNow(mainSettings.volumeSound);
-#else
-            melodyPlay(bus.buffer[1], SOUND_LINK(alarm_sound), REPLAY_ONCE); //воспроизводим мелодию
-#endif
             break;
         }
 #endif
@@ -3081,7 +3091,12 @@ uint8_t settings_time(void) //настройки времени
     if (!secUpd) {
       secUpd = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
-        setUpdateMemory(0x01 << MEM_UPDATE_TIME_SET); //записываем дату и время в память
+#if DS3231_ENABLE
+        sendTime(); //отправить время в RTC
+#endif
+#if ESP_ENABLE
+        deviceStatus |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+#endif
         animShow = ANIM_MAIN; //установили флаг анимации
         return MAIN_PROGRAM;
       }
@@ -3164,7 +3179,12 @@ uint8_t settings_time(void) //настройки времени
 
       case SET_KEY_HOLD: //удержание средней кнопки
         if (cur_mode < 2 && time_update) RTC.s = 0; //сбрасываем секунды
-        setUpdateMemory(0x01 << MEM_UPDATE_TIME_SET); //записываем дату и время в память
+#if DS3231_ENABLE
+        sendTime(); //отправить время в RTC
+#endif
+#if ESP_ENABLE
+        deviceStatus |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+#endif
         return MAIN_PROGRAM;
     }
   }
@@ -5056,6 +5076,9 @@ void autoShowMenu(void) //меню автоматического показа
     _timer_ms[TMR_MS] = (uint16_t)extendedSettings.autoShowTimes[mode] * 1000; //устанавливаем таймер
     while (_timer_ms[TMR_MS]) { //если таймер истек
       dataUpdate(); //обработка данных
+#if ESP_ENABLE
+      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
+#endif
 #if ESP_ENABLE || SENS_PORT_ENABLE
       if (sign) { //если температура отрицательная
         if (!_timer_ms[TMR_ANIM]) { //если пришло время
@@ -5652,27 +5675,21 @@ uint8_t radioMenu(void) //радиоприемник
 
         if (!radio.seekRun) { //если не идет поиск
 #if RADIO_STATUS_DOT_TYPE
-#if (RADIO_STATUS_DOT_TYPE == 2) && DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
-          if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
-          else indiClrDotR(3); //очистка разделительных точек
-#else
-          if (getStationStatusRDA()) indiSetDotL(0); //установка разделительной точки
-          else indiClrDotL(0); //очистка разделительных точек
-#endif
-#elif NEON_DOT == 2
+#if ((RADIO_STATUS_DOT_TYPE == 1) && (NEON_DOT < 3)) || !DOTS_PORT_ENABLE
+#if NEON_DOT == 2
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
           if (getStationStatusRDA()) neonDotSet(DOT_RIGHT); //включаем разделительную точку
           else neonDotSet(DOT_NULL); //выключаем разделительную точку
 #elif NEON_DOT < 2
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
-#elif DOTS_PORT_ENABLE
-#if DOTS_TYPE == 1
-          if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
-          else indiClrDotR(3); //очистка разделительных точек
+#endif
 #else
-          if (getStationStatusRDA()) indiSetDotL(0); //установка разделительной точки
-          else indiClrDotL(0); //очистка разделительных точек
+          boolean status_sta = getStationStatusRDA();
+          indiClrDots(); //очистка разделителных точек
+#if DOTS_TYPE == 1
+          if (status_sta) indiSetDotR(3); //установка разделительной точки
+#else
+          if (status_sta) indiSetDotL(radioSettings.stationsFreq < 1000); //установка разделительной точки
 #endif
 #endif
 #endif
@@ -5704,7 +5721,6 @@ uint8_t radioMenu(void) //радиоприемник
           else _timer_ms[TMR_MS] = RADIO_ANIM_TIME; //устанавливаем таймер
         }
 
-        indiClr(); //очистка индикаторов
 #if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
         indiSetDotR(2); //включаем разделительную точку
@@ -5712,6 +5728,8 @@ uint8_t radioMenu(void) //радиоприемник
         indiSetDotL(3); //включаем разделительную точку
 #endif
 #endif
+
+        indiClr(); //очистка индикаторов
         indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
         if (!radio.seekRun) { //если не идет поиск
@@ -5795,6 +5813,7 @@ uint8_t radioMenu(void) //радиоприемник
 
         case SET_KEY_HOLD: //удержание средней кнопк
           radio.powerState = RDA_OFF; //сбросили флаг питания радио
+          radioSeekStop(); //остановка автопоиска радиостанции
           setPowerRDA(RDA_OFF); //выключаем радио
           return MAIN_PROGRAM; //выходим
       }

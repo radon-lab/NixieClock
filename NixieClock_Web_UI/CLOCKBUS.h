@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x10 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x12 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -43,10 +43,11 @@
 
 #define BUS_WRITE_SENS_DATA 0x22
 
-#define BUS_CONTROL_DEVICE 0xFA
+#define BUS_TEST_FLIP 0xEA
+#define BUS_TEST_SOUND 0xEB
+#define BUS_STOP_SOUND 0xEC
 
-#define BUS_TEST_FLIP 0xFB
-#define BUS_TEST_SOUND 0xFC
+#define BUS_CONTROL_DEVICE 0xFA
 
 #define BUS_SELECT_BYTE 0xFD
 #define BUS_READ_STATUS 0xFE
@@ -158,12 +159,12 @@ enum {
 uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
 
 enum {
-  STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_MAIN_SET,
   STATUS_UPDATE_FAST_SET,
   STATUS_UPDATE_RADIO_SET,
   STATUS_UPDATE_EXTENDED_SET,
   STATUS_UPDATE_ALARM_SET,
+  STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_SENS_DATA,
   STATUS_MAX_DATA
 };
@@ -184,6 +185,7 @@ enum {
   DOTS_TYPE,
   LIGHT_SENS_ENABLE,
   EXT_BTN_ENABLE,
+  DS3231_ENABLE,
   TIMER_ENABLE,
   RADIO_ENABLE,
   ALARM_TYPE,
@@ -304,6 +306,7 @@ enum {
   WRITE_TIMER_SET,
   WRITE_TIMER_MODE,
 
+  WRITE_STOP_SOUND,
   WRITE_TEST_MAIN_VOL,
   WRITE_TEST_ALARM_VOL,
   WRITE_TEST_ALARM_SOUND,
@@ -317,6 +320,12 @@ enum {
 
   CONTROL_DEVICE,
   UPDATE_FIRMWARE,
+
+  WRITE_RTC_INIT,
+  WRITE_RTC_TIME,
+  READ_RTC_TIME,
+  WRITE_RTC_AGING,
+  READ_RTC_AGING,
 
   CHECK_INTERNAL_AHT,
   CHECK_INTERNAL_SHT,
@@ -343,48 +352,11 @@ struct busData {
 #include "SHT.h"
 #include "BME.h"
 
+#include "RTC.h"
+
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos = 0x00);
 void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos = 0x00);
 
-const uint16_t ntpSyncTime[] = {900, 1800, 3600, 7200, 10800}; //время синхронизации ntp
-const uint8_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
-//------------------------------Максимальное количество дней------------------------------
-uint8_t maxDays(uint16_t YY, uint8_t MM) { //максимальное количество дней
-  return (((MM == 2) && !(YY % 4)) ? 1 : 0) + daysInMonth[MM - 1]; //возвращаем количество дней в месяце
-}
-//---------------------------------Получить день недели-----------------------------------
-uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) { //получить день недели
-  if (YY >= 2000) YY -= 2000; //если год больше 2000
-  uint16_t days = DD; //записываем дату
-  for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
-  if ((MM > 2) && !(YY % 4)) days++; //если високосный год, прибавляем день
-  return (days + 365 * YY + (YY + 3) / 4 - 2 + 6) % 7 + 1; //возвращаем день недели
-}
-//--------------------------------Получить летнее время-----------------------------------
-boolean DST(uint8_t MM, uint8_t DD, uint8_t DW, uint8_t HH) { //получить летнее время
-  if (MM < 3 || MM > 10) return 0; //зима
-  switch (MM) {
-    case 3:
-      if (DD < 25) return 0; //зима
-      else if (DW == 7) {
-        if (HH >= 1) return 1; //лето
-        else return 0; //зима
-      }
-      else if ((DD - 25) < DW) return 0; //зима
-      else return 1; //лето
-      break;
-    case 10:
-      if (DD < 25) return 1; //лето
-      else if (DW == 7) {
-        if (HH >= 2) return 0; //зима
-        else return 1; //лето
-      }
-      else if ((DD - 25) < DW) return 1; //лето
-      else return 0; //зима
-      break;
-  }
-  return 1; //лето
-}
 //--------------------------------------------------------------------
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos) {
   if (pos) {
@@ -493,7 +465,7 @@ void busUpdate(void) {
                 }
               }
               else syncState = 2; //зимнее время
-              
+
               if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
                 twi_write_byte(BUS_WRITE_TIME); //регистр команды
                 twi_write_byte(mainTime.second); //отправляем время
@@ -505,6 +477,7 @@ void busUpdate(void) {
                 twi_write_byte((mainDate.year >> 8) & 0xFF);
                 twi_write_byte(dayWeek); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
+                  if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
                   if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
                   timeState = 0x03; //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
@@ -527,6 +500,7 @@ void busUpdate(void) {
             mainDate.year = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
             if (!twi_error()) { //если передача была успешной
               if (busReadBufferArg()) { //если время обновлено в часах
+                if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
                 if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
                 timeState = 0x03; //установили флаги актуального времени
               }
@@ -545,6 +519,7 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
+            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
               if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState = 0x03; //установили флаги актуального времени
@@ -559,6 +534,7 @@ void busUpdate(void) {
             twi_write_byte(mainTime.minute);
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
+              if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
               if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x01; //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
@@ -574,7 +550,9 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
+            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
+              if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
               if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x02; //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
@@ -739,11 +717,11 @@ void busUpdate(void) {
               alarm_data[alarm.now][ALARM_DATA_RADIO] = twi_read_byte(TWI_NACK);
               if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
                 alarm_data[alarm.now][ALARM_DATA_SOUND] = tempSound;
-                alarm_data[alarm.now][ALARM_DATA_VOLUME] = ((100.0 / deviceInformation[PLAYER_MAX_VOL]) * tempVolume);
+                alarm_data[alarm.now][ALARM_DATA_VOLUME] = map(tempVolume, 0, deviceInformation[PLAYER_MAX_VOL]), 0, 100);
               }
               else {
                 alarm_data[alarm.now][ALARM_DATA_STATION] = tempSound;
-                alarm_data[alarm.now][ALARM_DATA_VOLUME] = ((100.0 / 30.0) * tempVolume);
+                alarm_data[alarm.now][ALARM_DATA_VOLUME] = map(tempVolume, 0, 15, 0, 100);
               }
               if (!twi_error()) { //если передача была успешной
                 busShiftBuffer(); //сместили буфер команд
@@ -759,9 +737,8 @@ void busUpdate(void) {
               case ALARM_DAYS: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 3); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_DAYS]); break; //день недели будильника
               case ALARM_SOUND: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 4); twi_write_byte((!alarm_data[alarm.now][ALARM_DATA_RADIO]) ? alarm_data[alarm.now][ALARM_DATA_SOUND] : alarm_data[alarm.now][ALARM_DATA_STATION]); break; //мелодия будильника
               case ALARM_VOLUME: { //громкость будильника
-                  float volume = alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0;
                   busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 5);
-                  twi_write_byte(((alarm_data[alarm.now][ALARM_DATA_RADIO]) ? 30 : deviceInformation[PLAYER_MAX_VOL]) * volume);
+                  twi_write_byte(map(alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 0, (alarm_data[alarm.now][ALARM_DATA_RADIO]) ? 15 : deviceInformation[PLAYER_MAX_VOL]));
                 }
                 break;
               case ALARM_RADIO: busWriteTwiRegByte(alarm.now, BUS_WRITE_SELECT_ALARM, 6); twi_write_byte(alarm_data[alarm.now][ALARM_DATA_RADIO]); break; //радиобудильник
@@ -1092,6 +1069,14 @@ void busUpdate(void) {
           }
           break;
 
+        case WRITE_STOP_SOUND:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            twi_write_byte(BUS_STOP_SOUND); //регистр команды
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
         case WRITE_TEST_MAIN_VOL:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
@@ -1118,7 +1103,7 @@ void busUpdate(void) {
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
             twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
-            twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + 1); //номер трека
+            twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + ((deviceInformation[PLAYER_TYPE]) ? 1 : 0)); //номер трека
             twi_write_byte(1); //номер папки
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
@@ -1170,6 +1155,7 @@ void busUpdate(void) {
             deviceInformation[DOTS_TYPE] = twi_read_byte(TWI_ACK);
             deviceInformation[LIGHT_SENS_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[EXT_BTN_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[DS3231_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[TIMER_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[RADIO_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[ALARM_TYPE] = twi_read_byte(TWI_ACK);
@@ -1214,10 +1200,37 @@ void busUpdate(void) {
             twi_write_byte(BUS_CONTROL_DEVICE); //регистр команды
             twi_write_byte(DEVICE_UPDATE);
             if (!twi_error()) { //если передача была успешной
-              updeterStart(); //запуск обновления
+              updaterStart(); //запуск обновления
               busShiftBuffer(); //сместили буфер команд
             }
           }
+          break;
+
+        case WRITE_RTC_INIT:
+          busShiftBuffer(); //сместили буфер команд
+          switch (initTime()) {
+            case 0: busSetComand(WRITE_TIME_DATE); break; //отправляем время в часы
+            case 1: busSetComand(WRITE_RTC_INIT); break; //инициализируем модуль RTC
+          }
+          break;
+        case WRITE_RTC_TIME:
+          busShiftBuffer(); //сместили буфер команд
+          if (sendTime()) busSetComand(WRITE_RTC_TIME); //отправляем время в RTC
+          break;
+        case READ_RTC_TIME:
+          busShiftBuffer(); //сместили буфер команд
+          switch (getTime(RTC_CHECK_OSF)) {
+            case 0: busSetComand(WRITE_TIME_DATE); break; //отправляем время в часы
+            case 1: busSetComand(READ_RTC_TIME); break; //считываем время из RTC
+          }
+          break;
+        case WRITE_RTC_AGING:
+          busShiftBuffer(); //сместили буфер команд
+          if (writeAgingRTC()) busSetComand(WRITE_RTC_AGING); //запись коррекции хода в RTC
+          break;
+        case READ_RTC_AGING:
+          busShiftBuffer(); //сместили буфер команд
+          if (readAgingRTC()) busSetComand(READ_RTC_AGING); //чтение коррекции хода из RTC
           break;
 
         case CHECK_INTERNAL_AHT:
