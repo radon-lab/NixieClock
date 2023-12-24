@@ -691,11 +691,11 @@ void busUpdate(void) {
               alarm_data[alarm.num][ALARM_DATA_RADIO] = twi_read_byte(TWI_NACK);
               if (!alarm_data[alarm.num][ALARM_DATA_RADIO]) {
                 alarm_data[alarm.num][ALARM_DATA_SOUND] = tempSound;
-                alarm_data[alarm.num][ALARM_DATA_VOLUME] = ((100.0 / deviceInformation[PLAYER_MAX_VOL]) * tempVolume);
+                alarm_data[alarm.num][ALARM_DATA_VOLUME] = map(tempVolume, 0, deviceInformation[PLAYER_MAX_VOL], 0, 100);
               }
               else {
                 alarm_data[alarm.num][ALARM_DATA_STATION] = tempSound;
-                alarm_data[alarm.num][ALARM_DATA_VOLUME] = ((100.0 / 30.0) * tempVolume);
+                alarm_data[alarm.num][ALARM_DATA_VOLUME] = map(tempVolume, 0, 15, 0, 100);
               }
               if (!twi_error()) { //если передача была успешной
                 if (++alarm.num >= alarm.all) {
@@ -717,7 +717,7 @@ void busUpdate(void) {
               alarm_data[alarm.now][ALARM_DATA_RADIO] = twi_read_byte(TWI_NACK);
               if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
                 alarm_data[alarm.now][ALARM_DATA_SOUND] = tempSound;
-                alarm_data[alarm.now][ALARM_DATA_VOLUME] = map(tempVolume, 0, deviceInformation[PLAYER_MAX_VOL]), 0, 100);
+                alarm_data[alarm.now][ALARM_DATA_VOLUME] = map(tempVolume, 0, deviceInformation[PLAYER_MAX_VOL], 0, 100);
               }
               else {
                 alarm_data[alarm.now][ALARM_DATA_STATION] = tempSound;
@@ -1091,7 +1091,7 @@ void busUpdate(void) {
         case WRITE_TEST_ALARM_VOL:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
-            twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
+            twi_write_byte((uint8_t)map(alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 0, deviceInformation[PLAYER_MAX_VOL])); //громкость
             twi_write_byte(22); //номер трека
             twi_write_byte(5); //номер папки
             if (!twi_error()) { //если передача была успешной
@@ -1102,7 +1102,7 @@ void busUpdate(void) {
         case WRITE_TEST_ALARM_SOUND:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
-            twi_write_byte((uint8_t)(deviceInformation[PLAYER_MAX_VOL] * (alarm_data[alarm.now][ALARM_DATA_VOLUME] / 100.0))); //громкость
+            twi_write_byte((uint8_t)map(alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 0, deviceInformation[PLAYER_MAX_VOL])); //громкость
             twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + ((deviceInformation[PLAYER_TYPE]) ? 1 : 0)); //номер трека
             twi_write_byte(1); //номер папки
             if (!twi_error()) { //если передача была успешной
