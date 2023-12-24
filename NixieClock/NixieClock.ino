@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 20.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.4 релиз от 24.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1157,9 +1157,6 @@ void updateMemory(void) //обновить данные в памяти
   static uint8_t tmrUpdate; //таймер следующего обновления
   if (tmrUpdate) tmrUpdate--; //убавляем таймер
   else if (memoryCheck) { //если нужно сохранить настройки
-#if ESP_ENABLE
-    if (bus.comand != BUS_WAIT_DATA) return; //выходим
-#endif
     uint8_t temp = memoryCheck; //копируем флаги
     memoryCheck = 0; //сбрасываем флаги
     tmrUpdate = 3; //установили таймер
@@ -2663,14 +2660,12 @@ uint8_t busUpdate(void) //обновление статуса шины
               bus.buffer[0] = TWDR;
             }
             break;
-#if PLAYER_TYPE
           case BUS_TEST_SOUND:
             if (bus.counter < 3) {
               bus.buffer[bus.counter] = TWDR;
               bus.counter++; //сместили указатель
             }
             break;
-#endif
           case BUS_SELECT_BYTE: //выбрать произвольное место записи
             if (!bus.counter) {
               bus.counter = TWDR; //установка места записи
@@ -2861,9 +2856,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             melodyPlay(bus.buffer[1], SOUND_LINK(alarm_sound), REPLAY_ONCE); //воспроизводим мелодию
 #endif
             break;
-          default: TWCR |= (0x01 << TWINT); return 0; //возвращаем статус ожидания шины
         }
-        bus.comand = BUS_WAIT_DATA;
 #endif
         TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
@@ -3810,19 +3803,15 @@ uint8_t settings_multiAlarm(void) //настройка будильников
       case LEFT_KEY_HOLD: //удержание левой кнопки
         if (!cur_mode) {
           if (cur_alarm) { //если есть будильники в памяти
+            delAlarm(cur_alarm); //удалить текущий будильник
+            dotSetBright(dot.menuBright); //включаем точки
+            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+            dotSetBright(0); //выключаем точки
+            if (cur_alarm > (alarms.num > 0)) cur_alarm--; //убавляем номер текущего будильника
+            else cur_alarm = (alarms.num > 0);
+            alarmReadBlock(cur_alarm, alarm); //читаем блок данных
 #if ESP_ENABLE
-            if (bus.comand == BUS_WAIT_DATA) { //если шина свободна
-#endif
-              delAlarm(cur_alarm); //удалить текущий будильник
-              dotSetBright(dot.menuBright); //включаем точки
-              for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-              dotSetBright(0); //выключаем точки
-              if (cur_alarm > (alarms.num > 0)) cur_alarm--; //убавляем номер текущего будильника
-              else cur_alarm = (alarms.num > 0);
-              alarmReadBlock(cur_alarm, alarm); //читаем блок данных
-#if ESP_ENABLE
-              deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
-            }
+            deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
           }
         }
@@ -3867,18 +3856,14 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         if (!cur_mode) {
+          newAlarm(); //создать новый будильник
+          dotSetBright(dot.menuBright); //включаем точки
+          for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+          dotSetBright(0); //выключаем точки
+          cur_alarm = alarms.num;
+          alarmReadBlock(cur_alarm, alarm); //читаем блок данных
 #if ESP_ENABLE
-          if (bus.comand == BUS_WAIT_DATA) { //если шина свободна
-#endif
-            newAlarm(); //создать новый будильник
-            dotSetBright(dot.menuBright); //включаем точки
-            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
-            dotSetBright(0); //выключаем точки
-            cur_alarm = alarms.num;
-            alarmReadBlock(cur_alarm, alarm); //читаем блок данных
-#if ESP_ENABLE
-            deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
-          }
+          deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
         }
         else {
