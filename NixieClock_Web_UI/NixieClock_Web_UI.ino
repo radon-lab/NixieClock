@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 27.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 27.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -53,6 +53,8 @@ struct settingsData {
   int8_t ntpGMT;
   char host[20];
   char name[20];
+  char ssid[64];
+  char pass[64];
 } settings;
 
 #include <EEManager.h>
@@ -65,12 +67,9 @@ GPtime alarmTime; //время будильника
 
 boolean clockUpdate = true; //флаг запрета обновления часов
 boolean otaUpdate = true; //флаг запрета обновления есп
-boolean alarmSvgImage = false; //флаг локальных изоражений будильника
-boolean timerSvgImage = false; //флаг локальных изоражений таймера/секундомера
-boolean radioSvgImage = false; //флаг локальных изоражений радиоприемника
-
-char wifiSSID[64]; //текущий ssid сети
-char wifiPASS[64]; //текущий пароль сети
+boolean alarmSvgImage = false; //флаг локальных изображений будильника
+boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
+boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
 
 int8_t wifiScanState = 2; //статус сканирования сети
 uint32_t wifiScanTimer = 0; //таймер начала поиска сети
@@ -873,7 +872,7 @@ void build(void) {
         GP.FORM_BEGIN("/connection");
         GP.SELECT("login", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
         GP.BREAK();
-        GP.PASS_EYE("pass", "Пароль", wifiPASS, "100%", 20);
+        GP.PASS_EYE("pass", "Пароль", settings.pass, "100%", 64);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<style>#extScan {font-size:250%!important;align-items:normal;line-height:115%;width:60px;}</style>\n<div style='max-width:300px;justify-content:center' class='inliner'>\n");
         if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
@@ -1419,17 +1418,19 @@ void action() {
         wifiInterval = 0; //сбрасываем интервал переподключения
         wifiStatus = 255; //отключаемся от точки доступа
         statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
-        wifiSSID[0] = '\0'; //устанавливаем последний символ
-        wifiPASS[0] = '\0'; //устанавливаем последний символ
+        settings.ssid[0] = '\0'; //устанавливаем последний символ
+        settings.pass[0] = '\0'; //устанавливаем последний символ
+        memory.update(); //обновить данные в памяти
       }
     }
     else if (ui.form("/connection")) {
       if (wifiStatus != WL_CONNECTED) {
-        strncpy(wifiSSID, WiFi.SSID(ui.getInt("login")).c_str(), 64); //копируем себе
-        wifiSSID[63] = '\0'; //устанавливаем последний символ
-        strncpy(wifiPASS, ui.getString("pass").c_str(), 64); //копируем себе
-        wifiPASS[63] = '\0'; //устанавливаем последний символ
         wifiInterval = 1; //устанавливаем интервал переподключения
+        strncpy(settings.ssid, WiFi.SSID(ui.getInt("login")).c_str(), 64); //копируем себе
+        settings.ssid[63] = '\0'; //устанавливаем последний символ
+        strncpy(settings.pass, ui.getString("pass").c_str(), 64); //копируем себе
+        settings.pass[63] = '\0'; //устанавливаем последний символ
+        memory.update(); //обновить данные в памяти
       }
     }
   }
@@ -1594,7 +1595,7 @@ String getWifiState(void) { //получить состояние подключ
   if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
   else if (!wifiInterval) data += "Не удалось подключиться к \"";
   else data += "Подключение к \"";
-  data += String(wifiSSID);
+  data += String(settings.ssid);
   if (wifiStatus == WL_CONNECTED) data += "\"<br>IP адрес \"" + WiFi.localIP().toString() + "\"";
   else if (!wifiInterval) data += "\"";
   else data += "\"...";
@@ -1949,16 +1950,15 @@ void setup() {
   }
   else Serial.println F("OTA update enable");
 
-  //читаем логин пароль из памяти
-  strncpy(wifiSSID, WiFi.SSID().c_str(), 64); //восстанавливаем ssid сети
-  wifiSSID[63] = '\0'; //устанавливаем последний символ
-
-  strncpy(wifiPASS, WiFi.psk().c_str(), 64); //восстанавливаем пароль сети
-  wifiPASS[63] = '\0'; //устанавливаем последний символ
-
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xAF) == 1) { //если контрольная ячейка не совпала
+  if (memory.begin(0, 0xBA) == 1) { //если контрольная ячейка не совпала
+    strncpy(settings.ssid, WiFi.SSID().c_str(), 64); //восстанавливаем ssid сети
+    settings.ssid[63] = '\0'; //устанавливаем последний символ
+
+    strncpy(settings.pass, WiFi.psk().c_str(), 64); //восстанавливаем пароль сети
+    settings.pass[63] = '\0'; //устанавливаем последний символ
+
     resetMainSettings(); //устанавливаем настройки по умолчанию
   }
   alarm.now = 0; //сбросить текущий будильник
@@ -2062,12 +2062,12 @@ void loop() {
       Serial.println F("Wifi access point disabled");
     }
     else { //иначе новое поключение
-      wifiStatus = WiFi.begin(wifiSSID, wifiPASS); //подключаемся к wifi
+      wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
       if (wifiStatus != WL_CONNECT_FAILED) {
         timerWifi = millis(); //сбросили таймер
         wifiInterval = 30000; //устанавливаем интервал переподключения
         Serial.print F("Wifi connecting to \"");
-        Serial.print(wifiSSID);
+        Serial.print(settings.ssid);
         Serial.println F("\"...");
       }
       else {
