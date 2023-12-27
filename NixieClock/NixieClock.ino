@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.5 релиз от 24.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.6 релиз от 27.12.23
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -225,6 +225,15 @@ uint16_t buzz_time; //циклы полуволны для работы пища
 #define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
 
 #if BTN_TYPE
+#if BTN_PULL
+#define BTN_MIN_RANGE 0 //минимальный диапазон аналоговых кнопок
+#define BTN_MAX_RANGE 250 //максимальный диапазон аналоговых кнопок
+#define BTN_CHECK_ADC(low, high) (!(((255 - (high)) <= btn.adc) && (btn.adc < (255 - (low))))) //проверка аналоговой кнопки
+#else
+#define BTN_MIN_RANGE 5 //минимальный диапазон аналоговых кнопок
+#define BTN_MAX_RANGE 255 //максимальный диапазон аналоговых кнопок
+#define BTN_CHECK_ADC(low, high) (!(((low) < btn.adc) && (btn.adc <= (high)))) //проверка аналоговой кнопки
+#endif
 #define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
 
 #define SET_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
@@ -236,15 +245,15 @@ uint16_t buzz_time; //циклы полуволны для работы пища
 #define RIGHT_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 #define RIGHT_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_RIGHT_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
-#define SET_CHK buttonCheckADC(SET_MIN_ADC, SET_MAX_ADC) //чтение средней аналоговой кнопки
-#define LEFT_CHK buttonCheckADC(LEFT_MIN_ADC, LEFT_MAX_ADC) //чтение левой аналоговой кнопки
-#define RIGHT_CHK buttonCheckADC(RIGHT_MIN_ADC, RIGHT_MAX_ADC) //чтение правой аналоговой кнопки
+#define SET_CHK BTN_CHECK_ADC(SET_MIN_ADC, SET_MAX_ADC) //чтение средней аналоговой кнопки
+#define LEFT_CHK BTN_CHECK_ADC(LEFT_MIN_ADC, LEFT_MAX_ADC) //чтение левой аналоговой кнопки
+#define RIGHT_CHK BTN_CHECK_ADC(RIGHT_MIN_ADC, RIGHT_MAX_ADC) //чтение правой аналоговой кнопки
 
 #if (BTN_ADD_TYPE == 2)
 #define ADD_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 #define ADD_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_ADD_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 
-#define ADD_CHK buttonCheckADC(ADD_MIN_ADC, ADD_MAX_ADC) //чтение правой аналоговой кнопки
+#define ADD_CHK BTN_CHECK_ADC(ADD_MIN_ADC, ADD_MAX_ADC) //чтение правой аналоговой кнопки
 #endif
 #endif
 
@@ -1455,11 +1464,6 @@ void lightSensCheck(void) //проверка сенсора яркости ос�
     _timer_ms[TMR_LIGHT] = 1000; //установили таймер
     analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
   }
-}
-//-----------------------Проверка аналоговой кнопки--------------------------------
-inline boolean buttonCheckADC(uint8_t minADC, uint8_t maxADC) //проверка аналоговой кнопки
-{
-  return !(minADC < btn.adc && btn.adc <= maxADC); //возвращаем результат опроса
 }
 //---------------------------Проверка кнопок---------------------------------------
 inline uint8_t buttonState(void) //проверка кнопок

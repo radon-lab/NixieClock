@@ -241,8 +241,6 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define BTN_HOLD_TIME 550            //время после которого считается что кнопка зажата(200..1500)(мс)
 
 #define BTN_ANALOG_GIST 25           //гистерезис значения ацп кнопок(5..50)
-#define BTN_MIN_RANGE 5              //минимальный диапазон аналоговых кнопок
-#define BTN_MAX_RANGE 255            //максимальный диапазон аналоговых кнопок
 
 //Настройки звука кнопок
 #define KNOCK_SOUND_FREQ 1000        //частота звука клавиш(10..10000)(Гц)
@@ -269,5 +267,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.1.5"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "2.1.6"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x12        //версия прошивки для интерфейса wire

@@ -77,15 +77,15 @@
 
 #define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
-#define DECODE_PCMSK(pin) ((pin < 8) ? PCMSK2 : PCMSK0)
-#define DECODE_PCIE(pin) ((pin < 8) ? PCIE2 : PCIE0)
+#define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : PCMSK0)
+#define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : PCIE0)
 
 #ifdef PORTE
-#define DECODE_PORT(pin) ((pin < 8) ? PORTD : ((pin < 14) ? PORTB : PORTE))
-#define DECODE_BIT(pin) ((pin < 8) ? pin : ((pin < 14) ? (pin - 8) : (pin - 14)))
+#define DECODE_PORT(pin) (((pin) < 8) ? PORTD : (((pin) < 14) ? PORTB : PORTE))
+#define DECODE_BIT(pin) (((pin) < 8) ? pin : (((pin) < 14) ? ((pin) - 8) : ((pin) - 14)))
 #else
-#define DECODE_PORT(pin) ((pin < 8) ? PORTD : PORTB)
-#define DECODE_BIT(pin) ((pin < 8) ? pin : (pin - 8))
+#define DECODE_PORT(pin) (((pin) < 8) ? PORTD : PORTB)
+#define DECODE_BIT(pin) (((pin) < 8) ? (pin) : ((pin) - 8))
 #endif
 
 #define ANODE_OFF 0x00 //выключенный анод

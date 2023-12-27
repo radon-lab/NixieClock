@@ -10,9 +10,9 @@
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN(((uint16_t)LIGHT_MAX - 2) + (LIGHT_MAX >> 5), 100, 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
-#define R_COEF(low, high) (((float)low + (float)high) / (float)low) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)vcc) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
-#define GET_VCC(ref, adc) (float)((ref * 1023.0) / (float)adc) //расчет напряжения питания
+#define R_COEF(low, high) (((float)(low) + (float)(high)) / (float)(low)) //коэффициент делителя напряжения
+#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
+#define GET_VCC(ref, adc) (float)(((ref) * 1023.0) / (float)(adc)) //расчет напряжения питания
 
 #define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка

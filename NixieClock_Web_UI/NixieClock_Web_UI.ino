@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 24.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 27.12.23
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -17,7 +17,7 @@
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
   1МБ - FS:64KB OTA:~470KB(только обновление esp по OTA).
   1МБ - FS:512KB OTA:~246KB(только локальные файлы FS и обновление прошивки часов).
-  2МБ - FS:1MB OTA:~512KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS ).
+  2МБ - FS:1MB OTA:~512KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
   4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
   8МБ - FS:6MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
 
@@ -53,8 +53,6 @@ struct settingsData {
   int8_t ntpGMT;
   char host[20];
   char name[20];
-  char ssid[20];
-  char pass[20];
 } settings;
 
 #include <EEManager.h>
@@ -71,6 +69,11 @@ boolean alarmSvgImage = false; //флаг локальных изоражени�
 boolean timerSvgImage = false; //флаг локальных изоражений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изоражений радиоприемника
 
+char wifiSSID[64]; //текущий ssid сети
+char wifiPASS[64]; //текущий пароль сети
+
+int8_t wifiScanState = 2; //статус сканирования сети
+uint32_t wifiScanTimer = 0; //таймер начала поиска сети
 uint8_t wifiStatus = WL_IDLE_STATUS; //статус соединения wifi
 uint32_t wifiInterval = 5000; //интервал переподключения к wifi
 
@@ -84,8 +87,8 @@ uint8_t timeState = 0; //флаг состояния актуальности в
 
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
-uint8_t timerWait = 0; //таймер ожидания опроса шины
 int8_t timerPlayback = -1; //таймер остановки воспроизведения
+uint8_t timerWait = 0; //таймер ожидания опроса шины
 
 uint8_t climateTimer = 0; //таймер обновления микроклимата
 uint8_t climateCountAvg = 0; //счетчик циклов обновления микроклимата
@@ -128,6 +131,7 @@ const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "
 const char *statusNtpList[] = {"Нет сети", "Подключение...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
+String wifiScanList = "Нет сетей"; //список найденых wifi сетей
 String sensorsList = "Отсутсвует"; //список подключенных сенсоров температуры
 String dotModeList = "Выключены,Статичные"; //список режимов основных разделительных точек
 String backlModeList = "Выключена"; //список режимов подсветки
@@ -193,7 +197,7 @@ void build(void) {
   static boolean listInit = false;
 
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP.ONLINE_CHECK(); //проверять статус платы
+  GP.ONLINE_CHECK(5000); //проверять статус платы
 
   if (updaterState()) {
     GP_PAGE_TITLE("Обновление прошивки часов");
@@ -848,26 +852,33 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
       if ((wifiStatus == WL_CONNECTED) || wifiInterval) {
         GP.FORM_BEGIN("/network");
-        if (wifiStatus == WL_CONNECTED) {
-          GP.LABEL("Подключено к \"" + String(settings.ssid) + "\"", "", UI_INFO_COLOR, 25, false, true);
-          GP.BREAK();
-          GP.LABEL("IP адрес \"" + WiFi.localIP().toString() + "\"", "", UI_INFO_COLOR, 25, false, true);
-        }
-        else GP.LABEL("Подключение к \"" + String(settings.ssid) + "\"...", "", UI_INFO_COLOR, 25, false, true);
+        GP.SPAN(getWifiState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
 
         GP.HR(UI_LINE_COLOR);
-        GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
+        if (ui.uri("/connection")) {
+          updateList += ",syncNetwork";
+          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
+        }
+        else {
+          GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
+        }
         GP.FORM_END();
       }
       else {
-        GP.FORM_BEGIN("/");
-        GP.TEXT("login", "Логин", settings.ssid, "", 20);
+        if (wifiScanState < 0) wifiScanState = -wifiScanState;
+
+        updateList += ",syncReload";
+        GP.RELOAD("syncReload");
+
+        GP.FORM_BEGIN("/connection");
+        GP.SELECT("login", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
         GP.BREAK();
-        GP.PASS_EYE("pass", "Пароль", settings.pass, "100%", 20);
+        GP.PASS_EYE("pass", "Пароль", wifiPASS, "100%", 20);
         GP.HR(UI_LINE_COLOR);
-        GP.SEND("<style>#extClear {font-size:230%!important;line-height:90%;width:auto!important;}</style>\n<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extClear", "⌦", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+        GP.SEND("<style>#extScan {font-size:250%!important;align-items:normal;line-height:115%;width:60px;}</style>\n<div style='max-width:300px;justify-content:center' class='inliner'>\n");
+        if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
+        else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
+        GP.BUTTON("extScan", "⟳", "", UI_BUTTON_COLOR, "", false, true);
         GP.SEND("</div>\n");
         GP.FORM_END();
       }
@@ -1247,7 +1258,6 @@ void action() {
       if (ui.click("extReset")) {
         if (ui.getBool("extReset")) {
           resetMainSettings(); //устанавливаем настройки по умолчанию
-          memory.updateNow(); //обновить данные в памяти
           if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_RESET);
         }
       }
@@ -1258,10 +1268,12 @@ void action() {
         }
       }
 
-      if (ui.click("extClear")) {
-        settings.ssid[0] = '\0'; //устанавливаем последний символ
-        settings.pass[0] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
+      if (ui.click("extScan")) {
+        if (wifiScanState > 0) { //начинаем поиск
+          wifiScanList = "Поиск...";
+          wifiScanState = 127;
+          wifiScanTimer = millis();
+        }
       }
     }
     //--------------------------------------------------------------------
@@ -1402,22 +1414,22 @@ void action() {
   }
   /**************************************************************************/
   if (ui.form()) {
-    //проверяем, была ли это форма "/network"
     if (ui.form("/network")) {
-      wifiInterval = 0; //сбрасываем интервал переподключения
-      statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
-      ntp.end(); //остановили ntp
-      WiFi.disconnect(); //отключаем wifi
-      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP();
+      if (wifiInterval || (wifiStatus == WL_CONNECTED)) {
+        wifiInterval = 0; //сбрасываем интервал переподключения
+        wifiStatus = 255; //отключаемся от точки доступа
+        statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
+        wifiSSID[0] = '\0'; //устанавливаем последний символ
+        wifiPASS[0] = '\0'; //устанавливаем последний символ
+      }
     }
-    else if (ui.form("/")) {
+    else if (ui.form("/connection")) {
       if (wifiStatus != WL_CONNECTED) {
-        strncpy(settings.ssid, ui.getString("login").c_str(), 20); //копируем себе
-        settings.ssid[19] = '\0'; //устанавливаем последний символ
-        strncpy(settings.pass, ui.getString("pass").c_str(), 20); //копируем себе
-        settings.pass[19] = '\0'; //устанавливаем последний символ
+        strncpy(wifiSSID, WiFi.SSID(ui.getInt("login")).c_str(), 64); //копируем себе
+        wifiSSID[63] = '\0'; //устанавливаем последний символ
+        strncpy(wifiPASS, ui.getString("pass").c_str(), 64); //копируем себе
+        wifiPASS[63] = '\0'; //устанавливаем последний символ
         wifiInterval = 1; //устанавливаем интервал переподключения
-        memory.update(); //обновить данные в памяти
       }
     }
   }
@@ -1427,6 +1439,7 @@ void action() {
       if (ui.update("syncStatus")) { //если было обновление
         ui.answer(getNtpState());
       }
+
       if (ui.update("syncUpdate")) { //если было обновление
         ui.answer("<big><b>Обновление прошивки завершено!</b></big>");
       }
@@ -1436,6 +1449,15 @@ void action() {
       if (ui.update("syncUpdater")) { //если было обновление
         ui.answer(getUpdaterState());
       }
+
+      if (ui.update("syncNetwork")) { //если было обновление
+        ui.answer(getWifiState());
+      }
+      if (ui.update("syncReload") && (wifiScanState < 0)) { //если было обновление
+        ui.answer(1);
+        wifiScanState = -wifiScanState;
+      }
+
       if (ui.update("syncAging")) { //если было обновление
         ui.answer(rtc_aging);
       }
@@ -1566,6 +1588,19 @@ void action() {
   }
 }
 
+//-----------------------Получить состояние подключения wifi-----------------------------
+String getWifiState(void) { //получить состояние подключения wifi
+  String data = "<big><big>";
+  if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
+  else if (!wifiInterval) data += "Не удалось подключиться к \"";
+  else data += "Подключение к \"";
+  data += String(wifiSSID);
+  if (wifiStatus == WL_CONNECTED) data += "\"<br>IP адрес \"" + WiFi.localIP().toString() + "\"";
+  else if (!wifiInterval) data += "\"";
+  else data += "\"...";
+  data += "</big></big>";
+  return data;
+}
 //--------------------------Получить состояние загрузчика--------------------------------
 String getUpdaterState(void) { //получить состояние загрузчика
   String data = "<big><b>";
@@ -1766,6 +1801,29 @@ boolean checkFsData(const char** data, int8_t size) {
   return true;
 }
 
+void wifiScanResult(int networksFound)
+{
+  wifiScanList = "";
+  if (networksFound) {
+    wifiScanState = -1;
+    for (int i = 0; i < networksFound; i++) {
+      if (i) wifiScanList += ',';
+      wifiScanList += WiFi.SSID(i);
+      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
+      switch (map(constrain(2 * (WiFi.RSSI(i) + 100), 0, 100), 0, 100, 0, 3)) {
+        case 0: wifiScanList += " ○○○"; break;
+        case 1: wifiScanList += " ●○○"; break;
+        case 2: wifiScanList += " ●●○"; break;
+        case 3: wifiScanList += " ●●●"; break;
+      }
+    }
+  }
+  else {
+    wifiScanState = -2;
+    wifiScanList = "Нет сетей";
+  }
+}
+
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
@@ -1792,6 +1850,9 @@ void wifiStartAP(void) {
     Serial.print(WiFi.softAPIP());
     Serial.println F(" ]");
   }
+
+  //начинаем поиск сетей
+  WiFi.scanNetworksAsync(wifiScanResult);
 }
 
 void resetMainSettings(void) {
@@ -1814,6 +1875,8 @@ void resetMainSettings(void) {
   settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
   settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
   if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
+
+  memory.update(); //обновить данные в памяти
 }
 
 void ntpStartSettings(void) {
@@ -1887,15 +1950,16 @@ void setup() {
   else Serial.println F("OTA update enable");
 
   //читаем логин пароль из памяти
+  strncpy(wifiSSID, WiFi.SSID().c_str(), 64); //восстанавливаем ssid сети
+  wifiSSID[63] = '\0'; //устанавливаем последний символ
+
+  strncpy(wifiPASS, WiFi.psk().c_str(), 64); //восстанавливаем пароль сети
+  wifiPASS[63] = '\0'; //устанавливаем последний символ
+
+  //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
   if (memory.begin(0, 0xAF) == 1) { //если контрольная ячейка не совпала
-    strncpy(settings.ssid, WiFi.SSID().c_str(), 20); //восстанавливаем ssid сети
-    settings.ssid[19] = '\0'; //устанавливаем последний символ
-
-    strncpy(settings.pass, WiFi.psk().c_str(), 20); //восстанавливаем пароль сети
-    settings.pass[19] = '\0'; //устанавливаем последний символ
     resetMainSettings(); //устанавливаем настройки по умолчанию
-    memory.update(); //обновить данные в памяти
   }
   alarm.now = 0; //сбросить текущий будильник
 
@@ -1939,7 +2003,18 @@ void loop() {
   static uint32_t timerSeconds; //таймер ожидания опроса шины
   static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
 
+  if ((wifiScanState == 127) && (millis() - wifiScanTimer) >= 100) { //если необходимо начать поиск
+    wifiScanState = 0; //сбрасываем статус
+    WiFi.scanNetworksAsync(wifiScanResult); //начинаем поиск
+  }
+
   if (wifiStatus != WiFi.status()) { //если изменился статус
+    if (wifiStatus == 255) { //если нужно отключиться
+      Serial.println F("Wifi disconnecting...");
+      ntp.end(); //остановили ntp
+      WiFi.disconnect(); //отключаем wifi
+      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
+    }
     wifiStatus = WiFi.status();
     switch (wifiStatus) {
       case WL_CONNECTED:
@@ -1972,6 +2047,7 @@ void loop() {
 #if STATUS_LED == 1
           digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
+          Serial.println F("Wifi connect error...");
         }
         statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
         ntp.end(); //остановили ntp
@@ -1986,12 +2062,12 @@ void loop() {
       Serial.println F("Wifi access point disabled");
     }
     else { //иначе новое поключение
-      wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
+      wifiStatus = WiFi.begin(wifiSSID, wifiPASS); //подключаемся к wifi
       if (wifiStatus != WL_CONNECT_FAILED) {
         timerWifi = millis(); //сбросили таймер
         wifiInterval = 30000; //устанавливаем интервал переподключения
         Serial.print F("Wifi connecting to \"");
-        Serial.print(settings.ssid);
+        Serial.print(wifiSSID);
         Serial.println F("\"...");
       }
       else {
