@@ -1811,7 +1811,7 @@ void wifiScanResult(int networksFound)
       if (i) wifiScanList += ',';
       wifiScanList += WiFi.SSID(i);
       if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
-      switch (map(constrain(2 * (WiFi.RSSI(i) + 100), 0, 100), 0, 100, 0, 3)) {
+      switch (map(constrain(2 * (WiFi.RSSI(i) + 100), 0, 100), 100, 0, 3, 0)) {
         case 0: wifiScanList += " ○○○"; break;
         case 1: wifiScanList += " ●○○"; break;
         case 2: wifiScanList += " ●●○"; break;
