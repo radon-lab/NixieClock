@@ -2,7 +2,7 @@ boolean ledUpdate = 0; //флаг отрисовки светодиодов
 uint8_t ledColor[LAMP_NUM]; //массив цветов
 uint8_t ledBright[LAMP_NUM]; //массив яркости
 
-const uint8_t ledWiteTable[][3] = { //таблица оттенков белого GRB
+const uint8_t ledWhiteTable[][3] = { //таблица оттенков белого GRB
   155, 255, 60,  //2400
   208, 255, 170, //4100
   255, 255, 255  //6500
@@ -105,9 +105,9 @@ void showLeds(void)
       }
       else {
         pallet -= 253;
-        *ledLink++ = (uint8_t)((ledBright[f] * ledWiteTable[pallet][0]) >> 8);
-        *ledLink++ = (uint8_t)((ledBright[f] * ledWiteTable[pallet][1]) >> 8);
-        *ledLink++ = (uint8_t)((ledBright[f] * ledWiteTable[pallet][2]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][0]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][1]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][2]) >> 8);
       }
     }
 
