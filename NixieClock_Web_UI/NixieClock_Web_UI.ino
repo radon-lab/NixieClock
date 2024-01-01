@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 27.12.23
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 01.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -150,7 +150,28 @@ void GP_SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, floa
   GP.SEND("<div style='position:relative;right:-10px;'>\n"); GP.SPINNER(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
 }
 void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
-  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + "' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
+  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
+}
+void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
+  String data = "";
+  data += F("<style>a:link.");
+  data += id;
+  data += F("_link{color:");
+  data += FPSTR(color);
+  data += F(";text-decoration:none;} a:visited.");
+  data += id;
+  data += F("_link{color:");
+  data += FPSTR(color);
+  data += F(";} a:hover.");
+  data += id;
+  data += F("_link{filter:brightness(0.75);}</style>\n<a href='");
+  data += url;
+  data += F("' class='");
+  data += id + "_link";
+  data += F("'>");
+  data += text;
+  data += F("</a>\n");
+  GP.SEND(data);
 }
 void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int size = 30, PGM_P st_0 = GP_GRAY, PGM_P st_1 = GP_GREEN, bool dis = false) {
   String data = "";
@@ -228,11 +249,13 @@ void build(void) {
     GP.BLOCK_END();
   }
   else {
-    GP.SEND("<style>.headbar{z-index:3;}</style>\n"); //фикс меню в мобильной версии
-    GP.SEND("<style>output{min-width:50px;}</style>\n"); //фикс слайдеров
-    GP.SEND("<style>button{line-height:90%;}</style>\n"); //фикс кнопок
-    GP.SEND("<style>select{width:200px;}</style>\n"); //фикс выпадающего списка
-    GP.SEND("<style>#ubtn {min-width:34px;}</style>\n"); //фикс кнопок загрузки
+    GP.SEND("<style>.headbar{z-index:3;}\n"); //фикс меню в мобильной версии
+    GP.SEND("select{width:200px;}\n"); //фикс выпадающего списка
+    GP.SEND("output{min-width:50px;border-radius:5px;}\n"); //фикс слайдеров
+    GP.SEND(".display{border-radius:5px;}\n"); //фикс лейбл блоков
+    GP.SEND(".sblock>a{border-radius:25px;}\n"); //фикс кнопок меню
+    GP.SEND("input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n"); //фикс кнопок
+    GP.SEND("#ubtn {min-width:34px;border-radius:25px;line-height:150%;}</style>\n"); //фикс кнопок загрузки
     GP.UI_MENU("Nixie clock", UI_MENU_COLOR); //начать меню
     if (settings.nameMenu && settings.name[0]) {
       GP.LABEL(settings.name, "", UI_MENU_NAME_COLOR);
@@ -870,15 +893,31 @@ void build(void) {
         GP.RELOAD("syncReload");
 
         GP.FORM_BEGIN("/connection");
-        GP.SELECT("login", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
-        GP.BREAK();
-        GP.PASS_EYE("pass", "Пароль", settings.pass, "100%", 64);
-        GP.HR(UI_LINE_COLOR);
-        GP.SEND("<style>#extScan {font-size:250%!important;align-items:normal;line-height:115%;width:60px;}</style>\n<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
-        else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extScan", "⟳", "", UI_BUTTON_COLOR, "", false, true);
-        GP.SEND("</div>\n");
+        if (ui.uri("/manual")) {
+          GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
+          GP.BREAK();
+          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+          GP.BREAK();
+          GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
+          GP.HR(UI_LINE_COLOR);
+          GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
+          GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+          GP.SEND("</div>\n");
+        }
+        else {
+          GP.SELECT("wifiNetwork", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
+          GP.BREAK();
+          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+          GP.BREAK();
+          GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
+          GP.HR(UI_LINE_COLOR);
+          GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
+          if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
+          else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
+          GP.SEND("</div>\n");
+        }
         GP.FORM_END();
       }
       GP.BLOCK_END();
@@ -1267,6 +1306,11 @@ void action() {
         }
       }
 
+      if (ui.click("extClear")) {
+        settings.ssid[0] = '\0'; //устанавливаем последний символ
+        settings.pass[0] = '\0'; //устанавливаем последний символ
+        memory.update(); //обновить данные в памяти
+      }
       if (ui.click("extScan")) {
         if (wifiScanState > 0) { //начинаем поиск
           wifiScanList = "Поиск...";
@@ -1413,25 +1457,27 @@ void action() {
   }
   /**************************************************************************/
   if (ui.form()) {
-    if (ui.form("/network")) {
-      if (wifiInterval || (wifiStatus == WL_CONNECTED)) {
-        wifiInterval = 0; //сбрасываем интервал переподключения
-        wifiStatus = 255; //отключаемся от точки доступа
-        statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
-        settings.ssid[0] = '\0'; //устанавливаем последний символ
-        settings.pass[0] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
-      }
-    }
-    else if (ui.form("/connection")) {
-      if (wifiStatus != WL_CONNECTED) {
+    if (!wifiInterval && (wifiStatus != WL_CONNECTED)) {
+      if (ui.form("/connection")) {
         wifiInterval = 1; //устанавливаем интервал переподключения
-        strncpy(settings.ssid, WiFi.SSID(ui.getInt("login")).c_str(), 64); //копируем себе
+        if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
+          int network = 0; //номер сети из списка
+          if (ui.copyInt("wifiNetwork", network)) strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
+          else wifiInterval = 0; //сбрасываем интервал переподключения
+        }
         settings.ssid[63] = '\0'; //устанавливаем последний символ
-        strncpy(settings.pass, ui.getString("pass").c_str(), 64); //копируем себе
+        ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
         settings.pass[63] = '\0'; //устанавливаем последний символ
         memory.update(); //обновить данные в памяти
       }
+    }
+    else if (ui.form("/network")) {
+      wifiInterval = 0; //сбрасываем интервал переподключения
+      wifiStatus = 255; //отключаемся от точки доступа
+      statusNtp = NTP_STOPPED; //устанавливаем флаг остановки ntp сервера
+      settings.ssid[0] = '\0'; //устанавливаем последний символ
+      settings.pass[0] = '\0'; //устанавливаем последний символ
+      memory.update(); //обновить данные в памяти
     }
   }
   /**************************************************************************/
@@ -1592,13 +1638,16 @@ void action() {
 //-----------------------Получить состояние подключения wifi-----------------------------
 String getWifiState(void) { //получить состояние подключения wifi
   String data = "<big><big>";
-  if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
-  else if (!wifiInterval) data += "Не удалось подключиться к \"";
-  else data += "Подключение к \"";
-  data += String(settings.ssid);
-  if (wifiStatus == WL_CONNECTED) data += "\"<br>IP адрес \"" + WiFi.localIP().toString() + "\"";
-  else if (!wifiInterval) data += "\"";
-  else data += "\"...";
+  if (!settings.ssid[0]) data += "Некорректное имя сети!";
+  else {
+    if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
+    else if (!wifiInterval) data += "Не удалось подключиться к \"";
+    else data += "Подключение к \"";
+    data += String(settings.ssid);
+    if (wifiStatus == WL_CONNECTED) data += "\"<br>IP адрес \"" + WiFi.localIP().toString() + "\"";
+    else if (!wifiInterval) data += "\"";
+    else data += "\"...";
+  }
   data += "</big></big>";
   return data;
 }
@@ -1811,12 +1860,6 @@ void wifiScanResult(int networksFound)
       if (i) wifiScanList += ',';
       wifiScanList += WiFi.SSID(i);
       if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
-      switch (map(constrain(2 * (WiFi.RSSI(i) + 100), 0, 100), 100, 0, 3, 0)) {
-        case 0: wifiScanList += " ○○○"; break;
-        case 1: wifiScanList += " ●○○"; break;
-        case 2: wifiScanList += " ●●○"; break;
-        case 3: wifiScanList += " ●●●"; break;
-      }
     }
   }
   else {
