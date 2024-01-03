@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 01.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 03.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -611,7 +611,7 @@ void build(void) {
             M_BOX(GP_CENTER, GP.ICON_FILE_BUTTON("timerControl/0", timerFsData[0], 60, UI_TIMER_CTRL_COLOR); GP.ICON_FILE_BUTTON("timerControl/1", timerFsData[1], 60, UI_TIMER_CTRL_COLOR); GP.ICON_FILE_BUTTON("timerControl/2", timerFsData[2], 60, UI_TIMER_CTRL_COLOR););
           }
           else {
-            M_BOX(GP_CENTER, GP.BUTTON_MINI("timerControl/0", "⠀⠀►⠀⠀", "", UI_TIMER_CTRL_COLOR, "75px"); GP.BUTTON_MINI("timerControl/1", "⠀⠀❑⠀⠀", "", UI_TIMER_CTRL_COLOR, "75px"); GP.BUTTON_MINI("timerControl/2", "⠀⠀||⠀⠀", "", UI_TIMER_CTRL_COLOR, "75px"););
+            M_BOX(GP_CENTER, GP.BUTTON_MINI("timerControl/0", "⠀⠀►⠀⠀", "", UI_TIMER_CTRL_COLOR); GP.BUTTON_MINI("timerControl/1", "⠀⠀❑⠀⠀", "", UI_TIMER_CTRL_COLOR); GP.BUTTON_MINI("timerControl/2", "⠀⠀||⠀⠀", "", UI_TIMER_CTRL_COLOR););
           }
           GP.BLOCK_END();
 
@@ -786,7 +786,7 @@ void build(void) {
         M_BOX(GP_CENTER, GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR); GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioFreqUp", radioFsData[2], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioSeekUp", radioFsData[3], 30, UI_RADIO_FREQ_2_COLOR); GP_CHECK_ICON("radioPower", radioFsData[5], radioSettings.powerState, 50, UI_RADIO_POWER_1_COLOR, UI_RADIO_POWER_2_COLOR););
       }
       else {
-        M_BOX(GP_CENTER, GP.BUTTON("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR); GP.BUTTON("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR); GP.BUTTON("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR); GP.BUTTON("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR););
+        M_BOX(GP_CENTER, GP.BUTTON("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR, "100px"););
       }
       GP.BLOCK_END();
 
@@ -804,7 +804,7 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9",
-                      "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,");
+                      "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
     else if (ui.uri("/information")) { //информация о системе
       GP_PAGE_TITLE("О системе");
@@ -1606,7 +1606,7 @@ void action() {
       }
       if (ui.updateSub("radioSta")) {
         uint8_t stationNum = constrain(ui.updateNameSub(1).toInt(), 0, 9);
-        ui.answer((radioSettings.stationsSave[stationNum]) ? String(radioSettings.stationsSave[stationNum] / 10.0, 1) : "");
+        ui.answer((radioSettings.stationsSave[stationNum]) ? String(radioSettings.stationsSave[stationNum] / 10.0, 1) : " ");
       }
     }
   }
