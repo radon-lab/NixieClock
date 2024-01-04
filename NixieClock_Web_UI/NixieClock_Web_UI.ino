@@ -974,9 +974,6 @@ void buildUpdater(bool UpdateEnd, const String& UpdateError) {
 
 void action() {
   if (ui.click()) {
-    if (ui.click("file_upl")) {
-      Serial.println("Upload click");
-    }
     if (ui.clickSub("sync")) {
       if (ui.click("syncGmt")) {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
