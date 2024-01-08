@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 04.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 08.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -58,7 +58,7 @@ struct settingsData {
 } settings;
 
 #include <EEManager.h>
-EEManager memory(settings);
+EEManager memory(settings, 3000);
 
 //переменные
 GPdate mainDate; //основная дата
@@ -1293,11 +1293,13 @@ void action() {
       if (ui.click("extReset")) {
         if (ui.getBool("extReset")) {
           resetMainSettings(); //устанавливаем настройки по умолчанию
+          memory.updateNow(); //обновить данные в памяти
           if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_RESET);
         }
       }
       if (ui.click("extReboot")) {
         if (ui.getBool("extReboot")) {
+          memory.updateNow(); //обновить данные в памяти
           if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_REBOOT);
           else ESP.reset(); //перезагрузка
         }
@@ -1916,8 +1918,6 @@ void resetMainSettings(void) {
   settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
   settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
   if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
-
-  memory.update(); //обновить данные в памяти
 }
 
 void ntpStartSettings(void) {
@@ -1990,18 +1990,21 @@ void setup() {
   }
   else Serial.println F("OTA update enable");
 
+  //устанавливаем указатель будильниака
+  alarm.now = 0;
+
+  //восстанавливаем настройки сети
+  strncpy(settings.ssid, WiFi.SSID().c_str(), 64);
+  settings.ssid[63] = '\0';
+  strncpy(settings.pass, WiFi.psk().c_str(), 64);
+  settings.pass[63] = '\0';
+
+  //устанавливаем настройки по умолчанию
+  resetMainSettings();
+
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  if (memory.begin(0, 0xBA) == 1) { //если контрольная ячейка не совпала
-    strncpy(settings.ssid, WiFi.SSID().c_str(), 64); //восстанавливаем ssid сети
-    settings.ssid[63] = '\0'; //устанавливаем последний символ
-
-    strncpy(settings.pass, WiFi.psk().c_str(), 64); //восстанавливаем пароль сети
-    settings.pass[63] = '\0'; //устанавливаем последний символ
-
-    resetMainSettings(); //устанавливаем настройки по умолчанию
-  }
-  alarm.now = 0; //сбросить текущий будильник
+  memory.begin(0, 0xBA);
 
   //настраиваем wifi
   WiFi.setAutoConnect(false);
@@ -2013,7 +2016,7 @@ void setup() {
   ui.attach(action);
   ui.start();
 
-  //обновление без пароля
+  //настраиваем обновление без пароля
   if (otaUpdate) {
     ui.enableOTA();
     ui.OTA.attachUpdateBuild(buildUpdater);
