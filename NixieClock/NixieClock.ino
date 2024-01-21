@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.7 релиз от 27.12.23
+  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 20.01.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -825,7 +825,14 @@ void INIT_SYSTEM(void) //инициализация
   indiPortInit(); //инициализация портов индикаторов
 
 #if ESP_ENABLE
-  if (EEPROM_ReadByte(EEPROM_BLOCK_BOOT) == BOOTLOADER_START) RESET_BOOTLOADER; //переход к загрузчику
+  if (GPIOR0 == BOOTLOADER_START) { //если был запрос начала обновления прошивки
+    GPIOR0 = 0x00; //сбросили запрос начала обновления прошивки
+    
+    if (EEPROM_ReadByte(EEPROM_BLOCK_BOOT) == BOOTLOADER_OK) { //если загрузчик готов
+      EEPROM_UpdateByte(EEPROM_BLOCK_BOOT, BOOTLOADER_START); //устанавливаем флаг запуска загрузчика
+      RESET_BOOTLOADER; //переход к загрузчику
+    }
+  }
 #endif
 
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала
@@ -2863,7 +2870,7 @@ uint8_t busUpdate(void) //обновление статуса шины
                   RESET_SYSTEM; //перезагрузка
                   break;
                 case DEVICE_UPDATE:
-                  EEPROM_UpdateByte(EEPROM_BLOCK_BOOT, BOOTLOADER_START); //сбрасываем настройки
+                  GPIOR0 = BOOTLOADER_START; //устанавливаем запрос обновления прошивки
                   RESET_SYSTEM; //перезагрузка
                   break;
                 case DEVICE_REBOOT: RESET_SYSTEM; break; //перезагрузка
