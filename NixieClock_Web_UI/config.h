@@ -91,7 +91,8 @@
 #define UI_BAR_LINE_COLOR GP_GRAY //цвет горизонтальной линии статус бара
 
 //Дополнительно
-#define MAX_ALARMS 7 //максимум будильников(3..15)
+#define MAX_ALARMS 7 //максимум будильников в веб интерфейсе(3..15)
+#define MAX_CLOCK 4 //максимум часов в групповом управлении(2..5)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.1.7" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.8" //версия прошивки модуля esp

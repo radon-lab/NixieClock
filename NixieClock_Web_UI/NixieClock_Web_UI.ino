@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 08.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 21.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -55,6 +55,7 @@ struct settingsData {
   char name[20];
   char ssid[64];
   char pass[64];
+  char multi[MAX_CLOCK * 2][20];
 } settings;
 
 #include <EEManager.h>
@@ -64,6 +65,9 @@ EEManager memory(settings, 3000);
 GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
 GPtime alarmTime; //время будильника
+
+char buffMultiIp[20]; //буфер ip адреса
+char buffMultiName[20]; //буфер имени
 
 boolean clockUpdate = true; //флаг запрета обновления часов
 boolean otaUpdate = true; //флаг запрета обновления есп
@@ -173,6 +177,21 @@ void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P
   data += F("</a>\n");
   GP.SEND(data);
 }
+void GP_UI_LINK(const String& url, const String& name, PGM_P color) {
+  String data = "";
+  data += F("<a href='http://");
+  data += url;
+  data += "'";
+  if (WiFi.localIP().toString().equals(url)) {
+    data += F(" class='sbsel' style='background:");
+    data += FPSTR(color);
+    data += F(" !important;'");
+  }
+  data += ">";
+  data += name;
+  data += F("</a>\n");
+  GP.SEND(data);
+}
 void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int size = 30, PGM_P st_0 = GP_GRAY, PGM_P st_1 = GP_GREEN, bool dis = false) {
   String data = "";
   data += F("<style>#__");
@@ -270,6 +289,17 @@ void build(void) {
     GP.UI_LINK("/information", "О системе");
     if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/network", "Сетевые настройки");
+
+    //ссылки часов
+    if (settings.multi[0][0] != '\0') {
+      GP.HR(UI_MENU_LINE_COLOR);
+      for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+        if (settings.multi[i][0] != '\0') {
+          GP_UI_LINK(settings.multi[i], (settings.multi[i + 1][0] != '\0') ? settings.multi[i + 1] : settings.multi[i], UI_MENU_COLOR);
+        }
+        else break;
+      }
+    }
 
     //состояние соединения
     GP.HR(UI_MENU_LINE_COLOR);
@@ -814,13 +844,37 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Устройство", UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.name, "", 20););
+      M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.name, "", 19););
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Отображение", "", UI_HINT_COLOR);
       M_BOX(GP.LABEL("Меню", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Префикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePrefix", settings.namePrefix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Постфикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePostfix", settings.namePostfix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Точка доступа", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceAp", settings.nameAp, UI_SWITCH_COLOR););
+
+
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Групповое управление", "", UI_HINT_COLOR);
+      for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+        if (i) {
+          GP.HR(UI_MENU_LINE_COLOR);
+        }
+        if (settings.multi[i][0] != '\0') {
+          M_BOX(
+            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.multi[i], "", 20, "", true); GP.TEXT("", "Название", (settings.multi[i + 1][0] != '\0') ? settings.multi[i + 1] : settings.multi[i], "", 20, "", true););
+            GP.BUTTON_MINI(String("extMultiDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "107px!important", false, true);
+          );
+        }
+        else {
+          M_BOX(
+            M_BOX(GP_LEFT, GP.TEXT("extMultiIp", "IP адрес", "", "", 15); GP.TEXT("extMultiName", "Название", "", "", 19););
+            GP.BUTTON_MINI("extMultiAdd", "Добавить", "", UI_BUTTON_COLOR, "107px!important", false, true);
+          );
+          buffMultiIp[0] = '\0';
+          buffMultiName[0] = '\0';
+          break;
+        }
+      }
 
       if (rtc_status != RTC_NOT_FOUND) {
         GP.HR(UI_LINE_COLOR);
@@ -839,7 +893,7 @@ void build(void) {
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix || (settings.multi[0][0] != '\0')) ? ",extDeviceName" : ""));
     }
     else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
       GP_PAGE_TITLE("Обновление");
@@ -926,7 +980,7 @@ void build(void) {
         updateList += ",syncStatus";
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
-        GP.TEXT("syncHost", "Хост", settings.host, "", 20);
+        GP.TEXT("syncHost", "Хост", settings.host, "", 19);
         GP.BREAK();
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.BREAK();
@@ -1275,6 +1329,18 @@ void action() {
       if (ui.click("extDeviceName")) {
         strncpy(settings.name, ui.getString("extDeviceName").c_str(), 20); //копируем себе
         settings.name[19] = '\0'; //устанавливаем последний символ
+
+        for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+          if (settings.multi[i][0] != '\0') {
+            if (WiFi.localIP().toString().equals(settings.multi[i])) {
+              strncpy(settings.multi[i + 1], settings.name, 20); //копируем себе
+              settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
+              break;
+            }
+          }
+          else break;
+        }
+
         memory.update(); //обновить данные в памяти
       }
       if (ui.clickBool("extDeviceAp", settings.nameAp)) {
@@ -1288,6 +1354,61 @@ void action() {
       }
       if (ui.clickBool("extDevicePostfix", settings.namePostfix)) {
         memory.update(); //обновить данные в памяти
+      }
+
+      if (ui.clickSub("extMultiDel")) {
+        uint8_t multiNum = constrain(ui.clickNameSub(1).toInt(), 0, ((MAX_CLOCK - 1) * 2));
+        if (WiFi.localIP().toString().equals(settings.multi[multiNum])) {
+          for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.multi[i][0] = '\0';
+        }
+        else {
+          for (; multiNum < ((MAX_CLOCK - 1) * 2); multiNum++) {
+            strncpy(settings.multi[multiNum], settings.multi[multiNum + 2], 20); //копируем себе
+          }
+          settings.multi[((MAX_CLOCK - 1) * 2)][0] = '\0'; //устанавливаем последний символ
+          settings.multi[((MAX_CLOCK - 1) * 2) + 1][0] = '\0'; //устанавливаем последний символ
+
+          if (settings.multi[2][0] == '\0') {
+            settings.multi[0][0] = '\0'; //устанавливаем последний символ
+            settings.multi[1][0] = '\0'; //устанавливаем последний символ
+          }
+        }
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("extMultiAdd")) {
+        if (buffMultiIp[0] != '\0') { //если строка не пустая
+          if (!WiFi.localIP().toString().equals(buffMultiIp)) { //если не собственный адрес
+            for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+              if (settings.multi[i][0] == '\0') { //если ячейка не заполнена
+                if (!i) { //если список пуст
+                  strncpy(settings.multi[i], WiFi.localIP().toString().c_str(), 20); //копируем себе
+                  settings.multi[i][19] = '\0'; //устанавливаем последний символ
+                  strncpy(settings.multi[i + 1], settings.name, 20); //копируем себе
+                  settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
+                  i += 2; //сместили указатель
+                }
+                strncpy(settings.multi[i], buffMultiIp, 20); //копируем себе
+                settings.multi[i][19] = '\0'; //устанавливаем последний символ
+                strncpy(settings.multi[i + 1], buffMultiName, 20); //копируем себе
+                settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
+                memory.update(); //обновить данные в памяти
+                break;
+              }
+              else if (String(settings.multi[i]).equals(buffMultiIp)) {
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (ui.click("extMultiIp")) {
+        strncpy(buffMultiIp, ui.getString("extMultiIp").c_str(), 20); //копируем себе
+        buffMultiIp[19] = '\0'; //устанавливаем последний символ
+      }
+      if (ui.click("extMultiName")) {
+        strncpy(buffMultiName, ui.getString("extMultiName").c_str(), 20); //копируем себе
+        buffMultiName[19] = '\0'; //устанавливаем последний символ
       }
 
       if (ui.click("extReset")) {
@@ -1990,6 +2111,9 @@ void setup() {
   }
   else Serial.println F("OTA update enable");
 
+  //сбрасываем настройки группового управления
+  for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.multi[i][0] = '\0';
+
   //устанавливаем указатель будильниака
   alarm.now = 0;
 
@@ -2004,7 +2128,7 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xBA);
+  memory.begin(0, 0xBB);
 
   //настраиваем wifi
   WiFi.setAutoConnect(false);
