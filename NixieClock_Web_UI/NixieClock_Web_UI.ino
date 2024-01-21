@@ -231,6 +231,15 @@ void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int si
   data += "'>\n";
   GP.SEND(data);
 }
+void GP_HR(PGM_P st, const String& width = "100%") {
+  String data = "";
+  data += F("<hr style='border-color:");
+  data += FPSTR(st);
+  data += F(";width:");
+  data += width;
+  data += F("'>\n");
+  GP.SEND(data);
+}
 
 void build(void) {
   static boolean listInit = false;
@@ -268,6 +277,8 @@ void build(void) {
     GP.BLOCK_END();
   }
   else {
+    GP.GRID_RESPONSIVE(1050); //отключить таблицу при ширине экрана меньше 1050px
+
     GP.SEND("<style>.headbar{z-index:3;}\n"); //фикс меню в мобильной версии
     GP.SEND("select{width:200px;}\n"); //фикс выпадающего списка
     GP.SEND("output{min-width:50px;border-radius:5px;}\n"); //фикс слайдеров
@@ -386,21 +397,18 @@ void build(void) {
       }
     }
     GP.UI_BODY(); //начать основное окно
-    GP.GRID_RESPONSIVE(600); //позволяет "отключить" таблицу при ширине экрана меньше 600px
 
-    M_TABLE(
-      "",
-      GP_ALS(GP_LEFT, GP_RIGHT),
-      M_TR(GP.LABEL(" "); GP.LABEL(" "); GP.LABEL_BLOCK(mainTime.encode(), "barTime", UI_BAR_CLOCK_COLOR, 18, 1););
-      M_TD(
-        if (climateState > 0) GP.LABEL_BLOCK(String(climateGetTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
-        if (climateGetHum()) GP.LABEL_BLOCK(String(climateGetHum()) + "%", "barHum", UI_BAR_HUM_COLOR, 18, 1);
-          if (climateGetPress()) GP.LABEL_BLOCK(String(climateGetPress()) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
-            GP.LABEL(" ");
-            GP.LABEL(" ");
-          );
-        );
-    GP.HR(UI_BAR_LINE_COLOR);
+    GP.BOX_BEGIN(GP_JUSTIFY, "auto;padding-left:7px;padding-right:7px");
+    GP.LABEL_BLOCK(mainTime.encode(), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
+    if (climateState > 0) {
+      GP.BOX_BEGIN(GP_RIGHT, "100%");
+      GP.LABEL_BLOCK(String(climateGetTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
+      if (climateGetHum()) GP.LABEL_BLOCK(String(climateGetHum()) + "%", "barHum", UI_BAR_HUM_COLOR, 18, 1);
+      if (climateGetPress()) GP.LABEL_BLOCK(String(climateGetPress()) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
+      GP.BOX_END();
+    }
+    GP.BOX_END();
+    GP_HR(UI_BAR_LINE_COLOR, "97.5%");
 
     if (timerPlayback > -1) timerPlayback = 0; //сбросили воспроизведение
 
