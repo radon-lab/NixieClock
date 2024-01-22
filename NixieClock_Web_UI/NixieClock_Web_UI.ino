@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 21.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 22.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -277,15 +277,16 @@ void build(void) {
     GP.BLOCK_END();
   }
   else {
-    GP.GRID_RESPONSIVE(1050); //отключить таблицу при ширине экрана меньше 1050px
+    GP.SEND("<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
+            "select{width:200px;}\n" //фикс выпадающего списка
+            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
+            ".display{border-radius:5px;}\n" //фикс лейбл блоков
+            ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
+            "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
+            "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
+            "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
+            "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n"); //отключить таблицу при ширине экрана меньше 1050px
 
-    GP.SEND("<style>.headbar{z-index:3;}\n"); //фикс меню в мобильной версии
-    GP.SEND("select{width:200px;}\n"); //фикс выпадающего списка
-    GP.SEND("output{min-width:50px;border-radius:5px;}\n"); //фикс слайдеров
-    GP.SEND(".display{border-radius:5px;}\n"); //фикс лейбл блоков
-    GP.SEND(".sblock>a{border-radius:25px;}\n"); //фикс кнопок меню
-    GP.SEND("input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n"); //фикс кнопок
-    GP.SEND("#ubtn {min-width:34px;border-radius:25px;line-height:150%;}</style>\n"); //фикс кнопок загрузки
     GP.UI_MENU("Nixie clock", UI_MENU_COLOR); //начать меню
     if (settings.nameMenu && settings.name[0]) {
       GP.LABEL(settings.name, "", UI_MENU_NAME_COLOR);
@@ -398,7 +399,7 @@ void build(void) {
     }
     GP.UI_BODY(); //начать основное окно
 
-    GP.BOX_BEGIN(GP_JUSTIFY, "auto;padding-left:7px;padding-right:7px");
+    GP.BOX_BEGIN(GP_JUSTIFY, "auto;padding-left:2%;padding-right:2%");
     GP.LABEL_BLOCK(mainTime.encode(), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
     if (climateState > 0) {
       GP.BOX_BEGIN(GP_RIGHT, "100%");
@@ -408,7 +409,7 @@ void build(void) {
       GP.BOX_END();
     }
     GP.BOX_END();
-    GP_HR(UI_BAR_LINE_COLOR, "97.5%");
+    GP.HR(UI_BAR_LINE_COLOR);
 
     if (timerPlayback > -1) timerPlayback = 0; //сбросили воспроизведение
 
