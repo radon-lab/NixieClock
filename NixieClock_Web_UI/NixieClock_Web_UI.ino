@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 22.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 23.01.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -151,7 +151,7 @@ void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
 void GP_SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND("<div style='position:relative;right:-10px;'>\n"); GP.SPINNER(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
+  GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP.SPINNER(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
 }
 void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
   GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
