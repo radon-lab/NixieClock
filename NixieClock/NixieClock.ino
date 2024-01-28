@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 20.01.24
+  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 27.01.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -827,7 +827,7 @@ void INIT_SYSTEM(void) //инициализация
 #if ESP_ENABLE
   if (GPIOR0 == BOOTLOADER_START) { //если был запрос начала обновления прошивки
     GPIOR0 = 0x00; //сбросили запрос начала обновления прошивки
-    
+
     if (EEPROM_ReadByte(EEPROM_BLOCK_BOOT) == BOOTLOADER_OK) { //если загрузчик готов
       EEPROM_UpdateByte(EEPROM_BLOCK_BOOT, BOOTLOADER_START); //устанавливаем флаг запуска загрузчика
       RESET_BOOTLOADER; //переход к загрузчику
@@ -4100,22 +4100,13 @@ uint8_t settings_main(void) //настроки основные
                   uint16_t temperature = getTemperature(); //буфер температуры
 #endif
                   if (temperature > 990) indiPrintNum(0, 0); //вывод ошибки
-                  else if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
 #else
                 updateTemp(); //обновить показания температуры
                 if (!blink_data) {
                   if (sens.err) indiPrintNum(0, 0); //вывод ошибки
-                  else {
-#if SENS_PORT_ENABLE
-                    uint16_t temperature = getTemperature(); //буфер температуры
-                    if (temperature >= 10) indiPrintNum(temperature, 0, 3); //вывод температуры
-                    else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
-#else
-                    indiPrintNum(getTemperature(), 0, 3); //вывод температуры
-#endif
-                  }
+                  else indiPrintNum(getTemperature(), 1, 2, 0); //вывод температуры
                 }
                 indiPrintNum(sens.type, 3); //вывод сенсора температуры
 #endif
@@ -4661,12 +4652,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
       switch (mode) {
         case 0: {
-#if ESP_ENABLE || SENS_PORT_ENABLE
-            if (temperature >= 10) indiPrintNum(temperature, 0, 3);
-            else indiPrintNum(temperature, 1, 2, 0);
-#else
-            indiPrintNum(temperature, 0, 3);
-#endif
+            indiPrintNum(temperature, 1, 2, 0);
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
             setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
 #endif
@@ -4927,12 +4913,7 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
 #endif
         if (temperature > 990) continue; //возвращаемся назад
-#if ESP_ENABLE || SENS_PORT_ENABLE
-        if (temperature >= 10) animPrintNum(temperature, 0, 3); //вывод температуры
-        else animPrintNum(temperature, 1, 2, 0); //вывод температуры
-#else
-        animPrintNum(temperature, 0, 3); //вывод температуры
-#endif
+        animPrintNum(temperature, 1, 2, 0); //вывод температуры
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) animPrintNum(humidity, 4, 2); //вывод влажности
 #endif
@@ -5029,7 +5010,7 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         animPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
         animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
-#if DOTS_NUM > 4
+#if DOTS_PORT_ENABLE && (DOTS_NUM > 4)
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
         indiSetDotR(1); //включаем разделительную точку
         indiSetDotR(3); //включаем разделительную точку

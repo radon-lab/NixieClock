@@ -709,6 +709,8 @@ void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, uint8
   }
 
   while ((_length > count) && (count < 6)) buff[count++] = digitMask[_filler]; //заполняем символами заполнителями
+  
+  if (_length && (_length < count)) _indi -= count - _length; //смещаем буфер если число длиннее
 
   while (count) { //расшивровка символов
     count--; //убавили счетчик символов
