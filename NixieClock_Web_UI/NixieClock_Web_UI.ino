@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 23.01.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 01.02.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -256,7 +256,7 @@ void build(void) {
     else {
       GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
       GP.SPAN(String("<small>Не выключайте устройство до завершения обновления!</small>") + ((deviceInformation[HARDWARE_VERSION]) ? "" : "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"), GP_CENTER, "syncWarn", GP_RED); //описание
-      GP.UPDATE("syncUpdater,syncWarn");
+      GP.UPDATE("syncUpdater,syncWarn", 300);
     }
     GP.HR(UI_LINE_COLOR);
     M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
