@@ -963,11 +963,11 @@ void busUpdate(void) {
         case WRITE_EXTENDED_ALARM:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             switch (busReadBufferArg()) {
-              case EXT_ALARM_TIMEOUT: busWriteTwiRegByte(extendedSettings.alarmTime, BUS_WRITE_EXTENDED_SET, 11); break; //отправляем дополнительные натройки
-              case EXT_ALARM_WAIT: busWriteTwiRegByte(extendedSettings.alarmWaitTime, BUS_WRITE_EXTENDED_SET, 12); break; //отправляем дополнительные натройки
-              case EXT_ALARM_TIMEOUT_SOUND: busWriteTwiRegByte(extendedSettings.alarmSoundTime, BUS_WRITE_EXTENDED_SET, 13); break; //отправляем дополнительные натройки
-              case EXT_ALARM_DOT_ON: busWriteTwiRegByte(extendedSettings.alarmDotOn, BUS_WRITE_EXTENDED_SET, 14); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
-              case EXT_ALARM_DOT_WAIT: busWriteTwiRegByte(extendedSettings.alarmDotWait, BUS_WRITE_EXTENDED_SET, 15); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
+              case EXT_ALARM_TIMEOUT: busWriteTwiRegByte(extendedSettings.alarmTime, BUS_WRITE_EXTENDED_SET, 10); break; //отправляем дополнительные натройки
+              case EXT_ALARM_WAIT: busWriteTwiRegByte(extendedSettings.alarmWaitTime, BUS_WRITE_EXTENDED_SET, 11); break; //отправляем дополнительные натройки
+              case EXT_ALARM_TIMEOUT_SOUND: busWriteTwiRegByte(extendedSettings.alarmSoundTime, BUS_WRITE_EXTENDED_SET, 12); break; //отправляем дополнительные натройки
+              case EXT_ALARM_DOT_ON: busWriteTwiRegByte(extendedSettings.alarmDotOn, BUS_WRITE_EXTENDED_SET, 13); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
+              case EXT_ALARM_DOT_WAIT: busWriteTwiRegByte(extendedSettings.alarmDotWait, BUS_WRITE_EXTENDED_SET, 14); busWriteBuffer(SET_UPDATE); break; //отправляем дополнительные натройки
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
