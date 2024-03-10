@@ -38,12 +38,61 @@ uint8_t getIntData(uint8_t data_h, uint8_t data_l) {
   return hexToInt(data_l) | (hexToInt(data_h) << 4);
 }
 //---------------------------------------------------------------------------------
-void updateCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
-{
+void updateCRC(uint8_t* crc, uint8_t data) { //сверка контрольной суммы
   for (uint8_t i = 8; i; i--) { //считаем для всех бит
     *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
     data >>= 0x01; //сдвигаем буфер
   }
+}
+//---------------------------------------------------------------------------------
+boolean checkFileData(void) {
+  firmwareFile = LittleFS.open("/update/firmware.hex", "r");
+  
+  if (firmwareFile && (firmwareFile.size() != 0)) {
+    uint8_t file_crc = 0;
+    uint8_t file_size = 0;
+    uint8_t file_type = 0;
+    uint16_t file_addr = 0;
+    uint16_t file_addr_now = 0;
+
+    while (firmwareFile.available()) {
+      if (firmwareFile.read() == ':') {
+        if (file_type == 1) return false;
+
+        file_size = getIntData(firmwareFile.read(), firmwareFile.read());
+        file_crc += file_size;
+
+        file_type = getIntData(firmwareFile.read(), firmwareFile.read());
+        file_addr = file_type << 8;
+        file_crc += file_type;
+        file_type = getIntData(firmwareFile.read(), firmwareFile.read());
+        file_addr |= file_type;
+        file_crc += file_type;
+
+        file_type = getIntData(firmwareFile.read(), firmwareFile.read());
+        file_crc += file_type;
+
+        if (!file_type && (file_addr != file_addr_now)) return false;
+        file_addr_now += file_size;
+
+        while (file_size) {
+          file_size--;
+          file_crc += getIntData(firmwareFile.read(), firmwareFile.read());
+        }
+
+        file_crc += getIntData(firmwareFile.read(), firmwareFile.read());
+
+        if (file_crc || (file_type > 1)) return false;
+      }
+    }
+
+    if (file_type == 1) {
+      firmwareFile.close();
+      firmwareFile = LittleFS.open("/update/firmware.hex", "r");
+      return true;
+    }
+  }
+  return false;
 }
 //---------------------------------------------------------------------------------
 uint8_t getFileData(void) {
@@ -70,6 +119,11 @@ uint8_t getFileData(void) {
     }
   }
   return 0xFF;
+}
+//---------------------------------------------------------------------------------
+void removeFileData(void) {
+  firmwareFile.close();
+  LittleFS.remove("/update/firmware.hex");
 }
 //---------------------------------------------------------------------------------
 boolean updaterFlash(void) {
@@ -99,9 +153,8 @@ void updaterSetIdle(void) {
 }
 //---------------------------------------------------------------------------------
 void updaterStart(void) {
-  if (!updaterState()) {
-    firmwareFile = LittleFS.open("/update/firmware.hex", "r");
-    if (firmwareFile && (firmwareFile.size() != 0)) {
+  if (!updaterState()) { //если не идет обновление
+    if (checkFileData()) { //проверяем файл
       page.pos = 0;
       page.size = 0;
       updater_page_cnt = 0;
@@ -110,8 +163,8 @@ void updaterStart(void) {
       Serial.println F("Updater start programming");
     }
     else {
+      removeFileData(); //удаляем файл
       updater_state = UPDATER_NO_FILE; //установили флаг ошибки файла
-      LittleFS.remove("/update/firmware.hex"); //удаляем файл
       Serial.println F("Updater error opening file");
     }
   }
@@ -119,8 +172,8 @@ void updaterStart(void) {
 //---------------------------------------------------------------------------------
 void updaterRun(void) {
   if ((millis() - updater_timer) >= 10000) {
+    removeFileData(); //удаляем файл
     updater_state = UPDATER_TIMEOUT;
-    LittleFS.remove("/update/firmware.hex"); //удаляем файл
     Serial.println("Updater timeout write page " + String(updater_page_cnt));
   }
   switch (updater_state) {
@@ -159,8 +212,8 @@ void updaterRun(void) {
             }
             else if ((temp_page - updater_page_cnt) == 0) updater_state = UPDATER_WRITE;
             else {
+              removeFileData(); //удаляем файл
               updater_state = UPDATER_ERROR;
-              LittleFS.remove("/update/firmware.hex"); //удаляем файл
               Serial.println("Updater error, page at " + String(updater_page_cnt));
             }
           }
@@ -173,9 +226,8 @@ void updaterRun(void) {
         twi_write_byte(0xFF);
         if (!twi_error()) { //если передача была успешной
           twi_write_stop(); //остановили шину
+          removeFileData(); //удаляем файл
           updater_state = UPDATER_IDLE;
-          firmwareFile.close();
-          LittleFS.remove("/update/firmware.hex"); //удаляем файл
           Serial.println F("Updater end, reboot...");
           ESP.reset(); //перезагрузка
         }

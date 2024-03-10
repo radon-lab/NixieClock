@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 13.02.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 08.03.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -277,23 +277,76 @@ void build(void) {
     GP.BLOCK_END();
   }
   else {
+    if (!listInit && deviceInformation[HARDWARE_VERSION]) {
+      listInit = true;
+      if (deviceInformation[SHOW_TEMP_MODE]) {
+        showModeList += ",Температура(esp),Влажность(esp),Давление(esp),Температура и влажность(esp)";
+      }
+
+      if (deviceInformation[BACKL_TYPE]) {
+        backlModeList += ",Статичная,Дыхание";
+      }
+      if (deviceInformation[BACKL_TYPE] >= 3) {
+        backlModeList += ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
+      }
+
+      if (deviceInformation[NEON_DOT] != 3) {
+        dotModeList += ",Динамичные(плавно мигают)";
+      }
+      if (deviceInformation[NEON_DOT] == 2) {
+        dotModeList += ",Маятник(неонки)";
+      }
+      if (deviceInformation[DOTS_PORT_ENABLE]) {
+        dotModeList += ",Мигающие,Бегущие,Змейка,Резинка";
+        if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
+          dotModeList += ",Одинарный маятник";
+        }
+        if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
+          dotModeList += ",Двойной маятник";
+        }
+      }
+      alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
+
+      for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
+        playerVoiceList += ",Голос_";
+        playerVoiceList += i;
+      }
+    }
+
+    //обновления блоков
+    String updateList = "barTime";
+
+    if (climateState > 0) {
+      updateList += ",barTemp";
+      if (climateGetHum()) {
+        updateList += ",barHum";
+      }
+      if (climateGetPress()) {
+        updateList += ",barPress";
+      }
+    }
+
+    //кастомные стили
     GP.SEND("<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
             "select{width:200px;}\n" //фикс выпадающего списка
             "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
             ".display{border-radius:5px;}\n" //фикс лейбл блоков
+            ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
             "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n"); //отключить таблицу при ширине экрана меньше 1050px
 
-    GP.UI_MENU("Nixie clock", UI_MENU_COLOR); //начать меню
+    //начать меню
+    GP.UI_MENU("Nixie clock", UI_MENU_COLOR);
     if (settings.nameMenu && settings.name[0]) {
       GP.LABEL(settings.name, "", UI_MENU_NAME_COLOR);
       GP.HR(UI_MENU_LINE_COLOR);
     }
 
     //ссылки меню
+    GP.SEND("<div class='sblock' style='flex-grow:1;display:block;padding:0px;'>");
     GP.UI_LINK("/", "Главная");
     GP.UI_LINK("/settings", "Настройки");
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
@@ -348,55 +401,13 @@ void build(void) {
     else {
       GP.LABEL_BLOCK("NTP connecting...", "", UI_MENU_NTP_2_COLOR, 0, 1);
     }
+    GP.SEND("</div>\n<footer>");
+    GP.HR(UI_MENU_LINE_COLOR);
+    GP_TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
+    GP.BREAK();
+    GP_TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
+    GP.SEND("</footer>");
 
-    if (!listInit && deviceInformation[HARDWARE_VERSION]) {
-      listInit = true;
-      if (deviceInformation[SHOW_TEMP_MODE]) {
-        showModeList += ",Температура(esp),Влажность(esp),Давление(esp),Температура и влажность(esp)";
-      }
-
-      if (deviceInformation[BACKL_TYPE]) {
-        backlModeList += ",Статичная,Дыхание";
-      }
-      if (deviceInformation[BACKL_TYPE] >= 3) {
-        backlModeList += ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
-      }
-
-      if (deviceInformation[NEON_DOT] != 3) {
-        dotModeList += ",Динамичные(плавно мигают)";
-      }
-      if (deviceInformation[NEON_DOT] == 2) {
-        dotModeList += ",Маятник(неонки)";
-      }
-      if (deviceInformation[DOTS_PORT_ENABLE]) {
-        dotModeList += ",Мигающие,Бегущие,Змейка,Резинка";
-        if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
-          dotModeList += ",Одинарный маятник";
-        }
-        if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
-          dotModeList += ",Двойной маятник";
-        }
-      }
-      alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
-
-      for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
-        playerVoiceList += ",Голос_";
-        playerVoiceList += i;
-      }
-    }
-
-    //обновления блоков
-    String updateList = "barTime";
-
-    if (climateState > 0) {
-      updateList += ",barTemp";
-      if (climateGetHum()) {
-        updateList += ",barHum";
-      }
-      if (climateGetPress()) {
-        updateList += ",barPress";
-      }
-    }
     GP.UI_BODY(); //начать основное окно
 
     GP.BOX_BEGIN(GP_JUSTIFY, "auto;padding-left:2%;padding-right:2%");
@@ -1787,7 +1798,7 @@ String getUpdaterState(void) { //получить состояние загру�
     case UPDATER_IDLE: data += "Обновление завершено!"; break;
     case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
     case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
-    case UPDATER_NO_FILE: data += "Ошибка!<br><small>Невозможно открыть файл!</small>"; break;
+    case UPDATER_NO_FILE: data += "Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"; break;
     case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
     case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
     default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(map(updaterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
