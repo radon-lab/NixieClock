@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 13.02.24
+  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 24.02.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -6568,7 +6568,6 @@ void dotFlash(void) //мигание точек
           }
           break;
 #endif
-#endif
 #if (DOTS_NUM > 4) && (DOTS_TYPE == 2)
         case DOT_DUAL_TURN_BLINK: //мигание двумя точками по очереди
 #if DOT_DUAL_TURN_TIME
@@ -6588,6 +6587,7 @@ void dotFlash(void) //мигание точек
             case 1: indiSetDotR(1); indiSetDotL(4); indiClrDotL(2); indiClrDotR(3); dot.drive = 0; break; //включаем правую точку
           }
           break;
+#endif
 #endif
         case DOT_OTHER_BLINK:
           switch (dot.drive) {
