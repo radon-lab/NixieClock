@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 24.02.24
+  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 10.04.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -3093,7 +3093,6 @@ uint8_t settings_time(void) //настройки времени
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
-  //настройки
   while (1) {
     dataUpdate(); //обработка данных
 
@@ -3595,6 +3594,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
   while (1) {
     dataUpdate(); //обработка данных
+
 #if ESP_ENABLE
     if (busCheck()) {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
@@ -4009,6 +4009,7 @@ uint8_t settings_main(void) //настроки основные
 
   while (1) {
     dataUpdate(); //обработка данных
+
 #if ESP_ENABLE
     if (busCheck()) return MAIN_PROGRAM;
 #endif
@@ -5070,9 +5071,11 @@ void autoShowMenu(void) //меню автоматического показа
     _timer_ms[TMR_MS] = (uint16_t)extendedSettings.autoShowTimes[mode] * 1000; //устанавливаем таймер
     while (_timer_ms[TMR_MS]) { //если таймер истек
       dataUpdate(); //обработка данных
+
 #if ESP_ENABLE
       if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
 #endif
+
 #if ESP_ENABLE || SENS_PORT_ENABLE
       if (sign) { //если температура отрицательная
         if (!_timer_ms[TMR_ANIM]) { //если пришло время
@@ -5186,9 +5189,11 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
     }
 
     dataUpdate(); //обработка данных
+
 #if ESP_ENABLE
     if (busCheck()) return MAIN_PROGRAM;
 #endif
+
     if (!_timer_ms[TMR_MS]) break; //выходим
 
     switch (buttonState()) {
@@ -5637,14 +5642,16 @@ uint8_t radioMenu(void) //радиоприемник
     while (1) {
       dataUpdate(); //обработка данных
 
+#if ESP_ENABLE
+      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновились настройки
+        radioSeekStop(); //остановка автопоиска радиостанции
+        return RADIO_PROGRAM;
+      }
+#endif
+
       if (!secUpd) { //если прошла секунда
         secUpd = 1; //сбросили флаг секунды
-#if ESP_ENABLE
-        if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновились настройки
-          radioSeekStop(); //остановка автопоиска радиостанции
-          return RADIO_PROGRAM;
-        }
-#endif
+
 #if ALARM_TYPE
         if (alarms.now == 3) { //тревога таймера
           radioSeekStop(); //остановка автопоиска радиостанции
@@ -5981,16 +5988,18 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   while (1) {
     dataUpdate(); //обработка данных
 
+#if ESP_ENABLE
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) {
+      if (!timer.mode || (timer.mode > 2)) return MAIN_PROGRAM; //выходим
+      else return TIMER_PROGRAM; //выходим
+    }
+#endif
+
     if ((timer.mode == 2) && !timer.count) return WARN_PROGRAM; //тревога таймера
 
     if (!secUpd) {
       secUpd = 1; //сбрасываем флаг
-#if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) {
-        if (!timer.mode || (timer.mode > 2)) return MAIN_PROGRAM; //выходим
-        else return TIMER_PROGRAM; //выходим
-      }
-#endif
+
       if (!timer.mode || (timer.mode > 2)) {
         if (++time_out >= TIMER_TIMEOUT) {
           animShow = ANIM_MAIN; //установили флаг анимации
@@ -6672,8 +6681,13 @@ uint8_t sleepIndi(void) //режим сна индикаторов
   while (!buttonState()) { //если не нажата кнопка
     dataUpdate(); //обработка данных
 
+#if ESP_ENABLE
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //выходим
+#endif
+
     if (!secUpd) { //если пришло время обновить индикаторы
       secUpd = 1; //сбрасываем флаг
+
 #if ALARM_TYPE
       if (alarms.now == 3) return ALARM_PROGRAM; //тревога будильника
 #endif
@@ -6681,9 +6695,6 @@ uint8_t sleepIndi(void) //режим сна индикаторов
       if ((timer.mode == 2) && !timer.count) return WARN_PROGRAM; //тревога таймера
 #endif
       if (!indi.sleepMode) return MAIN_PROGRAM; //выход в режим часов
-#if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //выходим
-#endif
     }
   }
   return MAIN_PROGRAM; //выход в режим часов
@@ -7096,15 +7107,17 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
             if (changeNum < LAMP_NUM) {
               changeIndi = random(0, LAMP_NUM);
               if (changeCnt < 2) {
-                for (uint8_t b = 0; b < changeNum; b++) {
-                  while (changeBuffer[b] == changeIndi) {
-                    changeIndi = random(0, LAMP_NUM);
-                    b = 0;
-                  }
-                }
-                changeBuffer[changeNum] = changeIndi;
                 switch (changeCnt) {
-                  case 0: indiClr(changeIndi); break; //очистка индикатора
+                  case 0:
+                    for (uint8_t b = 0; b < changeNum; b++) {
+                      while (changeBuffer[b] == changeIndi) {
+                        changeIndi = random(0, LAMP_NUM);
+                        b = 0;
+                      }
+                    }
+                    changeBuffer[changeNum] = changeIndi;
+                    indiClr(changeIndi); //очистка индикатора
+                    break;
                   case 1:
                     indiSet(anim.flipBuffer[6 + changeIndi], changeIndi); //вывод часов
                     changeNum++; //прибавляем цикл
@@ -7192,17 +7205,18 @@ uint8_t mainScreen(void) //главный экран
   for (;;) { //основной цикл
     dataUpdate(); //обработка данных
 
+#if ESP_ENABLE
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
+      if (!changeAnimState) changeAnimState = 1; //установили тип анимации
+      return MAIN_PROGRAM; //перезапуск основной программы
+    }
+#endif
+
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
     if (radioFastSettings() == 1) return MAIN_PROGRAM; //перезапуск основной программы
 #endif
 
     if (!secUpd) { //если пришло время обновить индикаторы
-#if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
-        if (!changeAnimState) changeAnimState = 1; //установили тип анимации
-        return MAIN_PROGRAM; //перезапуск основной программы
-      }
-#endif
 #if ALARM_TYPE
       if (alarms.now == 3) return ALARM_PROGRAM; //тревога будильника
 #endif
