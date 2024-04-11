@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 10.04.24
+  Arduino IDE 1.8.13 версия прошивки 2.1.8 релиз от 11.04.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -183,6 +183,7 @@ struct backlightData {
 
 //переменные работы с индикаторами
 struct indiData {
+  boolean update; //флаг обновления индикаторов
   uint8_t sleepMode; //флаг режима сна индикаторов
   uint8_t maxBright; //максимальная яркость индикаторов
 } indi;
@@ -191,7 +192,6 @@ struct indiData {
 uint8_t changeBrightState; //флаг состояния смены яркости подсветки
 uint8_t changeAnimState; //флаг состояния анимаций
 uint8_t animShow; //флаг анимации смены времени
-boolean secUpd; //флаг обновления секунды
 
 //переменные таймера/секундомера
 struct timerData {
@@ -602,7 +602,7 @@ enum {
   BUS_COMMAND_BIT_2,
   BUS_COMMAND_BIT_3,
   BUS_COMMAND_BIT_4,
-  BUS_COMMAND_BIT_5,
+  BUS_COMMAND_TIME,
   BUS_COMMAND_WAIT,
   BUS_COMMAND_UPDATE
 };
@@ -702,7 +702,7 @@ int main(void) //главный цикл программ
 #endif
     changeBrightEnable(); //разрешить смену яркости
     changeBright(); //установка яркости от времени суток
-    secUpd = 0; //обновление экрана
+    indi.update = 0; //обновление экрана
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
@@ -1745,8 +1745,8 @@ boolean check_pass(void) //проверка пароля
   while (1) {
     dataUpdate(); //обработка данных
 
-    if (!secUpd) {
-      secUpd = 1; //сбросили флаг
+    if (!indi.update) {
+      indi.update = 1; //сбросили флаг
       if (++time_out >= DEBUG_TIMEOUT) { //если время вышло
 #if FLIP_ANIM_START == 1
         animShow = ANIM_MAIN; //установили флаг анимации
@@ -2497,7 +2497,7 @@ void busCommand(void) //проверка команды шины
 {
   if (bus.status & ~(0x01 << BUS_COMMAND_WAIT)) {
 #if RADIO_ENABLE || (TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE))
-    uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
+    uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
     bus.status &= (0x01 << BUS_COMMAND_WAIT); //сбросили статус
     if (status) { //если установлены флаги
       changeAnimState = 2; //установили сброс анимации
@@ -2790,7 +2790,7 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if DS3231_ENABLE
             bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
 #endif
-            bus.status |= (0x01 << BUS_COMMAND_UPDATE);
+            bus.status |= (0x01 << BUS_COMMAND_TIME);
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
             break;
           case BUS_WRITE_FAST_SET: memoryCheck |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
@@ -3021,7 +3021,7 @@ void dataUpdate(void) //обработка данных
     }
 #endif
 
-    secUpd = dot.update = 0; //очищаем флаги секунды и точек
+    indi.update = dot.update = 0; //очищаем флаги секунды и точек
 
 #if LAMP_NUM > 4
     if (animShow == ANIM_NULL) animShow = ANIM_SECS; //показать анимацию переключения цифр
@@ -3100,8 +3100,8 @@ uint8_t settings_time(void) //настройки времени
     if (busCheck()) return MAIN_PROGRAM;
 #endif
 
-    if (!secUpd) {
-      secUpd = 1;
+    if (!indi.update) {
+      indi.update = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
 #if DS3231_ENABLE
         sendTime(); //отправить время в RTC
@@ -3253,8 +3253,8 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 #endif
 #endif
 
-    if (!secUpd) {
-      secUpd = 1;
+    if (!indi.update) {
+      indi.update = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
         if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
@@ -3617,8 +3617,8 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 #endif
 #endif
 
-    if (!secUpd) {
-      secUpd = 1;
+    if (!indi.update) {
+      indi.update = 1;
       if (++time_out >= SETTINGS_TIMEOUT) {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
         if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
@@ -4014,8 +4014,8 @@ uint8_t settings_main(void) //настроки основные
     if (busCheck()) return MAIN_PROGRAM;
 #endif
 
-    if (!secUpd) { //если установлен флаг
-      secUpd = 1; //сбрасываем флаг
+    if (!indi.update) { //если установлен флаг
+      indi.update = 1; //сбрасываем флаг
       if (++time_out >= SETTINGS_TIMEOUT) {
         setUpdateMemory(0x01 << MEM_UPDATE_MAIN_SET); //записываем основные настройки в память
         animShow = ANIM_MAIN; //установили флаг анимации
@@ -4647,8 +4647,8 @@ uint8_t showTemp(void) //показать температуру
     }
 #endif
 
-    if (!secUpd) {
-      secUpd = 1; //сбрасываем флаг
+    if (!indi.update) {
+      indi.update = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
 #if (LAMP_NUM > 4) && MENU_SHOW_NUMBER
       indiPrintNum(mode + 1, 5); //режим
@@ -4708,7 +4708,7 @@ uint8_t showTemp(void) //показать температуру
         }
 #endif
         _timer_ms[TMR_MS] = SHOW_TEMP_TIME;
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
@@ -4786,8 +4786,8 @@ uint8_t showDate(void) //показать дату
   for (_timer_ms[TMR_MS] = SHOW_DATE_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
 
-    if (!secUpd) {
-      secUpd = 1; //сбрасываем флаг
+    if (!indi.update) {
+      indi.update = 1; //сбрасываем флаг
       indiClr(); //очистка индикаторов
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
 #if SHOW_DATE_TYPE == 3
@@ -4856,7 +4856,7 @@ uint8_t showDate(void) //показать дату
             break;
         }
         _timer_ms[TMR_MS] = SHOW_DATE_TIME;
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
 #endif
 
@@ -5073,7 +5073,7 @@ void autoShowMenu(void) //меню автоматического показа
       dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
+      if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) return; //обновление шины
 #endif
 
 #if ESP_ENABLE || SENS_PORT_ENABLE
@@ -5649,8 +5649,8 @@ uint8_t radioMenu(void) //радиоприемник
       }
 #endif
 
-      if (!secUpd) { //если прошла секунда
-        secUpd = 1; //сбросили флаг секунды
+      if (!indi.update) { //если прошла секунда
+        indi.update = 1; //сбросили флаг секунды
 
 #if ALARM_TYPE
         if (alarms.now == 3) { //тревога таймера
@@ -5997,8 +5997,8 @@ uint8_t timerStopwatch(void) //таймер-секундомер
 
     if ((timer.mode == 2) && !timer.count) return WARN_PROGRAM; //тревога таймера
 
-    if (!secUpd) {
-      secUpd = 1; //сбрасываем флаг
+    if (!indi.update) {
+      indi.update = 1; //сбрасываем флаг
 
       if (!timer.mode || (timer.mode > 2)) {
         if (++time_out >= TIMER_TIMEOUT) {
@@ -6057,7 +6057,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
         if (mode && !timer.mode) { //если режим таймера и таймер/секундомер не запущен
           timerSettings(); //настройки таймера
           time_out = 0; //сбрасываем таймер автовыхода
-          secUpd = 0; //обновление экрана
+          indi.update = 0; //обновление экрана
         }
         break;
 
@@ -6074,7 +6074,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
         timer.mode = 0; //деактивируем таймер
         timer.count = timer.time; //сбрасываем таймер
         time_out = 0; //сбрасываем таймер автовыхода
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
 
       case LEFT_KEY_PRESS: //клик левой кнопкой
@@ -6086,7 +6086,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
         timer.mode = 0; //деактивируем таймер
         timer.count = 0; //сбрасываем секундомер
         time_out = 0; //сбрасываем таймер автовыхода
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
 
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
@@ -6098,7 +6098,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
         }
         else timer.mode ^= 0x80; //приостановка таймера/секундомера
         time_out = 0; //сбрасываем таймер автовыхода
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
 
       case ADD_KEY_HOLD: //удержание дополнительной кнопки
@@ -6108,7 +6108,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
           case 1: timer.count = timer.time; break; //сбрасываем таймер
         }
         time_out = 0; //сбрасываем таймер автовыхода
-        secUpd = 0; //обновление экрана
+        indi.update = 0; //обновление экрана
         break;
     }
   }
@@ -6682,11 +6682,11 @@ uint8_t sleepIndi(void) //режим сна индикаторов
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //выходим
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return ((bus.status & (0x01 << BUS_COMMAND_TIME)) ? SLEEP_PROGRAM : MAIN_PROGRAM); //выходим
 #endif
 
-    if (!secUpd) { //если пришло время обновить индикаторы
-      secUpd = 1; //сбрасываем флаг
+    if (!indi.update) { //если пришло время обновить индикаторы
+      indi.update = 1; //сбрасываем флаг
 
 #if ALARM_TYPE
       if (alarms.now == 3) return ALARM_PROGRAM; //тревога будильника
@@ -6703,7 +6703,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 void glitchIndi(void) //имитация глюков
 {
   if (mainSettings.glitchMode) { //если глюки включены
-    if (!_timer_sec[TMR_GLITCH] && RTC.s >= GLITCH_PHASE_MIN && RTC.s < GLITCH_PHASE_MAX) { //если пришло время
+    if (!_timer_sec[TMR_GLITCH] && (RTC.s >= GLITCH_PHASE_MIN) && (RTC.s < GLITCH_PHASE_MAX)) { //если пришло время
       uint8_t indiSave = 0; //текущая цифра в индикаторе
       uint8_t glitchCounter = random(GLITCH_NUM_MIN, GLITCH_NUM_MAX); //максимальное количество глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
@@ -6870,7 +6870,7 @@ void animUpdateTime(void) //обновить буфер анимации тек�
 void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   switch (mode) {
-    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = ANIM_NULL; return;  //без анимации
+    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = ANIM_NULL; return; //без анимации
     case 1: if (type == FLIP_DEMO) return; else mode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
   }
 
@@ -6952,12 +6952,12 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
+    if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) return; //обновление шины
 #endif
 
     if (type != FLIP_NORMAL) { //если анимация времени
-      if (!secUpd) { //если пришло время обновить индикаторы
-        secUpd = 1; //сбрасываем флаг
+      if (!indi.update) { //если пришло время обновить индикаторы
+        indi.update = 1; //сбрасываем флаг
         animUpdateTime(); //обновляем буфер анимации текущего времени
         switch (mode) { //режим анимации перелистывания
           case FLIP_RUBBER_BAND: if (changeCnt) animPrintBuff(LAMP_NUM - changeNum, (LAMP_NUM + 6) - changeNum, changeNum); break; //вывод часов
@@ -7198,7 +7198,7 @@ uint8_t mainScreen(void) //главный экран
   if (_timer_sec[TMR_SHOW] < RESET_TIME_SHOW) _timer_sec[TMR_SHOW] = RESET_TIME_SHOW; //если время вышло то устанавливаем минимальное время
 
 #if LAMP_NUM > 4
-  anim.flipSeconds = 0; //сбрасываем флаги анимации секунд
+  anim.flipSeconds = 0; //сбрасываем флаг анимации секунд
 #endif
   changeAnimState = 0; //сбрасываем флаг установки таймера сна
 
@@ -7206,8 +7206,8 @@ uint8_t mainScreen(void) //главный экран
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
-      if (!changeAnimState) changeAnimState = 1; //установили тип анимации
+    if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) { //обновление шины
+      if (!changeAnimState) changeAnimState = 1; //установили тип сброса анимации
       return MAIN_PROGRAM; //перезапуск основной программы
     }
 #endif
@@ -7216,7 +7216,13 @@ uint8_t mainScreen(void) //главный экран
     if (radioFastSettings() == 1) return MAIN_PROGRAM; //перезапуск основной программы
 #endif
 
-    if (!secUpd) { //если пришло время обновить индикаторы
+    if (!indi.update) { //если пришло время обновить индикаторы
+#if ESP_ENABLE
+      if (bus.status & (0x01 << BUS_COMMAND_TIME)) { //обновление шины
+        if (!changeAnimState) changeAnimState = 1; //установили тип сброса анимации
+        return MAIN_PROGRAM; //перезапуск основной программы
+      }
+#endif
 #if ALARM_TYPE
       if (alarms.now == 3) return ALARM_PROGRAM; //тревога будильника
 #endif
@@ -7233,8 +7239,8 @@ uint8_t mainScreen(void) //главный экран
           if (mainSettings.burnMode != BURN_SINGLE_TIME) mainTask = SLEEP_PROGRAM; //подмена текущей программы
           burnIndi(mainSettings.burnMode, BURN_NORMAL); //антиотравление индикаторов
           _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); //установка таймера антиотравления
-          if (mainSettings.burnMode != BURN_SINGLE_TIME) changeAnimState = 2; //установили тип анимации
-          else changeAnimState = 1; //установили тип анимации
+          if (mainSettings.burnMode != BURN_SINGLE_TIME) changeAnimState = 2; //установили тип сброса анимации
+          else changeAnimState = 1; //установили тип сброса анимации
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
@@ -7242,7 +7248,7 @@ uint8_t mainScreen(void) //главный экран
           mainTask = SLEEP_PROGRAM; //подмена текущей программы
           autoShowMenu(); //автоматическое отображение данных
           _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
-          changeAnimState = 2; //установили тип анимации
+          changeAnimState = 2; //установили тип сброса анимации
           return MAIN_PROGRAM; //перезапуск основной программы
         }
 
@@ -7256,7 +7262,7 @@ uint8_t mainScreen(void) //главный экран
 #if LAMP_NUM > 4
       if (animShow != ANIM_SECS) indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
 #endif
-      secUpd = 1; //сбрасываем флаг
+      indi.update = 1; //сбрасываем флаг
 
       glitchIndi(); //имитация глюков
     }
