@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 08.03.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 23.04.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -351,7 +351,7 @@ void build(void) {
     GP.UI_LINK("/settings", "Настройки");
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
-    GP.UI_LINK("/information", "О системе");
+    GP.UI_LINK("/information", "Об устройстве");
     if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/network", "Сетевые настройки");
 
@@ -376,7 +376,7 @@ void build(void) {
     else {
       GP.LABEL_BLOCK("Clock offline", "", UI_MENU_CLOCK_2_COLOR, 0, 1);
     }
-    if (!deviceInformation[DS3231_ENABLE]) {
+    if (!deviceInformation[DS3231_ENABLE] && (rtc_status != RTC_NOT_FOUND)) {
       GP.BREAK();
       if (rtc_status == RTC_ONLINE) {
         GP.LABEL_BLOCK("RTC synced", "", UI_MENU_RTC_1_COLOR, 0, 1);
@@ -384,22 +384,21 @@ void build(void) {
       else if (rtc_status == RTC_BAT_LOW) {
         GP.LABEL_BLOCK("RTC low battery", "", UI_MENU_RTC_2_COLOR, 0, 1);
       }
-      else {
-        GP.LABEL_BLOCK("RTC disconnect", "", UI_MENU_RTC_3_COLOR, 0, 1);
+    }
+    if (statusNtp != NTP_STOPPED) {
+      GP.BREAK();
+      if (statusNtp == NTP_ERROR) {
+        GP.LABEL_BLOCK("NTP disconnect", "", UI_MENU_NTP_3_COLOR, 0, 1);
       }
-    }
-    GP.BREAK();
-    if ((statusNtp == NTP_ERROR) || (statusNtp == NTP_STOPPED)) {
-      GP.LABEL_BLOCK("NTP disconnect", "", UI_MENU_NTP_3_COLOR, 0, 1);
-    }
-    else if (statusNtp == NTP_SYNCED) {
-      GP.LABEL_BLOCK("NTP synced", "", UI_MENU_NTP_1_COLOR, 0, 1);
-    }
-    else if (statusNtp == NTP_DESYNCED) {
-      GP.LABEL_BLOCK("NTP desynced", "", UI_MENU_NTP_2_COLOR, 0, 1);
-    }
-    else {
-      GP.LABEL_BLOCK("NTP connecting...", "", UI_MENU_NTP_2_COLOR, 0, 1);
+      else if (statusNtp == NTP_SYNCED) {
+        GP.LABEL_BLOCK("NTP synced", "", UI_MENU_NTP_1_COLOR, 0, 1);
+      }
+      else if (statusNtp == NTP_DESYNCED) {
+        GP.LABEL_BLOCK("NTP desynced", "", UI_MENU_NTP_2_COLOR, 0, 1);
+      }
+      else {
+        GP.LABEL_BLOCK("NTP connecting...", "", UI_MENU_NTP_2_COLOR, 0, 1);
+      }
     }
     GP.SEND("</div>\n<footer>");
     GP.HR(UI_MENU_LINE_COLOR);
@@ -857,7 +856,7 @@ void build(void) {
                       "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
     else if (ui.uri("/information")) { //информация о системе
-      GP_PAGE_TITLE("О системе");
+      GP_PAGE_TITLE("Об устройстве");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
       GP.SYSTEM_INFO(ESP_FIRMWARE_VERSION);
@@ -896,12 +895,18 @@ void build(void) {
         }
       }
 
-      if (rtc_status != RTC_NOT_FOUND) {
-        GP.HR(UI_LINE_COLOR);
-        GP.LABEL("Модуль RTC", "", UI_HINT_COLOR);
+      String rtcStatus = "Не обнаружен...";
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Модуль RTC", "", UI_HINT_COLOR);
+      if (deviceInformation[DS3231_ENABLE]) {
+        rtcStatus = "Подключен к часам";
+      }
+      else if (rtc_status != RTC_NOT_FOUND) {
         M_BOX(GP.LABEL("Коррекция", "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
         GP.UPDATE_CLICK("syncAging", "syncAging");
+        rtcStatus = (rtc_status != RTC_ONLINE) ? "Батарея разряжена" : "Работает исправно";
       }
+      M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", rtcStatus, INT32_MAX, "", true););
 
       GP.HR(UI_LINE_COLOR);
       GP.LABEL("Управление", "", UI_HINT_COLOR);
@@ -2055,7 +2060,7 @@ void resetMainSettings(void) {
   settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
   settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
   settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
-  settings.ntpSync = false; //выключаем авто-синхронизацию
+  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
   settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
   settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
   if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;

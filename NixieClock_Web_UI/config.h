@@ -4,6 +4,8 @@
 #define DEFAULT_NTP_HOST "pool.ntp.org" //хост ntp сервера("pool.ntp.org", "ntp1.stratum2.ru", "ntp2.stratum2.ru", "ntp.msk-ix.ru")
 #define DEFAULT_NTP_TIME 2 //период запроса нового времени с ntp сервера(0 - каждые 15 мин | 1 - каждые 30 мин | 2 - каждый 1 час | 3 - каждые 2 часа | 4 - каждые 3 часа)
 
+#define DEFAULT_SYNC 0 //автосинхронизация времени(0 - отключена | 1 - включена)
+
 #define DEFAULT_CLIMATE_AVG 1 //усреднение данных микроклимата на графике за указанный интервал(0 - добавлять текущие данные | 1 - добавлять усредненные данные)
 #define DEFAULT_CLIMATE_TIME 30 //интервал отображения данных микроклимата на графике(1..60)(мин)
 #define CLIMATE_BUFFER 100 //размер буфера памяти данных микроклимата на графике(50..250)
@@ -95,4 +97,4 @@
 #define MAX_CLOCK 4 //максимум часов в групповом управлении(2..5)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.1.8" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.9" //версия прошивки модуля esp

@@ -125,8 +125,10 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_START_VOL 50          //громкость плеера при запуске(10..100)(%)
 #define PLAYER_MAX_BUFFER 10         //максимальное количество ячеек в буфере воспроизведения(1..25)
 #define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
+#define PLAYER_RESET_WAIT 1500       //ожидание инициализации плеера(1000..2000)(мс)
 #define PLAYER_START_WAIT 500        //ожидание инициализации плеера(500..1000)(мс)
 #define PLAYER_BUSY_WAIT 200         //ожидание сигнала занятости плеера(50..300)(мс)
+#define PLAYER_BUSY_ERROR 1500       //ожидание изменения сигнала занятости плеера(1000..3000)(мс)
 #define PLAYER_UART_SPEED 9600       //скорость UART плеера(9600)
 
 //Настройки радиоприемника
@@ -267,5 +269,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.1.8"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "2.1.9"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x12        //версия прошивки для интерфейса wire
