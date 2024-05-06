@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.9 релиз от 23.04.24
+  Arduino IDE 1.8.13 версия прошивки 2.1.9 релиз от 05.05.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -138,9 +138,9 @@ struct radioData {
 struct alarmData {
   uint8_t num; //текущее количество будильников
   uint8_t now; //флаг активоного будильника
-  uint8_t sound; //информация о текущем будильнике
-  uint8_t radio; //информация о текущем будильнике
-  uint8_t volume; //информация о текущем будильнике
+  uint8_t sound; //мелодия активоного будильника
+  uint8_t radio; //режим радио активоного будильника
+  uint8_t volume; //громкость активоного будильника
 } alarms;
 
 //переменные обработки кнопок
@@ -156,13 +156,13 @@ struct dotData {
   boolean update; //флаг обновления точек
   boolean drive; //направление яркости
   uint8_t count; //счетчик мигания точки
-#if DOTS_PORT_ENABLE
   uint8_t steps; //шаги точек
-#endif
   uint8_t maxBright; //максимальная яркость точек
   uint8_t menuBright; //максимальная яркость точек в меню
   uint8_t brightStep; //шаг мигания точек
   uint16_t brightTime; //период шага мигания точек
+  uint8_t brightTurnStep; //шаг мигания двойных точек
+  uint16_t brightTurnTime; //период шага мигания двойных точек
 } dot;
 
 //переменные работы с подсветкой
@@ -225,15 +225,15 @@ uint16_t buzz_time; //циклы полуволны для работы пища
 #define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
 
 #if BTN_TYPE
-#if BTN_PULL
-#define BTN_MIN_RANGE 0 //минимальный диапазон аналоговых кнопок
-#define BTN_MAX_RANGE 250 //максимальный диапазон аналоговых кнопок
-#define BTN_CHECK_ADC(low, high) (!(((255 - (high)) <= btn.adc) && (btn.adc < (255 - (low))))) //проверка аналоговой кнопки
-#else
 #define BTN_MIN_RANGE 5 //минимальный диапазон аналоговых кнопок
 #define BTN_MAX_RANGE 255 //максимальный диапазон аналоговых кнопок
+
+#if BTN_PULL
+#define BTN_CHECK_ADC(low, high) (!(((255 - (high)) <= btn.adc) && (btn.adc < (255 - (low))))) //проверка аналоговой кнопки
+#else
 #define BTN_CHECK_ADC(low, high) (!(((low) < btn.adc) && (btn.adc <= (high)))) //проверка аналоговой кнопки
 #endif
+
 #define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
 
 #define SET_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
@@ -383,7 +383,7 @@ enum {
   DOT_PULS, //плавно мигает
 #endif
 #if NEON_DOT == 2
-  DOT_TURN_BLINK_NEON, //мигание по очереди неоновых ламп
+  DOT_TURN_PULS, //мигание по очереди неоновых ламп
 #endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
@@ -6199,21 +6199,27 @@ void changeBright(void) //установка яркости от времени 
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
         case DOT_PULS: //плавное мигание
 #if NEON_DOT == 2
-        case DOT_TURN_BLINK_NEON:
+        case DOT_TURN_PULS:
 #endif
-          if (dot.maxBright) { //если яркость установлена
+          if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
+#if DOT_PULS_TIME || ((NEON_DOT == 2) && DOT_PULS_TURN_TIME)
+          else { //иначе пересчитываем шаги
+#if DOT_PULS_TIME
             dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
             dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
+#endif
+#if (NEON_DOT == 2) && DOT_PULS_TURN_TIME
+            dot.brightTurnStep = setBrightStep(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт шага яркости точки
+            dot.brightTurnTime = setBrightTime(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт шага яркости точки
+#endif
           }
-          else dotSetBright(0); //иначе выключаем точки
+#endif
           break;
 #endif
         default:
 #if NEON_DOT != 3
-          if (dot.maxBright) { //если яркость установлена
-            if (dotGetBright()) dotSetBright(dot.maxBright); //установка яркости точек
-          }
-          else dotSetBright(0); //иначе выключаем точки
+          if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
+          else if (dotGetBright()) dotSetBright(dot.maxBright); //установка яркости точек
 #endif
 #if DOTS_PORT_ENABLE
           if (!dot.maxBright) indiClrDots(); //очистка разделителных точек
@@ -6429,6 +6435,12 @@ void dotFlash(void) //мигание точек
       switch (dotGetMode()) { //режим точек
 #if NEON_DOT != 3
         case DOT_PULS:
+#if !DOT_PULS_TIME
+          if (!dot.drive) dotSetBright(dot.maxBright); //установка яркости точек
+          else dotSetBright(0); //иначе выключаем точки
+          dot.drive = !dot.drive; //сменили направление
+          dot.update = 1; //сбросили флаг обновления точек
+#else
           if (!dot.drive) {
             if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
           }
@@ -6440,23 +6452,32 @@ void dotFlash(void) //мигание точек
             }
           }
           _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
+#endif
           break;
 #endif
 #if NEON_DOT == 2
-        case DOT_TURN_BLINK_NEON:
+        case DOT_TURN_PULS:
+#if !DOT_PULS_TURN_TIME
+          neonDotSetBright(dot.maxBright); //установка яркости неоновых точек
+          if (!dot.drive) neonDotSet(DOT_LEFT); //установка неоновой точки
+          else neonDotSet(DOT_RIGHT); //установка неоновой точки
+          dot.drive = !dot.drive; //сменили направление
+          dot.update = 1; //сбросили флаг обновления точек
+#else
           switch (dot.count) {
-            case 0: if (dotIncBright(dot.brightStep, dot.maxBright, DOT_LEFT)) dot.count = 1; break; //сменили направление
-            case 1: if (dotDecBright(dot.brightStep, 0, DOT_LEFT)) dot.count = 2; break; //сменили направление
-            case 2: if (dotIncBright(dot.brightStep, dot.maxBright, DOT_RIGHT)) dot.count = 3; break; //сменили направление
+            case 0: if (dotIncBright(dot.brightTurnStep, dot.maxBright, DOT_LEFT)) dot.count = 1; break; //сменили направление
+            case 1: if (dotDecBright(dot.brightTurnStep, 0, DOT_LEFT)) dot.count = 2; break; //сменили направление
+            case 2: if (dotIncBright(dot.brightTurnStep, dot.maxBright, DOT_RIGHT)) dot.count = 3; break; //сменили направление
             default:
-              if (dotDecBright(dot.brightStep, 0, DOT_RIGHT)) {
+              if (dotDecBright(dot.brightTurnStep, 0, DOT_RIGHT)) {
                 dot.count = 0; //сменили направление
                 dot.update = 1; //сбросили флаг обновления точек
                 return; //выходим
               }
               break;
           }
-          _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
+          _timer_ms[TMR_DOT] = dot.brightTurnTime; //установили таймер
+#endif
           break;
 #endif
 #if DOTS_PORT_ENABLE
