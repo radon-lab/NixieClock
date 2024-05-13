@@ -47,7 +47,11 @@ enum {DOT_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //поряд
 const uint8_t digitMask[] = {ID(9), ID(8), ID(0), ID(5), ID(4), ID(7), ID(3), ID(6), ID(2), ID(1), ID(10)}; //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
 const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6}; //порядок катодов in14
 #else
+#if !INDI_PORT_TYPE
 enum {DOT_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+#else
+const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << DOT_1_PIN) : ANODE_OFF, (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+#endif
 const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
 const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
 #endif
@@ -121,11 +125,6 @@ uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряже
 
 uint8_t adc_light; //значение АЦП сенсора яркости освещения
 uint8_t state_light = 2; //состояние сенсора яркости освещения
-
-const uint8_t decoderMask[] = {DECODER_1, DECODER_2, DECODER_3, DECODER_4}; //порядок пинов дешифратора(0, 1, 2, 3)
-#if INDI_PORT_TYPE
-const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << DOT_1_PIN) : ANODE_OFF, (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
-#endif
 
 uint8_t indi_dot_l; //буфер левых точек индикаторов
 uint8_t indi_dot_r; //буфер правых точек индикаторов
