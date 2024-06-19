@@ -610,6 +610,7 @@ void busUpdate(void) {
             mainSettings.tempCorrect = twi_read_byte(TWI_ACK);
             mainSettings.glitchMode = twi_read_byte(TWI_ACK);
             mainSettings.autoShowTime = twi_read_byte(TWI_ACK);
+            if (!mainSettings.autoShowTime) mainSettings.autoShowTime = 0x81;
             mainSettings.autoShowFlip = twi_read_byte(TWI_ACK);
             mainSettings.burnMode = twi_read_byte(TWI_ACK);
             mainSettings.burnTime = twi_read_byte(TWI_NACK);
@@ -640,7 +641,7 @@ void busUpdate(void) {
               case MAIN_VOICE_SOUND: busWriteTwiRegByte(mainSettings.voiceSound, BUS_WRITE_MAIN_SET, 16); break; //отправляем дополнительные натройки
               case MAIN_TEMP_CORRECT: busWriteTwiRegByte(mainSettings.tempCorrect, BUS_WRITE_MAIN_SET, 17); break; //отправляем дополнительные натройки
               case MAIN_GLITCH_MODE: busWriteTwiRegByte(mainSettings.glitchMode, BUS_WRITE_MAIN_SET, 18); break; //отправляем дополнительные натройки
-              case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte(mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 19); busWriteBuffer(SET_SHOW_TIME); break; //отправляем дополнительные натройки
+              case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte((mainSettings.autoShowTime & 0x80) ? 0 : mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 19); busWriteBuffer(SET_SHOW_TIME); break; //отправляем дополнительные натройки
               case MAIN_AUTO_SHOW_FLIP: busWriteTwiRegByte(mainSettings.autoShowFlip, BUS_WRITE_MAIN_SET, 20); break; //отправляем дополнительные натройки
               case MAIN_BURN_MODE: busWriteTwiRegByte(mainSettings.burnMode, BUS_WRITE_MAIN_SET, 21); break; //отправляем дополнительные натройки
               case MAIN_BURN_TIME: busWriteTwiRegByte(mainSettings.burnTime, BUS_WRITE_MAIN_SET, 22); break; //отправляем дополнительные натройки

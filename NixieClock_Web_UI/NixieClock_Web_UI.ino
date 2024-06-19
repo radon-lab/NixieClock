@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 23.04.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 13.06.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -672,13 +672,11 @@ void build(void) {
     else if (ui.uri("/settings")) { //настройки
       GP_PAGE_TITLE("Настройки");
 
-      updateList += ",mainAutoShow,mainAutoShowTime";
-
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)mainSettings.autoShowTime, UI_SWITCH_COLOR););
+        M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
 
-        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("mainAutoShowTime", (mainSettings.autoShowTime) ? mainSettings.autoShowTime : 1, 1, 15, 1, 0, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
 
         M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
         GP.HR(UI_LINE_COLOR);
@@ -1244,11 +1242,18 @@ void action() {
       }
 
       if (ui.click("mainAutoShow")) {
-        mainSettings.autoShowTime = ui.getBool("mainAutoShow");
+        if (ui.getBool("mainAutoShow")) mainSettings.autoShowTime &= 0x7F;
+        else mainSettings.autoShowTime |= 0x80;
         busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
       }
-      if (ui.clickInt("mainAutoShowTime", mainSettings.autoShowTime)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
+      if (ui.click("mainAutoShowTime")) {
+        if (mainSettings.autoShowTime & 0x80) {
+          mainSettings.autoShowTime = ui.getInt("mainAutoShowTime") | 0x80;
+        }
+        else {
+          mainSettings.autoShowTime = ui.getInt("mainAutoShowTime");
+          busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
+        }
       }
       if (ui.clickInt("mainAutoShowFlip", mainSettings.autoShowFlip)) {
         busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_FLIP);
@@ -1714,12 +1719,6 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.updateSub("main")) {
-      if (ui.update("mainAutoShow")) { //если было обновление
-        ui.answer((boolean)mainSettings.autoShowTime);
-      }
-      if (ui.update("mainAutoShowTime")) { //если было обновление
-        ui.answer((mainSettings.autoShowTime) ? mainSettings.autoShowTime : 1);
-      }
       if (ui.update("mainTimerState")) { //если было обновление
         ui.answer(getTimerState());
         if (!timer.mode) busSetComand(READ_TIMER_STATE);
@@ -2327,9 +2326,7 @@ void loop() {
           if (!climateTimer) {
             climateTimer = 59;
             sens.status = 0;
-            if (deviceInformation[SENS_TEMP]) {
-              busSetComand(WRITE_CHECK_SENS);
-            }
+            if (deviceInformation[SENS_TEMP]) busSetComand(WRITE_CHECK_SENS);
             else sens.update |= SENS_EXT;
           }
           else climateTimer--;
@@ -2364,7 +2361,7 @@ void loop() {
             case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
             case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
             case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
-            case STATUS_UPDATE_SENS_DATA: busSetComand(READ_SENS_DATA); break;
+            case STATUS_UPDATE_SENS_DATA: if (deviceInformation[SENS_TEMP]) busSetComand(READ_SENS_DATA); break;
           }
         }
         deviceStatus >>= 1; //сместили буфер флагов
