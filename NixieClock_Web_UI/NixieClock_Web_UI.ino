@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 13.06.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 19.06.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -351,8 +351,8 @@ void build(void) {
     GP.UI_LINK("/settings", "Настройки");
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
-    GP.UI_LINK("/information", "Об устройстве");
     if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
+    GP.UI_LINK("/information", "Об устройстве");
     GP.UI_LINK("/network", "Сетевые настройки");
 
     //ссылки часов
@@ -853,6 +853,33 @@ void build(void) {
       GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9",
                       "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
+    else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
+      GP_PAGE_TITLE("Обновление");
+
+      GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
+      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.BREAK();
+      String formatText = "Поддерживаемые форматы файлов: ";
+      if (clockUpdate) formatText += "hex";
+      if (otaUpdate) {
+        if (clockUpdate) formatText += ", ";
+        formatText += "bin и bin.gz.";
+        GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
+        GP.BREAK();
+      }
+      else formatText += ".";
+      GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
+      GP.HR(UI_LINE_COLOR);
+      GP.LABEL("Загрузить", "", UI_HINT_COLOR);
+      if (clockUpdate) {
+        M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
+      }
+      if (otaUpdate) {
+        M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+        M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
+      }
+      GP.BLOCK_END();
+    }
     else if (ui.uri("/information")) { //информация о системе
       GP_PAGE_TITLE("Об устройстве");
 
@@ -917,33 +944,6 @@ void build(void) {
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
       GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix || (settings.multi[0][0] != '\0')) ? ",extDeviceName" : ""));
-    }
-    else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
-      GP_PAGE_TITLE("Обновление");
-
-      GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
-      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
-      GP.BREAK();
-      String formatText = "Поддерживаемые форматы файлов: ";
-      if (clockUpdate) formatText += "hex";
-      if (otaUpdate) {
-        if (clockUpdate) formatText += ", ";
-        formatText += "bin и bin.gz.";
-        GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
-        GP.BREAK();
-      }
-      else formatText += ".";
-      GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
-      GP.HR(UI_LINE_COLOR);
-      GP.LABEL("Загрузить", "", UI_HINT_COLOR);
-      if (clockUpdate) {
-        M_BOX(GP.LABEL("Прошивку часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
-      }
-      if (otaUpdate) {
-        M_BOX(GP.LABEL("Прошивку ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
-        M_BOX(GP.LABEL("Файловую систему ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
-      }
-      GP.BLOCK_END();
     }
     else { //подключение к роутеру
       GP_PAGE_TITLE("Сетевые настройки");
