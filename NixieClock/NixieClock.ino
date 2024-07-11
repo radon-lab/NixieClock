@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.1.9 релиз от 13.05.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 10.07.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -22,7 +22,7 @@ enum {
   TICK_OVF_ERROR,      //0012 - переполнение тиков времени
   INDI_ERROR           //0013 - сбой работы динамической индикации
 };
-void dataUpdate(void); //процедура обработки данных
+void systemTask(void); //процедура системной задачи
 void SET_ERROR(uint8_t err); //процедура установка ошибки
 
 //-----------------Таймеры------------------
@@ -44,6 +44,7 @@ enum {
   TMR_ALM,       //таймер тайм-аута будильника
   TMR_ALM_WAIT,  //таймер ожидания повторного включения будильника
   TMR_ALM_SOUND, //таймер отключения звука будильника
+  TMR_MEM,       //таймер обновления памяти
   TMR_SYNC,      //таймер синхронизации
   TMR_BURN,      //таймер антиотравления
   TMR_SHOW,      //таймер автопоказа
@@ -615,8 +616,9 @@ enum {
   BUS_COMMAND_TIMER_MODE
 };
 enum {
-  BUS_EXT_COMMAND_CHECK_TEMP,
+#if DS3231_ENABLE
   BUS_EXT_COMMAND_SEND_TIME,
+#endif
 #if RADIO_ENABLE
   BUS_EXT_COMMAND_RADIO_VOL,
   BUS_EXT_COMMAND_RADIO_FREQ,
@@ -643,7 +645,7 @@ enum {
   MEM_UPDATE_EXTENDED_SET,
   MEM_MAX_DATA
 };
-uint8_t memoryCheck;
+uint8_t memoryUpdate;
 
 //перечисления основных программ
 enum {
@@ -930,6 +932,9 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
+#if ESP_ENABLE
+  sens.init = 1; //установили флаг инициализации сенсора
+#endif
 #endif
 
   mainEnableWDT(); //основной запуск WDT
@@ -1156,7 +1161,7 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
 //-------------------Установить флаг обновления данных в памяти---------------------
 void setUpdateMemory(uint8_t mask) //установить флаг обновления данных в памяти
 {
-  memoryCheck |= mask; //установили флаг
+  memoryUpdate |= mask; //установили флаг
 #if ESP_ENABLE
   deviceStatus |= mask; //запоминаем статус
 #endif
@@ -1164,12 +1169,10 @@ void setUpdateMemory(uint8_t mask) //установить флаг обновл�
 //----------------------------Обновить данные в памяти------------------------------
 void updateMemory(void) //обновить данные в памяти
 {
-  static uint8_t tmrUpdate; //таймер следующего обновления
-  if (tmrUpdate) tmrUpdate--; //убавляем таймер
-  else if (memoryCheck) { //если нужно сохранить настройки
-    tmrUpdate = 3; //установили таймер
+  if (!_timer_sec[TMR_MEM] && memoryUpdate) { //если нужно сохранить настройки
+    _timer_sec[TMR_MEM] = 3; //установили таймер
     for (uint8_t i = 0; i < MEM_MAX_DATA; i++) { //проверяем все флаги
-      if (memoryCheck & 0x01) { //если флаг установлен
+      if (memoryUpdate & 0x01) { //если флаг установлен
         switch (i) { //выбираем действие
           case MEM_UPDATE_MAIN_SET: updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); break; //записываем основные настройки в память
           case MEM_UPDATE_FAST_SET: updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); break; //записываем быстрые настройки в память
@@ -1181,9 +1184,9 @@ void updateMemory(void) //обновить данные в памяти
 #endif
         }
       }
-      memoryCheck >>= 1; //сместили буфер флагов
+      memoryUpdate >>= 1; //сместили буфер флагов
     }
-    memoryCheck = 0; //сбрасываем флаги
+    memoryUpdate = 0; //сбрасываем флаги
   }
 }
 //-----------------Проверка установленного датчика температуры----------------------
@@ -1201,7 +1204,7 @@ void updateTemp(void) //обновить показания температур
   if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
     sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
 #if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-    switch (sens.type & 0x7F) { //выбор датчика температуры
+    switch (sens.type) { //выбор датчика температуры
 #if SENS_AHT_ENABLE
       case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
 #endif
@@ -1219,24 +1222,23 @@ void updateTemp(void) //обновить показания температур
 #endif
     }
 #endif
-    if (!sens.err) _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили таймаут
+#if ESP_ENABLE
+    if (!sens.err) _timer_ms[TMR_SENS] = TEMP_ESP_UPDATE_TIME; //установили таймаут ожидания опроса есп
+#else
+    if (!sens.err) _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили интервал следующего опроса
+#endif
 #if DS3231_ENABLE == 2
-    else if (readTempRTC() && !(sens.type & 0x7F)) sens.err = 0; //чтение температуры с датчика DS3231
+    else if (readTempRTC() && !sens.type) sens.err = 0; //чтение температуры с датчика DS3231
 #endif
 #if ESP_ENABLE
-    if (sens.type & 0x80) { //если был флаг чтения данных
+    if (sens.init && !(deviceStatus & (0x01 << STATUS_UPDATE_SENS_DATA))) deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
 #if !SHOW_TEMP_MODE
-      sens.type &= 0x7F; //сбросили флаг
-      _timer_ms[TMR_SENS] = TEMP_ESP_UPDATE_TIME; //установили таймаут
-    }
-    else { //иначе копируем данные
-      mainSens.temp = sens.temp;
-      mainSens.press = sens.press;
-      mainSens.hum = sens.hum;
-#else
-      sens.type &= 0x7F; //сбросили флаг
+      else { //иначе копируем внутренние данные
+        mainSens.temp = sens.temp; //устанавливаем температуру
+        mainSens.press = sens.press; //устанавливаем давление
+        mainSens.hum = sens.hum; //устанавливаем влажность
+      }
 #endif
-    }
 #endif
   }
 }
@@ -1684,7 +1686,7 @@ void test_system(void) //проверка системы
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[2]));
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
 #endif
-  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) dataUpdate(); //ждем
+  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
 #if PLAYER_TYPE
   playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
@@ -2465,7 +2467,7 @@ uint8_t alarmWarn(void) //тревога будильника
 //-------------------------------------Проверка статуса шины-------------------------------------------
 uint8_t busCheck(void) //проверка статуса шины
 {
-#if DS3231_ENABLE || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || RADIO_ENABLE
+#if RADIO_ENABLE || DS3231_ENABLE
   if (bus.statusExt) {
     uint8_t status = bus.statusExt;
     bus.statusExt = 0; //сбросили статус
@@ -2473,15 +2475,12 @@ uint8_t busCheck(void) //проверка статуса шины
       for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
-#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-            case BUS_EXT_COMMAND_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; sens.type |= 0x80; updateTemp(); deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); break; //обновить показания температуры
-#endif
 #if DS3231_ENABLE
             case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
 #endif
 #if RADIO_ENABLE
-            case BUS_EXT_COMMAND_RADIO_VOL: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
-            case BUS_EXT_COMMAND_RADIO_FREQ: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); if (mainTask == RADIO_PROGRAM) radioSearchStation(); break;
+            case BUS_EXT_COMMAND_RADIO_VOL: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
+            case BUS_EXT_COMMAND_RADIO_FREQ: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); if (mainTask == RADIO_PROGRAM) radioSearchStation(); break;
 #endif
           }
         }
@@ -2793,8 +2792,8 @@ uint8_t busUpdate(void) //обновление статуса шины
             bus.status |= (0x01 << BUS_COMMAND_TIME);
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
             break;
-          case BUS_WRITE_FAST_SET: memoryCheck |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
-          case BUS_WRITE_MAIN_SET: memoryCheck |= (0x01 << MEM_UPDATE_MAIN_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //основные настройки
+          case BUS_WRITE_FAST_SET: memoryUpdate |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
+          case BUS_WRITE_MAIN_SET: memoryUpdate |= (0x01 << MEM_UPDATE_MAIN_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //основные настройки
 #if ALARM_TYPE
           case BUS_WRITE_ALARM_DATA:
           case BUS_DEL_ALARM:
@@ -2811,7 +2810,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #endif
 #if RADIO_ENABLE
-          case BUS_WRITE_RADIO_STA: memoryCheck |= (0x01 << MEM_UPDATE_RADIO_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки радио
+          case BUS_WRITE_RADIO_STA: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки радио
           case BUS_WRITE_RADIO_VOL: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_VOL); break; //настройка громкости радио
           case BUS_WRITE_RADIO_FREQ: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_FREQ); break; //настройка частоты радио
           case BUS_WRITE_RADIO_MODE: bus.status |= BUS_COMMAND_RADIO_MODE; break; //переключение режима радио
@@ -2820,9 +2819,9 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SEEK_RADIO_DOWN: bus.status |= BUS_COMMAND_RADIO_SEEK_DOWN; break; //запуск автопоиска радио
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-          case BUS_CHECK_TEMP: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_CHECK_TEMP); break; //запрос температуры
+          case BUS_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; deviceStatus &= ~(0x01 << STATUS_UPDATE_SENS_DATA); break; //запрос температуры
 #endif
-          case BUS_WRITE_EXTENDED_SET: memoryCheck |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
+          case BUS_WRITE_EXTENDED_SET: memoryUpdate |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
           case BUS_SET_SHOW_TIME: _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); break; //установка таймера показа температуры
           case BUS_SET_BURN_TIME: _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); break; //установка таймера антиотравления
           case BUS_SET_UPDATE: bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //установка флага обновления
@@ -2887,14 +2886,15 @@ uint8_t busUpdate(void) //обновление статуса шины
   }
   return 0; //возвращаем статус ожидания шины
 }
-//----------------------------------Обработка данных------------------------------------------------
-void dataUpdate(void) //обработка данных
+//----------------------------------Системная задача------------------------------------------------
+void systemTask(void) //системная задача
 {
   static uint16_t timeClock; //счетчик реального времени
   static uint16_t timerCorrect; //остаток для коррекции времени
 #if DS3231_ENABLE || SQW_PORT_ENABLE
   static uint16_t timerSQW = SQW_MIN_TIME; //таймер контроля сигнала SQW
 #endif
+
 #if BACKL_TYPE == 3
   backlEffect(); //анимация подсветки
   showLeds(); //отрисовка светодиодов
@@ -2983,7 +2983,6 @@ void dataUpdate(void) //обработка данных
 #if DS3231_ENABLE || SQW_PORT_ENABLE
     }
 #endif
-    RESET_WDT; //сбрасываем таймер WDT
   }
 
   if (tick_sec) { //если был тик, обрабатываем данные
@@ -3069,8 +3068,18 @@ void dataUpdate(void) //обработка данных
       _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
     }
 #endif
-    updateMemory(); //обновить данные в памяти
   }
+}
+//----------------------------------Обработка данных------------------------------------------------
+void dataUpdate(void) //обработка данных
+{
+  systemTask(); //системная задача
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+  updateTemp(); //обновить показания температуры
+#endif
+  updateMemory(); //обновить данные в памяти
+
+  RESET_WDT; //сбрасываем таймер WDT
 }
 //----------------------------Настройки времени----------------------------------
 uint8_t settings_time(void) //настройки времени
@@ -3838,7 +3847,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           if (cur_alarm) { //если есть будильники в памяти
             delAlarm(cur_alarm); //удалить текущий будильник
             dotSetBright(dot.menuBright); //включаем точки
-            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+            for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) systemTask(); //обработка данных
             dotSetBright(0); //выключаем точки
             if (cur_alarm > (alarms.num > 0)) cur_alarm--; //убавляем номер текущего будильника
             else cur_alarm = (alarms.num > 0);
@@ -3891,7 +3900,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
         if (!cur_mode) {
           newAlarm(); //создать новый будильник
           dotSetBright(dot.menuBright); //включаем точки
-          for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) dataUpdate(); //обработка данных
+          for (_timer_ms[TMR_MS] = 500; _timer_ms[TMR_MS];) systemTask(); //обработка данных
           dotSetBright(0); //выключаем точки
           cur_alarm = alarms.num;
           alarmReadBlock(cur_alarm, alarm); //читаем блок данных
@@ -4106,7 +4115,6 @@ uint8_t settings_main(void) //настроки основные
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
 #else
-                updateTemp(); //обновить показания температуры
                 if (!blink_data) {
                   if (sens.err) indiPrintNum(0, 0); //вывод ошибки
                   else indiPrintNum(getTemperature(), 1, 2, 0); //вывод температуры
@@ -4602,10 +4610,6 @@ uint8_t showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
 
-#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-  updateTemp(); //обновить показания температуры
-#endif
-
   uint16_t temperature = getTemperature(); //буфер температуры
   uint16_t pressure = getPressure(); //буфер давления
   uint8_t humidity = getHumidity(); //буфер влажности
@@ -4877,9 +4881,6 @@ void autoShowMenu(void) //меню автоматического показа
   uint8_t show_mode = 0; //текущий режим
 
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-  updateTemp(); //обновить показания температуры
-#endif
   uint16_t temperature = 0; //буфер температуры
   uint16_t pressure = 0; //буфер давления
   uint8_t humidity = 0; //буфер влажности
@@ -6130,9 +6131,6 @@ void hourSound(void) //звук смены часа
       if (temp & 0x02) speakTime(temp & 0x01); //воспроизвести время
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
-#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-        updateTemp(); //обновить показания температуры
-#endif
         if (getTemperature() <= 990) speakTemp(1); //воспроизвести целую температуру
       }
 #endif
@@ -6730,7 +6728,7 @@ void glitchIndi(void) //имитация глюков
       uint8_t glitchIndic = random(0, LAMP_NUM); //номер индикатора
       _timer_ms[TMR_ANIM] = 0; //сбрасываем таймер
       while (!buttonState()) { //если не нажата кнопка
-        dataUpdate(); //обработка данных
+        systemTask(); //обработка данных
 #if LAMP_NUM > 4
         flipSecs(); //анимация секунд
 #endif

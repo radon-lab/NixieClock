@@ -26,7 +26,7 @@ void readTempAHT(void) //чтение температуры/влажности
 
       _timer_ms[TMR_SENS] = AHT10_CALIBRATE_TIME; //установили таймер
       while (1) { //ждем окончания калибровки
-        dataUpdate(); //обработка данных
+        systemTask(); //обработка данных
         if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
         if ((wireReadEndByte() & 0x88) == 0x08) break;
         if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
@@ -44,7 +44,7 @@ void readTempAHT(void) //чтение температуры/влажности
 
   _timer_ms[TMR_SENS] = AHT10_MEASURE_TIME; //установили таймер
   while (1) { //ждем окончания калибровки
-    dataUpdate(); //обработка данных
+    systemTask(); //обработка данных
     if (wireBeginTransmission(AHT10_ADDR, 1)) return; //запрашиваем чтение данных
     if (!(wireReadEndByte() & 0x80)) break;
     if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут

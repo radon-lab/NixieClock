@@ -116,7 +116,7 @@ void readTempDS(void)
   }
 
   if (requestTemp()) return; //запрашиваем температуру, если нет ответа выходим
-  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем окончания преобразования
+  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) systemTask(); //ждем окончания преобразования
   if (readTemp()) return; //чтаем температуру, если нет ответа выходим
 
   int16_t raw = oneWireRead() | ((uint16_t)oneWireRead() << 8); //читаем сырое значение

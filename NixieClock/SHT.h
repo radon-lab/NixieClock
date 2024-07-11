@@ -61,7 +61,7 @@ void readTempSHT(void) //чтение температуры/влажности
 
         _timer_ms[TMR_SENS] = SHT20_TEMP_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
         uint16_t temp_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
@@ -74,7 +74,7 @@ void readTempSHT(void) //чтение температуры/влажности
 
         _timer_ms[TMR_SENS] = SHT20_HUM_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
         uint16_t hum_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
@@ -92,7 +92,7 @@ void readTempSHT(void) //чтение температуры/влажности
 
         _timer_ms[TMR_SENS] = SHT30_MEAS_TIME; //установили таймер
         while (wireBeginTransmission(SHT30_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
         uint16_t temp_raw = ((uint16_t)wireRead() << 8) | wireRead();

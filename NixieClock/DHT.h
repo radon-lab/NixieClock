@@ -7,7 +7,7 @@
 boolean wireReset(uint8_t time)
 {
   SENS_LO;
-  for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
+  for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) systemTask(); //ждем
   SENS_HI;
   _delay_us(2);
   for (uint8_t c = DHT_RESET_WAIT_TIME; c; c--) {

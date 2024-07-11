@@ -158,7 +158,7 @@ void readTempBME(void) //чтение температуры/давления/в
 
         writeREG(BMP180_ADDR, BMP180_CONTROL_REG, BMP180_READ_TEMP); //запустили замер температуры
         while (1) { //ожидаем окончания замера
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (wireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
           if (!(wireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
@@ -171,7 +171,7 @@ void readTempBME(void) //чтение температуры/давления/в
 
         writeREG(BMP180_ADDR, BMP180_CONTROL_REG, BMP180_READ_PRESS | (BMP180_OVERSAMP << 6)); //запустили замер давления
         while (1) { //ожидаем окончания замера
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (wireRequestFrom(BMP180_ADDR, BMP180_CONTROL_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
           if (!(wireReadEndByte() & 0x20)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
@@ -213,7 +213,7 @@ void readTempBME(void) //чтение температуры/давления/в
 
         writeREG(BME280_ADDR, BME280_CONTROL_MEAS_REG, ((BME280_TEMP_OVERSAMP << 5) | (BME280_PRESS_OVERSAMP << 2) | BME280_MODE)); //устанавливаем разрешение датчика температуры и датчика давления, устанавливаем режим работы
         while (1) { //ожидаем окончания замера
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (wireRequestFrom(BME280_ADDR, BME280_STATUS_REG)) return; //запрашиваем чтение данных, если нет ответа выходим
           if (!(wireReadEndByte() & 0x08)) break; //если замер завершён продолжаем
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
