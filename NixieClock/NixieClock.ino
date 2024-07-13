@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 10.07.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 13.07.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -930,7 +930,7 @@ void INIT_SYSTEM(void) //инициализация
 #if DS3231_ENABLE || SQW_PORT_ENABLE
   checkRTC(); //проверка модуля часов
 #endif
-#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
 #if ESP_ENABLE
   sens.init = 1; //установили флаг инициализации сенсора
@@ -962,7 +962,9 @@ void INIT_SYSTEM(void) //инициализация
   playerSetVolNow(mainSettings.volumeSound); //установили громкость
 #endif
 
+#if ALARM_TYPE
   alarmInit(); //инициализация будильника
+#endif
 
   randomSeed(RTC.s * (RTC.m + RTC.h) + RTC.DD * RTC.MM); //радомный сид для глюков
   setAnimTimers(); //установка таймеров анимаций
@@ -1192,54 +1194,66 @@ void updateMemory(void) //обновить данные в памяти
 //-----------------Проверка установленного датчика температуры----------------------
 void checkTempSens(void) //проверка установленного датчика температуры
 {
+#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   for (sens.type = (SENS_ALL - 1); sens.type; sens.type--) { //перебираем все датчики температуры
-    updateTemp(); //обновить показания температуры
+    readTempSens(); //чтение установленного датчика температуры
     if (!sens.err) return; //если найден датчик температуры
   }
   SET_ERROR(TEMP_SENS_ERROR); //иначе выдаем ошибку
+#endif
+  readTempSens(); //чтение установленного датчика температуры
+}
+//------------------Чтение установленного датчика температуры-----------------------
+void readTempSens(void) //чтение установленного датчика температуры
+{
+  sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
+
+#if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+  switch (sens.type) { //выбор датчика температуры
+#if SENS_AHT_ENABLE
+    case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
+#endif
+#if SENS_SHT_ENABLE
+    case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
+#endif
+#if SENS_BME_ENABLE
+    case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
+#endif
+#if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
+    case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
+#endif
+#if (SENS_PORT_ENABLE == 2) || (SENS_PORT_ENABLE == 3)
+    case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
+#endif
+  }
+#endif
+
+#if DS3231_ENABLE == 2
+  if (sens.err) { //если основной датчик не отвечает
+    if (readTempRTC() && !sens.type) sens.err = 0; //чтение температуры с датчика DS3231
+  }
+#endif
+
+#if ESP_ENABLE
+  if (sens.init && !(deviceStatus & (0x01 << STATUS_UPDATE_SENS_DATA))) deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
+  else { //иначе копируем внутренние данные
+    mainSens.temp = sens.temp; //устанавливаем температуру
+    mainSens.press = sens.press; //устанавливаем давление
+    mainSens.hum = sens.hum; //устанавливаем влажность
+  }
+#endif
+
+#if ESP_ENABLE
+  _timer_ms[TMR_SENS] = TEMP_ESP_UPDATE_TIME; //установили таймаут ожидания опроса есп
+#else
+  _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили интервал следующего опроса
+#endif
 }
 //-------------------------Обновить показания температуры---------------------------
 void updateTemp(void) //обновить показания температуры
 {
-  if (!_timer_ms[TMR_SENS]) { //если таймаут нового запроса вышел
-    sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
-#if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-    switch (sens.type) { //выбор датчика температуры
-#if SENS_AHT_ENABLE
-      case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
-#endif
-#if SENS_SHT_ENABLE
-      case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
-#endif
-#if SENS_BME_ENABLE
-      case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
-#endif
-#if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
-      case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
-#endif
-#if (SENS_PORT_ENABLE == 2) || (SENS_PORT_ENABLE == 3)
-      case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
-#endif
-    }
-#endif
-#if ESP_ENABLE
-    if (!sens.err) _timer_ms[TMR_SENS] = TEMP_ESP_UPDATE_TIME; //установили таймаут ожидания опроса есп
-#else
-    if (!sens.err) _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили интервал следующего опроса
-#endif
-#if DS3231_ENABLE == 2
-    else if (readTempRTC() && !sens.type) sens.err = 0; //чтение температуры с датчика DS3231
-#endif
-#if ESP_ENABLE
-    if (sens.init && !(deviceStatus & (0x01 << STATUS_UPDATE_SENS_DATA))) deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
-#if !SHOW_TEMP_MODE
-      else { //иначе копируем внутренние данные
-        mainSens.temp = sens.temp; //устанавливаем температуру
-        mainSens.press = sens.press; //устанавливаем давление
-        mainSens.hum = sens.hum; //устанавливаем влажность
-      }
-#endif
-#endif
+  if (!_timer_ms[TMR_SENS]) { //если пришло время нового запроса температуры
+    readTempSens(); //чтение установленного датчика температуры
   }
 }
 //------------------------Получить показания температуры---------------------------
@@ -6425,7 +6439,7 @@ void dotFlash(void) //мигание точек
 {
   if (mainTask == MAIN_PROGRAM) { //если основная программа
     if (!dot.update && !_timer_ms[TMR_DOT]) { //если пришло время
-      if (!dot.maxBright && (animShow < ANIM_MAIN)) { //если яркость не выключена и не запущена сторонняя анимация
+      if (!dot.maxBright || (animShow >= ANIM_MAIN)) { //если яркость выключена или запущена сторонняя анимация
         dot.update = 1; //сбросили флаг секунд
         return; //выходим
       }
