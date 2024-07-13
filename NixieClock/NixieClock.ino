@@ -705,6 +705,7 @@ int main(void) //главный цикл программ
     changeBrightEnable(); //разрешить смену яркости
     changeBright(); //установка яркости от времени суток
     indi.update = 0; //обновление экрана
+    
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
@@ -754,6 +755,7 @@ int main(void) //главный цикл программ
 #endif
     }
   }
+  
   return INIT_PROGRAM;
 }
 //--------------------------------------Инициализация---------------------------------------------------
