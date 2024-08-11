@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.9 релиз от 19.06.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 11.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -9,10 +9,10 @@
   Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
-  В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить последние версии библиотек:
-  GyverPortal
-  GyverNTP
-  EEManager
+  В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить указанные версии библиотек:
+  GyverPortal 3.6.6
+  GyverNTP 1.3.1
+  EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
   1МБ - FS:64KB OTA:~470KB(только обновление esp по OTA).
@@ -328,11 +328,13 @@ void build(void) {
 
     //кастомные стили
     GP.SEND("<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
+            ".onlBlock{z-index:3;}\n" //фикс плашки офлайн
             "select{width:200px;}\n" //фикс выпадающего списка
             "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
             ".display{border-radius:5px;}\n" //фикс лейбл блоков
             ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
+            ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы

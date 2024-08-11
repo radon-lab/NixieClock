@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 15.07.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 11.08.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -3110,6 +3110,8 @@ void systemTask(void) //системная задача
       _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
     }
 #endif
+
+    RESET_WDT; //сбрасываем таймер WDT
   }
 }
 //----------------------------------Обработка данных------------------------------------------------
@@ -3120,8 +3122,6 @@ void dataUpdate(void) //обработка данных
   updateTemp(); //обновить показания температуры
 #endif
   updateMemory(); //обновить данные в памяти
-
-  RESET_WDT; //сбрасываем таймер WDT
 }
 //----------------------------Настройки времени----------------------------------
 uint8_t settings_time(void) //настройки времени
@@ -6750,16 +6750,9 @@ void dotReset(uint8_t state) //сброс анимации точек
 void secsReset(void) //сброс анимации секунд
 {
 #if LAMP_NUM > 4
-  static uint8_t mode; //предыдущий режим анимации секунд
-
-  if ((changeAnimState != ANIM_RESET_CHANGE) || (mode != fastSettings.secsMode)) { //если нужно сбросить анимацию точек
-    anim.flipSeconds = 0; //сбрасываем флаг анимации секунд
-  }
-  if (!anim.flipSeconds) indi.update = 0; //устанавливаем флаг обновления индикаторов
-  mode = fastSettings.secsMode; //запоминаем анимацию секунд
-#else
-  indi.update = 0; //устанавливаем флаг обновления индикаторов
+  anim.flipSeconds = 0; //сбрасываем флаг анимации секунд
 #endif
+  indi.update = 0; //устанавливаем флаг обновления индикаторов
 }
 //----------------------------Режим сна индикаторов---------------------------------
 uint8_t sleepIndi(void) //режим сна индикаторов
@@ -7376,8 +7369,7 @@ uint8_t mainScreen(void) //главный экран
       case LEFT_KEY_PRESS: //клик левой кнопкой
         changeFastSetBackl(); //сменить режим анимации подсветки быстрых настроек
         setUpdateMemory(0x01 << MEM_UPDATE_FAST_SET); //записываем настройки в память
-        changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
-        return MAIN_PROGRAM; //перезапуск основной программы
+        break;
 #endif
 
 #if ALARM_TYPE
@@ -7388,8 +7380,8 @@ uint8_t mainScreen(void) //главный экран
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         changeFastSetDot(); //сменить режим анимации точек быстрых настроек
         setUpdateMemory(0x01 << MEM_UPDATE_FAST_SET); //записываем настройки в память
-        changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
-        return MAIN_PROGRAM; //перезапуск основной программы
+        dotReset(ANIM_RESET_CHANGE); //установили тип сброса анимации
+        break;
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
         return CLOCK_SET_PROGRAM; //иначе настройки времени
