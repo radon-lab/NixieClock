@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 11.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 12.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -724,8 +724,8 @@ void build(void) {
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.HR(UI_LINE_COLOR);
         GP.LABEL("Яркость", "", UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
