@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 12.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 13.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -240,11 +240,49 @@ void GP_HR(PGM_P st, const String& width = "100%") {
   data += F("'>\n");
   GP.SEND(data);
 }
+void GP_FIX_SCRIPTS(void) {
+  GP.SEND(F(
+            "<script>function GP_send(req,r=null,upd=null){\n"
+            "var xhttp=new XMLHttpRequest();\n"
+            "xhttp.open(upd?'GET':'POST',req,true);\n"
+            "xhttp.send();\n"
+            "xhttp.timeout=_tout;\n"
+            "xhttp.onreadystatechange=function(){\n"
+            "onlShow(!this.status);\n"
+            "if(this.status||upd){\n"
+            "if(this.readyState==4&&this.status==200){\n"
+            "if(r){\n"
+            "if(r == 1)location.reload();\n"
+            "else location.href=r;}\n"
+            "if(upd)GP_apply(upd,this.responseText);}}}}</script>\n"
+          )
+         );
+}
+void GP_FIX_STYLES(void) {
+  GP.SEND(F(
+            "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
+            ".onlBlock{z-index:3;}\n" //фикс плашки офлайн
+            "select{width:200px;}\n" //фикс выпадающего списка
+            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
+            ".display{border-radius:5px;}\n" //фикс лейбл блоков
+            ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
+            ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
+            ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
+            "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
+            "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
+            "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
+            "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
+          )
+         );
+}
 
 void build(void) {
   static boolean listInit = false;
 
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
+  GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
+  GP_FIX_STYLES(); //фикс стилей страницы
+
   GP.ONLINE_CHECK(5000); //проверять статус платы
 
   if (updaterState()) {
@@ -325,20 +363,6 @@ void build(void) {
         updateList += ",barPress";
       }
     }
-
-    //кастомные стили
-    GP.SEND("<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
-            ".onlBlock{z-index:3;}\n" //фикс плашки офлайн
-            "select{width:200px;}\n" //фикс выпадающего списка
-            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
-            ".display{border-radius:5px;}\n" //фикс лейбл блоков
-            ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
-            ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
-            ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
-            "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
-            "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
-            "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
-            "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n"); //отключить таблицу при ширине экрана меньше 1050px
 
     //начать меню
     GP.UI_MENU("Nixie clock", UI_MENU_COLOR);
