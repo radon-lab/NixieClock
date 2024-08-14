@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 13.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.0 релиз от 14.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -240,19 +240,25 @@ void GP_HR(PGM_P st, const String& width = "100%") {
   data += F("'>\n");
   GP.SEND(data);
 }
+void GP_BUILD_END() {
+  GP.SEND(F("</div>\n<div id='onlBlock' class='onlBlock'>Нет соединения</div>\n"));
+  GP.JS_BOTTOM();
+  GP.PAGE_END();
+}
 void GP_FIX_SCRIPTS(void) {
   GP.SEND(F(
-            "<script>function GP_send(req,r=null,upd=null){\n"
+            "<script>var _err=0;\n"
+            "function GP_send(req,r=null,upd=null){\n"
             "var xhttp=new XMLHttpRequest();\n"
             "xhttp.open(upd?'GET':'POST',req,true);\n"
             "xhttp.send();\n"
             "xhttp.timeout=_tout;\n"
             "xhttp.onreadystatechange=function(){\n"
-            "onlShow(!this.status);\n"
+            "if(this.status||(++_err>=3)){onlShow(!this.status);_err=0;}\n"
             "if(this.status||upd){\n"
             "if(this.readyState==4&&this.status==200){\n"
             "if(r){\n"
-            "if(r == 1)location.reload();\n"
+            "if(r==1)location.reload();\n"
             "else location.href=r;}\n"
             "if(upd)GP_apply(upd,this.responseText);}}}}</script>\n"
           )
@@ -261,7 +267,7 @@ void GP_FIX_SCRIPTS(void) {
 void GP_FIX_STYLES(void) {
   GP.SEND(F(
             "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
-            ".onlBlock{z-index:3;}\n" //фикс плашки офлайн
+            ".onlBlock{z-index:3;background:#810000bf;width:15px;height:180px;border-radius:25px 0 0 25px;writing-mode:vertical-lr;text-align:center;}\n" //фикс плашки офлайн
             "select{width:200px;}\n" //фикс выпадающего списка
             "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
             ".display{border-radius:5px;}\n" //фикс лейбл блоков
@@ -282,8 +288,6 @@ void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
   GP_FIX_STYLES(); //фикс стилей страницы
-
-  GP.ONLINE_CHECK(5000); //проверять статус платы
 
   if (updaterState()) {
     GP_PAGE_TITLE("Обновление прошивки часов");
@@ -1045,7 +1049,7 @@ void build(void) {
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
   }
-  GP.BUILD_END();
+  GP_BUILD_END();
 }
 
 void buildUpdater(bool UpdateEnd, const String& UpdateError) {
@@ -1054,7 +1058,7 @@ void buildUpdater(bool UpdateEnd, const String& UpdateError) {
 
   GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
   if (!UpdateEnd) {
-    GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описани
+    GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.HR(UI_LINE_COLOR);
     M_BOX(GP_CENTER, GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
   }
@@ -1072,7 +1076,7 @@ void buildUpdater(bool UpdateEnd, const String& UpdateError) {
   }
   GP.BLOCK_END();
 
-  GP.BUILD_END();
+  GP_BUILD_END();
 }
 
 void action() {
