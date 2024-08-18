@@ -51,15 +51,14 @@
 #define UI_MENU_COLOR "#e67b09" //цвет меню веб интерфейса
 #define UI_MENU_NAME_COLOR GP_GRAY //цвет имени устройства в меню веб интерфейса
 #define UI_MENU_LINE_COLOR GP_GRAY //цвет горизонтальных линий меню веб интерфейса
-#define UI_MENU_FW_COLOR "#e67b09" //цвет блока версии прошивки меню веб интерфейса
-#define UI_MENU_NTP_1_COLOR GP_GREEN //цвет блока меню ntp "Синхронизирован" веб интерфейса
-#define UI_MENU_NTP_2_COLOR GP_YELLOW //цвет блока меню ntp "Подключен" веб интерфейса
-#define UI_MENU_NTP_3_COLOR GP_RED //цвет блока меню ntp "Отключен" веб интерфейса
-#define UI_MENU_RTC_1_COLOR GP_GREEN //цвет блока меню rtc "Синхронизирован" веб интерфейса
-#define UI_MENU_RTC_2_COLOR GP_YELLOW //цвет блока меню rtc "Батарея разряжена" веб интерфейса
-#define UI_MENU_RTC_3_COLOR GP_RED //цвет блока меню rtc "Отключен" веб интерфейса
-#define UI_MENU_CLOCK_1_COLOR GP_GREEN //цвет блока меню часы "Подключены" веб интерфейса
-#define UI_MENU_CLOCK_2_COLOR GP_RED //цвет блока меню часы "Отключены" веб интерфейса
+#define UI_MENU_TEXT_COLOR "#aaa" //цвет текста блоков меню веб интерфейса
+#define UI_MENU_WIFI_COLOR "#e67b09" //цвет блока меню уровень сигнала wifi веб интерфейса
+#define UI_MENU_NTP_1_COLOR GP_RED //цвет блока меню ntp "Отключен" веб интерфейса
+#define UI_MENU_NTP_2_COLOR GP_GREEN //цвет блока меню ntp "Синхронизирован" веб интерфейса
+#define UI_MENU_RTC_1_COLOR GP_YELLOW //цвет блока меню rtc "Батарея разряжена" веб интерфейса
+#define UI_MENU_RTC_2_COLOR GP_GREEN //цвет блока меню rtc "Синхронизирован" веб интерфейса
+#define UI_MENU_CLOCK_1_COLOR GP_RED //цвет блока меню часы "Отключены" веб интерфейса
+#define UI_MENU_CLOCK_2_COLOR GP_GREEN //цвет блока меню часы "Подключены" веб интерфейса
 
 #define UI_ALARM_ADD_COLOR "#e67b09" //цвет кнопки нового будильника
 #define UI_ALARM_DIS_COLOR GP_YELLOW //цвет кнопки отключить будильник
