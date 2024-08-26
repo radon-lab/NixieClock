@@ -96,4 +96,4 @@
 #define MAX_CLOCK 4 //максимум часов в групповом управлении(2..5)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.0" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.1" //версия прошивки модуля esp

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.0 релиз от 11.08.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.1 релиз от 25.08.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -3106,8 +3106,8 @@ void systemTask(void) //системная задача
 #endif
 #if MOV_PORT_ENABLE
     if (indi.sleepMode && MOV_CHK) {
+      sleepReset(); //установли время ожидания режима сна
       if (mainTask == SLEEP_PROGRAM) indi.sleepMode = SLEEP_DISABLE; //отключаем сон если в режиме сна
-      _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
     }
 #endif
 
@@ -5151,6 +5151,24 @@ void changeFastSetDot(void) //сменить режим анимации точ�
 //-------------------------Сменить режим анимации подсветки быстрых настроек----------------------------
 void changeFastSetBackl(void) //сменить режим анимации подсветки быстрых настроек
 {
+#if BTN_EASY_MAIN_MODE && (BACKL_TYPE == 3)
+  switch (fastSettings.backlMode) {
+    case BACKL_STATIC:
+    case BACKL_PULS:
+    case BACKL_RUNNING_FIRE:
+    case BACKL_WAVE:
+      if (fastSettings.backlColor < 253) {
+        fastSettings.backlColor -= fastSettings.backlColor % 50;
+        if (fastSettings.backlColor < 200) fastSettings.backlColor += 50;
+        else fastSettings.backlColor = 253;
+      }
+      else fastSettings.backlColor++;
+      if (fastSettings.backlColor) return;
+      else setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+      break;
+  }
+#endif
+
   if (++fastSettings.backlMode >= BACKL_EFFECT_NUM) fastSettings.backlMode = 0; //переключили режим подсветки
   switch (fastSettings.backlMode) {
 #if BACKL_TYPE == 3
@@ -5186,7 +5204,9 @@ void changeFastSetBackl(void) //сменить режим анимации по�
 //-------------------------Сменить цвет режима анимации подсвеетки быстрых настроек----------------------------
 void changeFastSetColor(void) //сменить цвет режима анимации подсвеетки быстрых настроек
 {
-  if (fastSettings.backlColor < 250) fastSettings.backlColor += 10; else if (fastSettings.backlColor == 250) fastSettings.backlColor = 253; else fastSettings.backlColor++;
+  if (fastSettings.backlColor < 250) fastSettings.backlColor += 10;
+  else if (fastSettings.backlColor == 250) fastSettings.backlColor = 253;
+  else fastSettings.backlColor++;
   setLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
 }
 //-------------------------------Получить значение быстрых настроек---------------------------------
@@ -6754,6 +6774,12 @@ void secsReset(void) //сброс анимации секунд
 #endif
   indi.update = 0; //устанавливаем флаг обновления индикаторов
 }
+//------------------------------Сброс режима сна------------------------------------
+void sleepReset(void) //сброс режима сна
+{
+  _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - SLEEP_NIGHT]; //установли время ожидания режима сна
+  if (indi.sleepMode == SLEEP_DAY) _timer_sec[TMR_SLEEP] *= 60; //если режим сна день
+}
 //----------------------------Режим сна индикаторов---------------------------------
 uint8_t sleepIndi(void) //режим сна индикаторов
 {
@@ -7283,8 +7309,8 @@ uint8_t mainScreen(void) //главный экран
   else if (animShow >= ANIM_OTHER) animIndi(animShow - ANIM_OTHER, FLIP_TIME); //анимация цифр
 
   if (indi.sleepMode) { //если активен режим сна
-    if (!changeAnimState) _timer_sec[TMR_SLEEP] = mainSettings.timeSleep[indi.sleepMode - 1]; //установли время ожидания режима пробуждения
-    else if (_timer_sec[TMR_SLEEP] < RESET_TIME_SLEEP) _timer_sec[TMR_SLEEP] = RESET_TIME_SLEEP; //установли минимальное время ожидания режима пробуждения
+    if (!changeAnimState) sleepReset(); //установли время ожидания режима сна
+    else if (_timer_sec[TMR_SLEEP] < RESET_TIME_SLEEP) _timer_sec[TMR_SLEEP] = RESET_TIME_SLEEP; //установли минимальное время ожидания режима сна
   }
 
   if (_timer_sec[TMR_GLITCH] < RESET_TIME_GLITCH) _timer_sec[TMR_GLITCH] = RESET_TIME_GLITCH; //если время вышло то устанавливаем минимальное время
@@ -7367,6 +7393,7 @@ uint8_t mainScreen(void) //главный экран
 #if BTN_EASY_MAIN_MODE //упрощенный режим
 #if BACKL_TYPE
       case LEFT_KEY_PRESS: //клик левой кнопкой
+        if (indi.sleepMode) sleepReset(); //сброс режима сна
         changeFastSetBackl(); //сменить режим анимации подсветки быстрых настроек
         setUpdateMemory(0x01 << MEM_UPDATE_FAST_SET); //записываем настройки в память
         break;
@@ -7378,6 +7405,7 @@ uint8_t mainScreen(void) //главный экран
 #endif
 
       case RIGHT_KEY_PRESS: //клик правой кнопкой
+        if (indi.sleepMode) sleepReset(); //сброс режима сна
         changeFastSetDot(); //сменить режим анимации точек быстрых настроек
         setUpdateMemory(0x01 << MEM_UPDATE_FAST_SET); //записываем настройки в память
         dotReset(ANIM_RESET_CHANGE); //установили тип сброса анимации

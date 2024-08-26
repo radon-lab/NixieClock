@@ -435,17 +435,22 @@ void busUpdate(void) {
     if (busStatusBuffer()) { //если есть новая команда
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
-            int32_t unixDiff = ntp.unix() - GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, mainTime.second, settings.ntpGMT);
-            if (syncState == 1) unixDiff -= 3600;
-            if (unixDiff < 0) unixDiff = -unixDiff;
-            if (ntp.synced() && (!syncState || (timeState != 0x03) || (unixDiff < 60))) {
-              mainTime.second = ntp.second();
-              mainTime.minute = ntp.minute();
-              mainTime.hour = ntp.hour();
-              mainDate.day = ntp.day();
-              mainDate.month = ntp.month();
-              mainDate.year = ntp.year();
-              uint8_t dayWeek = ntp.dayWeek();
+            if ((timeState != 0x03) || ntpCheckTime(GPunix(mainDate, mainTime, settings.ntpGMT), syncState)) {
+
+              time_t unix = ntpGetUnix() + (settings.ntpGMT * 3600UL);
+              secondsTimer = millis() - ntpGetMillis();
+              
+              tm time; //буфер времени
+              gmtime_r(&unix, &time);
+              
+              mainTime.second = time.tm_sec;
+              mainTime.minute = time.tm_min;
+              mainTime.hour = time.tm_hour;
+              uint8_t dayWeek = time.tm_wday;
+              if (!dayWeek) dayWeek = 7;
+              mainDate.day = time.tm_mday;
+              mainDate.month = time.tm_mon + 1;
+              mainDate.year = time.tm_year + 1900;
 
               if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) { //если учет летнего времени включен
                 syncState = 1; //летнее время
@@ -485,7 +490,6 @@ void busUpdate(void) {
               }
             }
             else {
-              statusNtp = NTP_DESYNCED;
               busShiftBuffer(); //сместили буфер команд
             }
           }
