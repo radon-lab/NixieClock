@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 25.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 26.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -138,8 +138,44 @@ String showModeList = "Дата,Год,Дата и год,Температура
 void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
+void GP_SPINNER_MAIN(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
+  GP.SEND(F("<div id='spinner' class='spinner'>\n"));
+  GP.SPIN_BTN(name, -step, st, dec, dis);
+  GP.SEND(F("<input type='number' name='"));
+  GP.SEND(name);
+  GP.SEND(F("' id='"));
+  GP.SEND(name);
+  if (w.length()) {
+    GP.SEND(F("' style='width:"));
+    GP.SEND(w);
+  }
+  GP.SEND(F("' step='"));
+  GP._FLOAT_DEC(step, dec);
+  GP.SEND(F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='GP_spinc(this);GP_click(this);GP_spinw(this)' onmousewheel='GP_wheel(this);GP_click(this);GP_spinw(this)' value='"));
+  GP._FLOAT_DEC(value, dec);
+  if (!isnan(min)) {
+    GP.SEND(F("' min='"));
+    GP._FLOAT_DEC(min, dec);
+  }
+  if (!isnan(max)) {
+    GP.SEND(F("' max='"));
+    GP._FLOAT_DEC(max, dec);
+  }
+  GP.SEND("' ");
+  if (dis) GP.SEND(F("disabled "));
+  if (!w.length()) GP.SEND(F("class='spin_inp'"));
+  GP.SEND(">\n");
+  GP.SPIN_BTN(name, step, st, dec, dis);
+  GP.SEND(F("</div>\n"));
+}
+void GP_SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
+  GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
+}
+void GP_SPINNER_LEFT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
+  GP.SEND("<div style='margin-left:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
+}
 void GP_SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP.SPINNER(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
+  GP.SEND("<div style='margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
 }
 void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
   GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
@@ -337,7 +373,10 @@ void GP_FIX_SCRIPTS(void) {
             "if(r){\n"
             "if(r==1)location.reload();\n"
             "else location.href=r;}\n"
-            "if(upd)GP_apply(upd,this.responseText);}}}}</script>\n"
+            "if(upd)GP_apply(upd,this.responseText);}}}}\n"
+            "function GP_spinc(arg){\n"
+            "if (arg.className=='spin_inp'){\n"
+            "arg.value-=arg.value%arg.step;}}</script>\n"
           )
          );
 }
@@ -352,6 +391,7 @@ void GP_FIX_STYLES(void) {
             ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
+            ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
@@ -795,18 +835,18 @@ void build(void) {
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
         GP.BREAK();
         GP_HR_TEXT("Отображение", "hint4", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint4", "Источник и время в секундах"); //всплывающая подсказка
-        M_BOX(GP.LABEL("1", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/0", showModeList, (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0); M_BOX(GP_RIGHT, GP.SPINNER("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1, 0, UI_SPINNER_COLOR);););
+        M_BOX(M_BOX(GP_LEFT, GP.LABEL("1", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/0", showModeList, (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0);); GP_SPINNER_MID("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1, 0, UI_SPINNER_COLOR););
       for (uint8_t i = 1; i < 5; i++) {
-      M_BOX(GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, "Пусто," + showModeList, extendedSettings.autoShowModes[i]); M_BOX(GP_RIGHT, GP.SPINNER(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);););
+      M_BOX(M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, "Пусто," + showModeList, extendedSettings.autoShowModes[i]);); GP_SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR););
       }
       GP.BREAK();
       GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)(climateState <= 0)););
+      M_BOX(GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)(climateState <= 0)););
       M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
       GP.BLOCK_END();
 
@@ -821,16 +861,16 @@ void build(void) {
       M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
       GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
       M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BREAK();
       GP_HR_TEXT("Время смены яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint1", "Одниаковое время - отключить смену яркости или активировать датчик освещения"); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
       GP.BREAK();
       GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
+      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
       GP.BLOCK_END();
       );
 
@@ -861,7 +901,7 @@ void build(void) {
         GP.BREAK();
         GP_HR_TEXT("Звук смены часа", "hint3", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint3", "Одниаковое время - отключить звук смены часа"); //всплывающая подсказка
-        M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);  GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+        M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
         GP.BREAK();
         GP_HR_TEXT("Озвучка смены часа", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Температура", "", UI_LABEL_COLOR); GP.SWITCH("mainHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)!(deviceInformation[PLAYER_TYPE] && (climateState > 0))););
@@ -869,12 +909,12 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Будильник", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Автоотключение, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL("Автоотключение, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
         GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("Повтор сигнала, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
-        M_BOX(GP.LABEL("Отключить звук, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL("Повтор сигнала, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL("Отключить звук, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
         GP_HR_TEXT("Индикация", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -906,7 +946,7 @@ void build(void) {
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", "Замер", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Усреднение", "", UI_LABEL_COLOR); GP.SWITCH("climateAvg", settings.climateAvg, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_RIGHT("climateTime", settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("climateTime", settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Датчики", UI_BLOCK_COLOR);
@@ -1069,13 +1109,13 @@ void build(void) {
         if (settings.multi[i][0] != '\0') {
           M_BOX(
             M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.multi[i], "", 20, "", true); GP.TEXT("", "Название", (settings.multi[i + 1][0] != '\0') ? settings.multi[i + 1] : settings.multi[i], "", 20, "", true););
-            GP.BUTTON_MINI(String("extMultiDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "107px!important", false, true);
+            GP.BUTTON_MINI(String("extMultiDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
         }
         else {
           M_BOX(
             M_BOX(GP_LEFT, GP.TEXT("extMultiIp", "IP адрес", "", "", 15); GP.TEXT("extMultiName", "Название", "", "", 19););
-            GP.BUTTON_MINI("extMultiAdd", "Добавить", "", UI_BUTTON_COLOR, "107px!important", false, true);
+            GP.BUTTON_MINI("extMultiAdd", "Добавить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
           buffMultiIp[0] = '\0';
           buffMultiName[0] = '\0';
@@ -1170,7 +1210,7 @@ void build(void) {
         GP.BREAK();
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.BREAK();
-        GP.LABEL(getNtpState(), "syncStatus", UI_INFO_COLOR);
+        GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
         GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (ntpGetStatus() == NTP_STOPPED) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(ntpGetStatus() == NTP_STOPPED));
         GP.BLOCK_END();
