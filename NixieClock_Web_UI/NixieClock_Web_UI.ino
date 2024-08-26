@@ -2426,6 +2426,7 @@ void loop() {
       resetMainSettings(); //устанавливаем настройки по умолчанию
       memory.updateNow(); //обновить данные в памяти
       if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_RESET);
+      else ESP.reset(); //перезагрузка
       break;
     case 100: //если установлен флаг перезагрузки
       rebootState = 127; //сбросили флаг перезагрузки
