@@ -34,7 +34,7 @@ void ntpStart(void) {
   if (udp.begin(NTP_LOCAL_PORT)) {
     ntp_status = NTP_CONNECTION;
     ntp_timer = millis();
-    ntp_attempts = 1;
+    ntp_attempts = 0;
   }
   else ntp_status = NTP_STOPPED;
 }

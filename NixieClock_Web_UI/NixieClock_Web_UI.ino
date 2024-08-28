@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 26.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 28.08.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -81,8 +81,6 @@ uint32_t secondsTimer = 0; //таймер счета секундных инте
 
 int8_t syncState = -2; //флаг состояния синхронизации времени
 uint8_t syncNtpTimer = 0; //таймер запроса времени с ntp сервера
-
-int8_t rebootState = 0; //флаг состояния перезгрузки устройства
 
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
@@ -408,15 +406,15 @@ void build(void) {
   GP_FIX_STYLES(); //фикс стилей страницы
 
   if (updaterState()) {
-    GP_PAGE_TITLE("Обновление прошивки часов");
+    GP_PAGE_TITLE("Обновление");
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
     if (!updaterFlash()) {
-      GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdater", GP_YELLOW); //описание
+      GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
     }
     else {
-      GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdater", UI_INFO_COLOR); //описание
+      GP.SPAN("<big><b>Подключение...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
       GP.SPAN(String("<small>Не выключайте устройство до завершения обновления!</small>") + ((deviceInformation[HARDWARE_VERSION]) ? "" : "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"), GP_CENTER, "syncWarn", GP_RED); //описание
-      GP.UPDATE("syncUpdater,syncWarn", 300);
+      GP.UPDATE("syncUpdate,syncWarn", 300);
     }
     GP.HR(UI_LINE_COLOR);
     M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
@@ -436,7 +434,7 @@ void build(void) {
     }
     GP.BLOCK_END();
   }
-  else if (rebootState) {
+  else if (busRebootState()) {
     GP.PAGE_TITLE("Перезагрузка");
 
     GP.BLOCK_BEGIN(GP_THIN, "", "Перезагрузка устройства", UI_BLOCK_COLOR);
@@ -446,8 +444,6 @@ void build(void) {
     M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
     GP.UPDATE("syncReboot,syncWarn");
     GP.BLOCK_END();
-
-    if (rebootState < 0) rebootState = -rebootState;
   }
   else {
     if (!listInit && deviceInformation[HARDWARE_VERSION]) {
@@ -707,7 +703,7 @@ void build(void) {
 
             uint8_t alarmMode = alarm_data[i][ALARM_DATA_MODE];
 
-            String alarmStatus;
+            String alarmStatus = " ";
             if (alarmMode >= 3) {
               boolean alarmDaysFirst = false;
               uint8_t alarmDays = (alarmMode != 3) ? alarm_data[i][ALARM_DATA_DAYS] : 0x3E;
@@ -1048,17 +1044,16 @@ void build(void) {
       M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
-      if (WiFi.getMode() != WIFI_AP) {
+      if (wifiStatus == WL_CONNECTED) {
+        M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
       }
-      if (WiFi.getMode() != WIFI_STA) {
+      if ((WiFi.getMode() == WIFI_AP) || (WiFi.getMode() == WIFI_AP_STA)) {
         M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
       }
-
-      M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
 
       GP.BREAK();
       GP_HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1647,12 +1642,15 @@ void action() {
 
       if (ui.click("extReset")) {
         if (ui.getBool("extReset")) {
-          rebootState = -80; //установили флаг сброса настроек и перезагрузки
+          resetMainSettings(); //устанавливаем настройки по умолчанию
+          memory.updateNow(); //обновить данные в памяти
+          busRebootDevice(DEVICE_RESET);
         }
       }
       if (ui.click("extReboot")) {
         if (ui.getBool("extReboot")) {
-          rebootState = -100; //установили флаг перезагрузки
+          memory.updateNow(); //обновить данные в памяти
+          busRebootDevice(DEVICE_REBOOT);
         }
       }
 
@@ -1836,17 +1834,14 @@ void action() {
         ui.answer(getNtpState());
       }
 
-      if (ui.update("syncUpdater")) { //если было обновление
-        ui.answer(getUpdaterState());
-      }
-      if (ui.update("syncReboot")) { //если было обновление
-        ui.answer("<big><b>Перезагрузка завершена!</b></big>");
-      }
       if (ui.update("syncUpdate")) { //если было обновление
-        ui.answer("<big><b>Обновление прошивки завершено!</b></big>");
+        ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? getUpdaterState() : "<big><b>Выполняется перезагрузка, подождите...</b></big>"));
       }
-      if (ui.update("syncWarn") && !rebootState && !updaterState()) { //если было обновление
-        ui.answer(" ");
+      if (ui.update("syncReboot") && !busRebootState()) { //если было обновление
+        ui.answer((busRebootFail()) ? " " : "<big><b>Перезагрузка завершена!</b></big>");
+      }
+      if (ui.update("syncWarn") && !updaterState() && !busRebootState()) { //если было обновление
+        ui.answer((busRebootFail()) ? "<big><b>Ошибка перезагрузки!</b></big>" : " ");
       }
 
       if (ui.update("syncNetwork")) { //если было обновление
@@ -2022,7 +2017,7 @@ String getUpdaterState(void) { //получить состояние загру�
     case UPDATER_NO_FILE: data += "Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"; break;
     case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
     case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
-    default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(map(updaterProgress(), 0, 255, 0, 100)) + "%") : "Подключение..."; break;
+    default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(map(updaterProgress(), 0, 252, 0, 100)) + "%") : "Подключение..."; break;
   }
   data += "</b></big>";
   updaterSetIdle();
@@ -2070,7 +2065,7 @@ String convertTimerTime(void) { //преобразовать время в фо�
 
   return data;
 }
-
+//--------------------------------------------------------------------
 String encodeTime(GPtime data) {
   String str = "";
 
@@ -2089,7 +2084,7 @@ String encodeTime(GPtime data) {
   str += data.second % 10;
   return str;
 }
-
+//--------------------------------------------------------------------
 String getTimeFromMs(uint32_t data) {
   data /= 1000;
 
@@ -2114,7 +2109,7 @@ String getTimeFromMs(uint32_t data) {
 
   return str;
 }
-
+//--------------------------------------------------------------------
 String StrLengthConstrain(String data, uint8_t size) {
   if (data.length() > size) {
     data.remove(size);
@@ -2122,7 +2117,7 @@ String StrLengthConstrain(String data, uint8_t size) {
   }
   return data;
 }
-
+//--------------------------------------------------------------------
 int16_t climateGetTemp(void) {
   return sens.mainTemp + mainSettings.tempCorrect;
 }
@@ -2135,7 +2130,7 @@ uint16_t climateGetPress(void) {
 uint8_t climateGetHum(void) {
   return sens.mainHum;
 }
-
+//--------------------------------------------------------------------
 void climateSet(void) {
   static boolean firstStart;
 
@@ -2213,20 +2208,20 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
     GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
   }
 }
-
+//--------------------------------------------------------------------
 void climateReset(void) {
   climateTempAvg = 0;
   climateHumAvg = 0;
   climatePressAvg = 0;
   climateCountAvg = 0;
 }
-
+//--------------------------------------------------------------------
 void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
     climateAdd(temp, hum, press, unix);
   }
 }
-
+//--------------------------------------------------------------------
 void climateUpdate(void) {
   static int8_t firstStart = -1;
 
@@ -2254,7 +2249,7 @@ void climateUpdate(void) {
     }
   }
 }
-
+//--------------------------------------------------------------------
 boolean checkFsData(const char** data, int8_t size) {
   File file;
   while (size > 0) {
@@ -2269,9 +2264,197 @@ boolean checkFsData(const char** data, int8_t size) {
   }
   return true;
 }
+//--------------------------------------------------------------------
+void timeUpdate(void) {
+  if ((millis() - secondsTimer) >= 1000) {
+    if (!secondsTimer) secondsTimer = millis();
+    else { //счет времени
+      if (++mainTime.second > 59) { //секунды
+        mainTime.second = 0; //сбросили секунды
+        if (++mainTime.minute > 59) { //минуты
+          mainTime.minute = 0; //сбросили минуты
+          if (++mainTime.hour > 23) { //часы
+            mainTime.hour = 0; //сбросили часы
+            if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //дата
+              mainDate.day = 1; //сбросили день
+              if (++mainDate.month > 12) { //месяц
+                mainDate.month = 1; //сбросили месяц
+                if (++mainDate.year > 2099) { //год
+                  mainDate.year = 2000; //сбросили год
+                }
+              }
+            }
+          }
+        }
+        if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
+        else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
 
-void wifiScanResult(int networksFound)
-{
+        if (settings.ntpSync) {
+          if (!settings.ntpDst) {
+            if (!syncNtpTimer) {
+              syncNtpTimer = ntpSyncTime[settings.ntpTime];
+              ntpRequest(); //запросить время с ntp сервера
+            }
+            else syncNtpTimer--;
+          }
+          else {
+            if (!(mainTime.minute % ntpSyncTime[(settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime])) {
+              ntpRequest(); //запросить время с ntp сервера
+            }
+          }
+        }
+      }
+      if (climateState != 0) {
+        if (!climateTimer) {
+          climateTimer = 59;
+          sens.status = 0;
+          if (deviceInformation[SENS_TEMP]) busSetComand(WRITE_CHECK_SENS);
+          else sens.update |= SENS_EXT;
+        }
+        else climateTimer--;
+      }
+      secondsTimer += 1000; //прибавили секунду
+    }
+    if (timer.mode) busSetComand(READ_TIMER_TIME);
+    if (!waitTimer) { //если пришло время опросить статус часов
+      waitTimer = 4; //установили таймер ожидания
+      if (clockState > 0) clockState--; //если есть попытки подключения
+      else if (clockState < 0) clockState = 3; //иначе первый запрос состояния
+      busSetComand(READ_STATUS); //запрос статуса часов
+    }
+    else waitTimer--;
+    if (playbackTimer > -1) {
+      if (!playbackTimer) busSetComand(WRITE_STOP_SOUND); //остановка воспроизведения
+      playbackTimer--;
+    }
+#if STATUS_LED == 1
+    if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+#elif STATUS_LED == 2
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+#endif
+  }
+
+  if (ntpUpdate()) { //обработка ntp
+    if (settings.ntpSync || !syncState) {
+      syncNtpTimer = ntpSyncTime[settings.ntpTime];
+      busSetComand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
+    }
+  }
+}
+
+void deviceUpdate(void) {
+  if (deviceStatus) { //если статус обновился
+    for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
+      if (deviceStatus & 0x01) { //если флаг установлен
+        switch (i) { //выбираем действие
+          case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
+          case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
+          case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
+          case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
+          case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
+          case STATUS_UPDATE_SENS_DATA: if (deviceInformation[SENS_TEMP]) busSetComand(READ_SENS_DATA); break;
+        }
+      }
+      deviceStatus >>= 1; //сместили буфер флагов
+    }
+    deviceStatus = 0; //сбрасываем все флаги
+  }
+
+  switch (sens.update) { //если все датчики опрошены
+    case SENS_EXT:
+      sens.update = 0; //сбрасываем флаги опроса
+      busSetComand(CHECK_INTERNAL_AHT);
+      busSetComand(CHECK_INTERNAL_SHT);
+      busSetComand(CHECK_INTERNAL_BME);
+      break;
+    case (SENS_AHT | SENS_SHT | SENS_BME):
+      sens.update = 0; //сбрасываем флаги опроса
+      climateSet(); //установить показания датчиков
+      climateUpdate(); //обновляем показания графиков
+      if (climateState != 0) busSetComand(WRITE_SENS_DATA);
+      break;
+  }
+}
+//--------------------------------------------------------------------
+void wifiUpdate(void) {
+  static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
+
+  if ((wifiScanState == 127) && (millis() - wifiScanTimer) >= 100) { //если необходимо начать поиск
+    wifiScanState = 0; //сбрасываем статус
+    WiFi.scanNetworksAsync(wifiScanResult); //начинаем поиск
+  }
+
+  if (wifiStatus != WiFi.status()) { //если изменился статус
+    if (wifiStatus == 255) { //если нужно отключиться
+      Serial.println F("Wifi disconnecting...");
+      ntpStop(); //остановили ntp
+      WiFi.disconnect(); //отключаем wifi
+      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
+    }
+    wifiStatus = WiFi.status();
+    switch (wifiStatus) {
+      case WL_CONNECTED:
+        timerWifi = millis(); //сбросили таймер
+        wifiInterval = 300000; //устанавливаем интервал отключения точки доступа
+#if STATUS_LED == 1
+        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
+#endif
+        ntpStart(); //запустить ntp
+        Serial.print F("Wifi connected, IP address: ");
+        Serial.println(WiFi.localIP());
+        break;
+      case WL_IDLE_STATUS:
+#if STATUS_LED == 1
+        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#endif
+        Serial.println F("Wifi idle status");
+        break;
+      default:
+        if ((wifiStatus == WL_DISCONNECTED) || (wifiStatus == WL_NO_SSID_AVAIL)) {
+          timerWifi = millis(); //сбросили таймер
+          if (wifiStatus == WL_NO_SSID_AVAIL) wifiInterval = 30000; //устанавливаем интервал переподключения
+          else wifiInterval = 5000; //устанавливаем интервал переподключения
+          WiFi.disconnect(); //отключаем wifi
+        }
+        else {
+          wifiInterval = 0; //сбрасываем интервал переподключения
+#if STATUS_LED == 1
+          digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#endif
+          Serial.println F("Wifi connect error...");
+        }
+        ntpStop(); //остановили ntp
+        break;
+    }
+  }
+
+  if (wifiInterval && ((millis() - timerWifi) >= wifiInterval)) {
+    if (wifiStatus == WL_CONNECTED) { //если подключены
+      wifiInterval = 0; //сбрасываем интервал переподключения
+      WiFi.mode(WIFI_STA); //отключили точку доступа
+      Serial.println F("Wifi access point disabled");
+    }
+    else { //иначе новое поключение
+      wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
+      if (wifiStatus != WL_CONNECT_FAILED) {
+        timerWifi = millis(); //сбросили таймер
+        wifiInterval = 30000; //устанавливаем интервал переподключения
+        Serial.print F("Wifi connecting to \"");
+        Serial.print(settings.ssid);
+        Serial.println F("\"...");
+      }
+      else {
+        wifiInterval = 0; //сбрасываем интервал
+#if STATUS_LED == 1
+        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#endif
+        Serial.println F("Wifi connection failed, wrong settings");
+      }
+    }
+  }
+}
+//--------------------------------------------------------------------
+void wifiScanResult(int networksFound) {
   wifiScanList = "";
   if (networksFound) {
     wifiScanState = -1;
@@ -2317,7 +2500,7 @@ void wifiStartAP(void) {
   //начинаем поиск сетей
   WiFi.scanNetworksAsync(wifiScanResult);
 }
-
+//--------------------------------------------------------------------
 void resetMainSettings(void) {
   strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
   settings.host[19] = '\0'; //устанавливаем последний символ
@@ -2458,209 +2641,15 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
+  wifiUpdate(); //обработка статусов wifi
 
-  switch (rebootState) {
-    case 80: //если установлен флаг сброса настроек и перезагрузки
-      rebootState = 127; //сбросили флаг перезагрузки
-      resetMainSettings(); //устанавливаем настройки по умолчанию
-      memory.updateNow(); //обновить данные в памяти
-      if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_RESET);
-      else ESP.reset(); //перезагрузка
-      break;
-    case 100: //если установлен флаг перезагрузки
-      rebootState = 127; //сбросили флаг перезагрузки
-      memory.updateNow(); //обновить данные в памяти
-      if (deviceInformation[HARDWARE_VERSION]) busSetComand(CONTROL_DEVICE, DEVICE_REBOOT);
-      else ESP.reset(); //перезагрузка
-      break;
-  }
-
-  if ((wifiScanState == 127) && (millis() - wifiScanTimer) >= 100) { //если необходимо начать поиск
-    wifiScanState = 0; //сбрасываем статус
-    WiFi.scanNetworksAsync(wifiScanResult); //начинаем поиск
-  }
-
-  if (wifiStatus != WiFi.status()) { //если изменился статус
-    if (wifiStatus == 255) { //если нужно отключиться
-      Serial.println F("Wifi disconnecting...");
-      ntpStop(); //остановили ntp
-      WiFi.disconnect(); //отключаем wifi
-      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
-    }
-    wifiStatus = WiFi.status();
-    switch (wifiStatus) {
-      case WL_CONNECTED:
-        timerWifi = millis(); //сбросили таймер
-        wifiInterval = 300000; //устанавливаем интервал отключения точки доступа
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
-        ntpStart(); //запустить ntp
-        Serial.print F("Wifi connected, IP address: ");
-        Serial.println(WiFi.localIP());
-        break;
-      case WL_IDLE_STATUS:
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-        Serial.println F("Wifi idle status");
-        break;
-      default:
-        if ((wifiStatus == WL_DISCONNECTED) || (wifiStatus == WL_NO_SSID_AVAIL)) {
-          timerWifi = millis(); //сбросили таймер
-          if (wifiStatus == WL_NO_SSID_AVAIL) wifiInterval = 30000; //устанавливаем интервал переподключения
-          else wifiInterval = 5000; //устанавливаем интервал переподключения
-          WiFi.disconnect(); //отключаем wifi
-        }
-        else {
-          wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED == 1
-          digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-          Serial.println F("Wifi connect error...");
-        }
-        ntpStop(); //остановили ntp
-        break;
-    }
-  }
-
-  if (wifiInterval && ((millis() - timerWifi) >= wifiInterval)) {
-    if (wifiStatus == WL_CONNECTED) { //если подключены
-      wifiInterval = 0; //сбрасываем интервал переподключения
-      WiFi.mode(WIFI_STA); //отключили точку доступа
-      Serial.println F("Wifi access point disabled");
-    }
-    else { //иначе новое поключение
-      wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
-      if (wifiStatus != WL_CONNECT_FAILED) {
-        timerWifi = millis(); //сбросили таймер
-        wifiInterval = 30000; //устанавливаем интервал переподключения
-        Serial.print F("Wifi connecting to \"");
-        Serial.print(settings.ssid);
-        Serial.println F("\"...");
-      }
-      else {
-        wifiInterval = 0; //сбрасываем интервал
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-        Serial.println F("Wifi connection failed, wrong settings");
-      }
-    }
-  }
-
-  if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) {
-    if ((millis() - secondsTimer) >= 1000) {
-      if (!secondsTimer) secondsTimer = millis();
-      else { //счет времени
-        if (++mainTime.second > 59) { //секунды
-          mainTime.second = 0; //сбросили секунды
-          if (++mainTime.minute > 59) { //минуты
-            mainTime.minute = 0; //сбросили минуты
-            if (++mainTime.hour > 23) { //часы
-              mainTime.hour = 0; //сбросили часы
-              if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //дата
-                mainDate.day = 1; //сбросили день
-                if (++mainDate.month > 12) { //месяц
-                  mainDate.month = 1; //сбросили месяц
-                  if (++mainDate.year > 2099) { //год
-                    mainDate.year = 2000; //сбросили год
-                  }
-                }
-              }
-            }
-          }
-          if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
-          else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
-
-          if (settings.ntpSync) {
-            if (!settings.ntpDst) {
-              if (!syncNtpTimer) {
-                syncNtpTimer = ntpSyncTime[settings.ntpTime];
-                ntpRequest(); //запросить время с ntp сервера
-              }
-              else syncNtpTimer--;
-            }
-            else {
-              if (!(mainTime.minute % ntpSyncTime[(settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime])) {
-                ntpRequest(); //запросить время с ntp сервера
-              }
-            }
-          }
-        }
-        if (climateState != 0) {
-          if (!climateTimer) {
-            climateTimer = 59;
-            sens.status = 0;
-            if (deviceInformation[SENS_TEMP]) busSetComand(WRITE_CHECK_SENS);
-            else sens.update |= SENS_EXT;
-          }
-          else climateTimer--;
-        }
-        secondsTimer += 1000; //прибавили секунду
-      }
-      if (timer.mode) busSetComand(READ_TIMER_TIME);
-      if (!waitTimer) { //если пришло время опросить статус часов
-        waitTimer = 4; //установили таймер ожидания
-        if (clockState > 0) clockState--; //если есть попытки подключения
-        else if (clockState < 0) clockState = 3; //иначе первый запрос состояния
-        busSetComand(READ_STATUS); //запрос статуса часов
-      }
-      else waitTimer--;
-      if (playbackTimer > -1) {
-        if (!playbackTimer) busSetComand(WRITE_STOP_SOUND); //остановка воспроизведения
-        playbackTimer--;
-      }
-#if STATUS_LED == 1
-      if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#elif STATUS_LED == 2
-      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#endif
-    }
-
-    if (deviceStatus) { //если статус обновился
-      for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
-        if (deviceStatus & 0x01) { //если флаг установлен
-          switch (i) { //выбираем действие
-            case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
-            case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
-            case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
-            case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
-            case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
-            case STATUS_UPDATE_SENS_DATA: if (deviceInformation[SENS_TEMP]) busSetComand(READ_SENS_DATA); break;
-          }
-        }
-        deviceStatus >>= 1; //сместили буфер флагов
-      }
-      deviceStatus = 0; //сбрасываем все флаги
-    }
-
-    switch (sens.update) { //если все датчики опрошены
-      case SENS_EXT:
-        sens.update = 0; //сбрасываем флаги опроса
-        busSetComand(CHECK_INTERNAL_AHT);
-        busSetComand(CHECK_INTERNAL_SHT);
-        busSetComand(CHECK_INTERNAL_BME);
-        break;
-      case (SENS_AHT | SENS_SHT | SENS_BME):
-        sens.update = 0; //сбрасываем флаги опроса
-        climateSet(); //установить показания датчиков
-        climateUpdate(); //обновляем показания графиков
-        if (climateState != 0) busSetComand(WRITE_SENS_DATA);
-        break;
-    }
-
-    if (ntpUpdate()) { //обработка ntp
-      if (settings.ntpSync || !syncState) {
-        syncNtpTimer = ntpSyncTime[settings.ntpTime];
-        busSetComand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
-      }
-    }
+  if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) { //если связь с часами установлена
+    timeUpdate(); //обработка времени
+    deviceUpdate(); //обработка статусов устройства
   }
 
   if (!updaterFlash()) busUpdate(); //обработка шины
-  else updaterRun(); //загрузчик прошивки
+  else if (updaterRun()) busRebootDevice(SYSTEM_REBOOT); //загрузчик прошивки
 
   ui.tick(); //обработка веб интерфейса
   memory.tick(); //обработка еепром

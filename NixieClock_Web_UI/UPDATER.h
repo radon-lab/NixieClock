@@ -170,12 +170,13 @@ void updaterStart(void) {
   }
 }
 //---------------------------------------------------------------------------------
-void updaterRun(void) {
+boolean updaterRun(void) {
   if ((millis() - updater_timer) >= 10000) {
     removeFileData(); //удаляем файл
     updater_state = UPDATER_TIMEOUT;
     Serial.println("Updater timeout write page " + String(updater_page_cnt));
   }
+  
   switch (updater_state) {
     case UPDETER_LOAD:
       updater_page_crc = 0;
@@ -229,9 +230,10 @@ void updaterRun(void) {
           removeFileData(); //удаляем файл
           updater_state = UPDATER_IDLE;
           Serial.println F("Updater end, reboot...");
-          ESP.reset(); //перезагрузка
         }
       }
-      break;
+      return true;
   }
+
+  return false;
 }

@@ -318,6 +318,7 @@ enum {
 
   WRITE_SENS_DATA,
 
+  CONTROL_SYSTEM,
   CONTROL_DEVICE,
   UPDATE_FIRMWARE,
 
@@ -342,6 +343,11 @@ struct busData {
   uint16_t timerInterval = 0;
   uint32_t timerStart = 0;
 } bus;
+
+#define SYSTEM_REBOOT 100
+
+#define BUS_STATUS_REBOOT 100
+#define BUS_STATUS_REBOOT_FAIL 255
 
 #define SENS_EXT 0x01
 #define SENS_AHT 0x02
@@ -430,6 +436,22 @@ void busSetComand(uint8_t cmd, uint8_t arg) {
   }
 }
 //--------------------------------------------------------------------
+void busRebootDevice(uint8_t arg) {
+  bus.bufferStart = bus.bufferEnd = 0;
+  bus.status = BUS_STATUS_REBOOT;
+  if (deviceInformation[HARDWARE_VERSION] && (arg != SYSTEM_REBOOT)) busSetComand(CONTROL_DEVICE, arg);
+  else busSetComand(CONTROL_SYSTEM, SYSTEM_REBOOT);
+  busTimerSetInterval(500);
+}
+//--------------------------------------------------------------------
+boolean busRebootState(void) {
+  return bus.status == BUS_STATUS_REBOOT;
+}
+//--------------------------------------------------------------------
+boolean busRebootFail(void) {
+  return bus.status == BUS_STATUS_REBOOT_FAIL;
+}
+//--------------------------------------------------------------------
 void busUpdate(void) {
   if (busTimerCheck()) { //если таймаут истек
     if (busStatusBuffer()) { //если есть новая команда
@@ -439,10 +461,10 @@ void busUpdate(void) {
 
               time_t unix = ntpGetUnix() + (settings.ntpGMT * 3600UL);
               secondsTimer = millis() - ntpGetMillis();
-              
+
               tm time; //буфер времени
               gmtime_r(&unix, &time);
-              
+
               mainTime.second = time.tm_sec;
               mainTime.minute = time.tm_min;
               mainTime.hour = time.tm_hour;
@@ -1188,6 +1210,16 @@ void busUpdate(void) {
           }
           break;
 
+        case CONTROL_SYSTEM:
+          if (busReadBufferArg() == SYSTEM_REBOOT) {
+            twi_write_stop(); //остановили шину
+            if (!twi_running()) ESP.reset(); //перезагрузка
+            else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
+          }
+          else bus.status = 0; //сбросили статус
+          busShiftBuffer(); //сместили буфер команд
+          busShiftBuffer(); //сместили буфер команд
+          break;
         case CONTROL_DEVICE:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_CONTROL_DEVICE); //регистр команды
@@ -1197,6 +1229,7 @@ void busUpdate(void) {
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
               if (!twi_running()) ESP.reset(); //перезагрузка
+              else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
             }
           }
           break;
