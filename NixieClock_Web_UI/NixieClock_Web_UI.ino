@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 28.08.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 01.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -136,35 +136,103 @@ String showModeList = "Дата,Год,Дата и год,Температура
 void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
-void GP_SPINNER_MAIN(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND(F("<div id='spinner' class='spinner'>\n"));
-  GP.SPIN_BTN(name, -step, st, dec, dis);
-  GP.SEND(F("<input type='number' name='"));
-  GP.SEND(name);
-  GP.SEND(F("' id='"));
-  GP.SEND(name);
-  if (w.length()) {
-    GP.SEND(F("' style='width:"));
-    GP.SEND(w);
+String GP_FLOAT_DEC(float val, uint16_t dec) {
+  String data = "";
+  if (!dec) data += (int)round(val);
+  else data += String(val, (uint16_t)dec);
+  return data;
+}
+void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
+  String data = "";
+  data += F("<lable style='color:#fff;position:relative;z-index:1;left:15px;bottom:1px;width:0px;pointer-events:none'>");
+  data += lable;
+  data += F("</lable>\n<input type='range' name='");
+  data += name;
+  data += F("' id='");
+  data += name;
+  data += F("' value='");
+  data += value;
+  data += F("' min='");
+  data += min;
+  data += F("' max='");
+  data += max;
+  data += F("' step='");
+  data += step;
+  data += F("' style='background-image:linear-gradient(");
+  data += FPSTR(st);
+  data += ',';
+  data += FPSTR(st);
+  data += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
+  if (oninp) data += F("oninput='GP_change(this);GP_click(this)'");
+  else data += F("onchange='GP_click(this)' oninput='GP_change(this)'");
+  data += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
+  if (dis) data += F("disabled");
+  data += F(">\n<output align='center' id='");
+  data += name;
+  data += F("_val' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
+  if (dis) data += F(" class='dsbl'");
+  data += F(">");
+  data += GP_FLOAT_DEC(value, dec);
+  data += F("</output>\n");
+  GP.SEND(data);
+}
+String GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
+  String data = "";
+  data += F("<input type='button' class='spinBtn ");
+  data += (step > 0) ? F("spinR") : F("spinL");
+  data += F("' name='");
+  data += name;
+  data += F("' min='");
+  data += step;
+  data += F("' max='");
+  data += dec;
+  data += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{GP_spin(this);_spinF=1},");
+  data += 200;
+  data += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
+  data += (step > 0) ? '+' : '-';
+  data += F("' ");
+  if (st != GP_GREEN) {
+    data += F(" style='background:");
+    data += FPSTR(st);
+    data += F(";'");
   }
-  GP.SEND(F("' step='"));
-  GP._FLOAT_DEC(step, dec);
-  GP.SEND(F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='GP_spinc(this);GP_click(this);GP_spinw(this)' onmousewheel='GP_wheel(this);GP_click(this);GP_spinw(this)' value='"));
-  GP._FLOAT_DEC(value, dec);
+  if (dis) data += F(" disabled");
+  data += F(">\n");
+  return data;
+}
+void GP_SPINNER_MAIN(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
+  String data = "";
+  data += F("<div id='spinner' class='spinner'>\n");
+  data += GP_SPINNER_BTN(name, -step, st, dec, dis);
+  data += F("<input type='number' name='");
+  data += name;
+  data += F("' id='");
+  data += name;
+  if (w.length()) {
+    data += F("' style='width:");
+    data += w;
+  }
+  data += F("' step='");
+  data += GP_FLOAT_DEC(step, dec);
+  data += F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='");
+  if (!dec) data += F("GP_spinc(this);");
+  data += F("GP_click(this);GP_spinw(this)' value='");
+  data += GP_FLOAT_DEC(value, dec);
   if (!isnan(min)) {
-    GP.SEND(F("' min='"));
-    GP._FLOAT_DEC(min, dec);
+    data += F("' min='");
+    data += GP_FLOAT_DEC(min, dec);
   }
   if (!isnan(max)) {
-    GP.SEND(F("' max='"));
-    GP._FLOAT_DEC(max, dec);
+    data += F("' max='");
+    data += GP_FLOAT_DEC(max, dec);
   }
-  GP.SEND("' ");
-  if (dis) GP.SEND(F("disabled "));
-  if (!w.length()) GP.SEND(F("class='spin_inp'"));
-  GP.SEND(">\n");
-  GP.SPIN_BTN(name, step, st, dec, dis);
-  GP.SEND(F("</div>\n"));
+  data += F("' ");
+  if (dis) data += F("disabled ");
+  if (!w.length()) data += F("class='spin_inp'");
+  data += F(">\n");
+  data += GP_SPINNER_BTN(name, step, st, dec, dis);
+  data += F("</div>\n");
+  GP.SEND(data);
 }
 void GP_SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
   GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
@@ -391,7 +459,7 @@ void GP_FIX_STYLES(void) {
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
             ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
-            "#ubtn {min-width:34px;border-radius:25px;line-height:150%;}\n" //фикс кнопок загрузки
+            "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
             "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
           )
@@ -980,8 +1048,8 @@ void build(void) {
       if (!radioSvgImage) {
         M_BOX(M_BOX(GP_LEFT, GP.BUTTON_MINI("radioMode", "Часы ⇋ Радио", "", UI_RADIO_BACK_COLOR);); M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_1_COLOR);););
       }
-      M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR);););
-      M_BOX(GP.LABEL("Частота", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR);););
+      M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR, false, true););
+      M_BOX(GP_CENTER, GP_SLIDER_MAX("Частота", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR, false, true););
       GP.BLOCK_END();
 
       if (radioSvgImage) {
@@ -1050,7 +1118,7 @@ void build(void) {
         M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
       }
-      if ((WiFi.getMode() == WIFI_AP) || (WiFi.getMode() == WIFI_AP_STA)) {
+      if (WiFi.getMode() != WIFI_STA) {
         M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
       }
