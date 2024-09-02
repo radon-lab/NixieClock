@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 01.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 02.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -117,7 +117,7 @@ const char *tempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT
 const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
-const char *statusNtpList[] = {"Нет сети", "Подключение...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
+const char *statusNtpList[] = {"Отсутсвует подключение к сети", "Подключение к серверу...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
 String wifiScanList = "Нет сетей"; //список найденых wifi сетей
@@ -144,7 +144,9 @@ String GP_FLOAT_DEC(float val, uint16_t dec) {
 }
 void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
   String data = "";
-  data += F("<lable style='color:#fff;position:relative;z-index:1;left:15px;bottom:1px;width:0px;pointer-events:none'>");
+  data += F("<lable style='color:#fff;position:relative;z-index:1;left:15px;bottom:1px;width:0px;pointer-events:none'");
+  if (dis) data += F(" class='dsbl'");
+  data += '>';
   data += lable;
   data += F("</lable>\n<input type='range' name='");
   data += name;
@@ -166,7 +168,7 @@ void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, flo
   if (oninp) data += F("oninput='GP_change(this);GP_click(this)'");
   else data += F("onchange='GP_click(this)' oninput='GP_change(this)'");
   data += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
-  if (dis) data += F("disabled");
+  if (dis) data += F("class='dsbl' disabled");
   data += F(">\n<output align='center' id='");
   data += name;
   data += F("_val' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
@@ -450,15 +452,20 @@ void GP_FIX_STYLES(void) {
   GP.SEND(F(
             "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
             ".onlBlock{z-index:3;background:#810000bf;width:15px;height:180px;border-radius:25px 0 0 25px;writing-mode:vertical-lr;text-align:center;}\n" //фикс плашки офлайн
-            "select{width:200px;}\n" //фикс выпадающего списка
-            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
-            "input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}\n" //фикс слайдеров
             ".display{border-radius:5px;}\n" //фикс лейбл блоков
             ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
             ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
+            "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста
+            "input[type='time'],input[type='date']{height:34px;border:none!important;}\n" //фикс выбора времени и даты
+            "input[type='number']{text-align:center;}\n" //фикс ввода чисел
+            "input[type=range]:disabled{filter:brightness(0.6);}\n" //фикс слайдеров
+            "input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}\n" //фикс слайдеров
+            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
+            "select:disabled{filter:brightness(0.6);}\n" //фикс выпадающего списка
+            "select{width:200px;cursor:pointer;}\n" //фикс выпадающего списка
             "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
             "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
@@ -692,7 +699,7 @@ void build(void) {
           String alarmSoundList;
           for (uint8_t i = 0; i < deviceInformation[PLAYER_MAX_SOUND]; i++) {
             if (i) alarmSoundList += ',';
-            alarmSoundList += String("№") + (i + 1);
+            alarmSoundList += String("Звук №") + (i + 1);
           }
 
           String alarmRadioList;
@@ -704,16 +711,10 @@ void build(void) {
           }
           else alarmRadioList += "Пусто";
 
-          M_BOX(GP.LABEL("Звук", "", UI_LABEL_COLOR); GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP.LABEL("Мелодия", "", UI_LABEL_COLOR); GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0););
-          M_BOX(GP.LABEL("Радиостанция", "", UI_LABEL_COLOR); GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 10, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE])););); //ползунки
+          M_BOX(GP_CENTER, GP.TIME("alarmTime", alarmTime); GP.SELECT("alarmMode", "Выключен,Однократно,Ежедневно,По будням,Выбрать дни", alarm_data[alarm.now][ALARM_DATA_MODE]););
+          GP.BREAK();
 
-          GP.HR(UI_LINE_COLOR);
-          M_BOX(GP.LABEL("Время", "", UI_LABEL_COLOR); GP.TIME("alarmTime", alarmTime););
-          M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("alarmMode", "Выключен,Однократно,Ежедневно,По будням,Выбрать дни", alarm_data[alarm.now][ALARM_DATA_MODE]););
-
-          GP.HR(UI_LINE_COLOR);
+          GP_HR_TEXT("Дни недели", "", UI_LINE_COLOR, UI_HINT_COLOR);
           GP.TABLE_BORDER(false);
           GP.TABLE_BEGIN("200px,50px,50px,50px,50px,50px,50px,50px,200px");
           GP.TR(GP_CENTER);
@@ -749,6 +750,12 @@ void build(void) {
           GP.TD(GP_CENTER);
           GP.LABEL("");
           GP.TABLE_END();
+          GP.BREAK();
+
+          GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
+          M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
+          M_BOX(GP_CENTER, GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0); GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
+          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 10, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE]));); //ползунки
 
           boolean alarmDelStatus = (boolean)(alarm.all > 1);
 
@@ -1074,7 +1081,7 @@ void build(void) {
       GP.TABLE_END();
       GP.BLOCK_END();
 
-      GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9",
+      GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioFreq",
                       "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
     else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
@@ -1217,11 +1224,19 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
       if ((wifiStatus == WL_CONNECTED) || wifiInterval) {
         GP.FORM_BEGIN("/network");
-        GP.SPAN(getWifiState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+        if (wifiStatus == WL_CONNECTED) {
+          GP.TEXT("", "", settings.ssid, "", 0, "", true);
+          GP.BREAK();
+          GP.TEXT("", "", WiFi.localIP().toString(), "", 0, "", true);
+          GP.SPAN("Подключение установлено", GP_CENTER, "", UI_INFO_COLOR); //описание
+        }
+        else {
+          GP.SPAN(getWifiState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+          updateList += ",syncNetwork";
+        }
 
         GP.HR(UI_LINE_COLOR);
         if (ui.uri("/connection")) {
-          updateList += ",syncNetwork";
           GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
         }
         else {
@@ -1272,7 +1287,6 @@ void build(void) {
         GP.TEXT("syncHost", "Хост", settings.host, "", 19);
         GP.BREAK();
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
-        GP.BREAK();
         GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
         GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (ntpGetStatus() == NTP_STOPPED) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(ntpGetStatus() == NTP_STOPPED));
@@ -1740,12 +1754,12 @@ void action() {
       if (!timer.mode || (timer.mode == 0x82)) {
         if (ui.clickSub("timerHour")) {
           switch (ui.clickNameSub(1).toInt()) {
-            case 0: if (timer.hour < 23) timer.hour++; break; //час прибавить
-            case 1: if (timer.mins < 59) timer.mins++; break; //минута прибавить
-            case 2: if (timer.secs < 59) timer.secs++; break; //секунда прибавить
-            case 3: if (timer.hour > 0) timer.hour--; break; //час убавить
-            case 4: if (timer.mins > 0) timer.mins--; break; //минута убавить
-            case 5: if (timer.secs > 0) timer.secs--; break; //секунда убавить
+            case 0: if (timer.hour < 17) timer.hour++; else timer.hour = 0; break; //час прибавить
+            case 1: if (timer.mins < 59) timer.mins++; else timer.mins = 0; break; //минута прибавить
+            case 2: if (timer.secs < 59) timer.secs++; else timer.secs = 0; break; //секунда прибавить
+            case 3: if (timer.hour > 0) timer.hour--; else timer.hour = 17; break; //час убавить
+            case 4: if (timer.mins > 0) timer.mins--; else timer.mins = 59; break; //минута убавить
+            case 5: if (timer.secs > 0) timer.secs--; else timer.secs = 59; break; //секунда убавить
           }
         }
       }
@@ -2068,8 +2082,7 @@ String getWifiState(void) { //получить состояние подключ
     else if (!wifiInterval) data += "Не удалось подключиться к \"";
     else data += "Подключение к \"";
     data += String(settings.ssid);
-    if (wifiStatus == WL_CONNECTED) data += "\"<br>IP адрес \"" + WiFi.localIP().toString() + "\"";
-    else if (!wifiInterval) data += "\"";
+    if ((wifiStatus == WL_CONNECTED) || !wifiInterval) data += "\"";
     else data += "\"...";
   }
   data += "</big></big>";
@@ -2093,7 +2106,7 @@ String getUpdaterState(void) { //получить состояние загру�
 }
 //------------------------------Получить состояние ntp-----------------------------------
 String getNtpState(void) { //получить состояние ntp
-  String data = "Статус: ";
+  String data = "";
   if (!ntpGetAttempts()) data += statusNtpList[ntpGetStatus()];
   else {
     data += "Попытка подключения[";
