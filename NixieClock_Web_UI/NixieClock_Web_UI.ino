@@ -456,6 +456,8 @@ void GP_FIX_STYLES(void) {
             ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
+            ".check_c>span::before{border-color:#444;background-color:#2a2d35}\n" //фикс чекбоксов
+            ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09}\n" //фикс чекбоксов
             ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста
@@ -744,7 +746,7 @@ void build(void) {
           for (uint8_t i = 1; i < 8; i++) {
             GP.TD(GP_CENTER);
             alarmDays >>= 1;
-            GP.CHECK(String("alarmDay/") + i, (boolean)(alarmDays & 0x01), UI_CHECK_COLOR);
+            GP.CHECK(String("alarmDay/") + i, (boolean)(alarmDays & 0x01));
             updateList += String(",alarmDay/") + i;
           }
           GP.TD(GP_CENTER);
