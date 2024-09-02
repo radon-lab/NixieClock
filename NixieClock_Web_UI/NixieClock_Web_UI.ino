@@ -136,6 +136,9 @@ String showModeList = "Дата,Год,Дата и год,Температура
 void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
+void GP_LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
+  GP.TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
+}
 String GP_FLOAT_DEC(float val, uint16_t dec) {
   String data = "";
   if (!dec) data += (int)round(val);
@@ -723,19 +726,19 @@ void build(void) {
           GP.TD(GP_CENTER);
           GP.LABEL("");
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("ПН", "", UI_ALARM_WEEK_1_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("ПН", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("ВТ", "", UI_ALARM_WEEK_1_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("ВТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("СР", "", UI_ALARM_WEEK_1_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("СР", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("ЧТ", "", UI_ALARM_WEEK_1_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("ЧТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("ПТ", "", UI_ALARM_WEEK_1_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("ПТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("СБ", "", UI_ALARM_WEEK_2_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("СБ", "", UI_ALARM_WEEK_2_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK("ВС", "", UI_ALARM_WEEK_2_COLOR, 0, 1);
+          GP_LABEL_BLOCK_W("ВС", "", UI_ALARM_WEEK_2_COLOR, 0);
           GP.TD(GP_CENTER);
           GP.LABEL("");
 
