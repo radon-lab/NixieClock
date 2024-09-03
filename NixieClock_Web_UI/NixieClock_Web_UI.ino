@@ -147,7 +147,7 @@ String GP_FLOAT_DEC(float val, uint16_t dec) {
 }
 void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
   String data = "";
-  data += F("<lable style='color:#fff;position:relative;z-index:1;left:15px;bottom:1px;width:0px;pointer-events:none'");
+  data += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
   if (dis) data += F(" class='dsbl'");
   data += '>';
   data += lable;
@@ -167,7 +167,7 @@ void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, flo
   data += FPSTR(st);
   data += ',';
   data += FPSTR(st);
-  data += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
+  data += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;margin:10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
   if (oninp) data += F("oninput='GP_change(this);GP_click(this)'");
   else data += F("onchange='GP_click(this)' oninput='GP_change(this)'");
   data += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
@@ -720,7 +720,7 @@ void build(void) {
           GP.BREAK();
 
           GP_HR_TEXT("Дни недели", "", UI_LINE_COLOR, UI_HINT_COLOR);
-          GP.BLOCK_BEGIN(GP_DIV_RAW, "430px");
+          GP.BLOCK_BEGIN(GP_DIV_RAW, "430px;margin:10px 0px");
           GP.TABLE_BORDER(false);
           GP.TABLE_BEGIN("50px,50px,50px,50px,50px,50px,50px");
           GP.TR(GP_CENTER);
@@ -749,7 +749,6 @@ void build(void) {
           }
           GP.TABLE_END();
           GP.BLOCK_END();
-          GP.BREAK();
 
           GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
           M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
@@ -1052,7 +1051,7 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", "Радиоприёмник", UI_BLOCK_COLOR);
       GP.BLOCK_BEGIN(GP_DIV_RAW, "450px");
       if (!radioSvgImage) {
-        M_BOX(M_BOX(GP_LEFT, GP.BUTTON_MINI("radioMode", "Часы ⇋ Радио", "", UI_RADIO_BACK_COLOR);); M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_1_COLOR);););
+        M_BOX(M_BOX(GP_LEFT, GP.BUTTON_MINI("radioMode", "Часы ⇋ Радио", "", UI_RADIO_BACK_COLOR);); M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_2_COLOR);););
       }
       M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR, false, true););
       M_BOX(GP_CENTER, GP_SLIDER_MAX("Частота", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR, false, true););
@@ -1060,10 +1059,20 @@ void build(void) {
 
       if (radioSvgImage) {
         GP.SEND("<style>#radioMode .i_mask{margin-left:5px;margin-right:4px;}</style>\n<style>#radioFreqDown .i_mask{margin-left:0px;margin-right:3px;}</style>\n<style>#radioFreqUp .i_mask{margin-left:3px;margin-right:0px;}</style>\n");
-        M_BOX(GP_CENTER, GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR); GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioFreqUp", radioFsData[2], 30, UI_RADIO_FREQ_2_COLOR); GP.ICON_FILE_BUTTON("radioSeekUp", radioFsData[3], 30, UI_RADIO_FREQ_2_COLOR); GP_CHECK_ICON("radioPower", radioFsData[5], radioSettings.powerState, 50, UI_RADIO_POWER_1_COLOR, UI_RADIO_POWER_2_COLOR););
+        M_BOX(GP_CENTER,
+              GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR);
+              GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR);
+              GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR);
+              GP.ICON_FILE_BUTTON("radioFreqUp", radioFsData[2], 30, UI_RADIO_FREQ_2_COLOR);
+              GP.ICON_FILE_BUTTON("radioSeekUp", radioFsData[3], 30, UI_RADIO_FREQ_2_COLOR);
+              GP_CHECK_ICON("radioPower", radioFsData[5], radioSettings.powerState, 50, UI_RADIO_POWER_1_COLOR, UI_RADIO_POWER_2_COLOR););
       }
       else {
-        M_BOX(GP_CENTER, GP.BUTTON("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR, "100px"); GP.BUTTON("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR, "100px"););
+        M_BOX(GP_CENTER,
+              GP.BUTTON("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR, "100px");
+              GP.BUTTON("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR, "100px");
+              GP.BUTTON("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR, "100px");
+              GP.BUTTON("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR, "100px"););
       }
       GP.BLOCK_END();
 
