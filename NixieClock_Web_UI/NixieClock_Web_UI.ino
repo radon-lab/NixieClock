@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 02.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 03.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -720,11 +720,10 @@ void build(void) {
           GP.BREAK();
 
           GP_HR_TEXT("Дни недели", "", UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.BLOCK_BEGIN(GP_DIV_RAW, "430px");
           GP.TABLE_BORDER(false);
-          GP.TABLE_BEGIN("200px,50px,50px,50px,50px,50px,50px,50px,200px");
+          GP.TABLE_BEGIN("50px,50px,50px,50px,50px,50px,50px");
           GP.TR(GP_CENTER);
-          GP.TD(GP_CENTER);
-          GP.LABEL("");
           GP.TD(GP_CENTER);
           GP_LABEL_BLOCK_W("ПН", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
@@ -739,22 +738,17 @@ void build(void) {
           GP_LABEL_BLOCK_W("СБ", "", UI_ALARM_WEEK_2_COLOR, 0);
           GP.TD(GP_CENTER);
           GP_LABEL_BLOCK_W("ВС", "", UI_ALARM_WEEK_2_COLOR, 0);
-          GP.TD(GP_CENTER);
-          GP.LABEL("");
 
           uint8_t alarmDays = alarm_data[alarm.now][ALARM_DATA_DAYS];
           GP.TR(GP_CENTER);
-          GP.TD(GP_CENTER);
-          GP.LABEL("");
           for (uint8_t i = 1; i < 8; i++) {
             GP.TD(GP_CENTER);
             alarmDays >>= 1;
             GP.CHECK(String("alarmDay/") + i, (boolean)(alarmDays & 0x01));
             updateList += String(",alarmDay/") + i;
           }
-          GP.TD(GP_CENTER);
-          GP.LABEL("");
           GP.TABLE_END();
+          GP.BLOCK_END();
           GP.BREAK();
 
           GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
