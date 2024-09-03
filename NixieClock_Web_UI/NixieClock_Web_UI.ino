@@ -886,10 +886,16 @@ void build(void) {
           GP.BLOCK_END();
 
           if (timerSvgImage) {
-            M_BOX(GP_CENTER, GP.ICON_FILE_BUTTON("timerControl/0", timerFsData[0], 60, UI_TIMER_CTRL_COLOR); GP.ICON_FILE_BUTTON("timerControl/1", timerFsData[1], 60, UI_TIMER_CTRL_COLOR); GP.ICON_FILE_BUTTON("timerControl/2", timerFsData[2], 60, UI_TIMER_CTRL_COLOR););
+            M_BOX(GP_CENTER,
+                  GP.ICON_FILE_BUTTON("timerControl/0", timerFsData[0], 60, UI_TIMER_CTRL_COLOR);
+                  GP.ICON_FILE_BUTTON("timerControl/1", timerFsData[1], 60, UI_TIMER_CTRL_COLOR);
+                  GP.ICON_FILE_BUTTON("timerControl/2", timerFsData[2], 60, UI_TIMER_CTRL_COLOR););
           }
           else {
-            M_BOX(GP_CENTER, GP.BUTTON_MINI("timerControl/0", "⠀⠀►⠀⠀", "", UI_TIMER_CTRL_COLOR); GP.BUTTON_MINI("timerControl/1", "⠀⠀❑⠀⠀", "", UI_TIMER_CTRL_COLOR); GP.BUTTON_MINI("timerControl/2", "⠀⠀||⠀⠀", "", UI_TIMER_CTRL_COLOR););
+            M_BOX(GP_CENTER,
+                  GP.BUTTON_MINI("timerControl/0", "⠀⠀►⠀⠀", "", UI_TIMER_CTRL_COLOR);
+                  GP.BUTTON_MINI("timerControl/1", "⠀⠀❑⠀⠀", "", UI_TIMER_CTRL_COLOR);
+                  GP.BUTTON_MINI("timerControl/2", "⠀⠀||⠀⠀", "", UI_TIMER_CTRL_COLOR););
           }
           GP.BLOCK_END();
 
@@ -1058,7 +1064,10 @@ void build(void) {
       GP.BLOCK_END();
 
       if (radioSvgImage) {
-        GP.SEND("<style>#radioMode .i_mask{margin-left:5px;margin-right:4px;}</style>\n<style>#radioFreqDown .i_mask{margin-left:0px;margin-right:3px;}</style>\n<style>#radioFreqUp .i_mask{margin-left:3px;margin-right:0px;}</style>\n");
+        GP.SEND("<style>#radioMode .i_mask{margin-left:5px;margin-right:4px;}\n"
+                "#radioFreqDown .i_mask{margin-left:0px;margin-right:3px;}\n"
+                "#radioFreqUp .i_mask{margin-left:3px;margin-right:0px;}</style>\n"
+               );
         M_BOX(GP_CENTER,
               GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR);
               GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR);
