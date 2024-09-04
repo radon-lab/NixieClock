@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 03.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 04.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -82,11 +82,13 @@ uint32_t secondsTimer = 0; //таймер счета секундных инте
 int8_t syncState = -2; //флаг состояния синхронизации времени
 uint8_t syncNtpTimer = 0; //таймер запроса времени с ntp сервера
 
+int8_t playbackTimer = -1; //таймер остановки воспроизведения
+uint8_t waitTimer = 0; //таймер ожидания опроса шины
+
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
-int8_t playbackTimer = -1; //таймер остановки воспроизведения
-uint8_t waitTimer = 0; //таймер ожидания опроса шины
+uint8_t dotEffectNum = 2; //количество основных эффектов секундной точки
 
 uint8_t climateTimer = 0; //таймер обновления микроклимата
 uint8_t climateCountAvg = 0; //счетчик циклов обновления микроклимата
@@ -127,6 +129,8 @@ String backlModeList = "Выключена"; //список режимов по�
 String alarmDotModeList = "Выключены"; //список режимов разделительных точек будильника
 String playerVoiceList = "Алёна,Филипп"; //список голосов для озвучки
 String showModeList = "Дата,Год,Дата и год,Температура,Влажность,Давление,Температура и влажность"; //список режимов автопоказа
+String flipModeList = "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"; //список режимов смены минут
+String secsModeList = "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе"; //список режимов смены секунд
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -540,21 +544,27 @@ void build(void) {
       }
 
       if (deviceInformation[NEON_DOT] != 3) {
+        dotEffectNum += 1;
         dotModeList += ",Динамичные(плавно мигают)";
       }
       if (deviceInformation[NEON_DOT] == 2) {
+        dotEffectNum += 1;
         dotModeList += ",Маятник(неонки)";
       }
       if (deviceInformation[DOTS_PORT_ENABLE]) {
+        dotEffectNum += 4;
         dotModeList += ",Мигающие,Бегущие,Змейка,Резинка";
         if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
+          dotEffectNum += 1;
           dotModeList += ",Одинарный маятник";
         }
         if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
+          dotEffectNum += 1;
           dotModeList += ",Двойной маятник";
         }
       }
       alarmDotModeList = dotModeList + ",Без реакции,Мигают один раз в секунду,Мигают два раза в секунду";
+      dotModeList += ",Мигают один раз в секунду,Мигают два раза в секунду";
 
       for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
         playerVoiceList += ",Голос_";
@@ -676,9 +686,9 @@ void build(void) {
 
           GP.BLOCK_BEGIN(GP_THIN, "", "Эффекты", UI_BLOCK_COLOR);
           M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL("Точки", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
-          M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
-          M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
+          M_BOX(GP.LABEL("Точки", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, (fastSettings.dotMode >= dotEffectNum) ? (fastSettings.dotMode - 1) : fastSettings.dotMode););
+          M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList, fastSettings.flipMode););
+          M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList, fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Подсветка", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
           M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);););
@@ -937,8 +947,8 @@ void build(void) {
       GP.BREAK();
       GP_HR_TEXT("Эффекты", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", fastSettings.flipMode););
-      M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе", fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
+      M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList, fastSettings.flipMode););
+      M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList, fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
       GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
@@ -965,7 +975,7 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
+        M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, (fastSettings.dotMode >= dotEffectNum) ? (fastSettings.dotMode - 1) : fastSettings.dotMode););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3));); //ползунки
@@ -1500,11 +1510,13 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("fast")) {
+      if (ui.click("fastDot")) {
+        fastSettings.dotMode = ui.getInt("fastDot");
+        if (fastSettings.dotMode >= dotEffectNum) fastSettings.dotMode += 1;
+        busSetComand(WRITE_FAST_SET, FAST_DOT_MODE);
+      }
       if (ui.clickInt("fastFlip", fastSettings.flipMode)) {
         busSetComand(WRITE_FAST_SET, FAST_FLIP_MODE);
-      }
-      if (ui.clickInt("fastDot", fastSettings.dotMode)) {
-        busSetComand(WRITE_FAST_SET, FAST_DOT_MODE);
       }
       if (ui.clickInt("fastSecsFlip", fastSettings.secsMode)) {
         busSetComand(WRITE_FAST_SET, FAST_SECS_MODE);

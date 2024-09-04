@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.1 релиз от 25.08.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.1 релиз от 04.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -398,9 +398,10 @@ enum {
   DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
 #endif
 #endif
-  DOT_EFFECT_NUM, //максимум эффектов подсветки
+  DOT_EFFECT_NUM, //количество основных эффектов точек
   DOT_OTHER_BLINK, //дополнительное одиночное мигание
-  DOT_OTHER_DOOBLE_BLINK //дополнительное двойное мигание
+  DOT_OTHER_DOOBLE_BLINK, //дополнительное двойное мигание
+  DOT_EFFECT_MAX //максимум эффектов точек
 };
 
 //перечисления настроек будильника
@@ -5146,7 +5147,8 @@ void changeFastSetSecs(void) //сменить режим анимации сек
 //-------------------------Сменить режим анимации точек быстрых настроек----------------------------
 void changeFastSetDot(void) //сменить режим анимации точек быстрых настроек
 {
-  if (++fastSettings.dotMode >= DOT_EFFECT_NUM) fastSettings.dotMode = 0;
+  if (++fastSettings.dotMode >= DOT_EFFECT_MAX) fastSettings.dotMode = 0;
+  if (fastSettings.dotMode == DOT_EFFECT_NUM) fastSettings.dotMode = DOT_OTHER_BLINK;
 }
 //-------------------------Сменить режим анимации подсветки быстрых настроек----------------------------
 void changeFastSetBackl(void) //сменить режим анимации подсветки быстрых настроек
@@ -5217,7 +5219,7 @@ uint8_t getFastSetData(uint8_t pos) //получить значение быст
 #if LAMP_NUM > 4
     case FAST_SECS_MODE: return fastSettings.secsMode; //вывод режима смены секунд
 #endif
-    case FAST_DOT_MODE: return fastSettings.dotMode; //вывод режима секундных точек
+    case FAST_DOT_MODE: return (fastSettings.dotMode >= DOT_EFFECT_NUM) ? (fastSettings.dotMode - 1) : fastSettings.dotMode; //вывод режима секундных точек
 #if BACKL_TYPE
     case FAST_BACKL_MODE: return fastSettings.backlMode; //вывод режима подсветки
 #endif
