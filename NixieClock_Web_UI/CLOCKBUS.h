@@ -1214,16 +1214,18 @@ void busUpdate(void) {
           }
           break;
 
-          case WRITE_WEATHER_DATA:
-          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
-            twi_write_byte(sens.wetherTemp & 0xFF);
-            twi_write_byte((sens.wetherTemp >> 8) & 0xFF);
-            twi_write_byte(sens.wetherPress & 0xFF);
-            twi_write_byte((sens.wetherPress >> 8) & 0xFF);
-            twi_write_byte(sens.wetherHum);
-            if (!twi_error()) { //если передача была успешной
-              busShiftBuffer(); //сместили буфер команд
+        case WRITE_WEATHER_DATA: {
+            if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+              int16_t temp = sens.wetherTemp - mainSettings.tempCorrect;
+              twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
+              twi_write_byte(temp & 0xFF);
+              twi_write_byte((temp >> 8) & 0xFF);
+              twi_write_byte(sens.wetherPress & 0xFF);
+              twi_write_byte((sens.wetherPress >> 8) & 0xFF);
+              twi_write_byte(sens.wetherHum);
+              if (!twi_error()) { //если передача была успешной
+                busShiftBuffer(); //сместили буфер команд
+              }
             }
           }
           break;
