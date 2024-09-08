@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.1 релиз от 04.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.2 релиз от 08.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -7338,8 +7338,8 @@ uint8_t mainScreen(void) //главный экран
     if (!indi.update) { //если пришло время обновить индикаторы
 #if ESP_ENABLE
       if (bus.status & (0x01 << BUS_COMMAND_TIME)) { //обновление шины
-        if (!changeAnimState) changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
-        return MAIN_PROGRAM; //перезапуск основной программы
+        bus.status &= ~(0x01 << BUS_COMMAND_TIME); //сбросить флаг
+        changeBright(); //установка яркости от времени суток
       }
 #endif
 #if ALARM_TYPE

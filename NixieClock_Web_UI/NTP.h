@@ -58,6 +58,9 @@ boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
   ntp_status = NTP_DESYNCED;
   return false;
 }
+boolean ntpGetConnectStatus(void) {
+  return (ntp_status > NTP_WAIT_ANSWER);
+}
 uint8_t ntpGetStatus(void) {
   return ntp_status;
 }

@@ -123,6 +123,9 @@ struct sensorData {
   int16_t mainTemp; //основная температура
   uint16_t mainPress; //основное давление
   uint8_t mainHum; //основная влажность
+  int16_t wetherTemp; //температура погоды
+  uint16_t wetherPress; //давление погоды
+  uint8_t wetherHum; //влажность погоды
 } sens;
 
 //------------Таймера/Секундомер-----------
@@ -317,6 +320,7 @@ enum {
   READ_DEVICE,
 
   WRITE_SENS_DATA,
+  WRITE_WEATHER_DATA,
 
   CONTROL_SYSTEM,
   CONTROL_DEVICE,
@@ -1204,6 +1208,20 @@ void busUpdate(void) {
             twi_write_byte(sens.mainPress & 0xFF);
             twi_write_byte((sens.mainPress >> 8) & 0xFF);
             twi_write_byte(sens.mainHum);
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+
+          case WRITE_WEATHER_DATA:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
+            twi_write_byte(sens.wetherTemp & 0xFF);
+            twi_write_byte((sens.wetherTemp >> 8) & 0xFF);
+            twi_write_byte(sens.wetherPress & 0xFF);
+            twi_write_byte((sens.wetherPress >> 8) & 0xFF);
+            twi_write_byte(sens.wetherHum);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }

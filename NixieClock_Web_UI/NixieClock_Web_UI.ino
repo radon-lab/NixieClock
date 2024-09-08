@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.1 релиз от 04.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 08.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -40,7 +40,12 @@ struct settingsData {
   boolean nameMenu;
   boolean namePrefix;
   boolean namePostfix;
+  uint8_t weatherCity;
+  float weatherLat;
+  float weatherLon;
   uint8_t climateType[3];
+  uint8_t climateSend;
+  uint8_t climateBar;
   uint8_t climateTime;
   boolean climateAvg;
   boolean ntpSync;
@@ -98,14 +103,20 @@ uint16_t climatePressAvg = 0; //буфер среднего давления м�
 
 boolean climateLocal = false; //флаг локальных скриптов графика
 int8_t climateState = -1; //флаг состояние активации микроклимата
-int16_t climateArrMain[2][CLIMATE_BUFFER];
-int16_t climateArrExt[1][CLIMATE_BUFFER];
-uint32_t climateDates[CLIMATE_BUFFER];
 
 #include "NTP.h"
 #include "WIRE.h"
+#include "WEATHER.h"
 #include "UPDATER.h"
 #include "CLOCKBUS.h"
+
+int16_t weatherArrMain[2][WEATHER_BUFFER];
+int16_t weatherArrExt[1][WEATHER_BUFFER];
+uint32_t weatherDates[WEATHER_BUFFER];
+
+int16_t climateArrMain[2][CLIMATE_BUFFER];
+int16_t climateArrExt[1][CLIMATE_BUFFER];
+uint32_t climateDates[CLIMATE_BUFFER];
 
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
@@ -120,6 +131,7 @@ const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
 const char *statusNtpList[] = {"Отсутсвует подключение к сети", "Подключение к серверу...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
+const char *statusWeatherList[] = {"Отсутсвует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
 String wifiScanList = "Нет сетей"; //список найденых wifi сетей
@@ -416,6 +428,74 @@ void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, 
 
   GP.SEND(data);
 }
+void GP_PLOT_STOCK_BEGIN(boolean local = 0) {
+  String data = "";
+  if (local) data += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
+  else data += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
+  GP.SEND(data);
+}
+void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
+  String data = "";
+  data += '[';
+  data += time;
+  data += F("000");
+  data += ',';
+  if (dec) data += (float)val / dec;
+  else data += val;
+  data += "],\n";
+  GP.SEND(data);
+}
+void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
+  String data = "";
+
+  data += F("<div class='chartBlock' style='width:95%;height:");
+  data += height;
+  data += F("px' id='");
+  data += id;
+  data += F("'></div>");
+
+  data += F("<script>Highcharts.setOptions({colors:['");
+  data += FPSTR(st_0);
+  data += F("','");
+  data += FPSTR(st_1);
+  data += F("']});\nHighcharts.stockChart('");
+  data += id;
+  data += F("',{chart:{},\n"
+            "rangeSelector:{buttons:[\n"
+            "{count:1,type:'minute',text:'1M'},\n"
+            "{count:1,type:'hour',text:'1H'},\n"
+            "{count:1,type:'day',text:'1D'},\n"
+            "{type:'all',text:'All'}],\n"
+            "inputEnabled:false,selected:3},\n"
+            "time:{useUTC:false},\n"
+            "credits:{enabled:false},series:[\n"
+           );
+
+  if (vals_0 != NULL) {
+    data += F("{name:'");
+    data += labels[0];
+    data += F("',data:[\n");
+    GP.SEND(data);
+    data = "";
+    for (uint16_t s = 0; s < size; s++) {
+      GP_PLOT_STOCK_ADD(times[s], vals_0[s], dec);
+    }
+    data += "]},\n";
+  }
+  if (vals_1 != NULL) {
+    data += F("{name:'");
+    data += labels[1];
+    data += F("',data:[\n");
+    GP.SEND(data);
+    data = "";
+    for (uint16_t s = 0; s < size; s++) {
+      GP_PLOT_STOCK_ADD(times[s], vals_1[s], dec);
+    }
+    data += "]},\n";
+  }
+  data += F("]});</script>\n");
+  GP.SEND(data);
+}
 void GP_BLOCK_SHADOW_BEGIN(void) {
   GP.SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));
 }
@@ -586,6 +666,7 @@ void build(void) {
     GP.UI_LINK("/", "Главная");
     GP.UI_LINK("/settings", "Настройки");
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
+    if (weatherGetState()) GP.UI_LINK("/weather", "Погода");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
     if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/information", "Об устройстве");
@@ -646,7 +727,7 @@ void build(void) {
     GP.LABEL_BLOCK(encodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
 
     GP.BOX_BEGIN(GP_RIGHT, "100%");
-    if (climateState > 0) {
+    if (climateState > 0 && (!settings.climateBar || !weatherGetValid())) {
       updateList += ",barTemp";
       GP.LABEL_BLOCK(String(climateGetTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
       if (climateGetHum()) {
@@ -657,6 +738,12 @@ void build(void) {
         updateList += ",barPress";
         GP.LABEL_BLOCK(String(climateGetPress()) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
       }
+    }
+    else if (weatherGetState() && weatherGetValid()) {
+      updateList += ",weatherTemp,weatherHum,weatherPress";
+      GP.LABEL_BLOCK(String(sens.wetherTemp / 10.0, 1) + "°С", "weatherTemp", UI_BAR_TEMP_COLOR, 18, 1);
+      GP.LABEL_BLOCK(String(sens.wetherHum) + "%", "weatherHum", UI_BAR_HUM_COLOR, 18, 1);
+      GP.LABEL_BLOCK(String(sens.wetherPress) + "mm.Hg", "weatherPress", UI_BAR_PRESS_COLOR, 18, 1);
     }
     else {
       GP.LABEL_BLOCK("-.-°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
@@ -1016,19 +1103,20 @@ void build(void) {
     else if (ui.uri("/climate")) { //микроклимат
       GP_PAGE_TITLE("Микроклимат");
 
-      int heightSize = 500;
+      uint16_t heightSize = 500;
       if (climateGetPress()) heightSize = 300;
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Микроклимат", UI_BLOCK_COLOR);
-      GP.SEND("<style>.chartBlock{width:95%;}</style>\n");
+      GP_PLOT_STOCK_BEGIN(climateLocal);
+
       if (climateGetHum()) {
-        GP.PLOT_STOCK_DARK<2, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
+        GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
       }
       else {
-        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataMain", climateNamesMain, climateDates, climateArrMain, 10, heightSize, climateLocal);
+        GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
       }
       if (climateGetPress()) {
-        GP.PLOT_STOCK_DARK<1, CLIMATE_BUFFER>("climateDataExt", climateNamesExt, climateDates, climateArrExt, 0, heightSize, climateLocal);
+        GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 0, heightSize, UI_BAR_PRESS_COLOR);
       }
       GP.BREAK();
       GP.BLOCK_END();
@@ -1063,6 +1151,45 @@ void build(void) {
       M_BOX(GP.LABEL("Влажность", "", UI_LABEL_COLOR); GP.SELECT("climateHum", dataList, settings.climateType[2], 0, (boolean)(dataAll <= 1)););
       GP.BLOCK_END();
       GP.GRID_END();
+
+      GP.GRID_BEGIN();
+      GP.BLOCK_BEGIN(GP_THIN, "", "Отображение", UI_BLOCK_COLOR);
+      M_BOX(GP.LABEL("Данные в баре", "", UI_LABEL_COLOR); GP.SELECT("climateBar", "Датчик,Погода", settings.climateBar, 0, (boolean)(!weatherGetValid())););
+      GP.BLOCK_END();
+
+      GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
+      M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValid())););
+      GP.BLOCK_END();
+      GP.GRID_END();
+    }
+    else if (ui.uri("/weather")) { //погода
+      GP_PAGE_TITLE("Погода");
+
+      GP.BLOCK_BEGIN(GP_THIN, "", "Погода на сутки", UI_BLOCK_COLOR);
+      GP_PLOT_STOCK_BEGIN(climateLocal);
+      GP_PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+      GP_PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 10, 300, UI_BAR_PRESS_COLOR);
+      GP.BREAK();
+      GP.BLOCK_END();
+
+      uint8_t time_start = ((weatherDates[0] + (settings.ntpGMT * 3600UL)) % 86400UL) / 3600UL;
+
+      GP.BLOCK_BEGIN(GP_THIN, "", "Погода по часам", UI_BLOCK_COLOR);
+      for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
+        if (i) {
+          GP.HR(UI_MENU_LINE_COLOR);
+          GP.BREAK();
+        }
+        M_BOX(
+          GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", GP_DEFAULT, 30);
+          GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_BAR_TEMP_COLOR);
+          GP.LABEL(String(weatherArrMain[1][i] / 10) + "%", "", UI_BAR_HUM_COLOR);
+          GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_BAR_PRESS_COLOR);
+        );
+        GP.BREAK();
+        if (++time_start > 23) time_start = 0;
+      }
+      GP.BLOCK_END();
     }
     else if (ui.uri("/radio")) { //радиоприемник
       GP_PAGE_TITLE("Радио");
@@ -1315,7 +1442,7 @@ void build(void) {
       GP.BLOCK_END();
 
       if (ui.uri("/network")) { //сетевые настройки
-        updateList += ",syncStatus";
+        updateList += ",syncStatus,weatherStatus";
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
         GP.TEXT("syncHost", "Хост", settings.host, "", 19);
@@ -1327,6 +1454,17 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncStatus", "syncCheck");
+
+        GP.BLOCK_BEGIN(GP_THIN, "", "Регион погоды", UI_BLOCK_COLOR);
+        GP.SELECT("weatherCity", weatherCityList, settings.weatherCity, 0, false, true);
+        GP.BREAK();
+        M_BOX(GP_CENTER, "209px", GP.NUMBER_F("weatherLat", "Широта", settings.weatherLat, 4); GP.NUMBER_F("weatherLon", "Долгота", settings.weatherLon, 4););
+        GP.SPAN(getWeatherState(), GP_CENTER, "weatherStatus", UI_INFO_COLOR); //описание
+        GP.HR(UI_LINE_COLOR);
+        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetState()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!weatherGetState()));
+        GP.BLOCK_END();
+
+        GP.UPDATE_CLICK("weatherStatus", "weatherUpdate");
       }
     }
 
@@ -1336,7 +1474,7 @@ void build(void) {
   GP_BUILD_END();
 }
 
-void buildUpdater(bool UpdateEnd, const String& UpdateError) {
+void buildUpdater(bool UpdateEnd, const String & UpdateError) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
   GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
   GP_FIX_STYLES(); //фикс стилей страницы
@@ -1425,6 +1563,26 @@ void action() {
           rtc_aging = constrain(ui.getInt("syncAging"), -128, 127);
           busSetComand(WRITE_RTC_AGING);
         }
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.clickSub("weather")) {
+      if (ui.click("weatherCity")) {
+        settings.weatherCity = ui.getInt("weatherCity");
+        settings.weatherLat = settings.weatherLon = NAN;
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("weatherLat")) {
+        settings.weatherLat = ui.getFloat("weatherLat");
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.click("weatherLon")) {
+        settings.weatherLon = ui.getFloat("weatherLon");
+        memory.update(); //обновить данные в памяти
+      }
+
+      if (ui.click("weatherUpdate")) {
+        weatherCheck(); //запросить прогноз погоды
       }
     }
     //--------------------------------------------------------------------
@@ -1840,12 +1998,20 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("climate")) {
+      if (ui.clickInt("climateBar", settings.climateBar)) {
+        memory.update(); //обновить данные в памяти
+      }
+      if (ui.clickInt("climateSend", settings.climateSend)) {
+        memory.update(); //обновить данные в памяти
+      }
+
       if (ui.clickInt("climateTime", settings.climateTime)) {
         memory.update(); //обновить данные в памяти
       }
       if (ui.clickBool("climateAvg", settings.climateAvg)) {
         memory.update(); //обновить данные в памяти
       }
+      
       if (ui.clickSub("climateTemp")) {
         uint8_t dataType = ui.getInt("climateTemp");
         if (sens.search & (0x01 << dataType)) {
@@ -1947,6 +2113,22 @@ void action() {
   }
   /**************************************************************************/
   if (ui.update()) {
+    if (ui.updateSub("weather")) {
+      if (ui.update("weatherStatus")) { //если было обновление
+        ui.answer(getWeatherState());
+      }
+
+      if (ui.update("weatherTemp")) { //если было обновление
+        ui.answer(String(sens.wetherTemp / 10.0, 1) + "°С");
+      }
+      if (ui.update("weatherHum")) { //если было обновление
+        ui.answer(String(sens.wetherHum) + "%");
+      }
+      if (ui.update("weatherPress")) { //если было обновление
+        ui.answer(String(sens.wetherPress) + "mm.Hg");
+      }
+    }
+    //--------------------------------------------------------------------
     if (ui.updateSub("sync")) {
       if (ui.update("syncStatus")) { //если было обновление
         ui.answer(getNtpState());
@@ -2149,6 +2331,12 @@ String getNtpState(void) { //получить состояние ntp
     data += ntpGetAttempts();
     data += "]...";
   }
+  return data;
+}
+//----------------------------Получить состояние погоды-----------------------------------
+String getWeatherState(void) { //получить состояние погоды
+  String data = "";
+  data += statusWeatherList[weatherGetStatus()];
   return data;
 }
 //----------------------------Получить состояние таймера---------------------------------
@@ -2367,6 +2555,21 @@ void climateUpdate(void) {
   }
 }
 //--------------------------------------------------------------------
+void weatherCheck(void) {
+  if (isnan(settings.weatherLat) || isnan(settings.weatherLon)) weatherSetCoordinates(settings.weatherCity); //установить город
+  else weatherSetCoordinates(settings.weatherLat, settings.weatherLon); //установить координаты
+  weatherSendRequest(); //запросить прогноз погоды
+}
+//--------------------------------------------------------------------
+void weatherAveragData(void) {
+  uint8_t time_now = constrain((int8_t)(((weatherDates[0] + (settings.ntpGMT * 3600UL)) % 86400UL) / 3600UL) - mainTime.hour, 0, 23);
+  uint8_t time_next = constrain(time_now + 1, 0, 23);
+
+  sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
+  sens.wetherHum = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
+  sens.wetherPress = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+}
+//--------------------------------------------------------------------
 boolean checkFsData(const char** data, int8_t size) {
   File file;
   while (size > 0) {
@@ -2402,7 +2605,13 @@ void timeUpdate(void) {
               }
             }
           }
+          if (weatherGetValid()) weatherCheck(); //запросить прогноз погоды
         }
+        if (weatherGetValid()) { //если погода была получена
+          weatherAveragData(); //усреднить показания погоды
+          if (!climateState || settings.climateSend) busSetComand(WRITE_WEATHER_DATA); //отправить данные
+        }
+
         if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
         else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
 
@@ -2457,6 +2666,14 @@ void timeUpdate(void) {
       busSetComand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
     }
   }
+
+  if (weatherUpdate()) {
+    weatherGetUnixData(weatherDates, WEATHER_BUFFER);
+    weatherGetParseData(weatherArrMain[0], WEATHER_GET_TEMP, WEATHER_BUFFER);
+    weatherGetParseData(weatherArrMain[1], WEATHER_GET_HUM, WEATHER_BUFFER);
+    weatherGetParseData(weatherArrExt[0], WEATHER_GET_PRESS, WEATHER_BUFFER);
+    weatherAveragData();
+  }
 }
 
 void deviceUpdate(void) {
@@ -2488,7 +2705,7 @@ void deviceUpdate(void) {
       sens.update = 0; //сбрасываем флаги опроса
       climateSet(); //установить показания датчиков
       climateUpdate(); //обновляем показания графиков
-      if (climateState != 0) busSetComand(WRITE_SENS_DATA);
+      if ((climateState != 0) && (!settings.climateSend || !weatherGetValid())) busSetComand(WRITE_SENS_DATA);
       break;
   }
 }
@@ -2505,6 +2722,7 @@ void wifiUpdate(void) {
     if (wifiStatus == 255) { //если нужно отключиться
       Serial.println F("Wifi disconnecting...");
       ntpStop(); //остановили ntp
+      weatherDisconnect(); //отключились от сервера погоды
       WiFi.disconnect(); //отключаем wifi
       if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
     }
@@ -2517,6 +2735,8 @@ void wifiUpdate(void) {
         digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
 #endif
         ntpStart(); //запустить ntp
+        weatherCheck(); //запросить прогноз погоды
+
         Serial.print F("Wifi connected, IP address: ");
         Serial.println(WiFi.localIP());
         break;
@@ -2541,6 +2761,7 @@ void wifiUpdate(void) {
           Serial.println F("Wifi connect error...");
         }
         ntpStop(); //остановили ntp
+        weatherDisconnect(); //отключились от сервера погоды
         break;
     }
   }
@@ -2630,7 +2851,13 @@ void resetMainSettings(void) {
   strncpy(settings.name, DEFAULT_NAME, 20); //установить имя по умолчанию
   settings.name[19] = '\0'; //устанавливаем последний символ
 
+  settings.weatherCity = 37; //установить город по умолчанию
+  settings.weatherLat = NAN; //установить широту по умолчанию
+  settings.weatherLon = NAN; //установить долготу по умолчанию
+
   for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
+  settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
+  settings.climateSend = DEFAULT_CLIMATE_SEND; //установить режим по умолчанию
   settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
   settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
   settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
@@ -2719,7 +2946,7 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xBB);
+  memory.begin(0, 0xBD);
 
   //настраиваем wifi
   WiFi.setAutoConnect(false);
@@ -2741,6 +2968,7 @@ void setup() {
 
   //остановили ntp
   ntpStop();
+  weatherDisconnect(); //отключились от сервера погоды
 
   //запрашиваем настройки часов
   busSetComand(READ_MAIN_SET);
