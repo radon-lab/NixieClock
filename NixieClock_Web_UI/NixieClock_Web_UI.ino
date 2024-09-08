@@ -2851,7 +2851,7 @@ void resetMainSettings(void) {
   strncpy(settings.name, DEFAULT_NAME, 20); //установить имя по умолчанию
   settings.name[19] = '\0'; //устанавливаем последний символ
 
-  settings.weatherCity = 37; //установить город по умолчанию
+  settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
   settings.weatherLat = NAN; //установить широту по умолчанию
   settings.weatherLon = NAN; //установить долготу по умолчанию
 
@@ -2968,7 +2968,9 @@ void setup() {
 
   //остановили ntp
   ntpStop();
-  weatherDisconnect(); //отключились от сервера погоды
+
+  //отключились от сервера погоды
+  weatherDisconnect();
 
   //запрашиваем настройки часов
   busSetComand(READ_MAIN_SET);
