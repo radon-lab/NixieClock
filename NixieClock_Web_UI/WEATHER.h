@@ -99,6 +99,23 @@ void weatherGetUnixData(uint32_t* buf, uint8_t len) {
   int16_t valStart = 0;
   int16_t valEnd = 0;
 
+  int32_t valOffset = 0;
+
+  valPos = weather_answer.indexOf("\"utc_offset_seconds\":");
+  if (valPos >= 0) {
+    valStart = weather_answer.indexOf(":", valPos);
+    valEnd = weather_answer.indexOf(",", valPos);
+    if ((valStart >= 0) && (valEnd >= 0)) {
+      while (++valStart < valEnd) {
+        if ((weather_answer[valStart] >= '0') && (weather_answer[valStart] <= '9')) {
+          valOffset *= 10;
+          valOffset += weather_answer[valStart] - '0';
+        }
+      }
+      if ((valOffset < -43200) || (valOffset > 43200)) valOffset = 0;
+    }
+  }
+
   valPos = weather_answer.indexOf("\"time\":[");
   if (valPos >= 0) {
     valStart = weather_answer.indexOf("[", valPos);
@@ -114,6 +131,7 @@ void weatherGetUnixData(uint32_t* buf, uint8_t len) {
             }
             else if (weather_answer[valStart] == ',') break;
           }
+          buf[i] += valOffset;
         }
       }
       else weather_state = WEATHER_ERROR;

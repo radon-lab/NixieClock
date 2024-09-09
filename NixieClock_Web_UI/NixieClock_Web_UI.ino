@@ -467,7 +467,7 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
             "{count:1,type:'day',text:'1D'},\n"
             "{type:'all',text:'All'}],\n"
             "inputEnabled:false,selected:3},\n"
-            "time:{useUTC:false},\n"
+            "time:{useUTC:true},\n"
             "credits:{enabled:false},series:[\n"
            );
 
@@ -1172,7 +1172,7 @@ void build(void) {
       GP.BREAK();
       GP.BLOCK_END();
 
-      uint8_t time_start = ((weatherDates[0] + (settings.ntpGMT * 3600UL)) % 86400UL) / 3600UL;
+      uint8_t time_start = (weatherDates[0] % 86400UL) / 3600UL;
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Погода по часам", UI_BLOCK_COLOR);
       for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
@@ -2530,7 +2530,7 @@ void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
 void climateUpdate(void) {
   static int8_t firstStart = -1;
 
-  uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, settings.ntpGMT);
+  uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
 
   if (firstStart < timeState) {
     firstStart = timeState;
@@ -2562,7 +2562,7 @@ void weatherCheck(void) {
 }
 //--------------------------------------------------------------------
 void weatherAveragData(void) {
-  uint8_t time_now = constrain((int8_t)(((weatherDates[0] + (settings.ntpGMT * 3600UL)) % 86400UL) / 3600UL) - mainTime.hour, 0, 23);
+  uint8_t time_now = constrain((int8_t)((weatherDates[0] % 86400UL) / 3600UL) - mainTime.hour, 0, 23);
   uint8_t time_next = constrain(time_now + 1, 0, 23);
 
   sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
