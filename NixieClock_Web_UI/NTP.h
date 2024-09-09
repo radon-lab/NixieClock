@@ -1,6 +1,3 @@
-#include <WiFiUdp.h>
-WiFiUDP udp;
-
 #define NTP_ANSWER_TIMEOUT 3000
 #define NTP_ATTEMPTS_TIMEOUT 5000
 #define NTP_ATTEMPTS_ALL 5
@@ -26,9 +23,12 @@ uint32_t ntp_timer = 0; //таймер ожидания ответа от ntp с
 uint32_t ntp_millis = 0; //количество миллисекунд с момента запроса времени
 uint32_t ntp_unix = 0; //последнее запрошенное время
 
-const uint16_t ntpSyncTime[] = {15, 30, 60, 120, 180}; //время синхронизации ntp
+const uint8_t ntpSyncTime[] = {15, 30, 60, 120, 180}; //время синхронизации ntp
 
 #include <time.h>
+
+#include <WiFiUdp.h>
+WiFiUDP udp;
 
 void ntpStart(void) {
   if (udp.begin(NTP_LOCAL_PORT)) {
@@ -49,6 +49,7 @@ void ntpRequest(void) {
     ntp_attempts = 0;
   }
 }
+
 boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
   if (_dst <= 0) return true;
   int32_t diff = ntp_unix - _unix;
@@ -58,16 +59,21 @@ boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
   ntp_status = NTP_DESYNCED;
   return false;
 }
-boolean ntpGetConnectStatus(void) {
-  return (ntp_status > NTP_WAIT_ANSWER);
-}
+
 uint8_t ntpGetStatus(void) {
   return ntp_status;
+}
+boolean ntpGetRunStatus(void) {
+  return (ntp_status != NTP_STOPPED);
+}
+boolean ntpGetSyncStatus(void) {
+  return (ntp_status == NTP_SYNCED);
 }
 uint8_t ntpGetAttempts(void) {
   if (ntp_status != NTP_CONNECTION) return 0;
   return ntp_attempts;
 }
+
 uint32_t ntpGetMillis(void) {
   if (ntp_status != NTP_SYNCED) return 0;
   return ntp_millis % 1000;
@@ -83,6 +89,7 @@ void ntpChangeAttempt(void) {
   else ntp_status = NTP_CONNECTION;
   ntp_timer = millis();
 }
+
 boolean ntpUpdate(void) {
   switch (ntp_status) {
     case NTP_CONNECTION:

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 08.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 09.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -666,7 +666,7 @@ void build(void) {
     GP.UI_LINK("/", "Главная");
     GP.UI_LINK("/settings", "Настройки");
     if (climateState > 0) GP.UI_LINK("/climate", "Микроклимат");
-    if (weatherGetState()) GP.UI_LINK("/weather", "Погода");
+    if (weatherGetValidStatus()) GP.UI_LINK("/weather", "Погода");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
     if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/information", "Об устройстве");
@@ -699,11 +699,11 @@ void build(void) {
       GP_LINE_LED("bar_rtc", (rtc_status != RTC_BAT_LOW), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
-    if (ntpGetStatus() != NTP_STOPPED) {
+    if (ntpGetRunStatus()) {
       updateList += ",bar_ntp";
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус NTP", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("bar_ntp", (ntpGetStatus() == NTP_SYNCED), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_LINE_LED("bar_ntp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
     if (wifiStatus == WL_CONNECTED) {
@@ -727,7 +727,7 @@ void build(void) {
     GP.LABEL_BLOCK(encodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
 
     GP.BOX_BEGIN(GP_RIGHT, "100%");
-    if (climateState > 0 && (!settings.climateBar || !weatherGetValid())) {
+    if (climateState > 0 && (!settings.climateBar || !weatherGetValidStatus())) {
       updateList += ",barTemp";
       GP.LABEL_BLOCK(String(climateGetTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
       if (climateGetHum()) {
@@ -739,7 +739,7 @@ void build(void) {
         GP.LABEL_BLOCK(String(climateGetPress()) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
       }
     }
-    else if (weatherGetState() && weatherGetValid()) {
+    else if (weatherGetValidStatus()) {
       updateList += ",weatherTemp,weatherHum,weatherPress";
       GP.LABEL_BLOCK(String(sens.wetherTemp / 10.0, 1) + "°С", "weatherTemp", UI_BAR_TEMP_COLOR, 18, 1);
       GP.LABEL_BLOCK(String(sens.wetherHum) + "%", "weatherHum", UI_BAR_HUM_COLOR, 18, 1);
@@ -1154,11 +1154,11 @@ void build(void) {
 
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", "Отображение", UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL("Данные в баре", "", UI_LABEL_COLOR); GP.SELECT("climateBar", "Датчик,Погода", settings.climateBar, 0, (boolean)(!weatherGetValid())););
+      M_BOX(GP.LABEL("Данные в баре", "", UI_LABEL_COLOR); GP.SELECT("climateBar", "Датчик,Погода", settings.climateBar, 0, (boolean)(!weatherGetValidStatus()), true););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValid())););
+      M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValidStatus())););
       GP.BLOCK_END();
       GP.GRID_END();
     }
@@ -1450,7 +1450,7 @@ void build(void) {
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (ntpGetStatus() == NTP_STOPPED) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(ntpGetStatus() == NTP_STOPPED));
+        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!ntpGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncStatus", "syncCheck");
@@ -1461,7 +1461,7 @@ void build(void) {
         M_BOX(GP_CENTER, "209px", GP.NUMBER_F("weatherLat", "Широта", settings.weatherLat, 4); GP.NUMBER_F("weatherLon", "Долгота", settings.weatherLon, 4););
         GP.SPAN(getWeatherState(), GP_CENTER, "weatherStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetState()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!weatherGetState()));
+        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!weatherGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("weatherStatus", "weatherUpdate");
@@ -1509,28 +1509,28 @@ void action() {
     if (ui.clickSub("sync")) {
       if (ui.click("syncGmt")) {
         settings.ntpGMT = ui.getInt("syncGmt") - 12;
-        if (settings.ntpSync && (ntpGetStatus() == NTP_SYNCED)) {
+        if (settings.ntpSync && (ntpGetSyncStatus())) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
         memory.update(); //обновить данные в памяти
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
-        if (settings.ntpSync && (ntpGetStatus() == NTP_SYNCED)) {
+        if (settings.ntpSync && (ntpGetSyncStatus())) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
         memory.update(); //обновить данные в памяти
       }
       if (ui.clickBool("syncDst", settings.ntpDst)) {
-        if (settings.ntpSync && (ntpGetStatus() == NTP_SYNCED)) {
+        if (settings.ntpSync && (ntpGetSyncStatus())) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("syncTime")) {
-        if (ntpGetStatus() == NTP_SYNCED) {
+        if (ntpGetSyncStatus()) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
@@ -2180,7 +2180,7 @@ void action() {
         ui.answer((boolean)(rtc_status != RTC_BAT_LOW));
       }
       if (ui.update("bar_ntp")) { //если было обновление
-        ui.answer((boolean)(ntpGetStatus() == NTP_SYNCED));
+        ui.answer((boolean)(ntpGetSyncStatus()));
       }
 
       if (ui.update("bar_wifi")) { //если было обновление
@@ -2568,6 +2568,8 @@ void weatherAveragData(void) {
   sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
   sens.wetherHum = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
   sens.wetherPress = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+
+  if (!climateState || settings.climateSend) busSetComand(WRITE_WEATHER_DATA); //отправить данные
 }
 //--------------------------------------------------------------------
 boolean checkFsData(const char** data, int8_t size) {
@@ -2605,12 +2607,9 @@ void timeUpdate(void) {
               }
             }
           }
-          if (weatherGetValid()) weatherCheck(); //запросить прогноз погоды
+          if (weatherGetRunStatus()) weatherCheck(); //запросить прогноз погоды
         }
-        if (weatherGetValid()) { //если погода была получена
-          weatherAveragData(); //усреднить показания погоды
-          if (!climateState || settings.climateSend) busSetComand(WRITE_WEATHER_DATA); //отправить данные
-        }
+        if (weatherGetValidStatus()) weatherAveragData(); //усреднить показания погоды
 
         if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
         else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
@@ -2705,7 +2704,7 @@ void deviceUpdate(void) {
       sens.update = 0; //сбрасываем флаги опроса
       climateSet(); //установить показания датчиков
       climateUpdate(); //обновляем показания графиков
-      if ((climateState != 0) && (!settings.climateSend || !weatherGetValid())) busSetComand(WRITE_SENS_DATA);
+      if ((climateState != 0) && (!settings.climateSend || !weatherGetValidStatus())) busSetComand(WRITE_SENS_DATA);
       break;
   }
 }

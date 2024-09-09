@@ -57,11 +57,11 @@ WiFiClient client;
 uint8_t weatherGetStatus(void) {
   return weather_state;
 }
-boolean weatherGetState(void) {
-  return (weather_state > WEATHER_ERROR);
+boolean weatherGetRunStatus(void) {
+  return (weather_state != WEATHER_NULL);
 }
-boolean weatherGetValid(void) {
-  return (weather_update == true);
+boolean weatherGetValidStatus(void) {
+  return ((weather_state > WEATHER_ERROR) && (weather_update == true));
 }
 void weatherSetCoordinates(uint8_t city) {
   weather_latitude = weatherCoordinatesList[0][city];
