@@ -270,4 +270,4 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 //Версия прошивки
 #define FIRMWARE_VERSION "2.2.2"     //версия прошивки для отображения и озвучки
-#define HARDWARE_VERSION 0x12        //версия прошивки для интерфейса wire
+#define HARDWARE_VERSION 0x13        //версия прошивки для интерфейса wire

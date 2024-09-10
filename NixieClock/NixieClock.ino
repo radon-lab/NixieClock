@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.2 релиз от 08.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.2 релиз от 10.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -380,11 +380,14 @@ enum {
 enum {
   DOT_OFF, //выключена
   DOT_STATIC, //статичная
+  DOT_MAIN_BLINK, //мигание раз в секунду
+  DOT_MAIN_DOOBLE_BLINK, //мигание два раза в секунду
 #if NEON_DOT != 3
   DOT_PULS, //плавно мигает
 #endif
 #if NEON_DOT == 2
-  DOT_TURN_PULS, //мигание по очереди неоновых ламп
+  DOT_MAIN_TURN_BLINK, //мигание неоновых ламп раз в секунду
+  DOT_TURN_PULS, //мигание неоновых ламп плавно
 #endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
@@ -398,10 +401,7 @@ enum {
   DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
 #endif
 #endif
-  DOT_EFFECT_NUM, //количество основных эффектов точек
-  DOT_OTHER_BLINK, //дополнительное одиночное мигание
-  DOT_OTHER_DOOBLE_BLINK, //дополнительное двойное мигание
-  DOT_EFFECT_MAX //максимум эффектов точек
+  DOT_EFFECT_NUM //количество эффектов точек
 };
 
 //перечисления настроек будильника
@@ -507,8 +507,10 @@ struct Settings_4 { //расширенные настройки
   uint8_t alarmTime = ALARM_TIMEOUT;
   uint8_t alarmWaitTime = ALARM_WAIT_TIME;
   uint8_t alarmSoundTime = ALARM_SOUND_TIME;
-  uint8_t alarmDotOn = ((ALARM_ON_BLINK_DOT > 2) ? (ALARM_ON_BLINK_DOT - 3) : (ALARM_ON_BLINK_DOT + DOT_EFFECT_NUM));
-  uint8_t alarmDotWait = ((ALARM_WAIT_BLINK_DOT > 2) ? (ALARM_WAIT_BLINK_DOT - 3) : (ALARM_WAIT_BLINK_DOT + DOT_EFFECT_NUM));
+  uint8_t alarmDotOn = ((!ALARM_ON_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_ON_BLINK_DOT));
+  uint8_t alarmDotWait = ((!ALARM_WAIT_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_WAIT_BLINK_DOT));
+  uint8_t tempCorrectSensor = SHOW_TEMP_CORRECT_MODE;
+  uint8_t tempMainSensor = SHOW_TEMP_MAIN_SENS;
 } extendedSettings;
 
 const uint8_t deviceInformation[] = { //комплектация часов
@@ -517,7 +519,7 @@ const uint8_t deviceInformation[] = { //комплектация часов
   CONVERT_CHAR(FIRMWARE_VERSION[4]),
   HARDWARE_VERSION,
   ((DS3231_ENABLE == 2) | SENS_AHT_ENABLE | SENS_SHT_ENABLE | SENS_BME_ENABLE | SENS_PORT_ENABLE),
-  SHOW_TEMP_MODE,
+  BTN_EASY_MAIN_MODE,
   LAMP_NUM,
   BACKL_TYPE,
   NEON_DOT,
@@ -601,6 +603,7 @@ struct busData {
 #define BUS_WRITE_TIMER_MODE 0x21
 
 #define BUS_WRITE_SENS_DATA 0x22
+#define BUS_WRITE_MAIN_SENS_DATA 0x23
 
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
@@ -1288,15 +1291,7 @@ void updateTemp(void) //обновить показания температур
 //------------------------Получить показания температуры---------------------------
 int16_t getTemperatureData(void)
 {
-#if ESP_ENABLE
-#if SHOW_TEMP_MODE <= 1
-  return mainSens.temp + mainSettings.tempCorrect;
-#else
-  return sens.temp;
-#endif
-#else
   return sens.temp + mainSettings.tempCorrect;
-#endif
 }
 //--------------------------Получить знак температуры------------------------------
 boolean getTemperatureSign(void)
@@ -1312,26 +1307,18 @@ uint16_t getTemperature(void)
 //--------------------------Получить показания давления----------------------------
 uint16_t getPressure(void)
 {
-#if ESP_ENABLE && (SHOW_TEMP_MODE <= 1)
-  return mainSens.press;
-#else
   return sens.press;
-#endif
 }
 //-------------------------Получить показания влажности----------------------------
 uint8_t getHumidity(void)
 {
-#if ESP_ENABLE && (SHOW_TEMP_MODE <= 1)
-  return mainSens.hum;
-#else
   return sens.hum;
-#endif
 }
 //------------------------Получить показания температуры---------------------------
 int16_t getTemperatureData(uint8_t data)
 {
-  if (data >= SHOW_TEMP_ESP) return mainSens.temp + mainSettings.tempCorrect;
-  return sens.temp;
+  if (data >= SHOW_TEMP_ESP) return mainSens.temp + ((extendedSettings.tempCorrectSensor == 2) ? mainSettings.tempCorrect : 0);
+  return sens.temp + ((extendedSettings.tempCorrectSensor == 1) ? mainSettings.tempCorrect : 0);
 }
 //--------------------------Получить знак температуры------------------------------
 boolean getTemperatureSign(uint8_t data)
@@ -2697,7 +2684,15 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
 #endif
+#if (DS3231_ENABLE != 2) && !SENS_AHT_ENABLE && !SENS_SHT_ENABLE && !SENS_BME_ENABLE && !SENS_PORT_ENABLE
           case BUS_WRITE_SENS_DATA:
+            if (bus.counter < sizeof(sens)) {
+              bus.buffer[bus.counter] = TWDR;
+              bus.counter++; //сместили указатель
+            }
+            break;
+#endif
+          case BUS_WRITE_MAIN_SENS_DATA:
             if (bus.counter < sizeof(mainSens)) {
               bus.buffer[bus.counter] = TWDR;
               bus.counter++; //сместили указатель
@@ -2871,7 +2866,10 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
           case BUS_WRITE_TIMER_MODE: bus.status |= BUS_COMMAND_TIMER_MODE; break; //переключение в режим таймера
 #endif
-          case BUS_WRITE_SENS_DATA: for (uint8_t i = 0; i < sizeof(mainSens); i++) *((uint8_t*)&mainSens + i) = bus.buffer[i]; break; //копирование температуры
+#if (DS3231_ENABLE != 2) && !SENS_AHT_ENABLE && !SENS_SHT_ENABLE && !SENS_BME_ENABLE && !SENS_PORT_ENABLE
+          case BUS_WRITE_SENS_DATA: for (uint8_t i = 0; i < sizeof(sens); i++) *((uint8_t*)&sens + i) = bus.buffer[i]; break; //копирование температуры
+#endif
+          case BUS_WRITE_MAIN_SENS_DATA: for (uint8_t i = 0; i < sizeof(mainSens); i++) *((uint8_t*)&mainSens + i) = bus.buffer[i]; break; //копирование температуры
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
             if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
@@ -4149,11 +4147,7 @@ uint8_t settings_main(void) //настроки основные
             case SET_TEMP_SENS: {
 #if ESP_ENABLE
                 if (!blink_data) {
-#if SHOW_TEMP_MODE > 1
-                  uint16_t temperature = getTemperature(SHOW_TEMP_ESP); //буфер температуры
-#else
-                  uint16_t temperature = getTemperature(); //буфер температуры
-#endif
+                  uint16_t temperature = getTemperature((extendedSettings.tempCorrectSensor == 2) ? SHOW_TEMP_ESP : SHOW_TEMP); //буфер температуры
                   if (temperature > 990) indiPrintNum(0, 0); //вывод ошибки
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
                 }
@@ -4498,6 +4492,13 @@ uint8_t settings_main(void) //настроки основные
 #else
               indiSetDotL(2); //включаем разделительную точку
 #endif
+#if ESP_ENABLE
+              if (!extendedSettings.tempCorrectSensor) set = 0; //заблокировали пункт меню
+#endif
+              break;
+#elif ESP_ENABLE
+            case SET_TEMP_SENS: //настройка коррекции температуры
+              if (!extendedSettings.tempCorrectSensor) set = 0; //заблокировали пункт меню
               break;
 #endif
 #else
@@ -4653,9 +4654,17 @@ uint8_t showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
 
+#if ESP_ENABLE
+  uint8_t sensor = (extendedSettings.tempMainSensor) ? SHOW_TEMP_ESP : SHOW_TEMP;
+
+  uint16_t temperature = getTemperature(sensor); //буфер температуры
+  uint16_t pressure = getPressure(sensor); //буфер давления
+  uint8_t humidity = getHumidity(sensor); //буфер влажности
+#else
   uint16_t temperature = getTemperature(); //буфер температуры
   uint16_t pressure = getPressure(); //буфер давления
   uint8_t humidity = getHumidity(); //буфер влажности
+#endif
 
   if (temperature > 990) return MAIN_PROGRAM; //выходим
 
@@ -4673,7 +4682,7 @@ uint8_t showTemp(void) //показать температуру
 
 #if ESP_ENABLE || SENS_PORT_ENABLE
   boolean dot = 0; //флаг мигания точками
-  boolean sign = getTemperatureSign(); //знак температуры
+  boolean sign = getTemperatureSign(sensor); //знак температуры
   _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
 #endif
 
@@ -4944,7 +4953,7 @@ void autoShowMenu(void) //меню автоматического показа
 #if LAMP_NUM > 4
       case SHOW_TEMP_HUM: //режим отображения температуры и влажности
 #endif
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
       case SHOW_TEMP_ESP:
 #if LAMP_NUM > 4
       case SHOW_TEMP_HUM_ESP:
@@ -4980,7 +4989,7 @@ void autoShowMenu(void) //меню автоматического показа
         break;
 
       case SHOW_HUM: //режим отображения влажности
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
       case SHOW_HUM_ESP:
         humidity = getHumidity(show_mode);
 #else
@@ -4996,7 +5005,7 @@ void autoShowMenu(void) //меню автоматического показа
         break;
 
       case SHOW_PRESS: //режим отображения давления
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
       case SHOW_PRESS_ESP:
         pressure = getPressure(show_mode);
 #else
@@ -5097,13 +5106,13 @@ void autoShowMenu(void) //меню автоматического показа
 #if LAMP_NUM > 4
       case SHOW_TEMP_HUM: //режим отображения температуры и влажности
 #endif
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
       case SHOW_TEMP_ESP:
 #if LAMP_NUM > 4
       case SHOW_TEMP_HUM_ESP:
 #endif
 #endif
-#if ESP_ENABLE && SHOW_TEMP_MODE
+#if ESP_ENABLE
         if (getTemperatureSign(show_mode)) sign = 1;
 #else
         if (getTemperatureSign()) sign = 1;
@@ -5147,8 +5156,7 @@ void changeFastSetSecs(void) //сменить режим анимации сек
 //-------------------------Сменить режим анимации точек быстрых настроек----------------------------
 void changeFastSetDot(void) //сменить режим анимации точек быстрых настроек
 {
-  if (++fastSettings.dotMode >= DOT_EFFECT_MAX) fastSettings.dotMode = 0;
-  if (fastSettings.dotMode == DOT_EFFECT_NUM) fastSettings.dotMode = DOT_OTHER_BLINK;
+  if (++fastSettings.dotMode >= DOT_EFFECT_NUM) fastSettings.dotMode = 0;
 }
 //-------------------------Сменить режим анимации подсветки быстрых настроек----------------------------
 void changeFastSetBackl(void) //сменить режим анимации подсветки быстрых настроек
@@ -5219,7 +5227,7 @@ uint8_t getFastSetData(uint8_t pos) //получить значение быст
 #if LAMP_NUM > 4
     case FAST_SECS_MODE: return fastSettings.secsMode; //вывод режима смены секунд
 #endif
-    case FAST_DOT_MODE: return (fastSettings.dotMode >= DOT_EFFECT_NUM) ? (fastSettings.dotMode - 1) : fastSettings.dotMode; //вывод режима секундных точек
+    case FAST_DOT_MODE: return fastSettings.dotMode; //вывод режима секундных точек
 #if BACKL_TYPE
     case FAST_BACKL_MODE: return fastSettings.backlMode; //вывод режима подсветки
 #endif
@@ -6520,14 +6528,24 @@ void dotFlash(void) //мигание точек
       }
 
       switch (dotGetMode()) { //режим точек
+        case DOT_MAIN_BLINK:
+          switch (dot.drive) {
+            case 0: dotSetBright(dot.maxBright); dot.drive = 1; dot.update = 1; break; //включаем точки
+            case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
+          }
+          break;
+        case DOT_MAIN_DOOBLE_BLINK:
+          if (dot.count & 0x01) dotSetBright(0); //выключаем точки
+          else dotSetBright(dot.maxBright); //включаем точки
+
+          if (++dot.count > 3) {
+            dot.count = 0;  //сбрасываем счетчик
+            dot.update = 1; //сбросили флаг обновления точек
+          }
+          else _timer_ms[TMR_DOT] = DOT_MAIN_DOOBLE_TIME; //установили таймер
+          break;
 #if NEON_DOT != 3
         case DOT_PULS:
-#if !DOT_PULS_TIME
-          if (!dot.drive) dotSetBright(dot.maxBright); //установка яркости точек
-          else dotSetBright(0); //иначе выключаем точки
-          dot.drive = !dot.drive; //сменили направление
-          dot.update = 1; //сбросили флаг обновления точек
-#else
           if (!dot.drive) {
             if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
           }
@@ -6539,18 +6557,17 @@ void dotFlash(void) //мигание точек
             }
           }
           _timer_ms[TMR_DOT] = dot.brightTime; //установили таймер
-#endif
           break;
 #endif
 #if NEON_DOT == 2
-        case DOT_TURN_PULS:
-#if !DOT_PULS_TURN_TIME
+        case DOT_MAIN_TURN_BLINK:
           neonDotSetBright(dot.maxBright); //установка яркости неоновых точек
           if (!dot.drive) neonDotSet(DOT_LEFT); //установка неоновой точки
           else neonDotSet(DOT_RIGHT); //установка неоновой точки
           dot.drive = !dot.drive; //сменили направление
           dot.update = 1; //сбросили флаг обновления точек
-#else
+          break;
+        case DOT_TURN_PULS:
           switch (dot.count) {
             case 0: if (dotIncBright(dot.brightTurnStep, dot.maxBright, DOT_LEFT)) dot.count = 1; break; //сменили направление
             case 1: if (dotDecBright(dot.brightTurnStep, 0, DOT_LEFT)) dot.count = 2; break; //сменили направление
@@ -6564,7 +6581,6 @@ void dotFlash(void) //мигание точек
               break;
           }
           _timer_ms[TMR_DOT] = dot.brightTurnTime; //установили таймер
-#endif
           break;
 #endif
 #if DOTS_PORT_ENABLE
@@ -6706,28 +6722,6 @@ void dotFlash(void) //мигание точек
           break;
 #endif
 #endif
-        case DOT_OTHER_BLINK:
-          switch (dot.drive) {
-            case 0: dotSetBright(dot.maxBright); dot.drive = 1; //включаем точки
-#if DOT_OTHER_BLINK_TIME
-              _timer_ms[TMR_DOT] = DOT_OTHER_BLINK_TIME; //установили таймер
-#else
-              dot.update = 1; //сбросили флаг секунд
-#endif
-              break;
-            case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
-          }
-          break;
-        case DOT_OTHER_DOOBLE_BLINK:
-          if (dot.count & 0x01) dotSetBright(0); //выключаем точки
-          else dotSetBright(dot.maxBright); //включаем точки
-
-          if (++dot.count > 3) {
-            dot.count = 0;  //сбрасываем счетчик
-            dot.update = 1; //сбросили флаг обновления точек
-          }
-          else _timer_ms[TMR_DOT] = DOT_OTHER_DOOBLE_TIME; //установили таймер
-          break;
         default: dot.update = 1; break; //сбросили флаг обновления точек
       }
     }

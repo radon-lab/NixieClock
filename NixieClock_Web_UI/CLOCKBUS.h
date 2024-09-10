@@ -1,5 +1,5 @@
 //Информация о интефейсе
-#define HW_VERSION 0x12 //версия прошивки для интерфейса wire
+#define HW_VERSION 0x13 //версия прошивки для интерфейса wire
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -42,6 +42,7 @@
 #define BUS_WRITE_TIMER_MODE 0x21
 
 #define BUS_WRITE_SENS_DATA 0x22
+#define BUS_WRITE_MAIN_SENS_DATA 0x23
 
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
@@ -100,6 +101,8 @@ struct Settings_3 { //расширенные настройки
   uint8_t alarmSoundTime;
   uint8_t alarmDotOn;
   uint8_t alarmDotWait;
+  uint8_t tempCorrectSensor;
+  uint8_t tempMainSensor;
 } extendedSettings;
 
 struct Settings_4 { //настройки радио
@@ -120,10 +123,10 @@ struct sensorData {
   uint8_t type; //тип датчика температуры
   boolean init; //флаг инициализации порта
   boolean err; //ошибка сенсора
-  int16_t mainTemp; //основная температура
+  int16_t mainTemp = 0x7FFF; //основная температура
   uint16_t mainPress; //основное давление
   uint8_t mainHum; //основная влажность
-  int16_t wetherTemp; //температура погоды
+  int16_t wetherTemp = 0x7FFF; //температура погоды
   uint16_t wetherPress; //давление погоды
   uint8_t wetherHum; //влажность погоды
 } sens;
@@ -179,7 +182,7 @@ enum {
   FIRMWARE_VERSION_3,
   HARDWARE_VERSION,
   SENS_TEMP,
-  SHOW_TEMP_MODE,
+  BTN_EASY_MAIN_MODE,
   LAMP_NUM,
   BACKL_TYPE,
   NEON_DOT,
@@ -243,6 +246,11 @@ enum {
 };
 
 enum {
+  EXT_SHOW_CORRECT,
+  EXT_SHOW_SENS
+};
+
+enum {
   ALARM_TIME, //время будильника
   ALARM_MODE, //режим будильника
   ALARM_DAYS, //день недели будильника
@@ -295,6 +303,7 @@ enum {
   READ_EXTENDED_SET,
   WRITE_EXTENDED_SHOW_MODE,
   WRITE_EXTENDED_SHOW_TIME,
+  WRITE_EXTENDED_SHOW_SET,
   WRITE_EXTENDED_ALARM,
 
   SET_SHOW_TIME,
@@ -967,7 +976,9 @@ void busUpdate(void) {
             extendedSettings.alarmWaitTime = twi_read_byte(TWI_ACK);
             extendedSettings.alarmSoundTime = twi_read_byte(TWI_ACK);
             extendedSettings.alarmDotOn = twi_read_byte(TWI_ACK);
-            extendedSettings.alarmDotWait = twi_read_byte(TWI_NACK);
+            extendedSettings.alarmDotWait = twi_read_byte(TWI_ACK);
+            extendedSettings.tempCorrectSensor = twi_read_byte(TWI_ACK);
+            extendedSettings.tempMainSensor = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
@@ -985,6 +996,18 @@ void busUpdate(void) {
         case WRITE_EXTENDED_SHOW_TIME:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             busWriteTwiRegByte(extendedSettings.autoShowTimes[busReadBufferArg()], BUS_WRITE_EXTENDED_SET, busReadBufferArg() + 5);
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+        case WRITE_EXTENDED_SHOW_SET:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            switch (busReadBufferArg()) {
+              case EXT_SHOW_CORRECT: busWriteTwiRegByte(extendedSettings.tempCorrectSensor, BUS_WRITE_EXTENDED_SET, 15); break; //отправляем дополнительные натройки
+              case EXT_SHOW_SENS: busWriteTwiRegByte(extendedSettings.tempMainSensor, BUS_WRITE_EXTENDED_SET, 16); break; //отправляем дополнительные натройки
+            }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
@@ -1177,7 +1200,7 @@ void busUpdate(void) {
             deviceInformation[FIRMWARE_VERSION_3] = twi_read_byte(TWI_ACK);
             deviceInformation[HARDWARE_VERSION] = twi_read_byte(TWI_ACK);
             deviceInformation[SENS_TEMP] = twi_read_byte(TWI_ACK);
-            deviceInformation[SHOW_TEMP_MODE] = twi_read_byte(TWI_ACK);
+            deviceInformation[BTN_EASY_MAIN_MODE] = twi_read_byte(TWI_ACK);
             deviceInformation[LAMP_NUM] = twi_read_byte(TWI_ACK);
             deviceInformation[BACKL_TYPE] = twi_read_byte(TWI_ACK);
             deviceInformation[NEON_DOT] = twi_read_byte(TWI_ACK);
@@ -1202,7 +1225,7 @@ void busUpdate(void) {
 
         case WRITE_SENS_DATA:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
+            twi_write_byte((deviceInformation[SENS_TEMP]) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
             twi_write_byte(sens.mainTemp & 0xFF);
             twi_write_byte((sens.mainTemp >> 8) & 0xFF);
             twi_write_byte(sens.mainPress & 0xFF);
@@ -1216,10 +1239,9 @@ void busUpdate(void) {
 
         case WRITE_WEATHER_DATA: {
             if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-              int16_t temp = sens.wetherTemp - mainSettings.tempCorrect;
-              twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
-              twi_write_byte(temp & 0xFF);
-              twi_write_byte((temp >> 8) & 0xFF);
+              twi_write_byte(BUS_WRITE_MAIN_SENS_DATA); //регистр команды
+              twi_write_byte(sens.wetherTemp & 0xFF);
+              twi_write_byte((sens.wetherTemp >> 8) & 0xFF);
               twi_write_byte(sens.wetherPress & 0xFF);
               twi_write_byte((sens.wetherPress >> 8) & 0xFF);
               twi_write_byte(sens.wetherHum);
