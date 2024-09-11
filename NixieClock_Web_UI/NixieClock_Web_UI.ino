@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 10.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 11.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1463,9 +1463,12 @@ void build(void) {
         GP.UPDATE_CLICK("syncStatus", "syncCheck");
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Регион погоды", UI_BLOCK_COLOR);
-        GP.SELECT("weatherCity", weatherCityList, settings.weatherCity, 0, false, true);
+        GP.SELECT("weatherCity", String(weatherCityList) + ",- По координатам -", settings.weatherCity, 0, false, true);
         GP.BREAK();
-        M_BOX(GP_CENTER, "209px", GP.NUMBER_F("weatherLat", "Широта", settings.weatherLat, 4); GP.NUMBER_F("weatherLon", "Долгота", settings.weatherLon, 4););
+        M_BOX(GP_CENTER, "209px",
+              GP.NUMBER_F("weatherLat", "Широта", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
+              GP.NUMBER_F("weatherLon", "Долгота", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
+             );
         GP.SPAN(getWeatherState(), GP_CENTER, "weatherStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
         GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!weatherGetRunStatus()));
@@ -1576,7 +1579,6 @@ void action() {
     if (ui.clickSub("weather")) {
       if (ui.click("weatherCity")) {
         settings.weatherCity = ui.getInt("weatherCity");
-        settings.weatherLat = settings.weatherLon = NAN;
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("weatherLat")) {
@@ -2570,7 +2572,7 @@ void climateUpdate(void) {
 }
 //--------------------------------------------------------------------
 void weatherCheck(void) {
-  if (isnan(settings.weatherLat) || isnan(settings.weatherLon)) weatherSetCoordinates(settings.weatherCity); //установить город
+  if (settings.weatherCity < WEATHER_CITY_ARRAY) weatherSetCoordinates(settings.weatherCity); //установить город
   else weatherSetCoordinates(settings.weatherLat, settings.weatherLon); //установить координаты
   weatherSendRequest(); //запросить прогноз погоды
 }
@@ -2905,8 +2907,8 @@ void resetMainSettings(void) {
   settings.name[19] = '\0'; //устанавливаем последний символ
 
   settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
-  settings.weatherLat = NAN; //установить широту по умолчанию
-  settings.weatherLon = NAN; //установить долготу по умолчанию
+  settings.weatherLat = 0; //установить широту по умолчанию
+  settings.weatherLon = 0; //установить долготу по умолчанию
 
   for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
   settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
