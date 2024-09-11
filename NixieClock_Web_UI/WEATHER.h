@@ -87,7 +87,7 @@ const char* weatherGetParseType(uint8_t mod) {
   switch (mod) {
     case WEATHER_GET_TEMP: return "\"temperature_2m\":[";
     case WEATHER_GET_HUM: return "\"relative_humidity_2m\":[";
-    case WEATHER_GET_PRESS: return "\"pressure_msl\":[";
+    case WEATHER_GET_PRESS: return "\"surface_pressure\":[";
   }
   return "NULL";
 }
@@ -189,7 +189,7 @@ boolean weatherUpdate(void) {
         if (client.connected()) {
           client.println("GET /v1/forecast?latitude=" + String(weather_latitude, 4) +
                          "&longitude=" + String(weather_longitude, 4) +
-                         "&hourly=temperature_2m,relative_humidity_2m,pressure_msl&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 HTTP/1.1\r\nHost: api.open-meteo.com\r\n");
+                         "&hourly=temperature_2m,relative_humidity_2m,surface_pressure&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 HTTP/1.1\r\nHost: api.open-meteo.com\r\n");
           weather_answer = "";
           weather_timer = millis();
           weather_state = WEATHER_WAIT_ANSWER;
