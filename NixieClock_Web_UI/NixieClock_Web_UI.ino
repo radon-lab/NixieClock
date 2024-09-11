@@ -1582,11 +1582,11 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("weatherLat")) {
-        settings.weatherLat = ui.getFloat("weatherLat");
+        settings.weatherLat = (ui.getString("weatherLat").length()) ? ui.getFloat("weatherLat") : NAN;
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("weatherLon")) {
-        settings.weatherLon = ui.getFloat("weatherLon");
+        settings.weatherLon = (ui.getString("weatherLon").length()) ? ui.getFloat("weatherLon") : NAN;
         memory.update(); //обновить данные в памяти
       }
 
