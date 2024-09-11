@@ -2907,8 +2907,8 @@ void resetMainSettings(void) {
   settings.name[19] = '\0'; //устанавливаем последний символ
 
   settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
-  settings.weatherLat = 0; //установить широту по умолчанию
-  settings.weatherLon = 0; //установить долготу по умолчанию
+  settings.weatherLat = NAN; //установить широту по умолчанию
+  settings.weatherLon = NAN; //установить долготу по умолчанию
 
   for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
   settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
