@@ -1,18 +1,18 @@
-#define NTP_ANSWER_TIMEOUT 3000
-#define NTP_ATTEMPTS_TIMEOUT 5000
-#define NTP_ATTEMPTS_ALL 5
+#define NTP_ANSWER_TIMEOUT 3000 //время ожидания ответа от сервера(2000..5000)(мс)
+#define NTP_ATTEMPTS_TIMEOUT 5000 //пауза перед следующим запросом на сервер(5000..10000)(мс)
+#define NTP_ATTEMPTS_ALL 5 //количесво попыток отправки запроса(1..10)
 
-#define NTP_PACKET_SIZE 48
-#define NTP_LOCAL_PORT 1234
-#define NTP_SERVER_PORT 123
+#define NTP_PACKET_SIZE 48 //длинна пакета данных(48)
+#define NTP_LOCAL_PORT 1234 //локальный порт(1234)
+#define NTP_SERVER_PORT 123 //порт сервера(123)
 
 enum {
-  NTP_STOPPED,
-  NTP_CONNECTION,
-  NTP_WAIT_ANSWER,
-  NTP_SYNCED,
-  NTP_DESYNCED,
-  NTP_ERROR
+  NTP_STOPPED, //сервис не запущен
+  NTP_CONNECTION, //идет подключение к серверу
+  NTP_WAIT_ANSWER, //ожидание ответа от сервера
+  NTP_SYNCED, //время синхронизировано
+  NTP_DESYNCED, //время рассинхронизировано
+  NTP_ERROR //ошибка запроса
 };
 
 uint8_t ntp_buffer[NTP_PACKET_SIZE]; //буфер обмена с ntp сервером

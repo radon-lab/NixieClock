@@ -29,27 +29,27 @@ const float weatherCoordinatesList[2][WEATHER_CITY_ARRAY] = { //координа
 };
 
 enum {
-  WEATHER_GET_TEMP,
-  WEATHER_GET_HUM,
-  WEATHER_GET_PRESS
+  WEATHER_GET_TEMP, //получить температуру
+  WEATHER_GET_HUM, //получить влажность
+  WEATHER_GET_PRESS //получить давление
 };
 
 enum {
-  WEATHER_NULL,
-  WEATHER_ERROR,
-  WEATHER_GOOD,
-  WEATHER_REQUEST,
-  WEATHER_WAIT_ANSWER
+  WEATHER_NULL, //сервис не запущен
+  WEATHER_ERROR, //ошибка запроса
+  WEATHER_GOOD, //данные получены успешно
+  WEATHER_REQUEST, //выполняется запрос
+  WEATHER_WAIT_ANSWER //ожидается ответ
 };
-uint8_t weather_state = WEATHER_NULL;
+uint8_t weather_state = WEATHER_NULL; //флаг состояние сервера погоды
 
 boolean weather_update = false; //флаг обновления данных о погоде
 uint32_t weather_timer = 0; //таймер ожидания ответа от сервера погоды
 
-float weather_latitude = 0;
-float weather_longitude = 0;
+float weather_latitude = 0; //текущая широта
+float weather_longitude = 0; //текущая долгота
 
-String weather_answer = "";
+String weather_answer = ""; //ответ от сервера погоды
 
 #include <ESP8266WiFi.h>
 WiFiClient client;
