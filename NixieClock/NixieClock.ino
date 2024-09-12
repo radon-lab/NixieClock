@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.2 релиз от 10.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.2 релиз от 12.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2361,7 +2361,7 @@ uint8_t alarmWarn(void) //тревога будильника
 #if PLAYER_TYPE
     if (!cur_vol) { //если автогромкость
       auto_vol = 1; //установили флаг автогромкости
-      cur_vol = ALARM_RADIO_VOL_MIN; //установили минимальную громкость
+      cur_vol = ALARM_PLAYER_VOL_MIN; //установили минимальную громкость
     }
     playerStop(); //сброс позиции мелодии
     playerSetVolNow(cur_vol); //установка громкости
