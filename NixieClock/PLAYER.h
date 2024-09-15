@@ -16,13 +16,8 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
-#if PLAYER_TYPE == 2
-#define PLAYER_MIN_VOL 0 //минимальная громкость SD плеер
-#define PLAYER_MAX_VOL 9 //максимальная громкость SD плеер
-#else
-#define PLAYER_MIN_VOL 0 //минимальная громкость DF плеер
-#define PLAYER_MAX_VOL 30 //максимальная громкость DF плеер
-#endif
+#define MAIN_MIN_VOL 0 //общая минимальная громкость(0..15)
+#define MAIN_MAX_VOL 15 //общая максимальная громкость(1..15)
 
 enum {
   _START_BYTE, //стартовый байт
@@ -250,14 +245,26 @@ void playerSetTrackNow(uint8_t _track, uint8_t _folder)
   if (_folder > 1) _folder += player.playbackVoice;
   playerSendDataNow(PLAYER_CMD_PLAY_TRACK_IN_FOLDER, _track, _folder);
 }
+//-------------------------------------Ограничить громкость-------------------------------------
+uint8_t playerConstrainVol(uint8_t _vol)
+{
+  if (_vol > MAIN_MAX_VOL) _vol = MAIN_MAX_VOL;
+#if PLAYER_TYPE == 2
+  _vol *= 0.6; //ограничили для SD
+#else
+  _vol *= 2; //ограничили для DF
+#endif
+  return _vol;
+}
 //-------------------------------------Установить громкость-------------------------------------
 void playerSetVol(uint8_t _vol)
 {
-  playerSendDataNow(PLAYER_CMD_SET_VOL, _vol);
+  playerSendDataNow(PLAYER_CMD_SET_VOL, playerConstrainVol(_vol));
 }
 //------------------------------Установить громкость без очереди--------------------------------
 void playerSetVolNow(uint8_t _vol)
 {
+  _vol = playerConstrainVol(_vol);
   if (player.playbackVol != _vol) {
     player.playbackVol = _vol;
     playerSendDataReg(PLAYER_CMD_SET_VOL, _vol, _VOL_REG);
@@ -266,7 +273,7 @@ void playerSetVolNow(uint8_t _vol)
 //----------------------Установить громкость по окончанию воспроизведения------------------------
 void playerRetVol(uint8_t _vol)
 {
-  playerSendDataReg(PLAYER_CMD_SET_VOL, _vol, _VOL_RET_REG);
+  playerSendDataReg(PLAYER_CMD_SET_VOL, playerConstrainVol(_vol), _VOL_RET_REG);
 }
 //------------------------------------Установить приглушение-------------------------------------
 void playerSetMute(boolean _mute)
@@ -496,7 +503,7 @@ void dfPlayerInit(void)
   UCSR0C = ((0x01 << UCSZ01) | (0x01 << UCSZ00)); //устанавливаем длинну посылки 8 бит
 #endif
 
-  playerSetVolNow((PLAYER_MAX_VOL * (PLAYER_START_VOL / 100.0)));
+  playerSetVolNow(PLAYER_START_VOL);
   _timer_ms[TMR_PLAYER] = PLAYER_BUSY_ERROR + PLAYER_START_WAIT;
 }
 //------------------------------------Инициализация SD плеера------------------------------------
@@ -509,5 +516,5 @@ void sdPlayerInit(void)
     }
     else buffer.cardType = 0; //иначе ошибка инициализации
   }
-  playerSetVolNow((PLAYER_MAX_VOL * (PLAYER_START_VOL / 100.0)));
+  playerSetVolNow(PLAYER_START_VOL);
 }

@@ -140,6 +140,7 @@ void stopSeekRDA(void)
 void setVolumeRDA(uint8_t _vol)
 {
   if (readRegRDA(RDA_VOLUME_REG)) return; //запрашиваем чтение данных, если нет ответа то выходим
+  if (_vol > RADIO_MAX_VOL) _vol = RADIO_MAX_VOL; //ограничили громкость
   rda.highReg = (rda.highReg & 0xF0) | RADIO_SEEK_SNR; //установили порог SNR
   rda.lowReg = (rda.lowReg & 0xF0) | (_vol & 0x0F); //записываем настройку
   writeRegRDA(RDA_VOLUME_REG); //отправляем данные

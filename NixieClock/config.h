@@ -122,7 +122,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 
 
 //Настройки плеера
-#define PLAYER_START_VOL 50          //громкость плеера при запуске(10..100)(%)
+#define PLAYER_START_VOL 7           //громкость плеера при запуске(0..15)
 #define PLAYER_MAX_BUFFER 10         //максимальное количество ячеек в буфере воспроизведения(1..25)
 #define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
 #define PLAYER_RESET_WAIT 1500       //ожидание инициализации плеера(1000..2000)(мс)
@@ -269,5 +269,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "2.2.2"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "2.2.3"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x13        //версия прошивки для интерфейса wire

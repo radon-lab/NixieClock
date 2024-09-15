@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.2 релиз от 11.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 15.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -158,7 +158,7 @@ String GP_FLOAT_DEC(float val, uint16_t dec) {
   else data += String(val, (uint16_t)dec);
   return data;
 }
-void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
+void GP_SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
   String data = "";
   data += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
   if (dis) data += F(" class='dsbl'");
@@ -187,7 +187,11 @@ void GP_SLIDER_MAX(const String& lable, const String& name, float value = 0, flo
   if (dis) data += F("class='dsbl' disabled");
   data += F(">\n<output align='center' id='");
   data += name;
-  data += F("_val' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
+  data += F("_val' name='");
+  data += min_lable;
+  data += ',';
+  data += max_lable;
+  data += F("' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
   if (dis) data += F(" class='dsbl'");
   data += F(">");
   data += GP_FLOAT_DEC(value, dec);
@@ -528,7 +532,14 @@ void GP_FIX_SCRIPTS(void) {
             "if(upd)GP_apply(upd,this.responseText);}}}}\n"
             "function GP_spinc(arg){\n"
             "if (arg.className=='spin_inp'){\n"
-            "arg.value-=arg.value%arg.step;}}</script>\n"
+            "arg.value-=arg.value%arg.step;}}\n"
+            "function GP_change(arg){\n"
+            "arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';\n"
+            "const _output=getEl(arg.id+'_val');\n"
+            "const _range=_output.name.split(',');\n"
+            "if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}\n"
+            "else if((arg.value>=Number(arg.max))&&_range[1]){_output.value=_range[1];}\n"
+            "else _output.value=arg.value;}</script>\n"
           )
          );
 }
@@ -769,7 +780,7 @@ void build(void) {
           M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, (deviceInformation[PLAYER_TYPE] == 2) ? 9 : 30, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
+          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
           GP.BLOCK_END();
         );
       }
@@ -838,7 +849,7 @@ void build(void) {
           GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
           M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
           M_BOX(GP_CENTER, GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0); GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 100, 10, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE]));); //ползунки
+          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "авто", "макс", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE]));); //ползунки
 
           boolean alarmDelStatus = (boolean)(alarm.all > 1);
 
@@ -1029,7 +1040,7 @@ void build(void) {
       GP.BREAK();
       GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)(climateState <= 0)););
-      M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего,Датчик в часах,Датчик в есп", extendedSettings.tempCorrectSensor););
+      M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего," + climateGetSensList(), extendedSettings.tempCorrectSensor););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
@@ -1047,7 +1058,7 @@ void build(void) {
       M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BREAK();
       GP_HR_TEXT("Время смены яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
-      GP.HINT("hint1", "Одниаковое время - отключить смену яркости или активировать датчик освещения"); //всплывающая подсказка
+      GP.HINT("hint1", "Одинаковое время - отключить смену яркости или активировать датчик освещения"); //всплывающая подсказка
       M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
       GP.BREAK();
       GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1079,7 +1090,7 @@ void build(void) {
         GP.BLOCK_BEGIN(GP_THIN, "", "Звуки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
         M_BOX(GP.LABEL("Голос озвучки", "", UI_LABEL_COLOR); GP.SELECT("mainVoice", "Алёна,Филипп", mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
-        M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, (deviceInformation[PLAYER_TYPE] == 2) ? 9 : 30, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BREAK();
         GP_HR_TEXT("Звук смены часа", "hint3", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint3", "Одниаковое время - отключить звук смены часа"); //всплывающая подсказка
@@ -1165,7 +1176,7 @@ void build(void) {
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
-      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик в часах,Датчик в есп", extendedSettings.tempMainSensor, 0, (boolean)(deviceInformation[BTN_EASY_MAIN_MODE])););
+      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(deviceInformation[BTN_EASY_MAIN_MODE])););
       GP.BLOCK_END();
       GP.GRID_END();
     }
@@ -1208,8 +1219,8 @@ void build(void) {
       if (!radioSvgImage) {
         M_BOX(M_BOX(GP_LEFT, GP.BUTTON_MINI("radioMode", "Часы ⇋ Радио", "", UI_RADIO_BACK_COLOR);); M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_2_COLOR);););
       }
-      M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR, false, true););
-      M_BOX(GP_CENTER, GP_SLIDER_MAX("Частота", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR, false, true););
+      M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "мин", "макс", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR, false, true););
+      M_BOX(GP_CENTER, GP_SLIDER_MAX("Частота", "", "", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR, false, true););
       GP.BLOCK_END();
 
       if (radioSvgImage) {
@@ -2403,6 +2414,7 @@ String encodeTime(GPtime data) {
   str += ':';
   str += data.second / 10;
   str += data.second % 10;
+  
   return str;
 }
 //--------------------------------------------------------------------
@@ -2437,6 +2449,19 @@ String StrLengthConstrain(String data, uint8_t size) {
     data += "…";
   }
   return data;
+}
+//--------------------------------------------------------------------
+String climateGetSensList(void) {
+  String str = "";
+  
+  if (deviceInformation[SENS_TEMP]) {
+    str += "Датчик в часах";
+    if (weatherGetValidStatus() && settings.climateSend) str += ",Данные о погоде";
+    else str += "Датчик в есп";
+  }
+  else str += "Датчик в есп,Данные о погоде";
+
+  return str;
 }
 //--------------------------------------------------------------------
 int16_t climateGetTemp(void) {
