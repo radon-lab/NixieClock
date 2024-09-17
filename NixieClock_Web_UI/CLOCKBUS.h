@@ -249,6 +249,10 @@ enum {
   EXT_SHOW_CORRECT,
   EXT_SHOW_SENS
 };
+enum {
+  SENS_DATA_MAIN,
+  SENS_DATA_EXT
+};
 
 enum {
   ALARM_TIME, //время будильника
@@ -696,10 +700,8 @@ void busUpdate(void) {
             if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
               uint8_t tempAll = twi_read_byte(TWI_NACK);
               if (tempAll > MAX_ALARMS) tempAll = MAX_ALARMS;
-              else if (alarm.all != tempAll) {
-                alarm.now = alarm.set = 0;
-                alarm.reload = 1;
-              }
+              else if (alarm.all != tempAll) alarm.now = alarm.set = 0;
+              alarm.reload = 1;
               alarm.num = 0;
               alarm.all = tempAll;
               if (!twi_error()) { //если передача была успешной
@@ -1209,7 +1211,7 @@ void busUpdate(void) {
 
         case WRITE_SENS_DATA:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            twi_write_byte((deviceInformation[SENS_TEMP]) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
+            twi_write_byte((busReadBufferArg()) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
             twi_write_byte(sens.mainTemp & 0xFF);
             twi_write_byte((sens.mainTemp >> 8) & 0xFF);
             twi_write_byte(sens.mainPress & 0xFF);
@@ -1217,19 +1219,21 @@ void busUpdate(void) {
             twi_write_byte(sens.mainHum);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
+              busShiftBuffer(); //сместили буфер команд
             }
           }
           break;
 
         case WRITE_WEATHER_DATA: {
             if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-              twi_write_byte(BUS_WRITE_MAIN_SENS_DATA); //регистр команды
+              twi_write_byte((busReadBufferArg()) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
               twi_write_byte(sens.wetherTemp & 0xFF);
               twi_write_byte((sens.wetherTemp >> 8) & 0xFF);
               twi_write_byte(sens.wetherPress & 0xFF);
               twi_write_byte((sens.wetherPress >> 8) & 0xFF);
               twi_write_byte(sens.wetherHum);
               if (!twi_error()) { //если передача была успешной
+                busShiftBuffer(); //сместили буфер команд
                 busShiftBuffer(); //сместили буфер команд
               }
             }

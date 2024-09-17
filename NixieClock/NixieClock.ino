@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.3 релиз от 15.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.3 релиз от 17.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -5533,7 +5533,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
           case VOL_UP_KEY_PRESS: //прибавить громкость
 #endif
-            if (radioSettings.volume < RADIO_MAX_VOL) {
+            if (radioSettings.volume < MAIN_MAX_VOL) {
               setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
               setVolumeRDA(++radioSettings.volume); //прибавитиь громкость
             }
@@ -5542,7 +5542,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
           case VOL_DOWN_KEY_PRESS: //убавить громкость
 #endif
-            if (radioSettings.volume > RADIO_MIN_VOL) {
+            if (radioSettings.volume > MAIN_MIN_VOL) {
               setUpdateMemory(0x01 << MEM_UPDATE_RADIO_SET);
               setVolumeRDA(--radioSettings.volume); //убавить громкость
             }

@@ -16,9 +16,6 @@
 #define PLAYER_MUTE_OFF 0x00 //выключить приглушение звука
 #define PLAYER_MUTE_ON 0x01 //включить приглушение звука
 
-#define MAIN_MIN_VOL 0 //общая минимальная громкость(0..15)
-#define MAIN_MAX_VOL 15 //общая максимальная громкость(1..15)
-
 enum {
   _START_BYTE, //стартовый байт
   _VERSION, //версия
@@ -250,7 +247,7 @@ uint8_t playerConstrainVol(uint8_t _vol)
 {
   if (_vol > MAIN_MAX_VOL) _vol = MAIN_MAX_VOL;
 #if PLAYER_TYPE == 2
-  _vol *= 0.6; //ограничили для SD
+  _vol = ((uint16_t)_vol * 154) >> 8; //ограничили для SD
 #else
   _vol *= 2; //ограничили для DF
 #endif

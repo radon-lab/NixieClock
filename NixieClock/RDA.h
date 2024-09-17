@@ -16,11 +16,6 @@
 #define RDA_OFF 0x00 //радио выключено
 #define RDA_ON 0x01 //радио включено
 
-#define RADIO_MIN_FREQ 870 //минимальная частота(870..1080)
-#define RADIO_MAX_FREQ 1080 //максимальная частота(870..1080)
-#define RADIO_MIN_VOL 0 //минмальная громкость(0..15)
-#define RADIO_MAX_VOL 15 //максимальная громкость(1..15)
-
 struct rdaData { //буфер обмена радио
   uint8_t highReg; //старший байт
   uint8_t lowReg; //младший байт
@@ -140,7 +135,7 @@ void stopSeekRDA(void)
 void setVolumeRDA(uint8_t _vol)
 {
   if (readRegRDA(RDA_VOLUME_REG)) return; //запрашиваем чтение данных, если нет ответа то выходим
-  if (_vol > RADIO_MAX_VOL) _vol = RADIO_MAX_VOL; //ограничили громкость
+  if (_vol > MAIN_MAX_VOL) _vol = MAIN_MAX_VOL; //ограничили громкость
   rda.highReg = (rda.highReg & 0xF0) | RADIO_SEEK_SNR; //установили порог SNR
   rda.lowReg = (rda.lowReg & 0xF0) | (_vol & 0x0F); //записываем настройку
   writeRegRDA(RDA_VOLUME_REG); //отправляем данные

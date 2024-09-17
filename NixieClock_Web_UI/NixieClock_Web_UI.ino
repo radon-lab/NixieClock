@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 15.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 17.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -788,14 +788,12 @@ void build(void) {
       if (deviceInformation[ALARM_TYPE]) {
         if (alarm.reload >= 2) alarm.reload = 0;
 
-        updateList += ",alarmReload";
-        GP.RELOAD("alarmReload");
+        updateList += ",mainReload";
+        GP.RELOAD("mainReload");
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Будильник", UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
           GP_PAGE_TITLE("Настройка будильника");
-
-          updateList += ",alarmVol,alarmSoundType,alarmSound,alarmRadio,alarmTime,alarmMode";
 
           String alarmSoundList;
           for (uint8_t i = 0; i < deviceInformation[PLAYER_MAX_SOUND]; i++) {
@@ -847,9 +845,12 @@ void build(void) {
           GP.BLOCK_END();
 
           GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
-          M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия, Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP_CENTER, GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0); GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)!deviceInformation[RADIO_ENABLE]););
-          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "авто", "макс", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)(!deviceInformation[RADIO_ENABLE] && !deviceInformation[PLAYER_TYPE]));); //ползунки
+          M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия,Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE], true););
+          M_BOX(GP_CENTER,
+                GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0, (boolean)(deviceInformation[RADIO_ENABLE] && alarm_data[alarm.now][ALARM_DATA_RADIO]));
+                GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)(!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]));
+               );
+          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "авто", "макс", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
 
           boolean alarmDelStatus = (boolean)(alarm.all > 1);
 
@@ -879,7 +880,7 @@ void build(void) {
             if (alarmMode >= 3) {
               boolean alarmDaysFirst = false;
               uint8_t alarmDays = (alarmMode != 3) ? alarm_data[i][ALARM_DATA_DAYS] : 0x3E;
-              nowWeekDay = getWeekDay(mainDate.year, mainDate.month, mainDate.day); //получить день недели;
+              nowWeekDay = getWeekDay(mainDate.year, mainDate.month, mainDate.day); //получить день недели
               for (uint8_t dl = 0; dl < 7; dl++) {
                 if (alarmDays & (0x01 << nowWeekDay)) {
                   nowWeekDay = dl;
@@ -1008,13 +1009,13 @@ void build(void) {
     else if (ui.uri("/settings")) { //настройки
       GP_PAGE_TITLE("Настройки");
 
-      String showModeList = "Дата,Год,Дата и год"; //список режимов автопоказа
+      String showModeList = "Пусто,Дата,Год,Дата и год"; //список режимов автопоказа
       if (deviceInformation[LAMP_NUM] < 6) showModeList += "(недоступно)";
       if (deviceInformation[SENS_TEMP]) {
         showModeList += ",Температура,Влажность,Давление,Температура и влажность";
         if (deviceInformation[LAMP_NUM] < 6) showModeList += "(недоступно)";
       }
-      if (!deviceInformation[SENS_TEMP] || !settings.climateSend) {
+      if ((climateState != 0) && (!settings.climateSend || !deviceInformation[SENS_TEMP])) {
         showModeList += ",Температура(есп),Влажность(есп),Давление(есп),Температура и влажность";
         if (deviceInformation[LAMP_NUM] < 6) showModeList += "(недоступно)";
         else showModeList += "(есп)";
@@ -1033,9 +1034,11 @@ void build(void) {
         GP.BREAK();
         GP_HR_TEXT("Отображение", "hint4", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint4", "Источник и время в секундах"); //всплывающая подсказка
-        M_BOX(M_BOX(GP_LEFT, GP.LABEL("1", "", UI_LABEL_COLOR); GP.SELECT("extShowMode/0", showModeList, (extendedSettings.autoShowModes[0]) ? (extendedSettings.autoShowModes[0] - 1) : 0);); GP_SPINNER_MID("extShowTime/0", extendedSettings.autoShowTimes[0], 1, 5, 1, 0, UI_SPINNER_COLOR););
-      for (uint8_t i = 1; i < 5; i++) {
-      M_BOX(M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, "Пусто," + showModeList, extendedSettings.autoShowModes[i]);); GP_SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR););
+      for (uint8_t i = 0; i < 5; i++) {
+      M_BOX(
+        M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
+        GP_SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
+      );
       }
       GP.BREAK();
       GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1045,8 +1048,8 @@ void build(void) {
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
       GP.LABEL("Яркость", "", UI_HINT_COLOR);
-      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtDay", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR);); //ползунки
-      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtNight", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR);); //ползунки
+      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtDay", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtNight", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
       GP.BREAK();
       GP_HR_TEXT("Эффекты", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
@@ -1073,16 +1076,16 @@ void build(void) {
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList, fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);); //ползунки
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightDay", mainSettings.backlBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightNight", mainSettings.backlBrightNight, 0, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList, fastSettings.dotMode););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3));); //ползунки
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10, 0, UI_SLIDER_COLOR);); //ползунки
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtDay", mainSettings.dotBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10, 0, UI_SLIDER_COLOR););
         GP.BLOCK_END();
       );
 
@@ -1655,7 +1658,6 @@ void action() {
         if (ui.click("alarmDel") && !alarm.reload) {
           if (alarm.all > 1) {
             alarm.all--;
-            alarm.reload = 1;
             busSetComand(DEL_ALARM, alarm.now);
             busSetComand(READ_ALARM_ALL);
           }
@@ -1679,7 +1681,6 @@ void action() {
             alarm.now = alarm.all;
             alarm.all++;
             alarm.set = 2;
-            alarm.reload = 1;
             busSetComand(NEW_ALARM);
             busSetComand(READ_ALARM_ALL);
           }
@@ -1818,7 +1819,7 @@ void action() {
       if (ui.clickSub("extShowMode")) {
         uint8_t pos = ui.clickNameSub(1).toInt();
         uint8_t mode = ui.getInt(String("extShowMode/") + pos);
-        extendedSettings.autoShowModes[pos] = (!pos) ? (mode + 1) : mode;
+        extendedSettings.autoShowModes[pos] = mode;
         busSetComand(WRITE_EXTENDED_SHOW_MODE, pos);
       }
       if (ui.clickSub("extShowTime")) {
@@ -2027,8 +2028,8 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
       if (ui.clickInt("climateSend", settings.climateSend)) {
-        if (!settings.climateSend) busSetComand(WRITE_SENS_DATA);
-        else busSetComand(WRITE_WEATHER_DATA);
+        if (!settings.climateSend) climateSendData(); //отправить данные
+        else weatherSendData(); //отправить данные
         memory.update(); //обновить данные в памяти
       }
 
@@ -2044,7 +2045,7 @@ void action() {
         if (sens.search & (0x01 << dataType)) {
           settings.climateType[0] = dataType;
           sens.mainTemp = sens.temp[settings.climateType[0]];
-          busSetComand(WRITE_SENS_DATA);
+          climateSendData(); //отправить данные
           memory.update(); //обновить данные в памяти
         }
       }
@@ -2053,7 +2054,7 @@ void action() {
         if (sens.hum[dataType]) {
           settings.climateType[2] = dataType;
           sens.mainHum = sens.hum[settings.climateType[2]];
-          busSetComand(WRITE_SENS_DATA);
+          climateSendData(); //отправить данные
           memory.update(); //обновить данные в памяти
         }
       }
@@ -2215,48 +2216,6 @@ void action() {
       }
     }
     //--------------------------------------------------------------------
-    if (ui.updateSub("alarm")) {
-      if (alarm.set) { //если режим настройки будильника
-        if (ui.update("alarmVol")) {
-          if (alarm.volume != alarm_data[alarm.now][ALARM_DATA_VOLUME]) {
-            alarm.volume = alarm_data[alarm.now][ALARM_DATA_VOLUME];
-            ui.answer(alarm_data[alarm.now][ALARM_DATA_VOLUME]);
-          }
-        }
-        if (ui.update("alarmSoundType")) {
-          ui.answer(alarm_data[alarm.now][ALARM_DATA_RADIO]);
-        }
-        if (ui.update("alarmSound")) {
-          if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
-            ui.answer(alarm_data[alarm.now][ALARM_DATA_SOUND]);
-          }
-        }
-        if (ui.update("alarmRadio")) {
-          if (alarm_data[alarm.now][ALARM_DATA_RADIO]) {
-            ui.answer(alarm_data[alarm.now][ALARM_DATA_STATION]);
-          }
-        }
-        if (ui.update("alarmTime")) {
-          if ((alarm_data[alarm.now][ALARM_DATA_HOUR] != alarmTime.hour) || (alarm_data[alarm.now][ALARM_DATA_MINS] != alarmTime.minute)) {
-            alarmTime.hour = alarm_data[alarm.now][ALARM_DATA_HOUR];
-            alarmTime.minute = alarm_data[alarm.now][ALARM_DATA_MINS];
-            ui.answer(alarmTime);
-          }
-        }
-        if (ui.update("alarmMode")) {
-          ui.answer(alarm_data[alarm.now][ALARM_DATA_MODE]);
-        }
-        if (ui.updateSub("alarmDay")) {
-          uint8_t day = constrain(ui.updateNameSub(1).toInt(), 1, 7);
-          ui.answer((boolean)(alarm_data[alarm.now][ALARM_DATA_DAYS] & (0x01 << day)));
-        }
-      }
-      if (ui.update("alarmReload") && (alarm.reload >= 2)) { //если было обновление
-        ui.answer(1);
-        alarm.reload = 0;
-      }
-    }
-    //--------------------------------------------------------------------
     if (ui.updateSub("main")) {
       if (ui.update("mainTimerState")) { //если было обновление
         ui.answer(getTimerState());
@@ -2264,6 +2223,10 @@ void action() {
       }
       if (ui.update("mainTimer")) { //если было обновление
         ui.answer(convertTimerTime());
+      }
+      if (ui.update("mainReload") && (alarm.reload >= 2)) { //если было обновление
+        ui.answer(1);
+        alarm.reload = 0;
       }
     }
     //--------------------------------------------------------------------
@@ -2363,7 +2326,12 @@ String getNtpState(void) { //получить состояние ntp
 //----------------------------Получить состояние погоды-----------------------------------
 String getWeatherState(void) { //получить состояние погоды
   String data = "";
-  data += statusWeatherList[weatherGetStatus()];
+  if (!weatherGetAttempts()) data += statusWeatherList[weatherGetStatus()];
+  else {
+    data += "Попытка запроса[";
+    data += weatherGetAttempts();
+    data += "]...";
+  }
   return data;
 }
 //----------------------------Получить состояние таймера---------------------------------
@@ -2414,7 +2382,7 @@ String encodeTime(GPtime data) {
   str += ':';
   str += data.second / 10;
   str += data.second % 10;
-  
+
   return str;
 }
 //--------------------------------------------------------------------
@@ -2453,13 +2421,14 @@ String StrLengthConstrain(String data, uint8_t size) {
 //--------------------------------------------------------------------
 String climateGetSensList(void) {
   String str = "";
-  
+
   if (deviceInformation[SENS_TEMP]) {
     str += "Датчик в часах";
     if (weatherGetValidStatus() && settings.climateSend) str += ",Данные о погоде";
     else str += "Датчик в есп";
   }
-  else str += "Датчик в есп,Данные о погоде";
+  else if (climateState != 0) str += "Датчик в есп,Данные о погоде";
+  else str += "Данные о погоде,Датчик в есп";
 
   return str;
 }
@@ -2596,6 +2565,13 @@ void climateUpdate(void) {
   }
 }
 //--------------------------------------------------------------------
+void climateSendData(void) {
+  if (climateState != 0) { //если датчик обнаружен
+    if (!deviceInformation[SENS_TEMP]) busSetComand(WRITE_SENS_DATA, SENS_DATA_MAIN); //отправить данные
+    else if (!settings.climateSend || !weatherGetValidStatus()) busSetComand(WRITE_SENS_DATA, SENS_DATA_EXT); //отправить данные
+  }
+}
+//--------------------------------------------------------------------
 void weatherCheck(void) {
   if (settings.weatherCity < WEATHER_CITY_ARRAY) weatherSetCoordinates(settings.weatherCity); //установить город
   else weatherSetCoordinates(settings.weatherLat, settings.weatherLon); //установить координаты
@@ -2603,14 +2579,29 @@ void weatherCheck(void) {
 }
 //--------------------------------------------------------------------
 void weatherAveragData(void) {
-  uint8_t time_now = constrain((int8_t)((weatherDates[0] % 86400UL) / 3600UL) - mainTime.hour, 0, 23);
+  int8_t time_diff = mainTime.hour - ((weatherDates[0] % 86400UL) / 3600UL);
+  if (time_diff < 0) time_diff += 24;
+  uint8_t time_now = constrain(time_diff, 0, 23);
   uint8_t time_next = constrain(time_now + 1, 0, 23);
 
-  sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
-  sens.wetherHum = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
-  sens.wetherPress = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+  if (!weatherGetGoodStatus() && (time_now > 12)) {
+    weatherResetValidStatus(); //сбросили статус погоды
+    sens.wetherTemp = 0x7FFF; //сбросили температуру погоды
+    sens.wetherHum = 0; //сбросили влажность погоды
+    sens.wetherPress = 0; //сбросили давление погоды
+  }
+  else {
+    sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
+    sens.wetherHum = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
+    sens.wetherPress = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+  }
 
-  if (!climateState || settings.climateSend || !deviceInformation[SENS_TEMP]) busSetComand(WRITE_WEATHER_DATA); //отправить данные
+  weatherSendData(); //отправить данные
+}
+//--------------------------------------------------------------------
+void weatherSendData(void) {
+  if (!climateState && !deviceInformation[SENS_TEMP]) busSetComand(WRITE_WEATHER_DATA, SENS_DATA_MAIN); //отправить данные
+  else if (!climateState || !deviceInformation[SENS_TEMP] || settings.climateSend) busSetComand(WRITE_WEATHER_DATA, SENS_DATA_EXT); //отправить данные
 }
 //--------------------------------------------------------------------
 boolean checkFsData(const char** data, int8_t size) {
@@ -2745,7 +2736,7 @@ void deviceUpdate(void) {
       sens.update = 0; //сбрасываем флаги опроса
       climateSet(); //установить показания датчиков
       climateUpdate(); //обновляем показания графиков
-      if ((climateState != 0) && (!settings.climateSend || !weatherGetValidStatus() || !deviceInformation[SENS_TEMP])) busSetComand(WRITE_SENS_DATA);
+      climateSendData(); //отправить данные
       break;
   }
 }
