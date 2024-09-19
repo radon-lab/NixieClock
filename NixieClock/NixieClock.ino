@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.3 релиз от 17.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.3 релиз от 19.09.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -534,7 +534,7 @@ const uint8_t deviceInformation[] = { //комплектация часов
   SOUND_MAX(alarm_sound),
 #endif
   PLAYER_VOICE_MAX,
-  MAIN_MAX_VOL
+  ALARM_AUTO_VOL_MAX
 };
 
 //переменные работы с температурой
@@ -2347,7 +2347,14 @@ uint8_t alarmWarn(void) //тревога будильника
       setVolumeRDA(cur_vol); //устанавливаем громкость
       setFreqRDA(radioSettings.stationsSave[alarms.sound]); //устанавливаем частоту
     }
-    else alarms.radio = 0; //отключили режим радио
+    else { //иначе переходим в режим мелодии
+#if PLAYER_TYPE
+      if (alarms.sound >= PLAYER_ALARM_MAX) alarms.sound = 0; //ограничили номер трека
+#else
+      if (alarms.sound >= SOUND_MAX(alarm_sound)) alarms.sound = 0; //ограничили номер мелодии
+#endif
+      alarms.radio = 0; //отключили режим радио
+    }
   }
   else radioPowerOff(); //выключить питание радиоприемника
 #endif

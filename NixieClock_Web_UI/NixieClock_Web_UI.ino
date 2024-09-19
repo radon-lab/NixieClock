@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 17.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 19.09.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1174,7 +1174,7 @@ void build(void) {
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", "Отображение", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Данные в баре", "", UI_LABEL_COLOR); GP.SELECT("climateBar", "Датчик,Погода", settings.climateBar, 0, (boolean)(!weatherGetValidStatus()), true););
-      M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValidStatus() || !deviceInformation[SENS_TEMP])););
+      M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValidStatus() || !deviceInformation[SENS_TEMP]), true););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
@@ -1615,7 +1615,7 @@ void action() {
           alarm_data[alarm.now][ALARM_DATA_VOLUME] = ui.getInt("alarmVol");
           alarm.volume = alarm_data[alarm.now][ALARM_DATA_VOLUME];
           busSetComand(WRITE_SELECT_ALARM, ALARM_VOLUME);
-          if (!alarm_data[alarm.now][ALARM_DATA_RADIO] && alarm_data[alarm.now][ALARM_DATA_VOLUME] && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetComand(WRITE_TEST_ALARM_VOL);
+          if ((!alarm_data[alarm.now][ALARM_DATA_RADIO] || !deviceInformation[RADIO_ENABLE]) && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetComand(WRITE_TEST_ALARM_VOL);
         }
         else if (playbackTimer > -1) playbackTimer = 0; //сбросили воспроизведение
         if (ui.click("alarmSoundType")) {
@@ -2423,8 +2423,8 @@ String climateGetSensList(void) {
   String str = "";
 
   if (deviceInformation[SENS_TEMP]) {
-    str += "Датчик в часах";
-    if (weatherGetValidStatus() && settings.climateSend) str += ",Данные о погоде";
+    str += "Датчик в часах,";
+    if (weatherGetValidStatus() && settings.climateSend) str += "Данные о погоде";
     else str += "Датчик в есп";
   }
   else if (climateState != 0) str += "Датчик в есп,Данные о погоде";
@@ -2703,7 +2703,7 @@ void timeUpdate(void) {
     weatherGetParseData(weatherArrMain[0], WEATHER_GET_TEMP, WEATHER_BUFFER);
     weatherGetParseData(weatherArrMain[1], WEATHER_GET_HUM, WEATHER_BUFFER);
     weatherGetParseData(weatherArrExt[0], WEATHER_GET_PRESS, WEATHER_BUFFER);
-    weatherAveragData();
+    if (weatherGetValidStatus()) weatherAveragData();
   }
 }
 

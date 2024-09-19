@@ -106,7 +106,7 @@ const char* weatherGetParseType(uint8_t mod) {
 }
 
 void weatherGetUnixData(uint32_t* buf, uint8_t len) {
-  if (weather_state != WEATHER_GOOD) return;
+  if (weather_update == false) return;
 
   int16_t valPos = 0;
   int16_t valStart = 0;
@@ -152,9 +152,11 @@ void weatherGetUnixData(uint32_t* buf, uint8_t len) {
     else weather_state = WEATHER_ERROR;
   }
   else weather_state = WEATHER_ERROR;
+
+  if (weather_state == WEATHER_ERROR) weather_update = false;
 }
 void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
-  if (weather_state != WEATHER_GOOD) return;
+  if (weather_update == false) return;
 
   int16_t valPos = 0;
   int16_t valStart = 0;
@@ -193,6 +195,8 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
     else weather_state = WEATHER_ERROR;
   }
   else weather_state = WEATHER_ERROR;
+
+  if (weather_state == WEATHER_ERROR) weather_update = false;
 }
 
 boolean weatherUpdate(void) {

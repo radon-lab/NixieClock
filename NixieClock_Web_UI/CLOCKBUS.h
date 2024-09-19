@@ -198,7 +198,7 @@ enum {
   PLAYER_TYPE,
   PLAYER_MAX_SOUND,
   PLAYER_MAX_VOICE,
-  PLAYER_MAX_VOL,
+  ALARM_AUTO_VOL_MAX,
   INFORMATION_MAX
 };
 uint8_t deviceInformation[INFORMATION_MAX]; //информация о часах
@@ -1131,7 +1131,7 @@ void busUpdate(void) {
         case WRITE_TEST_ALARM_VOL:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
-            twi_write_byte(alarm_data[alarm.now][ALARM_DATA_VOLUME]); //громкость
+            twi_write_byte((alarm_data[alarm.now][ALARM_DATA_VOLUME]) ? alarm_data[alarm.now][ALARM_DATA_VOLUME] : deviceInformation[ALARM_AUTO_VOL_MAX]); //громкость
             twi_write_byte(22); //номер трека
             twi_write_byte(5); //номер папки
             if (!twi_error()) { //если передача была успешной
@@ -1142,7 +1142,7 @@ void busUpdate(void) {
         case WRITE_TEST_ALARM_SOUND:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_TEST_SOUND); //регистр команды
-            twi_write_byte(alarm_data[alarm.now][ALARM_DATA_VOLUME]); //громкость
+            twi_write_byte((alarm_data[alarm.now][ALARM_DATA_VOLUME]) ? alarm_data[alarm.now][ALARM_DATA_VOLUME] : deviceInformation[ALARM_AUTO_VOL_MAX]); //громкость
             twi_write_byte(alarm_data[alarm.now][ALARM_DATA_SOUND] + ((deviceInformation[PLAYER_TYPE]) ? 1 : 0)); //номер трека
             twi_write_byte(1); //номер папки
             if (!twi_error()) { //если передача была успешной
@@ -1202,7 +1202,7 @@ void busUpdate(void) {
             deviceInformation[PLAYER_TYPE] = twi_read_byte(TWI_ACK);
             deviceInformation[PLAYER_MAX_SOUND] = twi_read_byte(TWI_ACK);
             deviceInformation[PLAYER_MAX_VOICE] = twi_read_byte(TWI_ACK);
-            deviceInformation[PLAYER_MAX_VOL] = twi_read_byte(TWI_NACK);
+            deviceInformation[ALARM_AUTO_VOL_MAX] = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
