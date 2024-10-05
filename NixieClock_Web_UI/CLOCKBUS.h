@@ -44,6 +44,8 @@
 #define BUS_WRITE_SENS_DATA 0x22
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
 
+#define BUS_ALARM_DISABLE 0xDA
+
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
 #define BUS_STOP_SOUND 0xEC
@@ -148,7 +150,7 @@ struct alarmData {
   uint8_t now; //текущий будильник
   uint8_t num; //текущий будильник
   uint8_t reload; //флаг обновления страницы будильника
-  uint8_t volume; //текущая громкость
+  boolean status; //флаг статуса будильника
 } alarm;
 
 enum {
@@ -321,6 +323,8 @@ enum {
   READ_TIMER_SET,
   WRITE_TIMER_SET,
   WRITE_TIMER_MODE,
+
+  WRITE_ALARM_DISABLE,
 
   WRITE_STOP_SOUND,
   WRITE_TEST_MAIN_VOL,
@@ -1109,6 +1113,15 @@ void busUpdate(void) {
           }
           break;
 
+        case WRITE_ALARM_DISABLE:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            twi_write_byte(BUS_ALARM_DISABLE); //регистр команды
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+
         case WRITE_STOP_SOUND:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_STOP_SOUND); //регистр команды
@@ -1173,6 +1186,11 @@ void busUpdate(void) {
         case READ_STATUS:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_STATUS)) { //начинаем передачу
             deviceStatus = twi_read_byte(TWI_NACK);
+            if ((boolean)(deviceStatus & (0x01 << STATUS_MAX_DATA)) != alarm.status) {
+              alarm.status = !alarm.status;
+              alarm.reload = 2;
+            }
+            deviceStatus &= ~(0x01 << STATUS_MAX_DATA);
             if (!twi_error()) { //если передача была успешной
               clockState = -1; //установили флаг ответа от часов
               busShiftBuffer(); //сместили буфер команд

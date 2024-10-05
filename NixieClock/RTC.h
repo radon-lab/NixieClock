@@ -10,8 +10,8 @@ struct time {
   uint8_t h = 8; //часы
   uint8_t DD = 1; //день
   uint8_t MM = 1; //месяц
-  uint16_t YY = 2021; //год
-  uint8_t DW = 5; //день недели
+  uint16_t YY = 2000; //год
+  uint8_t DW = 6; //день недели
 } RTC;
 
 const uint8_t daysInMonth[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце

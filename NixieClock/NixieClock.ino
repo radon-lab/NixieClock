@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.3 релиз от 19.09.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 05.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -600,6 +600,8 @@ struct busData {
 #define BUS_WRITE_SENS_DATA 0x22
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
 
+#define BUS_ALARM_DISABLE 0xDA
+
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
 #define BUS_STOP_SOUND 0xEC
@@ -655,7 +657,7 @@ enum {
   STATUS_UPDATE_ALARM_SET,
   STATUS_UPDATE_TIME_SET,
   STATUS_UPDATE_SENS_DATA,
-  STATUS_MAX_DATA
+  STATUS_UPDATE_ALARM_STATE
 };
 uint8_t deviceStatus; //состояние часов
 
@@ -1283,15 +1285,45 @@ void updateTemp(void) //обновить показания температур
     readTempSens(); //чтение установленного датчика температуры
   }
 }
+//-----------------------Получить текущий основной датчик--------------------------
+uint8_t getMainSens(void)
+{
+  return (extendedSettings.tempMainSensor) ? SHOW_TEMP_ESP : SHOW_TEMP;
+}
+//------------------------Получить показания температуры---------------------------
+int16_t getTemperatureData(uint8_t data)
+{
+  if (data >= SHOW_TEMP_ESP) return mainSens.temp + ((extendedSettings.tempCorrectSensor == 2) ? mainSettings.tempCorrect : 0);
+  return sens.temp + ((extendedSettings.tempCorrectSensor == 1) ? mainSettings.tempCorrect : 0);
+}
 //------------------------Получить показания температуры---------------------------
 int16_t getTemperatureData(void)
 {
+#if ESP_ENABLE
+  return getTemperatureData(getMainSens());
+#else
   return sens.temp + mainSettings.tempCorrect;
+#endif
+}
+//--------------------------Получить знак температуры------------------------------
+boolean getTemperatureSign(uint8_t data)
+{
+  return getTemperatureData(data) < 0;
 }
 //--------------------------Получить знак температуры------------------------------
 boolean getTemperatureSign(void)
 {
+#if ESP_ENABLE
+  return getTemperatureSign(getMainSens());
+#else
   return getTemperatureData() < 0;
+#endif
+}
+//------------------------Получить показания температуры---------------------------
+uint16_t getTemperature(uint8_t data)
+{
+  int16_t temp = getTemperatureData(data);
+  return (temp < 0) ? -temp : temp;
 }
 //------------------------Получить показания температуры---------------------------
 uint16_t getTemperature(void)
@@ -1300,43 +1332,34 @@ uint16_t getTemperature(void)
   return (temp < 0) ? -temp : temp;
 }
 //--------------------------Получить показания давления----------------------------
-uint16_t getPressure(void)
-{
-  return sens.press;
-}
-//-------------------------Получить показания влажности----------------------------
-uint8_t getHumidity(void)
-{
-  return sens.hum;
-}
-//------------------------Получить показания температуры---------------------------
-int16_t getTemperatureData(uint8_t data)
-{
-  if (data >= SHOW_TEMP_ESP) return mainSens.temp + ((extendedSettings.tempCorrectSensor == 2) ? mainSettings.tempCorrect : 0);
-  return sens.temp + ((extendedSettings.tempCorrectSensor == 1) ? mainSettings.tempCorrect : 0);
-}
-//--------------------------Получить знак температуры------------------------------
-boolean getTemperatureSign(uint8_t data)
-{
-  return getTemperatureData(data) < 0;
-}
-//------------------------Получить показания температуры---------------------------
-uint16_t getTemperature(uint8_t data)
-{
-  int16_t temp = getTemperatureData(data);
-  return (temp < 0) ? -temp : temp;
-}
-//--------------------------Получить показания давления----------------------------
 uint16_t getPressure(uint8_t data)
 {
   if (data >= SHOW_TEMP_ESP) return mainSens.press;
   return sens.press;
+}
+//--------------------------Получить показания давления----------------------------
+uint16_t getPressure(void)
+{
+#if ESP_ENABLE
+  return getPressure(getMainSens());
+#else
+  return sens.press;
+#endif
 }
 //-------------------------Получить показания влажности----------------------------
 uint8_t getHumidity(uint8_t data)
 {
   if (data >= SHOW_TEMP_ESP) return mainSens.hum;
   return sens.hum;
+}
+//-------------------------Получить показания влажности----------------------------
+uint8_t getHumidity(void)
+{
+#if ESP_ENABLE
+  return getHumidity(getMainSens());
+#else
+  return sens.hum;
+#endif
 }
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
@@ -2237,13 +2260,15 @@ void delAlarm(uint8_t alarm) //удалить будильник
 void checkAlarms(uint8_t check) //проверка будильников
 {
   if (alarms.now < ALARM_WAIT) { //если тревога не активна
+    if (RTC.YY <= 2000) return; //выходим если время не установлено
+
     alarms.now = ALARM_DISABLE; //сбрасываем флаг будильников
     int16_t time_now = 1440 + ((int16_t)RTC.h * 60) + RTC.m; //рассчитали текущее время
     for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
       uint8_t mode_alarm = alarmRead(alm, ALARM_MODE); //считали режим будильника
       if (mode_alarm) { //если будильник включен
         alarms.now = ALARM_ENABLE; //мигание точек при включенном будильнике
-        if (check == ALARM_CHECK_SET) return; //выходим
+        if (check == ALARM_CHECK_SET) return; //выходим если нужно только проверить
 
         uint8_t days_alarm = alarmRead(alm, ALARM_DAYS); //считали дни недели будильника
         int16_t time_alarm = ((int16_t)alarmRead(alm, ALARM_HOURS) * 60) + alarmRead(alm, ALARM_MINS);
@@ -2740,8 +2765,8 @@ uint8_t busUpdate(void) //обновление статуса шины
               bus.counter++; //сместили указатель
             }
             break;
-          case BUS_READ_ALARM_NUM: //передача количества будильников
-            if (!bus.counter) {
+          case BUS_READ_ALARM_NUM: //передача информации о будильниках
+            if (bus.counter < 2) {
               TWDR = alarms.num;
               bus.counter++; //сместили указатель
             }
@@ -2784,11 +2809,11 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #endif
           case BUS_READ_STATUS: //передача статуса часов
-            if (!bus.counter) {
-              TWDR = deviceStatus;
-              deviceStatus = 0;
-              bus.counter++; //сместили указатель
-            }
+#if ALARM_TYPE
+            if (alarms.now >= ALARM_WAIT) deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_STATE);
+#endif
+            TWDR = deviceStatus;
+            deviceStatus = 0;
             break;
           case BUS_READ_DEVICE: //передача комплектации
             if (bus.counter < sizeof(deviceInformation)) {
@@ -2863,6 +2888,18 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WRITE_SENS_DATA: for (uint8_t i = 0; i < sizeof(sens); i++) *((uint8_t*)&sens + i) = bus.buffer[i]; break; //копирование температуры
 #endif
           case BUS_WRITE_MAIN_SENS_DATA: for (uint8_t i = 0; i < sizeof(mainSens); i++) *((uint8_t*)&mainSens + i) = bus.buffer[i]; break; //копирование температуры
+#if ALARM_TYPE
+          case BUS_ALARM_DISABLE: //отключение будильника
+            if (alarms.now >= ALARM_WAIT) { //если будильник активен
+#if PLAYER_TYPE
+              playerStop(); //сброс воспроизведения плеера
+#else
+              melodyStop(); //сброс воспроизведения мелодии
+#endif
+              alarmDisable(); //отключить будильник
+            }
+            break;
+#endif
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
             if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
@@ -4643,17 +4680,9 @@ uint8_t showTemp(void) //показать температуру
 {
   uint8_t mode = 0; //текущий режим
 
-#if ESP_ENABLE
-  uint8_t sensor = (extendedSettings.tempMainSensor) ? SHOW_TEMP_ESP : SHOW_TEMP;
-
-  uint16_t temperature = getTemperature(sensor); //буфер температуры
-  uint16_t pressure = getPressure(sensor); //буфер давления
-  uint8_t humidity = getHumidity(sensor); //буфер влажности
-#else
   uint16_t temperature = getTemperature(); //буфер температуры
   uint16_t pressure = getPressure(); //буфер давления
   uint8_t humidity = getHumidity(); //буфер влажности
-#endif
 
   if (temperature > 990) return MAIN_PROGRAM; //выходим
 

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.3 релиз от 19.09.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 05.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -120,7 +120,7 @@ const char *climateNamesMain[] = {"Температура", "Влажность"
 const char *climateNamesExt[] = {"Давление"};
 
 const char *climateFsData[] = {"/gp_data/PLOT_STOCK.js.gz"};
-const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg"};
+const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg", "/alarm_dis.svg"};
 const char *timerFsData[] = {"/timer_play.svg", "/timer_stop.svg", "/timer_pause.svg", "/timer_up.svg", "/timer_down.svg"};
 const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "/radio_mode.svg", "/radio_power.svg"};
 
@@ -940,12 +940,22 @@ void build(void) {
             reloadList += String("alarmSet/") + i;
           }
 
-          if (alarm.all < MAX_ALARMS) {
+          if (!alarm.status) {
+            if (alarm.all < MAX_ALARMS) {
+              if (alarmSvgImage) {
+                GP.ICON_FILE_BUTTON("alarmAdd", alarmFsData[0], 50, UI_ALARM_ADD_COLOR);
+              }
+              else {
+                M_BOX(GP_CENTER, GP.BUTTON("alarmAdd", "✚", "", UI_ALARM_ADD_COLOR, "80px;font-size:30px"););
+              }
+            }
+          }
+          else {
             if (alarmSvgImage) {
-              GP.ICON_FILE_BUTTON("alarmAdd", alarmFsData[0], 50, UI_ALARM_ADD_COLOR);
+              GP.ICON_FILE_BUTTON("alarmDis", alarmFsData[2], 50, UI_ALARM_DIS_COLOR);
             }
             else {
-              M_BOX(GP_CENTER, GP.BUTTON("alarmAdd", "✚", "", UI_ALARM_ADD_COLOR, "80px"););
+              M_BOX(GP_CENTER, GP.BUTTON("alarmDis", "✖", "", UI_ALARM_DIS_COLOR, "80px;font-weight:bold"););
             }
           }
           GP.RELOAD_CLICK(reloadList);
@@ -1613,7 +1623,6 @@ void action() {
       if (alarm.set) { //если режим настройки будильника
         if (ui.click("alarmVol")) {
           alarm_data[alarm.now][ALARM_DATA_VOLUME] = ui.getInt("alarmVol");
-          alarm.volume = alarm_data[alarm.now][ALARM_DATA_VOLUME];
           busSetComand(WRITE_SELECT_ALARM, ALARM_VOLUME);
           if ((!alarm_data[alarm.now][ALARM_DATA_RADIO] || !deviceInformation[RADIO_ENABLE]) && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetComand(WRITE_TEST_ALARM_VOL);
         }
@@ -1684,6 +1693,9 @@ void action() {
             busSetComand(NEW_ALARM);
             busSetComand(READ_ALARM_ALL);
           }
+        }
+        if (ui.click("alarmDis")) {
+          busSetComand(WRITE_ALARM_DISABLE);
         }
       }
     }
@@ -2879,7 +2891,7 @@ void initFileSystemData(void) {
       climateLocal = true; //работаем локально
       Serial.println F("Script file found");
     }
-    if (checkFsData(alarmFsData, 2)) {
+    if (checkFsData(alarmFsData, 3)) {
       alarmSvgImage = true; //работаем локально
       Serial.println F("Alarm svg files found");
     }
