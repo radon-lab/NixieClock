@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 05.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 06.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -4700,7 +4700,7 @@ uint8_t showTemp(void) //показать температуру
 
 #if ESP_ENABLE || SENS_PORT_ENABLE
   boolean dot = 0; //флаг мигания точками
-  boolean sign = getTemperatureSign(sensor); //знак температуры
+  boolean sign = getTemperatureSign(); //знак температуры
   _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
 #endif
 

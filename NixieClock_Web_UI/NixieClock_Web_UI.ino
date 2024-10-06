@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 05.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 06.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1189,7 +1189,7 @@ void build(void) {
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
-      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(deviceInformation[BTN_EASY_MAIN_MODE])););
+      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !climateState)););
       GP.BLOCK_END();
       GP.GRID_END();
     }
