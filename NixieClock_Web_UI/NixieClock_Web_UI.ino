@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 06.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 10.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -726,7 +726,7 @@ void build(void) {
     GP.LABEL_BLOCK(encodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
 
     GP.BOX_BEGIN(GP_RIGHT, "100%");
-    if (climateState > 0 && (!settings.climateBar || !weatherGetValidStatus())) {
+    if ((climateState > 0) && (!settings.climateBar || !weatherGetValidStatus())) {
       updateList += ",barTemp";
       GP.LABEL_BLOCK(String(climateGetTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
       if (climateGetHum()) {
@@ -1052,8 +1052,8 @@ void build(void) {
       }
       GP.BREAK();
       GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Коррекция, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)(climateState <= 0)););
-      M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего," + climateGetSensList(), extendedSettings.tempCorrectSensor););
+      M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
+      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !climateState)););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
@@ -1187,9 +1187,9 @@ void build(void) {
       M_BOX(GP.LABEL("Данные в часах", "", UI_LABEL_COLOR); GP.SELECT("climateSend", "Датчик,Погода", settings.climateSend, 0, (boolean)(!weatherGetValidStatus() || !deviceInformation[SENS_TEMP]), true););
       GP.BLOCK_END();
 
-      GP.BLOCK_BEGIN(GP_THIN, "", "Отправка", UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
-      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !climateState)););
+      GP.BLOCK_BEGIN(GP_THIN, "", "Коррекция", UI_BLOCK_COLOR);
+      M_BOX(GP.LABEL("Температура, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR, "", (boolean)(climateState <= 0)););
+      M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего," + climateGetSensList(), extendedSettings.tempCorrectSensor););
       GP.BLOCK_END();
       GP.GRID_END();
     }
