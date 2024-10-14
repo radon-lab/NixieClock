@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.7 релиз от 13.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.0.8 релиз от 14.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -735,7 +735,7 @@ void checkSensors(void) {
     }
     else {
 #if DEBUG_MODE
-      Serial.println F("Sensor not found");
+      Serial.print F("Sensor not found");
 #endif
       if (settingsMode == true) {
         memory.update(); //обновить данные в памяти
@@ -832,7 +832,7 @@ void sendUpdate(void) {
         Serial.print((char*)&settings.send[_num][0]);
         Serial.println F(" ]...");
 #endif
-        if (!udp.beginPacket(settings.send[_num][0], UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
+        if (!udp.beginPacket((char*)&settings.send[_num][0], UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
           sendReady = false; //сбросили флаг повторной попытки отправки данных
 #if DEBUG_MODE
           Serial.println F("Send data fail!");

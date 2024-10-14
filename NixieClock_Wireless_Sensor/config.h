@@ -53,4 +53,4 @@
 #define UDP_LOCAL_PORT 888 //локальный порт udp(888)
 #define UDP_CLOCK_PORT 8888 //порт udp часов(8888)
 
-#define ESP_FIRMWARE_VERSION "1.0.7" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.0.8" //версия прошивки модуля esp
