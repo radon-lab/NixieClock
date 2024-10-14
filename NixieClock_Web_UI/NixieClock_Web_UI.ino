@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 10.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 13.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -107,6 +107,7 @@ int8_t climateState = -1; //флаг состояние активации ми�
 #include "WEATHER.h"
 #include "UPDATER.h"
 #include "CLOCKBUS.h"
+#include "WIRELESS.h"
 
 int16_t weatherArrMain[2][WEATHER_BUFFER];
 int16_t weatherArrExt[1][WEATHER_BUFFER];
@@ -129,6 +130,7 @@ const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
 const char *statusNtpList[] = {"Отсутсвует подключение к сети", "Подключение к серверу...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
+const char *statusWirelessList[] = {"Ошибка...", "Не обнаружен...", "Подключен", "Потеряна связь...", "Нет сенсора..."};
 const char *statusWeatherList[] = {"Отсутсвует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
@@ -698,6 +700,13 @@ void build(void) {
       GP_LINE_LED("bar_rtc", (rtc_status != RTC_BAT_LOW), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
+    if (wirelessGetSensorStastus()) {
+      updateList += ",bar_sens";
+      GP_BLOCK_SHADOW_BEGIN();
+      GP.LABEL("Статус датчика", "", UI_MENU_TEXT_COLOR, 15);
+      GP_LINE_LED("bar_sens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_BLOCK_SHADOW_END();
+    }
     if (ntpGetRunStatus()) {
       updateList += ",bar_ntp";
       GP_BLOCK_SHADOW_BEGIN();
@@ -740,9 +749,9 @@ void build(void) {
     }
     else if (weatherGetValidStatus()) {
       updateList += ",weatherTemp,weatherHum,weatherPress";
-      GP.LABEL_BLOCK(String(sens.wetherTemp / 10.0, 1) + "°С", "weatherTemp", UI_BAR_TEMP_COLOR, 18, 1);
-      GP.LABEL_BLOCK(String(sens.wetherHum) + "%", "weatherHum", UI_BAR_HUM_COLOR, 18, 1);
-      GP.LABEL_BLOCK(String(sens.wetherPress) + "mm.Hg", "weatherPress", UI_BAR_PRESS_COLOR, 18, 1);
+      GP.LABEL_BLOCK(String(sens.mainTemp[1] / 10.0, 1) + "°С", "weatherTemp", UI_BAR_TEMP_COLOR, 18, 1);
+      GP.LABEL_BLOCK(String(sens.mainHum[1]) + "%", "weatherHum", UI_BAR_HUM_COLOR, 18, 1);
+      GP.LABEL_BLOCK(String(sens.mainPress[1]) + "mm.Hg", "weatherPress", UI_BAR_PRESS_COLOR, 18, 1);
     }
     else {
       GP.LABEL_BLOCK("-.-°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
@@ -1383,6 +1392,18 @@ void build(void) {
           buffMultiName[0] = '\0';
           break;
         }
+      }
+
+      GP.BREAK();
+      GP_HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      if (!wirelessGetOnlineStastus()) {
+        M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", statusWirelessList[wirelessGetStastus()], INT32_MAX, "", true););
+      }
+      else {
+        M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.NUMBER("", String(sens.mainTemp[2] / 10.0, 1) + "°С " + String(sens.mainHum[2]) + "% " + String(sens.mainPress[2]) + "mm.Hg", INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Сигнал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Батарея", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetBattery()) + "%", INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetInterval()) + " мин", INT32_MAX, "", true););
       }
 
       String rtcStatus = "Не обнаружен...";
@@ -2056,7 +2077,7 @@ void action() {
         uint8_t dataType = ui.getInt("climateTemp");
         if (sens.search & (0x01 << dataType)) {
           settings.climateType[0] = dataType;
-          sens.mainTemp = sens.temp[settings.climateType[0]];
+          sens.mainTemp[0] = sens.temp[settings.climateType[0]];
           climateSendData(); //отправить данные
           memory.update(); //обновить данные в памяти
         }
@@ -2065,7 +2086,7 @@ void action() {
         uint8_t dataType = ui.getInt("climateHum");
         if (sens.hum[dataType]) {
           settings.climateType[2] = dataType;
-          sens.mainHum = sens.hum[settings.climateType[2]];
+          sens.mainHum[0] = sens.hum[settings.climateType[2]];
           climateSendData(); //отправить данные
           memory.update(); //обновить данные в памяти
         }
@@ -2159,13 +2180,13 @@ void action() {
       }
 
       if (ui.update("weatherTemp")) { //если было обновление
-        ui.answer(String(sens.wetherTemp / 10.0, 1) + "°С");
+        ui.answer(String(sens.mainTemp[1] / 10.0, 1) + "°С");
       }
       if (ui.update("weatherHum")) { //если было обновление
-        ui.answer(String(sens.wetherHum) + "%");
+        ui.answer(String(sens.mainHum[1]) + "%");
       }
       if (ui.update("weatherPress")) { //если было обновление
-        ui.answer(String(sens.wetherPress) + "mm.Hg");
+        ui.answer(String(sens.mainPress[1]) + "mm.Hg");
       }
     }
     //--------------------------------------------------------------------
@@ -2216,11 +2237,14 @@ void action() {
       if (ui.update("bar_clock")) { //если было обновление
         ui.answer((boolean)(clockState != 0));
       }
+      if (ui.update("bar_sens")) { //если было обновление
+        ui.answer((boolean)wirelessGetOnlineStastus());
+      }
       if (ui.update("bar_rtc")) { //если было обновление
         ui.answer((boolean)(rtc_status != RTC_BAT_LOW));
       }
       if (ui.update("bar_ntp")) { //если было обновление
-        ui.answer((boolean)(ntpGetSyncStatus()));
+        ui.answer((boolean)ntpGetSyncStatus());
       }
 
       if (ui.update("bar_wifi")) { //если было обновление
@@ -2446,16 +2470,16 @@ String climateGetSensList(void) {
 }
 //--------------------------------------------------------------------
 int16_t climateGetTemp(void) {
-  return sens.mainTemp + mainSettings.tempCorrect;
+  return sens.mainTemp[0] + mainSettings.tempCorrect;
 }
 float climateGetTempFloat(void) {
   return (climateGetTemp()) ? (climateGetTemp() / 10.0) : 0;
 }
 uint16_t climateGetPress(void) {
-  return sens.mainPress;
+  return sens.mainPress[0];
 }
 uint8_t climateGetHum(void) {
-  return sens.mainHum;
+  return sens.mainHum[0];
 }
 //--------------------------------------------------------------------
 void climateSet(void) {
@@ -2515,9 +2539,9 @@ void climateSet(void) {
     }
   }
 
-  sens.mainTemp = sens.temp[settings.climateType[0]];
-  sens.mainPress = sens.press[settings.climateType[1]];
-  sens.mainHum = sens.hum[settings.climateType[2]];
+  sens.mainTemp[0] = sens.temp[settings.climateType[0]];
+  sens.mainPress[0] = sens.press[settings.climateType[1]];
+  sens.mainHum[0] = sens.hum[settings.climateType[2]];
 }
 
 void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
@@ -2598,14 +2622,14 @@ void weatherAveragData(void) {
 
   if (!weatherGetGoodStatus() && (time_now > 12)) {
     weatherResetValidStatus(); //сбросили статус погоды
-    sens.wetherTemp = 0x7FFF; //сбросили температуру погоды
-    sens.wetherHum = 0; //сбросили влажность погоды
-    sens.wetherPress = 0; //сбросили давление погоды
+    sens.mainTemp[1] = 0x7FFF; //сбросили температуру погоды
+    sens.mainHum[1] = 0; //сбросили влажность погоды
+    sens.mainPress[1] = 0; //сбросили давление погоды
   }
   else {
-    sens.wetherTemp = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
-    sens.wetherHum = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
-    sens.wetherPress = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+    sens.mainTemp[1] = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
+    sens.mainHum[1] = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
+    sens.mainPress[1] = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
   }
 
   weatherSendData(); //отправить данные
@@ -3016,6 +3040,9 @@ void setup() {
   //остановили ntp
   ntpStop();
 
+  //запутили поиск беспроводного датчика
+  wirelessStart();
+
   //отключились от сервера погоды
   weatherDisconnect();
 
@@ -3035,7 +3062,8 @@ void setup() {
 }
 
 void loop() {
-  wifiUpdate(); //обработка статусов wifi
+  wifiUpdate(); //обработка состояния wifi
+  wirelessUpdate(); //обработка беспроводного датчика
 
   if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) { //если связь с часами установлена
     timeUpdate(); //обработка времени
