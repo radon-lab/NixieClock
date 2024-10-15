@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.8 релиз от 14.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.0.9 релиз от 15.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -45,6 +45,8 @@ WiFiUDP udp;
 char buffSendIp[20]; //буфер ip адреса
 char buffSendName[20]; //буфер имени
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
+
+uint8_t send_host_num = 0; //текущий номер хоста
 
 int8_t wifiScanState = 2; //статус сканирования сети
 uint32_t wifiScanTimer = 0; //таймер начала поиска сети
@@ -524,6 +526,7 @@ void action() {
           if (!WiFi.localIP().toString().equals(buffSendIp)) { //если не собственный адрес
             for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
               if (settings.send[i][0] == '\0') { //если ячейка не заполнена
+                send_host_num = 0; //сбросили текущий хост
                 strncpy(settings.send[i], buffSendIp, 20); //копируем себе
                 settings.send[i][19] = '\0'; //устанавливаем последний символ
                 strncpy(settings.send[i + 1], buffSendName, 20); //копируем себе
@@ -558,6 +561,7 @@ void action() {
           wifiScanTimer = millis();
         }
       }
+      
       if (ui.click("extPeriod")) {
         settings.period = ui.getInt("extPeriod");
         memory.update(); //обновить данные в памяти
@@ -772,22 +776,26 @@ void updateSensors(void) {
   }
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
 
-  buffSendData[0] = (uint8_t)sens.temp;
-  buffSendData[1] = (uint8_t)(sens.temp >> 8);
+  WiFi.macAddress(buffSendData); //получить mac адрес
 
-  buffSendData[2] = (uint8_t)sens.press;
-  buffSendData[3] = (uint8_t)(sens.press >> 8);
+  buffSendData[6] = (settingsMode == true) ? UDP_FOUND_CMD : UDP_WRITE_CMD;
 
-  buffSendData[4] = (uint8_t)sens.hum;
+  buffSendData[7] = (uint8_t)sens.temp;
+  buffSendData[8] = (uint8_t)(sens.temp >> 8);
 
-  buffSendData[5] = (uint8_t)getBatteryCharge();
-  buffSendData[6] = (uint8_t)getWiFiSignal();
-  buffSendData[7] = (uint8_t)sleepTime[settings.period];
+  buffSendData[9] = (uint8_t)sens.press;
+  buffSendData[10] = (uint8_t)(sens.press >> 8);
+
+  buffSendData[11] = (uint8_t)sens.hum;
+
+  buffSendData[12] = (uint8_t)getBatteryCharge();
+  buffSendData[13] = (uint8_t)getWiFiSignal();
+  buffSendData[14] = (uint8_t)sleepTime[settings.period];
 
   uint8_t crc = 0;
   for (uint8_t i = 0; i < (UDP_SEND_SIZE - 1); i++) checkCRC(&crc, buffSendData[i]);
 
-  buffSendData[8] = (uint8_t)crc;
+  buffSendData[15] = (uint8_t)crc;
 
   sensorReady = true; //установили флаг готовности замера
 
@@ -823,30 +831,29 @@ void timeUpdate(void) {
 }
 //--------------------------------------------------------------------
 void sendUpdate(void) {
-  static uint8_t _num = 0;
   if ((sendReady == true) && (sensorReady == true) && (wifiStatus == WL_CONNECTED)) {
-    if (_num < (MAX_CLOCK * 2)) {
-      if (settings.send[_num][0] != '\0') {
+    if (send_host_num < (MAX_CLOCK * 2)) {
+      if ((settings.send[send_host_num][0] != '\0') || !send_host_num) {
 #if DEBUG_MODE
         Serial.print F("Send data to [ ");
-        Serial.print((char*)&settings.send[_num][0]);
+        Serial.print((settings.send[send_host_num][0] != '\0') ? settings.send[send_host_num] : UDP_BROADCAST_ADDR);
         Serial.println F(" ]...");
 #endif
-        if (!udp.beginPacket((char*)&settings.send[_num][0], UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
+        if (!udp.beginPacket((settings.send[send_host_num][0] != '\0') ? settings.send[send_host_num] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
           sendReady = false; //сбросили флаг повторной попытки отправки данных
 #if DEBUG_MODE
           Serial.println F("Send data fail!");
 #endif
         }
         else {
-          _num += 2;
+          send_host_num += 2;
 #if DEBUG_MODE
           Serial.println F("Send data ok...");
 #endif
         }
       }
       else {
-        _num = (MAX_CLOCK * 2);
+        send_host_num = (MAX_CLOCK * 2);
 #if DEBUG_MODE
         Serial.println F("Send all data completed...");
 #endif
@@ -1052,6 +1059,9 @@ void setup() {
 
   //сбрасываем настройки группового управления
   for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.send[i][0] = '\0';
+
+  //устанавливаем период по умолчанию
+   settings.period = SEND_DATA_PERIOD;
 
   //восстанавливаем настройки сети
   strncpy(settings.ssid, WiFi.SSID().c_str(), 64);

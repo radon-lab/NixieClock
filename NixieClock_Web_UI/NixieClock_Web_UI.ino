@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 13.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 15.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -40,6 +40,7 @@ struct settingsData {
   boolean nameMenu;
   boolean namePrefix;
   boolean namePostfix;
+  uint8_t wirelessId[6];
   uint8_t weatherCity;
   float weatherLat;
   float weatherLon;
@@ -796,7 +797,6 @@ void build(void) {
 
       if (deviceInformation[ALARM_TYPE]) {
         if (alarm.reload >= 2) alarm.reload = 0;
-
         updateList += ",mainReload";
         GP.RELOAD("mainReload");
 
@@ -1400,7 +1400,18 @@ void build(void) {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", statusWirelessList[wirelessGetStastus()], INT32_MAX, "", true););
       }
       else {
-        M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.NUMBER("", String(sens.mainTemp[2] / 10.0, 1) + "°С " + String(sens.mainHum[2]) + "% " + String(sens.mainPress[2]) + "mm.Hg", INT32_MAX, "", true););
+        String _data = String(sens.mainTemp[2] / 10.0, 1) + "°С";
+        if (sens.mainHum[2]) {
+          _data += ' ';
+          _data += sens.mainHum[2];
+          _data += '%';
+        }
+        if (sens.mainPress[2]) {
+          _data += ' ';
+          _data += sens.mainPress[2];
+          _data += "mm.Hg";
+        }
+        M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", _data, "", 0, "", true););
         M_BOX(GP.LABEL("Сигнал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
         M_BOX(GP.LABEL("Батарея", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetBattery()) + "%", INT32_MAX, "", true););
         M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetInterval()) + " мин", INT32_MAX, "", true););
@@ -1522,6 +1533,12 @@ void build(void) {
         GP.UPDATE_CLICK("weatherStatus", "weatherUpdate");
       }
     }
+
+    wirelessResetFoundState();
+
+    updateList += ",extReload,extFound";
+    GP.RELOAD("extReload");
+    GP.CONFIRM("extFound");
 
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
@@ -1982,6 +1999,15 @@ void action() {
         }
       }
 
+      if (ui.click("extFound")) {
+        if (ui.getBool("extFound")) {
+          wirelessSetNewId();
+          wirelessSetData(wireless_found_buffer);
+          memory.update(); //обновить данные в памяти
+        }
+        else wirelessResetFoundState();
+      }
+
       if (ui.click("extClear")) {
         settings.ssid[0] = '\0'; //устанавливаем последний символ
         settings.pass[0] = '\0'; //устанавливаем последний символ
@@ -2272,6 +2298,13 @@ void action() {
       }
       if (ui.update("extReboot")) { //если было обновление
         ui.answer(1);
+      }
+
+      if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
+        ui.answer(1);
+      }
+      if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
+        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID:" + wirelessGetFoundId());
       }
     }
     //--------------------------------------------------------------------
@@ -2962,6 +2995,7 @@ void resetMainSettings(void) {
   settings.weatherLat = NAN; //установить широту по умолчанию
   settings.weatherLon = NAN; //установить долготу по умолчанию
 
+  for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
   for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
   settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
   settings.climateSend = DEFAULT_CLIMATE_SEND; //установить режим по умолчанию
@@ -3017,7 +3051,7 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xBD);
+  memory.begin(0, 0xBE);
 
   //настраиваем wifi
   WiFi.setAutoConnect(false);
