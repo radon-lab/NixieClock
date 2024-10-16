@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 15.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 16.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2304,7 +2304,7 @@ void action() {
         ui.answer(1);
       }
       if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
-        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID:" + wirelessGetFoundId());
+        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID: " + wirelessGetFoundId());
       }
     }
     //--------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.9 релиз от 15.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.0.9 релиз от 16.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -349,6 +349,7 @@ void build(void) {
     GP.BREAK();
     GP_HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
+    M_BOX(GP.LABEL("ID", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("CORE", "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("GyverPortal", "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
@@ -561,7 +562,7 @@ void action() {
           wifiScanTimer = millis();
         }
       }
-      
+
       if (ui.click("extPeriod")) {
         settings.period = ui.getInt("extPeriod");
         memory.update(); //обновить данные в памяти
@@ -1061,7 +1062,7 @@ void setup() {
   for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.send[i][0] = '\0';
 
   //устанавливаем период по умолчанию
-   settings.period = SEND_DATA_PERIOD;
+  settings.period = SEND_DATA_PERIOD;
 
   //восстанавливаем настройки сети
   strncpy(settings.ssid, WiFi.SSID().c_str(), 64);
