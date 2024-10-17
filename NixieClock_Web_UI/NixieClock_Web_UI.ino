@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 16.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 17.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -694,11 +694,11 @@ void build(void) {
     GP_LINE_LED("bar_clock", (clockState != 0), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
     GP_BLOCK_SHADOW_END();
 
-    if (!deviceInformation[DS3231_ENABLE] && (rtc_status != RTC_NOT_FOUND)) {
+    if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
       updateList += ",bar_rtc";
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус RTC", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("bar_rtc", (rtc_status != RTC_BAT_LOW), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_LINE_LED("bar_rtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
     if (wirelessGetSensorStastus()) {
@@ -1412,6 +1412,8 @@ void build(void) {
           _data += "mm.Hg";
         }
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", _data, "", 0, "", true););
+      }
+      if (wirelessGetSensorStastus()) {
         M_BOX(GP.LABEL("Сигнал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
         M_BOX(GP.LABEL("Батарея", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetBattery()) + "%", INT32_MAX, "", true););
         M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetInterval()) + " мин", INT32_MAX, "", true););
@@ -1423,10 +1425,10 @@ void build(void) {
       if (deviceInformation[DS3231_ENABLE]) {
         rtcStatus = "Подключен к часам";
       }
-      else if (rtc_status != RTC_NOT_FOUND) {
+      else if (rtcGetFoundStatus()) {
         M_BOX(GP.LABEL("Коррекция", "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
         GP.UPDATE_CLICK("syncAging", "syncAging");
-        rtcStatus = (rtc_status != RTC_ONLINE) ? "Батарея разряжена" : "Работает исправно";
+        rtcStatus = (!rtcGetNormalStatus()) ? "Батарея разряжена" : "Работает исправно";
       }
       M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", rtcStatus, INT32_MAX, "", true););
 
@@ -1610,7 +1612,7 @@ void action() {
           mainTime = ui.getSystemTime(); //запросить время браузера
           mainDate = ui.getSystemDate(); //запросить дату браузера
           busSetComand(WRITE_TIME_DATE);
-          if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+          if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
         }
       }
 
@@ -1631,7 +1633,7 @@ void action() {
       }
 
       if (ui.click("syncAging")) {
-        if (rtc_status != RTC_NOT_FOUND) {
+        if (rtcGetFoundStatus()) {
           rtc_aging = constrain(ui.getInt("syncAging"), -128, 127);
           busSetComand(WRITE_RTC_AGING);
         }
@@ -2267,7 +2269,7 @@ void action() {
         ui.answer((boolean)wirelessGetOnlineStastus());
       }
       if (ui.update("bar_rtc")) { //если было обновление
-        ui.answer((boolean)(rtc_status != RTC_BAT_LOW));
+        ui.answer((boolean)rtcGetNormalStatus());
       }
       if (ui.update("bar_ntp")) { //если было обновление
         ui.answer((boolean)ntpGetSyncStatus());
@@ -2712,7 +2714,7 @@ void timeUpdate(void) {
         }
         if (weatherGetValidStatus()) weatherAveragData(); //усреднить показания погоды
 
-        if ((rtc_status != RTC_NOT_FOUND) && !(mainTime.minute % 15) && !settings.ntpSync) busSetComand(READ_RTC_TIME); //отправить время в RTC
+        if (!(mainTime.minute % 15) && rtcGetFoundStatus() && (!settings.ntpSync || !ntpGetSyncStatus())) busSetComand(READ_RTC_TIME); //отправить время в RTC
         else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
 
         if (settings.ntpSync) {

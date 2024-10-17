@@ -525,7 +525,7 @@ void busUpdate(void) {
                 twi_write_byte((mainDate.year >> 8) & 0xFF);
                 twi_write_byte(dayWeek); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
-                  if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+                  if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
                   if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
                   timeState = 0x03; //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
@@ -547,7 +547,7 @@ void busUpdate(void) {
             mainDate.year = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
             if (!twi_error()) { //если передача была успешной
               if (busReadBufferArg()) { //если время обновлено в часах
-                if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+                if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
                 if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
                 timeState = 0x03; //установили флаги актуального времени
               }
@@ -581,7 +581,7 @@ void busUpdate(void) {
             twi_write_byte(mainTime.minute);
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
-              if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+              if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
               if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x01; //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
@@ -599,7 +599,7 @@ void busUpdate(void) {
             twi_write_byte((mainDate.year >> 8) & 0xFF);
             twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
-              if (rtc_status != RTC_NOT_FOUND) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+              if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
               if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x02; //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
@@ -1294,29 +1294,29 @@ void busUpdate(void) {
 
         case WRITE_RTC_INIT:
           busShiftBuffer(); //сместили буфер команд
-          switch (initTime()) {
+          switch (rtcInitTime()) {
             case 0: busSetComand(WRITE_TIME_DATE); break; //отправляем время в часы
             case 1: busSetComand(WRITE_RTC_INIT); break; //инициализируем модуль RTC
           }
           break;
         case WRITE_RTC_TIME:
           busShiftBuffer(); //сместили буфер команд
-          if (sendTime()) busSetComand(WRITE_RTC_TIME); //отправляем время в RTC
+          if (rtcSendTime()) busSetComand(WRITE_RTC_TIME); //отправляем время в RTC
           break;
         case READ_RTC_TIME:
           busShiftBuffer(); //сместили буфер команд
-          switch (getTime(RTC_CHECK_OSF)) {
+          switch (rtcGetTime(RTC_CHECK_OSF)) {
             case 0: busSetComand(WRITE_TIME_DATE); break; //отправляем время в часы
             case 1: busSetComand(READ_RTC_TIME); break; //считываем время из RTC
           }
           break;
         case WRITE_RTC_AGING:
           busShiftBuffer(); //сместили буфер команд
-          if (writeAgingRTC()) busSetComand(WRITE_RTC_AGING); //запись коррекции хода в RTC
+          if (rtcWriteAging()) busSetComand(WRITE_RTC_AGING); //запись коррекции хода в RTC
           break;
         case READ_RTC_AGING:
           busShiftBuffer(); //сместили буфер команд
-          if (readAgingRTC()) busSetComand(READ_RTC_AGING); //чтение коррекции хода из RTC
+          if (rtcReadAging()) busSetComand(READ_RTC_AGING); //чтение коррекции хода из RTC
           break;
 
         case CHECK_INTERNAL_AHT:

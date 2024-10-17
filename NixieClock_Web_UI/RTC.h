@@ -65,8 +65,16 @@ uint8_t packREG(uint8_t data) //запаковка регистра
 {
   return (((data / 10) << 4) | (data % 10)); //возвращаем результат
 }
+//----------------------------------Онлайн статус rtc--------------------------------------
+boolean rtcGetFoundStatus(void) {
+  return (boolean)(rtc_status != RTC_NOT_FOUND);
+}
+//----------------------------Статус нормальной работы rtc---------------------------------
+boolean rtcGetNormalStatus(void) {
+  return (boolean)(rtc_status == RTC_ONLINE);
+}
 //-------------------------------Чтение коррекции хода-------------------------------------
-boolean readAgingRTC(void) //чтение коррекции хода
+boolean rtcReadAging(void) //чтение коррекции хода
 {
   if (twi_requestFrom(RTC_ADDR, RTC_AGING_REG)) return 1; //модуль RTC не отвечает
   rtc_aging = twi_read_byte(TWI_NACK); //записываем результат
@@ -74,7 +82,7 @@ boolean readAgingRTC(void) //чтение коррекции хода
   return 0; //выходим
 }
 //-------------------------------Запись коррекции хода-------------------------------------
-boolean writeAgingRTC(void) //запись коррекции хода
+boolean rtcWriteAging(void) //запись коррекции хода
 {
   if (twi_beginTransmission(RTC_ADDR)) return 1; //модуль RTC не отвечает
   twi_write_byte(RTC_AGING_REG); //устанавливаем адрес записи
@@ -83,7 +91,7 @@ boolean writeAgingRTC(void) //запись коррекции хода
   return 0; //выходим
 }
 //--------------------------------Проверка флага OSF--------------------------------------
-uint8_t getOSF(boolean mode) //проверка флага OSF
+uint8_t rtcGetOSF(boolean mode) //проверка флага OSF
 {
   if (twi_requestFrom(RTC_ADDR, RTC_STATUS_REG)) return 1; //модуль RTC не отвечает
 
@@ -102,7 +110,7 @@ uint8_t getOSF(boolean mode) //проверка флага OSF
   return 0; //выходим
 }
 //-----------------------------------Настройка SQW-----------------------------------------
-boolean setSQW(void) //настройка SQW
+boolean rtcSetSQW(void) //настройка SQW
 {
   if (!twi_requestFrom(RTC_ADDR, RTC_CONTROL_REG)) { //запрашиваем чтение данных
     uint8_t ctrlReg = twi_read_byte(TWI_NACK); //выключаем INTCON и устанавливаем частоту 1Гц
@@ -116,7 +124,7 @@ boolean setSQW(void) //настройка SQW
   return 1; //модуль RTC не отвечает
 }
 //-------------------------------Отключение вывода 32K-------------------------------------
-boolean disable32K(void) //отключение вывода 32K
+boolean rtcDisable32K(void) //отключение вывода 32K
 {
   if (!twi_requestFrom(RTC_ADDR, RTC_STATUS_REG)) { //запрашиваем чтение данных
     uint8_t ctrlReg = twi_read_byte(TWI_NACK); //выключаем 32K
@@ -130,7 +138,7 @@ boolean disable32K(void) //отключение вывода 32K
   return 1; //модуль RTC не отвечает
 }
 //--------------------------------------Отправить время в RTC------------------------------------------
-boolean sendTime(void) //отправить время в RTC
+boolean rtcSendTime(void) //отправить время в RTC
 {
   if (!twi_beginTransmission(RTC_ADDR)) { //отправляем данные
     twi_write_byte(RTC_TIME_REG); //устанавливаем адрес записи
@@ -147,10 +155,10 @@ boolean sendTime(void) //отправить время в RTC
   }
   return 1; //модуль RTC не отвечает
 }
-//--------------------------------------Запрашиваем время из RTC------------------------------------------
-uint8_t getTime(boolean mode) //запрашиваем время из RTC
+//------------------------------------Запрашиваем время из RTC-----------------------------------------
+uint8_t rtcGetTime(boolean mode) //запрашиваем время из RTC
 {
-  uint8_t status = getOSF(mode); //проверка флага OSF
+  uint8_t status = rtcGetOSF(mode); //проверка флага OSF
   if (!status) { //если модуль на связи
     if (!twi_requestFrom(RTC_ADDR, RTC_TIME_REG)) { //запрашиваем чтение
       mainTime.second = unpackREG(twi_read_byte(TWI_ACK)); //получаем секунды
@@ -172,7 +180,7 @@ uint8_t getTime(boolean mode) //запрашиваем время из RTC
   return status; //возвращаем статус
 }
 //-------------------------------------Инициализируем модуль RTC------------------------------------------
-boolean initTime(void) //инициализируем модуль RTC
+boolean rtcInitTime(void) //инициализируем модуль RTC
 {
   static uint8_t attemptsRTC; //попытки инициализации модуля RTC
 
@@ -187,20 +195,20 @@ boolean initTime(void) //инициализируем модуль RTC
     return 2; //выходим
   }
 
-  if (disable32K()) { //отключение вывода 32K
+  if (rtcDisable32K()) { //отключение вывода 32K
     rtc_status = RTC_NOT_FOUND;
     return 1; //выходим
   }
-  if (setSQW()) { //настройка SQW
+  if (rtcSetSQW()) { //настройка SQW
     rtc_status = RTC_NOT_FOUND;
     return 1; //выходим
   }
-  if (readAgingRTC()) { //чтение коррекции хода
+  if (rtcReadAging()) { //чтение коррекции хода
     rtc_status = RTC_NOT_FOUND;
     return 1; //выходим
   }
 
   rtc_status = RTC_ONLINE; //модуль RTC работает нормально
 
-  return getTime(RTC_CLEAR_OSF); //запрашиваем время из RTC
+  return rtcGetTime(RTC_CLEAR_OSF); //запрашиваем время из RTC
 }
