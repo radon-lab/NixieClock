@@ -25,16 +25,19 @@ uint8_t wireless_signal = 0; //уровень сигнала беспровод�
 uint8_t wireless_battery = 0; //заряд батареи беспроводного датчика
 uint8_t wireless_interval = 0; //интервал передачи беспроводного датчика
 
+const char *wirelessStatusList[] = {"Ошибка...", "Не обнаружен...", "Подключен", "Потеряна связь...", "Нет сенсора..."};
+
 #include <WiFiUdp.h>
 WiFiUDP wireless;
 
+//--------------------------------------------------------------------
 void checkCRC(uint8_t* crc, uint8_t data) {
   for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
     *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
     data >>= 0x01; //сдвигаем буфер
   }
 }
-
+//--------------------------------------------------------------------
 void wirelessStart(void) {
   if (wireless.begin(WIRELESS_LOCAL_PORT)) {
     wireless_timeout = 0;
@@ -47,7 +50,7 @@ void wirelessStop(void) {
   wireless.stop();
   wireless_status = WIRELESS_STOPPED;
 }
-
+//--------------------------------------------------------------------
 void wirelessResetFoundState(void) {
   wireless_found = false;
   wireless_found_success = false;
@@ -58,7 +61,7 @@ boolean wirelessGetFoundState(void) {
 boolean wirelessGetFoundSuccessState(void) {
   return wireless_found_success;
 }
-
+//--------------------------------------------------------------------
 uint8_t wirelessGetStastus(void) {
   return wireless_status;
 }
@@ -68,7 +71,7 @@ boolean wirelessGetOnlineStastus(void) {
 boolean wirelessGetSensorStastus(void) {
   return (wireless_status >= WIRELESS_ONLINE);
 }
-
+//--------------------------------------------------------------------
 uint8_t wirelessGetBattery(void) {
   if (wireless_status == WIRELESS_ONLINE) return wireless_battery;
   return wireless_battery;
@@ -81,7 +84,7 @@ uint8_t wirelessGetInterval(void) {
   if (wireless_status == WIRELESS_ONLINE) return wireless_interval;
   return 0;
 }
-
+//--------------------------------------------------------------------
 String wirelessGetFoundId(void) {
   String _id = "";
   for (uint8_t i = 0; i < 6; i++) {
@@ -90,7 +93,7 @@ String wirelessGetFoundId(void) {
   _id.toUpperCase();
   return _id;
 }
-
+//--------------------------------------------------------------------
 void wirelessSetData(uint8_t* _buff) {
   int16_t _temp = _buff[7] | ((int16_t)_buff[8] << 8);
   if (_temp != 0x7FFF) {
@@ -119,7 +122,7 @@ boolean wirelessCheckData(void) {
   for (uint8_t i = 0; i < WIRELESS_PACKET_SIZE; i++) checkCRC(&_crc, wireless_buffer[i]);
   return (boolean)!_crc;
 }
-
+//--------------------------------------------------------------------
 void wirelessSetNewId(void) {
   wireless_found_success = true;
   for (uint8_t i = 0; i < 6; i++) {
@@ -132,7 +135,7 @@ boolean wirelessCheckId(void) {
   }
   return 1;
 }
-
+//--------------------------------------------------------------------
 void wirelessUpdate(void) {
   if (wireless_status != WIRELESS_STOPPED) {
     if (wireless.parsePacket() == WIRELESS_PACKET_SIZE) {

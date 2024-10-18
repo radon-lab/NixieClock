@@ -24,12 +24,14 @@ uint32_t ntp_millis = 0; //количество миллисекунд с мом
 uint32_t ntp_unix = 0; //последнее запрошенное время
 
 const uint8_t ntpSyncTime[] = {15, 30, 60, 120, 180}; //время синхронизации ntp
+const char *ntpStatusList[] = {"Отсутсвует подключение к сети", "Подключение к серверу...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
 
 #include <time.h>
 
 #include <WiFiUdp.h>
 WiFiUDP udp;
 
+//--------------------------------------------------------------------
 void ntpStart(void) {
   if (udp.begin(NTP_LOCAL_PORT)) {
     ntp_status = NTP_CONNECTION;
@@ -49,7 +51,7 @@ void ntpRequest(void) {
     ntp_attempts = 0;
   }
 }
-
+//--------------------------------------------------------------------
 boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
   if (_dst <= 0) return true;
   int32_t diff = ntp_unix - _unix;
@@ -59,7 +61,7 @@ boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
   ntp_status = NTP_DESYNCED;
   return false;
 }
-
+//--------------------------------------------------------------------
 uint8_t ntpGetStatus(void) {
   return ntp_status;
 }
@@ -73,7 +75,18 @@ uint8_t ntpGetAttempts(void) {
   if (ntp_status != NTP_CONNECTION) return 0;
   return ntp_attempts;
 }
-
+//--------------------------------------------------------------------
+String getNtpState(void) {
+  String data = "";
+  if (!ntpGetAttempts()) data += ntpStatusList[ntpGetStatus()];
+  else {
+    data += "Попытка подключения[";
+    data += ntpGetAttempts();
+    data += "]...";
+  }
+  return data;
+}
+//--------------------------------------------------------------------
 uint32_t ntpGetMillis(void) {
   if (ntp_status != NTP_SYNCED) return 0;
   return ntp_millis % 1000;
@@ -83,13 +96,13 @@ uint32_t ntpGetUnix(void) {
   ntp_millis = millis() - ntp_timer;
   return ntp_unix + (ntp_millis / 1000);
 }
-
+//--------------------------------------------------------------------
 void ntpChangeAttempt(void) {
   if (++ntp_attempts > NTP_ATTEMPTS_ALL) ntp_status = NTP_ERROR;
   else ntp_status = NTP_CONNECTION;
   ntp_timer = millis();
 }
-
+//--------------------------------------------------------------------
 boolean ntpUpdate(void) {
   switch (ntp_status) {
     case NTP_CONNECTION:

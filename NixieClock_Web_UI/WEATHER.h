@@ -52,11 +52,18 @@ uint32_t weather_timer = 0; //таймер ожидания ответа от с
 float weather_latitude = 0; //текущая широта
 float weather_longitude = 0; //текущая долгота
 
+int16_t weatherArrMain[2][WEATHER_BUFFER]; //буфер температуры и влажности погоды
+int16_t weatherArrExt[1][WEATHER_BUFFER]; //буфер давления погоды
+uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времени погоды
+
 String weather_answer = ""; //ответ от сервера погоды
+
+const char *weatherStatusList[] = {"Отсутсвует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
 
 #include <ESP8266WiFi.h>
 WiFiClient client;
 
+//--------------------------------------------------------------------
 uint8_t weatherGetStatus(void) {
   return weather_state;
 }
@@ -76,6 +83,18 @@ uint8_t weatherGetAttempts(void) {
   if ((weather_state != WEATHER_ERROR) || (weather_attempts < WEATHER_ATTEMPTS_ALL)) return 0;
   return weather_attempts + 1;
 }
+//--------------------------------------------------------------------
+String getWeatherState(void) {
+  String data = "";
+  if (!weatherGetAttempts()) data += weatherStatusList[weatherGetStatus()];
+  else {
+    data += "Попытка запроса[";
+    data += weatherGetAttempts();
+    data += "]...";
+  }
+  return data;
+}
+//--------------------------------------------------------------------
 void weatherSetCoordinates(uint8_t city) {
   weather_latitude = weatherCoordinatesList[0][city];
   weather_longitude = weatherCoordinatesList[1][city];
@@ -84,6 +103,7 @@ void weatherSetCoordinates(float latitude, float longitude) {
   weather_latitude = latitude;
   weather_longitude = longitude;
 }
+//--------------------------------------------------------------------
 void weatherSendRequest(void) {
   if (weather_state <= WEATHER_GOOD) {
     if (client.connected()) client.stop();
@@ -95,7 +115,7 @@ void weatherDisconnect(void) {
   if (client.connected()) client.stop();
   weather_state = WEATHER_NULL;
 }
-
+//--------------------------------------------------------------------
 const char* weatherGetParseType(uint8_t mod) {
   switch (mod) {
     case WEATHER_GET_TEMP: return "\"temperature_2m\":[";
@@ -104,7 +124,7 @@ const char* weatherGetParseType(uint8_t mod) {
   }
   return "NULL";
 }
-
+//--------------------------------------------------------------------
 void weatherGetUnixData(uint32_t* buf, uint8_t len) {
   if (weather_update == false) return;
 
@@ -198,7 +218,13 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
 
   if (weather_state == WEATHER_ERROR) weather_update = false;
 }
-
+//--------------------------------------------------------------------
+void weatherCheck(void) {
+  if (settings.weatherCity < WEATHER_CITY_ARRAY) weatherSetCoordinates(settings.weatherCity); //установить город
+  else weatherSetCoordinates(settings.weatherLat, settings.weatherLon); //установить координаты
+  weatherSendRequest(); //запросить прогноз погоды
+}
+//--------------------------------------------------------------------
 boolean weatherUpdate(void) {
   switch (weather_state) {
     case WEATHER_ERROR:

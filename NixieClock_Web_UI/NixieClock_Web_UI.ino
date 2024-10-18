@@ -73,14 +73,10 @@ char buffMultiName[20]; //буфер имени
 
 boolean clockUpdate = true; //флаг запрета обновления часов
 boolean otaUpdate = true; //флаг запрета обновления есп
+boolean climateLocal = false; //флаг локальных скриптов графика
 boolean alarmSvgImage = false; //флаг локальных изображений будильника
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
-
-int8_t wifiScanState = 2; //статус сканирования сети
-uint32_t wifiScanTimer = 0; //таймер начала поиска сети
-uint8_t wifiStatus = WL_IDLE_STATUS; //статус соединения wifi
-uint32_t wifiInterval = 5000; //интервал переподключения к wifi
 
 uint8_t timeState = 0; //флаг состояния актуальности времени
 uint32_t secondsTimer = 0; //таймер счета секундных интервалов
@@ -90,33 +86,21 @@ uint8_t syncNtpTimer = 0; //таймер запроса времени с ntp с
 
 int8_t playbackTimer = -1; //таймер остановки воспроизведения
 uint8_t waitTimer = 0; //таймер ожидания опроса шины
+uint8_t climateTimer = 0; //таймер обновления микроклимата
 
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
-uint8_t climateTimer = 0; //таймер обновления микроклимата
-uint8_t climateCountAvg = 0; //счетчик циклов обновления микроклимата
-int16_t climateTempAvg = 0; //буфер средней температуры микроклимата
-uint16_t climateHumAvg = 0; //буфер средней влажности микроклимата
-uint16_t climatePressAvg = 0; //буфер среднего давления микроклимата
-
-boolean climateLocal = false; //флаг локальных скриптов графика
-int8_t climateState = -1; //флаг состояние активации микроклимата
-
 #include "NTP.h"
 #include "WIRE.h"
-#include "WEATHER.h"
 #include "UPDATER.h"
 #include "CLOCKBUS.h"
 #include "WIRELESS.h"
 
-int16_t weatherArrMain[2][WEATHER_BUFFER];
-int16_t weatherArrExt[1][WEATHER_BUFFER];
-uint32_t weatherDates[WEATHER_BUFFER];
+#include "WEATHER.h"
+#include "CLIMATE.h"
 
-int16_t climateArrMain[2][CLIMATE_BUFFER];
-int16_t climateArrExt[1][CLIMATE_BUFFER];
-uint32_t climateDates[CLIMATE_BUFFER];
+#include "WIFI.h"
 
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
@@ -126,452 +110,24 @@ const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg", "/alarm_dis.svg
 const char *timerFsData[] = {"/timer_play.svg", "/timer_stop.svg", "/timer_pause.svg", "/timer_up.svg", "/timer_down.svg"};
 const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "/radio_mode.svg", "/radio_power.svg"};
 
-const char *tempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
-const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
-const char *statusNtpList[] = {"Отсутсвует подключение к сети", "Подключение к серверу...", "Ожидание ответа...", "Синхронизировано", "Рассинхронизация", "Сервер не отвечает"};
-const char *statusWirelessList[] = {"Ошибка...", "Не обнаружен...", "Подключен", "Потеряна связь...", "Нет сенсора..."};
-const char *statusWeatherList[] = {"Отсутсвует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
 
-String wifiScanList = "Нет сетей"; //список найденых wifi сетей
-String sensorsList = "Отсутсвует"; //список подключенных сенсоров температуры
-String dotModeList = "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"; //список режимов основных разделительных точек
+
 String backlModeList = "Выключена"; //список режимов подсветки
-String alarmDotModeList = "Выключены"; //список режимов разделительных точек будильника
 String playerVoiceList = "Алёна,Филипп"; //список голосов для озвучки
+String alarmDotModeList = "Выключены"; //список режимов разделительных точек будильника
+String dotModeList = "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"; //список режимов основных разделительных точек
 String flipModeList = "Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"; //список режимов смены минут
 String secsModeList = "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе"; //список режимов смены секунд
+
+#include "utils.h"
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
 #define STATUS_LED -1
 #endif
-
-void GP_PAGE_TITLE(const String& name) {
-  GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
-}
-void GP_LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
-  GP.TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
-}
-String GP_FLOAT_DEC(float val, uint16_t dec) {
-  String data = "";
-  if (!dec) data += (int)round(val);
-  else data += String(val, (uint16_t)dec);
-  return data;
-}
-void GP_SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
-  String data = "";
-  data += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
-  if (dis) data += F(" class='dsbl'");
-  data += '>';
-  data += lable;
-  data += F("</lable>\n<input type='range' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += F("' value='");
-  data += value;
-  data += F("' min='");
-  data += min;
-  data += F("' max='");
-  data += max;
-  data += F("' step='");
-  data += step;
-  data += F("' style='background-image:linear-gradient(");
-  data += FPSTR(st);
-  data += ',';
-  data += FPSTR(st);
-  data += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;margin:10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
-  if (oninp) data += F("oninput='GP_change(this);GP_click(this)'");
-  else data += F("onchange='GP_click(this)' oninput='GP_change(this)'");
-  data += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
-  if (dis) data += F("class='dsbl' disabled");
-  data += F(">\n<output align='center' id='");
-  data += name;
-  data += F("_val' name='");
-  data += min_lable;
-  data += ',';
-  data += max_lable;
-  data += F("' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
-  if (dis) data += F(" class='dsbl'");
-  data += F(">");
-  data += GP_FLOAT_DEC(value, dec);
-  data += F("</output>\n");
-  GP.SEND(data);
-}
-String GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
-  String data = "";
-  data += F("<input type='button' class='spinBtn ");
-  data += (step > 0) ? F("spinR") : F("spinL");
-  data += F("' name='");
-  data += name;
-  data += F("' min='");
-  data += step;
-  data += F("' max='");
-  data += dec;
-  data += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{GP_spin(this);_spinF=1},");
-  data += 200;
-  data += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
-  data += (step > 0) ? '+' : '-';
-  data += F("' ");
-  if (st != GP_GREEN) {
-    data += F(" style='background:");
-    data += FPSTR(st);
-    data += F(";'");
-  }
-  if (dis) data += F(" disabled");
-  data += F(">\n");
-  return data;
-}
-void GP_SPINNER_MAIN(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  String data = "";
-  data += F("<div id='spinner' class='spinner'>\n");
-  data += GP_SPINNER_BTN(name, -step, st, dec, dis);
-  data += F("<input type='number' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  if (w.length()) {
-    data += F("' style='width:");
-    data += w;
-  }
-  data += F("' step='");
-  data += GP_FLOAT_DEC(step, dec);
-  data += F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='");
-  if (!dec) data += F("GP_spinc(this);");
-  data += F("GP_click(this);GP_spinw(this)' value='");
-  data += GP_FLOAT_DEC(value, dec);
-  if (!isnan(min)) {
-    data += F("' min='");
-    data += GP_FLOAT_DEC(min, dec);
-  }
-  if (!isnan(max)) {
-    data += F("' max='");
-    data += GP_FLOAT_DEC(max, dec);
-  }
-  data += F("' ");
-  if (dis) data += F("disabled ");
-  if (!w.length()) data += F("class='spin_inp'");
-  data += F(">\n");
-  data += GP_SPINNER_BTN(name, step, st, dec, dis);
-  data += F("</div>\n");
-  GP.SEND(data);
-}
-void GP_SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
-}
-void GP_SPINNER_LEFT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND("<div style='margin-left:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
-}
-void GP_SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  GP.SEND("<div style='margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
-}
-void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
-  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
-}
-void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
-  String data = "";
-  data += F("<style>a:link.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";text-decoration:none;} a:visited.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";} a:hover.");
-  data += id;
-  data += F("_link{filter:brightness(0.75);}</style>\n<a href='");
-  data += url;
-  data += F("' class='");
-  data += id + "_link";
-  data += F("'>");
-  data += text;
-  data += F("</a>\n");
-  GP.SEND(data);
-}
-void GP_UI_LINK(const String& url, const String& name, PGM_P color) {
-  String data = "";
-  data += F("<a href='http://");
-  data += url;
-  data += "'";
-  if (WiFi.localIP().toString().equals(url)) {
-    data += F(" class='sbsel' style='background:");
-    data += FPSTR(color);
-    data += F(" !important;'");
-  }
-  data += ">";
-  data += name;
-  data += F("</a>\n");
-  GP.SEND(data);
-}
-void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int size = 30, PGM_P st_0 = GP_GRAY, PGM_P st_1 = GP_GREEN, bool dis = false) {
-  String data = "";
-  data += F("<style>#__");
-  data += name;
-  data += F(" span::before{background-color:");
-  data += FPSTR(st_0);
-  data += F(";border:none;padding:");
-  data += (size / 2) + 2;
-  data += F("px;}</style>\n");
-
-  data += F("<style>#__");
-  data += name;
-  data += F(" input:checked+span::before{background-color:");
-  data += FPSTR(st_1);
-  data += F(";background-image:none;}</style>\n");
-
-  data += F("<label id='__");
-  data += name;
-  data += F("' class='check_c'");
-  data += F(" style='-webkit-mask:center/contain no-repeat url(");
-  data += uri;
-  data += F(");display:inline-block;width:");
-  data += size;
-  data += F("px;'>");
-  data += F("<input type='checkbox' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += "' ";
-  if (state) data += F("checked ");
-  if (dis) data += F("disabled ");
-  data += F("onclick='GP_click(this)' style='height:");
-  data += size;
-  data += F("px;'><span></span></label>\n"
-            "<input type='hidden' value='0' name='");
-  data += name;
-  data += "'>\n";
-  GP.SEND(data);
-}
-void GP_HR(PGM_P st, int width = 0) {
-  String data = "";
-  data += F("<hr style='border-color:");
-  data += FPSTR(st);
-  data += F(";margin:5px ");
-  data += width;
-  data += F("px'>\n");
-  GP.SEND(data);
-}
-void GP_HR_TEXT(const String& text, const String& name, PGM_P st_0, PGM_P st_1) {
-  String data = "";
-
-  data += F("<label id='");
-  data += name;
-  data += F("' class='thinText' style='color:");
-  data += FPSTR(st_0);
-  data += F("'>");
-  data += text;
-  data += F("</label>\n");
-  data += F("<hr style='border-color:");
-  data += FPSTR(st_1);
-  data += F(";margin-top:-17px;padding-bottom:17px'>\n");
-
-  GP.SEND(data);
-}
-void GP_LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-  String data = "";
-
-  data += F("<style>#__");
-  data += name;
-  data += F(" input:checked+span::before{background-color:");
-  data += FPSTR(st_1);
-  data += F(";background-image:none}\n");
-
-  data += F("#__");
-  data += name;
-  data += F(" span::before{background-color:");
-  data += FPSTR(st_0);
-  data += F(";border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);}\n");
-
-  data += F("#__");
-  data += name;
-  data += F(" input[type=checkbox]{cursor:default;}</style>\n");
-
-  data += F("<label id='__");
-  data += name;
-  data += F("' class='check_c' style='display:block;height:30px;margin-top:-13px;cursor:default'><input type='checkbox' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += "' ";
-  if (state) data += F("checked ");
-  data += F("disabled ");
-  data += F("onclick='GP_click(this)'><span></span></label>\n"
-            "<input type='hidden' value='0' name='");
-  data += name;
-  data += "'>\n";
-  GP.SEND(data);
-}
-void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
-  String data = "";
-
-  data += F("<input type='range' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += F("' value='");
-  data += value;
-  data += F("' min='");
-  data += min;
-  data += F("' max='");
-  data += max;
-  data += F("' step='");
-  data += step;
-  data += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
-  data += FPSTR(st);
-  data += ',';
-  data += FPSTR(st);
-  data += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='GP_change(this)' disabled>\n");
-
-  data += F("<output style='display:none' id='");
-  data += name;
-  data += F("_val'></output>\n");
-
-  GP.SEND(data);
-}
-void GP_PLOT_STOCK_BEGIN(boolean local = 0) {
-  String data = "";
-  if (local) data += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
-  else data += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
-  GP.SEND(data);
-}
-void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
-  String data = "";
-  data += '[';
-  data += time;
-  data += F("000");
-  data += ',';
-  if (dec) data += (float)val / dec;
-  else data += val;
-  data += "],\n";
-  GP.SEND(data);
-}
-void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-  String data = "";
-
-  data += F("<div class='chartBlock' style='width:95%;height:");
-  data += height;
-  data += F("px' id='");
-  data += id;
-  data += F("'></div>");
-
-  data += F("<script>Highcharts.setOptions({colors:['");
-  data += FPSTR(st_0);
-  data += F("','");
-  data += FPSTR(st_1);
-  data += F("']});\nHighcharts.stockChart('");
-  data += id;
-  data += F("',{chart:{},\n"
-            "rangeSelector:{buttons:[\n"
-            "{count:1,type:'minute',text:'1M'},\n"
-            "{count:1,type:'hour',text:'1H'},\n"
-            "{count:1,type:'day',text:'1D'},\n"
-            "{type:'all',text:'All'}],\n"
-            "inputEnabled:false,selected:3},\n"
-            "time:{useUTC:true},\n"
-            "credits:{enabled:false},series:[\n"
-           );
-
-  if (vals_0 != NULL) {
-    data += F("{name:'");
-    data += labels[0];
-    data += F("',data:[\n");
-    GP.SEND(data);
-    data = "";
-    for (uint16_t s = 0; s < size; s++) {
-      GP_PLOT_STOCK_ADD(times[s], vals_0[s], dec);
-    }
-    data += "]},\n";
-  }
-  if (vals_1 != NULL) {
-    data += F("{name:'");
-    data += labels[1];
-    data += F("',data:[\n");
-    GP.SEND(data);
-    data = "";
-    for (uint16_t s = 0; s < size; s++) {
-      GP_PLOT_STOCK_ADD(times[s], vals_1[s], dec);
-    }
-    data += "]},\n";
-  }
-  data += F("]});</script>\n");
-  GP.SEND(data);
-}
-void GP_BLOCK_SHADOW_BEGIN(void) {
-  GP.SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));
-}
-void GP_BLOCK_SHADOW_END(void) {
-  GP.SEND(F("</div>\n"));
-}
-void GP_FOOTER_BEGIN(void) {
-  GP.SEND("<div style='flex-grow:1;display:block;padding:0px;'></div>\n<footer>");
-}
-void GP_FOOTER_END(void) {
-  GP.SEND("</footer>");
-}
-void GP_BUILD_END(void) {
-  GP.SEND(F("</div>\n<div id='onlBlock' class='onlBlock'>Нет соединения</div>\n"));
-  GP.JS_BOTTOM();
-  GP.PAGE_END();
-}
-void GP_FIX_SCRIPTS(void) {
-  GP.SEND(F(
-            "<script>var _err=0;\n"
-            "function GP_send(req,r=null,upd=null){\n"
-            "var xhttp=new XMLHttpRequest();\n"
-            "xhttp.open(upd?'GET':'POST',req,true);\n"
-            "xhttp.send();\n"
-            "xhttp.timeout=_tout;\n"
-            "xhttp.onreadystatechange=function(){\n"
-            "if(this.status||(++_err>=5)){onlShow(!this.status);_err=0;}\n"
-            "if(this.status||upd){\n"
-            "if(this.readyState==4&&this.status==200){\n"
-            "if(r){\n"
-            "if(r==1)location.reload();\n"
-            "else location.href=r;}\n"
-            "if(upd)GP_apply(upd,this.responseText);}}}}\n"
-            "function GP_spinc(arg){\n"
-            "if (arg.className=='spin_inp'){\n"
-            "arg.value-=arg.value%arg.step;}}\n"
-            "function GP_change(arg){\n"
-            "arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';\n"
-            "const _output=getEl(arg.id+'_val');\n"
-            "const _range=_output.name.split(',');\n"
-            "if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}\n"
-            "else if((arg.value>=Number(arg.max))&&_range[1]){_output.value=_range[1];}\n"
-            "else _output.value=arg.value;}</script>\n"
-          )
-         );
-}
-void GP_FIX_STYLES(void) {
-  GP.SEND(F(
-            "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
-            ".onlBlock{z-index:3;background:#810000bf;width:15px;height:180px;border-radius:25px 0 0 25px;writing-mode:vertical-lr;text-align:center;}\n" //фикс плашки офлайн
-            ".display{border-radius:5px;}\n" //фикс лейбл блоков
-            ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
-            ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
-            ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
-            ".check_c>span::before{border-color:#444;background-color:#2a2d35}\n" //фикс чекбоксов
-            ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09}\n" //фикс чекбоксов
-            ".miniButton{padding:1px 7px;}\n" //фикс кнопок
-            "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
-            "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста
-            "input[type='time'],input[type='date']{height:34px;border:none!important;}\n" //фикс выбора времени и даты
-            "input[type='number']{text-align:center;}\n" //фикс ввода чисел
-            "input[type=range]:disabled{filter:brightness(0.6);}\n" //фикс слайдеров
-            "input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}\n" //фикс слайдеров
-            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
-            "select:disabled{filter:brightness(0.6);}\n" //фикс выпадающего списка
-            "select{width:200px;cursor:pointer;}\n" //фикс выпадающего списка
-            "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
-            "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
-            "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
-          )
-         );
-}
 
 void build(void) {
   static boolean listInit = false;
@@ -1061,7 +617,7 @@ void build(void) {
       }
       GP.BREAK();
       GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", sensorsList, INT32_MAX, "", true););
+      M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", climateSensorsList, INT32_MAX, "", true););
       M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", climateGetSensList(), extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !climateState)););
       GP.BLOCK_END();
 
@@ -1397,7 +953,7 @@ void build(void) {
       GP.BREAK();
       GP_HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (!wirelessGetOnlineStastus()) {
-        M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", statusWirelessList[wirelessGetStastus()], INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessStatusList[wirelessGetStastus()], INT32_MAX, "", true););
       }
       else {
         String _data = String(sens.mainTemp[2] / 10.0, 1) + "°С";
@@ -2351,60 +1907,6 @@ void action() {
     Serial.println F("Updater file upload abort");
   }
 }
-
-//-----------------------Получить состояние подключения wifi-----------------------------
-String getWifiState(void) { //получить состояние подключения wifi
-  String data = "<big><big>";
-  if (!settings.ssid[0]) data += "Некорректное имя сети!";
-  else {
-    if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
-    else if (!wifiInterval) data += "Не удалось подключиться к \"";
-    else data += "Подключение к \"";
-    data += String(settings.ssid);
-    if ((wifiStatus == WL_CONNECTED) || !wifiInterval) data += "\"";
-    else data += "\"...";
-  }
-  data += "</big></big>";
-  return data;
-}
-//--------------------------Получить состояние загрузчика--------------------------------
-String getUpdaterState(void) { //получить состояние загрузчика
-  String data = "<big><b>";
-  switch (updaterStatus()) {
-    case UPDATER_IDLE: data += "Обновление завершено!"; break;
-    case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
-    case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
-    case UPDATER_NO_FILE: data += "Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"; break;
-    case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
-    case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
-    default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(constrain(map(updaterProgress(), 0, 252, 0, 100), 0, 100)) + "%") : "Подключение..."; break;
-  }
-  data += "</b></big>";
-  updaterSetIdle();
-  return data;
-}
-//------------------------------Получить состояние ntp-----------------------------------
-String getNtpState(void) { //получить состояние ntp
-  String data = "";
-  if (!ntpGetAttempts()) data += statusNtpList[ntpGetStatus()];
-  else {
-    data += "Попытка подключения[";
-    data += ntpGetAttempts();
-    data += "]...";
-  }
-  return data;
-}
-//----------------------------Получить состояние погоды-----------------------------------
-String getWeatherState(void) { //получить состояние погоды
-  String data = "";
-  if (!weatherGetAttempts()) data += statusWeatherList[weatherGetStatus()];
-  else {
-    data += "Попытка запроса[";
-    data += weatherGetAttempts();
-    data += "]...";
-  }
-  return data;
-}
 //----------------------------Получить состояние таймера---------------------------------
 String getTimerState(void) { //получить состояние таймера
   String data = statusTimerList[timer.mode & 0x03];
@@ -2490,163 +1992,88 @@ String StrLengthConstrain(String data, uint8_t size) {
   return data;
 }
 //--------------------------------------------------------------------
-String climateGetSensList(void) {
-  String str = "";
-
-  if (deviceInformation[SENS_TEMP]) {
-    str += "Датчик в часах,";
-    if (weatherGetValidStatus() && settings.climateSend) str += "Данные о погоде";
-    else str += "Датчик в есп";
+boolean checkFsData(const char** data, int8_t size) {
+  File file;
+  while (size > 0) {
+    size--;
+    file = LittleFS.open(data[size], "r");
+    if (!file) {
+      Serial.print(data[size]);
+      Serial.println F(" not found");
+      return false;
+    }
+    else file.close();
   }
-  else if (climateState != 0) str += "Датчик в есп,Данные о погоде";
-  else str += "Данные о погоде,Датчик в есп";
-
-  return str;
+  return true;
 }
 //--------------------------------------------------------------------
-int16_t climateGetTemp(void) {
-  return sens.mainTemp[0] + mainSettings.tempCorrect;
-}
-float climateGetTempFloat(void) {
-  return (climateGetTemp()) ? (climateGetTemp() / 10.0) : 0;
-}
-uint16_t climateGetPress(void) {
-  return sens.mainPress[0];
-}
-uint8_t climateGetHum(void) {
-  return sens.mainHum[0];
-}
-//--------------------------------------------------------------------
-void climateSet(void) {
-  static boolean firstStart;
-
-  if (!firstStart) {
-    firstStart = true;
-    climateState = 0;
-
-    if (sens.status) {
-      if (!(sens.status & (0x01 << settings.climateType[0]))) {
-        settings.climateType[0] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.status & (0x01 << i)) {
-            settings.climateType[0] = i;
-            climateState = 1;
-            break;
-          }
-        }
-      }
-      else climateState = 1;
-      sens.search = sens.status;
-
-      if (!sens.press[settings.climateType[1]]) {
-        settings.climateType[1] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.press[i]) {
-            settings.climateType[1] = i;
-            break;
-          }
-        }
-      }
-
-      if (!sens.hum[settings.climateType[2]]) {
-        settings.climateType[2] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.hum[i]) {
-            settings.climateType[2] = i;
-            break;
-          }
-        }
-      }
-
-      sensorsList = "";
-      memory.update(); //обновить данные в памяти
-    }
-
-    for (uint8_t i = 0; i < 4; i++) {
-      if (sens.status & (0x01 << i)) {
-        if (i) {
-          if (sensorsList.length() > 0) sensorsList += "+";
-          sensorsList += tempSensList[i];
-        }
-        else sensorsList += (sens.err) ? "Ошибка" : tempSensList[sens.type];
-      }
-      else if (!i && deviceInformation[SENS_TEMP]) sensorsList = "Ошибка";
-    }
-  }
-
-  sens.mainTemp[0] = sens.temp[settings.climateType[0]];
-  sens.mainPress[0] = sens.press[settings.climateType[1]];
-  sens.mainHum[0] = sens.hum[settings.climateType[2]];
-}
-
-void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
-  if (climateDates[CLIMATE_BUFFER - 1] > unix) {
-    climateDefault(temp, hum, press, unix);
-  }
+void initFileSystemData(void) {
+  if (!LittleFS.begin()) Serial.println F("File system error");
   else {
-    GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
-    if (hum) {
-      GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
-    }
-    if (press) {
-      GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
-    }
-    GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
-  }
-}
-//--------------------------------------------------------------------
-void climateReset(void) {
-  climateTempAvg = 0;
-  climateHumAvg = 0;
-  climatePressAvg = 0;
-  climateCountAvg = 0;
-}
-//--------------------------------------------------------------------
-void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
-  for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
-    climateAdd(temp, hum, press, unix);
-  }
-}
-//--------------------------------------------------------------------
-void climateUpdate(void) {
-  static int8_t firstStart = -1;
+    Serial.println F("File system init");
 
-  uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
-
-  if (firstStart < timeState) {
-    firstStart = timeState;
-    climateDefault(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
-    climateReset(); //сброс усреднения
-  }
-  else {
-    climateTempAvg += climateGetTemp();
-    climatePressAvg += climateGetPress();
-    climateHumAvg += climateGetHum();
-
-    if (++climateCountAvg >= settings.climateTime) {
-      if (settings.climateAvg && (climateCountAvg > 1)) {
-        if (climateTempAvg) climateTempAvg /= climateCountAvg;
-        if (climatePressAvg) climatePressAvg /= climateCountAvg;
-        if (climateHumAvg) climateHumAvg /= climateCountAvg;
-        climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
-      }
-      else climateAdd(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
-      climateReset(); //сброс усреднения
+    if (checkFsData(climateFsData, 1)) {
+      climateLocal = true; //работаем локально
+      Serial.println F("Script file found");
     }
+    if (checkFsData(alarmFsData, 3)) {
+      alarmSvgImage = true; //работаем локально
+      Serial.println F("Alarm svg files found");
+    }
+    if (checkFsData(timerFsData, 5)) {
+      timerSvgImage = true; //работаем локально
+      Serial.println F("Timer svg files found");
+    }
+    if (checkFsData(radioFsData, 6)) {
+      radioSvgImage = true; //работаем локально
+      Serial.println F("Radio svg files found");
+    }
+
+    if (LittleFS.remove("/update/firmware.hex")) Serial.println F("Clock update file remove"); //удаляем файл прошивки
+
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
+      clockUpdate = false; //выключаем обновление
+      Serial.println F("Clock update disable, running out of memory");
+    }
+    else Serial.println F("Clock update enable");
   }
+
+  if (ESP.getFreeSketchSpace() < ESP.getSketchSize()) {
+    otaUpdate = false; //выключаем обновление
+    Serial.println F("OTA update disable, running out of memory");
+  }
+  else Serial.println F("OTA update enable");
 }
 //--------------------------------------------------------------------
-void climateSendData(void) {
-  if (climateState != 0) { //если датчик обнаружен
-    if (!deviceInformation[SENS_TEMP]) busSetComand(WRITE_SENS_DATA, SENS_DATA_MAIN); //отправить данные
-    else if (!settings.climateSend || !weatherGetValidStatus()) busSetComand(WRITE_SENS_DATA, SENS_DATA_EXT); //отправить данные
-  }
-}
-//--------------------------------------------------------------------
-void weatherCheck(void) {
-  if (settings.weatherCity < WEATHER_CITY_ARRAY) weatherSetCoordinates(settings.weatherCity); //установить город
-  else weatherSetCoordinates(settings.weatherLat, settings.weatherLon); //установить координаты
-  weatherSendRequest(); //запросить прогноз погоды
+void resetMainSettings(void) {
+  strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+  settings.host[19] = '\0'; //устанавливаем последний символ
+
+  settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
+  settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
+  settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
+  settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
+
+  strncpy(settings.name, DEFAULT_NAME, 20); //установить имя по умолчанию
+  settings.name[19] = '\0'; //устанавливаем последний символ
+
+  settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
+  settings.weatherLat = NAN; //установить широту по умолчанию
+  settings.weatherLon = NAN; //установить долготу по умолчанию
+
+  for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
+  for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
+  settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
+  settings.climateSend = DEFAULT_CLIMATE_SEND; //установить режим по умолчанию
+  settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
+  settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
+  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
+  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
+  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
+  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
+  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
 }
 //--------------------------------------------------------------------
 void weatherAveragData(void) {
@@ -2675,19 +2102,11 @@ void weatherSendData(void) {
   else if (!climateState || !deviceInformation[SENS_TEMP] || settings.climateSend) busSetComand(WRITE_WEATHER_DATA, SENS_DATA_EXT); //отправить данные
 }
 //--------------------------------------------------------------------
-boolean checkFsData(const char** data, int8_t size) {
-  File file;
-  while (size > 0) {
-    size--;
-    file = LittleFS.open(data[size], "r");
-    if (!file) {
-      Serial.print(data[size]);
-      Serial.println F(" not found");
-      return false;
-    }
-    else file.close();
+void climateSendData(void) {
+  if (climateState != 0) { //если датчик обнаружен
+    if (!deviceInformation[SENS_TEMP]) busSetComand(WRITE_SENS_DATA, SENS_DATA_MAIN); //отправить данные
+    else if (!settings.climateSend || !weatherGetValidStatus()) busSetComand(WRITE_SENS_DATA, SENS_DATA_EXT); //отправить данные
   }
-  return true;
 }
 //--------------------------------------------------------------------
 void timeUpdate(void) {
@@ -2777,7 +2196,7 @@ void timeUpdate(void) {
     if (weatherGetValidStatus()) weatherAveragData();
   }
 }
-
+//--------------------------------------------------------------------
 void deviceUpdate(void) {
   if (deviceStatus) { //если статус обновился
     for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
@@ -2812,204 +2231,6 @@ void deviceUpdate(void) {
   }
 }
 //--------------------------------------------------------------------
-void wifiUpdate(void) {
-  static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
-
-  if ((wifiScanState == 127) && (millis() - wifiScanTimer) >= 100) { //если необходимо начать поиск
-    wifiScanState = 0; //сбрасываем статус
-    WiFi.scanNetworksAsync(wifiScanResult); //начинаем поиск
-  }
-
-  if (wifiStatus != WiFi.status()) { //если изменился статус
-    if (wifiStatus == 255) { //если нужно отключиться
-      Serial.println F("Wifi disconnecting...");
-      ntpStop(); //остановили ntp
-      weatherDisconnect(); //отключились от сервера погоды
-      WiFi.disconnect(); //отключаем wifi
-      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
-    }
-    wifiStatus = WiFi.status();
-    switch (wifiStatus) {
-      case WL_CONNECTED:
-        timerWifi = millis(); //сбросили таймер
-        wifiInterval = 300000; //устанавливаем интервал отключения точки доступа
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
-        ntpStart(); //запустить ntp
-        weatherCheck(); //запросить прогноз погоды
-
-        Serial.print F("Wifi connected, IP address: ");
-        Serial.println(WiFi.localIP());
-        break;
-      case WL_IDLE_STATUS:
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-        Serial.println F("Wifi idle status");
-        break;
-      default:
-        if ((wifiStatus == WL_DISCONNECTED) || (wifiStatus == WL_NO_SSID_AVAIL)) {
-          timerWifi = millis(); //сбросили таймер
-          if (wifiStatus == WL_NO_SSID_AVAIL) wifiInterval = 30000; //устанавливаем интервал переподключения
-          else wifiInterval = 5000; //устанавливаем интервал переподключения
-          WiFi.disconnect(); //отключаем wifi
-        }
-        else {
-          wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED == 1
-          digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-          Serial.println F("Wifi connect error...");
-        }
-        ntpStop(); //остановили ntp
-        weatherDisconnect(); //отключились от сервера погоды
-        break;
-    }
-  }
-
-  if (wifiInterval && ((millis() - timerWifi) >= wifiInterval)) {
-    if (wifiStatus == WL_CONNECTED) { //если подключены
-      wifiInterval = 0; //сбрасываем интервал переподключения
-      WiFi.mode(WIFI_STA); //отключили точку доступа
-      Serial.println F("Wifi access point disabled");
-    }
-    else { //иначе новое поключение
-      wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
-      if (wifiStatus != WL_CONNECT_FAILED) {
-        timerWifi = millis(); //сбросили таймер
-        wifiInterval = 30000; //устанавливаем интервал переподключения
-        Serial.print F("Wifi connecting to \"");
-        Serial.print(settings.ssid);
-        Serial.println F("\"...");
-      }
-      else {
-        wifiInterval = 0; //сбрасываем интервал
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-        Serial.println F("Wifi connection failed, wrong settings");
-      }
-    }
-  }
-}
-//--------------------------------------------------------------------
-void wifiScanResult(int networksFound) {
-  wifiScanList = "";
-  if (networksFound) {
-    wifiScanState = -1;
-    for (int i = 0; i < networksFound; i++) {
-      if (i) wifiScanList += ',';
-      wifiScanList += WiFi.SSID(i);
-      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
-    }
-  }
-  else {
-    wifiScanState = -2;
-    wifiScanList = "Нет сетей";
-  }
-}
-//--------------------------------------------------------------------
-void wifiStartAP(void) {
-  //настраиваем режим работы
-  WiFi.mode(WIFI_AP_STA);
-  Serial.println F("");
-
-  //настраиваем точку доступа
-  IPAddress local(AP_IP);
-  IPAddress subnet(255, 255, 255, 0);
-
-  //задаем настройки сети
-  WiFi.softAPConfig(local, local, subnet);
-
-  //запускаем точку доступа
-  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
-  else {
-    Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID);
-    if (AP_PASS[0] != '\0') {
-      Serial.print F(" ][ pass: ");
-      Serial.print(AP_PASS);
-    }
-    else Serial.print F(" ][ open ");
-    Serial.print F(" ][ ip: ");
-    Serial.print(WiFi.softAPIP());
-    Serial.println F(" ]");
-  }
-
-  //начинаем поиск сетей
-  WiFi.scanNetworksAsync(wifiScanResult);
-}
-//--------------------------------------------------------------------
-void initFileSystemData(void) {
-  if (!LittleFS.begin()) Serial.println F("File system error");
-  else {
-    Serial.println F("File system init");
-
-    if (checkFsData(climateFsData, 1)) {
-      climateLocal = true; //работаем локально
-      Serial.println F("Script file found");
-    }
-    if (checkFsData(alarmFsData, 3)) {
-      alarmSvgImage = true; //работаем локально
-      Serial.println F("Alarm svg files found");
-    }
-    if (checkFsData(timerFsData, 5)) {
-      timerSvgImage = true; //работаем локально
-      Serial.println F("Timer svg files found");
-    }
-    if (checkFsData(radioFsData, 6)) {
-      radioSvgImage = true; //работаем локально
-      Serial.println F("Radio svg files found");
-    }
-
-    if (LittleFS.remove("/update/firmware.hex")) Serial.println F("Clock update file remove"); //удаляем файл прошивки
-
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
-      clockUpdate = false; //выключаем обновление
-      Serial.println F("Clock update disable, running out of memory");
-    }
-    else Serial.println F("Clock update enable");
-  }
-
-  if (ESP.getFreeSketchSpace() < ESP.getSketchSize()) {
-    otaUpdate = false; //выключаем обновление
-    Serial.println F("OTA update disable, running out of memory");
-  }
-  else Serial.println F("OTA update enable");
-}
-//--------------------------------------------------------------------
-void resetMainSettings(void) {
-  strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
-  settings.host[19] = '\0'; //устанавливаем последний символ
-
-  settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
-  settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
-  settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
-  settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
-
-  strncpy(settings.name, DEFAULT_NAME, 20); //установить имя по умолчанию
-  settings.name[19] = '\0'; //устанавливаем последний символ
-
-  settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
-  settings.weatherLat = NAN; //установить широту по умолчанию
-  settings.weatherLon = NAN; //установить долготу по умолчанию
-
-  for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
-  for (uint8_t i = 0; i < sizeof(settings.climateType); i++) settings.climateType[i] = 0; //сбрасываем типы датчиков
-  settings.climateBar = DEFAULT_CLIMATE_BAR; //установить режим по умолчанию
-  settings.climateSend = DEFAULT_CLIMATE_SEND; //установить режим по умолчанию
-  settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
-  settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
-  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
-  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
-  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
-  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
-  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
-}
-
 void setup() {
   //инициализация индикатора
 #if STATUS_LED > 0
@@ -3096,7 +2317,7 @@ void setup() {
 
   busTimerSetInterval(1500);
 }
-
+//--------------------------------------------------------------------
 void loop() {
   wifiUpdate(); //обработка состояния wifi
   wirelessUpdate(); //обработка беспроводного датчика
