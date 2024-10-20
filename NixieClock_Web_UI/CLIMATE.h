@@ -22,17 +22,17 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix);
 
 //--------------------------------------------------------------------
 String climateGetMainSensList(void) {
-  String str = "Нет данных";
+  String str = "";
 
   uint8_t sensor = 0x02;
   for (uint8_t i = 1; i < 4; i++) {
     if (sens.search & sensor) {
       if (str[0] != '\0') str += '+';
-      else str = "";
       str += climateTempSensList[i];
     }
     sensor <<= 1;
   }
+  if (str[0] == '\0') str = "Нет данных";
 
   return str;
 }

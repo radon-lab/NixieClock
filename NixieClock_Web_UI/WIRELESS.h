@@ -104,12 +104,12 @@ void wirelessSetData(uint8_t* _buff) {
     sens.temp[SENS_WIRELESS] = _temp;
     sens.press[SENS_WIRELESS] = _buff[9] | ((uint16_t)_buff[10] << 8);
     sens.hum[SENS_WIRELESS] = _buff[11];
-    wireless_battery = _buff[12];
-    wireless_signal = _buff[13];
-    wireless_interval = _buff[14];
     wireless_status = WIRELESS_ONLINE;
   }
   else wireless_status = WIRELESS_NOT_SENSOR;
+  wireless_battery = _buff[12];
+  wireless_signal = _buff[13];
+  wireless_interval = _buff[14];
   wireless_timeout = 120000UL * (_buff[14] + 1);
   wireless_timer = millis();
 }

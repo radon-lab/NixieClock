@@ -610,9 +610,9 @@ void build(void) {
       );
       }
       GP.BREAK();
-      GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP_HR_TEXT("Температура", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
       M_BOX(GP.LABEL("Озвучка часа", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
-      M_BOX(GP.LABEL("Отображение", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
@@ -730,7 +730,7 @@ void build(void) {
       if (climateGetChartPress()) {
         GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 0, heightSize, UI_BAR_PRESS_COLOR);
       }
-      
+
       GP.BREAK();
       GP_HR_TEXT("Датчик в часах", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_CLOCK] != 0x7FFF) {
@@ -740,7 +740,7 @@ void build(void) {
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
       }
-      
+
       GP.BREAK();
       GP_HR_TEXT("Датчик в есп", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_MAIN] != 0x7FFF) {
@@ -750,7 +750,7 @@ void build(void) {
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
       }
-      
+
       GP.BREAK();
       GP_HR_TEXT("Беспроводной датчик", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (!wirelessGetOnlineStastus()) {
@@ -960,9 +960,6 @@ void build(void) {
       GP_HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (!wirelessGetOnlineStastus()) {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
-      }
-      else {
-        M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_WIRELESS], sens.press[SENS_WIRELESS], sens.hum[SENS_WIRELESS]), "", 0, "", true););
       }
       if (wirelessGetSensorStastus()) {
         M_BOX(GP.LABEL("Сигнал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
