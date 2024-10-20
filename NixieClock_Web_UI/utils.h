@@ -405,6 +405,8 @@ void GP_FIX_STYLES(void) {
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
             ".check_c>span::before{border-color:#444;background-color:#2a2d35}\n" //фикс чекбоксов
             ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09}\n" //фикс чекбоксов
+            ".navtab>ul{background:none!important;margin-bottom:5px}\n" //фикс блока меню
+            ".navtab>ul>li{display:block;border-radius:25px;margin:5px;width:40%;box-shadow:rgba(0, 0, 0, 0.45) 0px 0px 15px}\n" //фикс кнопки блока меню
             ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста

@@ -182,11 +182,18 @@ void build(void) {
     if (!listInit && deviceInformation[HARDWARE_VERSION]) {
       listInit = true;
 
+      if (deviceInformation[LAMP_NUM] < 6) {
+        secsModeList = "Не используются";
+      }
+
       if (deviceInformation[BACKL_TYPE]) {
         backlModeList += ",Статичная,Дыхание";
+        if (deviceInformation[BACKL_TYPE] >= 3) {
+          backlModeList += ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
+        }
       }
-      if (deviceInformation[BACKL_TYPE] >= 3) {
-        backlModeList += ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти";
+      else {
+        backlModeList = "Не используется";
       }
 
       if (deviceInformation[NEON_DOT] != 3) {
@@ -206,9 +213,14 @@ void build(void) {
       }
       alarmDotModeList = dotModeList + ",Без реакции";
 
-      for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
-        playerVoiceList += ",Голос_";
-        playerVoiceList += i;
+      if (deviceInformation[PLAYER_TYPE]) {
+        for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
+          playerVoiceList += ",Голос_";
+          playerVoiceList += i;
+        }
+      }
+      else {
+        playerVoiceList = "Не используется";
       }
     }
 
@@ -595,8 +607,14 @@ void build(void) {
         showModeList += climateGetSensList(settings.climateSend[1]);
       }
 
+      GP.NAV_TABS("Основные,Дополнительно", UI_BLOCK_COLOR);
+      GP.NAV_BLOCK_BEGIN();
       M_GRID(
-        GP.BLOCK_BEGIN(GP_THIN, "", "Автопоказ", UI_BLOCK_COLOR);
+        GP.BLOCK_BEGIN(GP_THIN, "", "Метеостанция", UI_BLOCK_COLOR);
+        M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
+        M_BOX(GP.LABEL("Озвучка часа", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
+        GP.BREAK();
+        GP_HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
         M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
@@ -609,10 +627,6 @@ void build(void) {
         GP_SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
       );
       }
-      GP.BREAK();
-      GP_HR_TEXT("Температура", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
-      M_BOX(GP.LABEL("Озвучка часа", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
@@ -657,7 +671,9 @@ void build(void) {
         M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtNight", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10, 0, UI_SLIDER_COLOR););
         GP.BLOCK_END();
       );
+      GP.NAV_BLOCK_END();
 
+      GP.NAV_BLOCK_BEGIN();
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Звуки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
@@ -707,6 +723,7 @@ void build(void) {
         M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего,Датчик 1,Датчик 2", extendedSettings.tempCorrectSensor););
         GP.BLOCK_END();
       );
+      GP.NAV_BLOCK_END();
 
       GP.CONFIRM("climateWarn", "Статистика микроклимата будет сброшена, продолжить?");
       GP.UPDATE_CLICK("climateWarn", "climateChart");
