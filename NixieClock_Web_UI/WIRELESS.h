@@ -72,16 +72,20 @@ boolean wirelessGetSensorStastus(void) {
   return (wireless_status >= WIRELESS_ONLINE);
 }
 //--------------------------------------------------------------------
+const char* wirelessGetStrStastus(void) {
+  return wirelessStatusList[wirelessGetStastus()];
+}
+//--------------------------------------------------------------------
 uint8_t wirelessGetBattery(void) {
-  if (wireless_status == WIRELESS_ONLINE) return wireless_battery;
+  if (wireless_status >= WIRELESS_ONLINE) return wireless_battery;
   return wireless_battery;
 }
 uint8_t wirelessGetSignal(void) {
-  if (wireless_status == WIRELESS_ONLINE) return wireless_signal;
+  if (wireless_status >= WIRELESS_ONLINE) return wireless_signal;
   return 0;
 }
 uint8_t wirelessGetInterval(void) {
-  if (wireless_status == WIRELESS_ONLINE) return wireless_interval;
+  if (wireless_status >= WIRELESS_ONLINE) return wireless_interval;
   return 0;
 }
 //--------------------------------------------------------------------
@@ -97,16 +101,16 @@ String wirelessGetFoundId(void) {
 void wirelessSetData(uint8_t* _buff) {
   int16_t _temp = _buff[7] | ((int16_t)_buff[8] << 8);
   if (_temp != 0x7FFF) {
-    sens.mainTemp[2] = _temp;
-    sens.mainPress[2] = _buff[9] | ((uint16_t)_buff[10] << 8);
-    sens.mainHum[2] = _buff[11];
+    sens.temp[SENS_WIRELESS] = _temp;
+    sens.press[SENS_WIRELESS] = _buff[9] | ((uint16_t)_buff[10] << 8);
+    sens.hum[SENS_WIRELESS] = _buff[11];
     wireless_battery = _buff[12];
     wireless_signal = _buff[13];
     wireless_interval = _buff[14];
     wireless_status = WIRELESS_ONLINE;
   }
   else wireless_status = WIRELESS_NOT_SENSOR;
-  wireless_timeout = 120000UL * _buff[14];
+  wireless_timeout = 120000UL * (_buff[14] + 1);
   wireless_timer = millis();
 }
 void wirelessCopyData(void) {
@@ -136,7 +140,7 @@ boolean wirelessCheckId(void) {
   return 1;
 }
 //--------------------------------------------------------------------
-void wirelessUpdate(void) {
+boolean wirelessUpdate(void) {
   if (wireless_status != WIRELESS_STOPPED) {
     if (wireless.parsePacket() == WIRELESS_PACKET_SIZE) {
       if (wireless.remotePort() == WIRELESS_SENSOR_PORT) {
@@ -144,13 +148,19 @@ void wirelessUpdate(void) {
           if (wirelessCheckData() && wireless_buffer[6]) {
             if (wirelessCheckId()) wirelessSetData(wireless_buffer);
             else if (wireless_buffer[6] == WIRELESS_SET_CMD) wirelessCopyData();
+            return true;
           }
         }
       }
     }
     if (wireless_timeout && ((millis() - wireless_timer) >= wireless_timeout)) {
+      sens.temp[SENS_WIRELESS] = 0x7FFF;
+      sens.press[SENS_WIRELESS] = 0;
+      sens.hum[SENS_WIRELESS] = 0;
       wireless_timeout = 0;
       wireless_status = WIRELESS_OFFLINE;
+      return true;
     }
   }
+  return false;
 }

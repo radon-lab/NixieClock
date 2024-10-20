@@ -9,100 +9,103 @@ int16_t climateArrMain[2][CLIMATE_BUFFER]; //буфер температуры �
 int16_t climateArrExt[1][CLIMATE_BUFFER]; //буфер давления микроклимата
 uint32_t climateDates[CLIMATE_BUFFER]; //буфер отметок времени микроклимата
 
-String climateSensorsList = "Отсутсвует"; //список подключенных сенсоров температуры
+enum {
+  CLIMATE_UPDATE, //добавить данные в статистику микроклимата
+  CLIMATE_RESET //сбросить данные в статистике микроклимата
+};
+
+const char *climateDataList[] = {"(часы)", "(есп)", "(датчик)", "(погода)", "(недоступно)"};
+const char *climateShowList[] = {"Температура", "Влажность", "Давление", "Температура и влажность"};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
-const char *sensDataList[] = {"CLOCK", "AHT", "SHT", "BMP", "BME"};
 
 void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix);
 
 //--------------------------------------------------------------------
-String climateGetSensList(void) {
-  String str = "";
+String climateGetMainSensList(void) {
+  String str = "Нет данных";
 
-  if (deviceInformation[SENS_TEMP]) {
-    str += "Датчик в часах,";
-    if (weatherGetValidStatus() && settings.climateSend) str += "Данные о погоде";
-    else str += "Датчик в есп";
+  uint8_t sensor = 0x02;
+  for (uint8_t i = 1; i < 4; i++) {
+    if (sens.search & sensor) {
+      if (str[0] != '\0') str += '+';
+      else str = "";
+      str += climateTempSensList[i];
+    }
+    sensor <<= 1;
   }
-  else if (climateState != 0) str += "Датчик в есп,Данные о погоде";
-  else str += "Данные о погоде,Датчик в есп";
 
   return str;
 }
 //--------------------------------------------------------------------
-int16_t climateGetTemp(void) {
-  return sens.mainTemp[0] + mainSettings.tempCorrect;
-}
-float climateGetTempFloat(void) {
-  return (climateGetTemp()) ? (climateGetTemp() / 10.0) : 0;
-}
-uint16_t climateGetPress(void) {
-  return sens.mainPress[0];
-}
-uint8_t climateGetHum(void) {
-  return sens.mainHum[0];
-}
-//--------------------------------------------------------------------
-void climateSet(void) {
-  static boolean firstStart;
+String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
+  String str = "Нет данных";
 
-  if (!firstStart) {
-    firstStart = true;
-    climateState = 0;
-
-    if (sens.status) {
-      if (!(sens.status & (0x01 << settings.climateType[0]))) {
-        settings.climateType[0] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.status & (0x01 << i)) {
-            settings.climateType[0] = i;
-            climateState = 1;
-            break;
-          }
-        }
-      }
-      else climateState = 1;
-      sens.search = sens.status;
-
-      if (!sens.press[settings.climateType[1]]) {
-        settings.climateType[1] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.press[i]) {
-            settings.climateType[1] = i;
-            break;
-          }
-        }
-      }
-
-      if (!sens.hum[settings.climateType[2]]) {
-        settings.climateType[2] = 0;
-        for (uint8_t i = 0; i < 4; i++) {
-          if (sens.hum[i]) {
-            settings.climateType[2] = i;
-            break;
-          }
-        }
-      }
-
-      climateSensorsList = "";
-      memory.update(); //обновить данные в памяти
+  if (temp != 0x7FFF) {
+    str = String(temp / 10.0, 1) + "°С";
+    if (hum) {
+      str += ' ';
+      str += hum;
+      str += '%';
     }
-
-    for (uint8_t i = 0; i < 4; i++) {
-      if (sens.status & (0x01 << i)) {
-        if (i) {
-          if (climateSensorsList.length() > 0) climateSensorsList += "+";
-          climateSensorsList += climateTempSensList[i];
-        }
-        else climateSensorsList += (sens.err) ? "Ошибка" : climateTempSensList[sens.type];
-      }
-      else if (!i && deviceInformation[SENS_TEMP]) climateSensorsList = "Ошибка";
+    if (press) {
+      str += ' ';
+      str += press;
+      str += "mm.Hg";
     }
   }
 
-  sens.mainTemp[0] = sens.temp[settings.climateType[0]];
-  sens.mainPress[0] = sens.press[settings.climateType[1]];
-  sens.mainHum[0] = sens.hum[settings.climateType[2]];
+  return str;
+}
+//--------------------------------------------------------------------
+String climateGetSensList(uint8_t data) {
+  String str = "";
+
+  for (uint8_t i = 0; i < 4; i++) {
+    str += ',';
+    str += climateShowList[i];
+    if ((i < 3) || (deviceInformation[LAMP_NUM] > 4)) str += climateDataList[data];
+    else str += climateDataList[4];
+  }
+
+  return str;
+}
+//--------------------------------------------------------------------
+int16_t climateGetTemp(uint8_t data) {
+  if (sens.temp[data] == 0x7FFF) return 0x7FFF;
+  if (extendedSettings.tempCorrectSensor) {
+    if (settings.climateSend[extendedSettings.tempCorrectSensor - 1] == data) return sens.temp[data] + mainSettings.tempCorrect;
+  }
+  return sens.temp[data];
+}
+//--------------------------------------------------------------------
+int16_t climateGetChartTemp(void) {
+  return climateGetTemp(settings.climateChart);
+}
+uint16_t climateGetChartPress(void) {
+  return sens.press[settings.climateChart];
+}
+uint8_t climateGetChartHum(void) {
+  return sens.hum[settings.climateChart];
+}
+//--------------------------------------------------------------------
+int16_t climateGetBarTemp(void) {
+  return climateGetTemp(settings.climateBar);
+}
+float climateGetBarTempFloat(void) {
+  return (climateGetBarTemp() != 0x7FFF) ? (climateGetBarTemp() / 10.0) : 0;
+}
+uint16_t climateGetBarPress(void) {
+  return sens.press[settings.climateBar];
+}
+uint8_t climateGetBarHum(void) {
+  return sens.hum[settings.climateBar];
+}
+//--------------------------------------------------------------------
+void climateReset(void) {
+  climateTempAvg = 0;
+  climateHumAvg = 0;
+  climatePressAvg = 0;
+  climateCountAvg = 0;
 }
 //--------------------------------------------------------------------
 void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
@@ -127,37 +130,35 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   }
 }
 //--------------------------------------------------------------------
-void climateReset(void) {
-  climateTempAvg = 0;
-  climateHumAvg = 0;
-  climatePressAvg = 0;
-  climateCountAvg = 0;
-}
-//--------------------------------------------------------------------
-void climateUpdate(void) {
-  static int8_t firstStart = -1;
+void climateUpdate(boolean mode) {
+  static int8_t first_start = -1;
 
-  uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
+  if (climateGetChartTemp() != 0x7FFF) {
+    uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
 
-  if (firstStart < timeState) {
-    firstStart = timeState;
-    climateDefault(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
-    climateReset(); //сброс усреднения
-  }
-  else {
-    climateTempAvg += climateGetTemp();
-    climatePressAvg += climateGetPress();
-    climateHumAvg += climateGetHum();
-
-    if (++climateCountAvg >= settings.climateTime) {
-      if (settings.climateAvg && (climateCountAvg > 1)) {
-        if (climateTempAvg) climateTempAvg /= climateCountAvg;
-        if (climatePressAvg) climatePressAvg /= climateCountAvg;
-        if (climateHumAvg) climateHumAvg /= climateCountAvg;
-        climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
-      }
-      else climateAdd(climateGetTemp(), climateGetHum(), climateGetPress(), unixNow);
+    if ((first_start < timeState) || (mode == CLIMATE_RESET)) {
+      first_start = timeState;
+      climateDefault(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
       climateReset(); //сброс усреднения
+    }
+    else if (settings.climateChart == SENS_WIRELESS) {
+      climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
+    }
+    else {
+      climateTempAvg += climateGetChartTemp();
+      climatePressAvg += climateGetChartPress();
+      climateHumAvg += climateGetChartHum();
+
+      if (++climateCountAvg >= settings.climateTime) {
+        if (settings.climateAvg && (climateCountAvg > 1)) {
+          if (climateTempAvg) climateTempAvg /= climateCountAvg;
+          if (climatePressAvg) climatePressAvg /= climateCountAvg;
+          if (climateHumAvg) climateHumAvg /= climateCountAvg;
+          climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
+        }
+        else climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
+        climateReset(); //сброс усреднения
+      }
     }
   }
 }

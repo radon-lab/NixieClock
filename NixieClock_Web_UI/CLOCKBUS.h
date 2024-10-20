@@ -116,7 +116,7 @@ struct Settings_4 { //настройки радио
 
 //----------------Температура--------------
 struct sensorData {
-  int16_t temp[4]; //температура
+  int16_t temp[4] = {0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF}; //температура
   uint16_t press[4]; //давление
   uint8_t hum[4]; //влажность
   uint8_t search; //флаги найденых датчиков температуры
@@ -125,12 +125,6 @@ struct sensorData {
   uint8_t type; //тип датчика температуры
   boolean init; //флаг инициализации порта
   boolean err; //ошибка сенсора
-  int16_t mainTemp[3] = {0x7FFF, 0x7FFF, 0x7FFF}; //основная температура
-  uint16_t mainPress[3]; //основное давление
-  uint8_t mainHum[3]; //основная влажность
-  int16_t wetherTemp = 0x7FFF; //температура погоды
-  uint16_t wetherPress; //давление погоды
-  uint8_t wetherHum; //влажность погоды
 } sens;
 
 //------------Таймера/Секундомер-----------
@@ -336,8 +330,8 @@ enum {
   READ_STATUS,
   READ_DEVICE,
 
-  WRITE_SENS_DATA,
-  WRITE_WEATHER_DATA,
+  WRITE_SENS_1_DATA,
+  WRITE_SENS_2_DATA,
 
   CONTROL_SYSTEM,
   CONTROL_DEVICE,
@@ -369,6 +363,14 @@ struct busData {
 
 #define BUS_STATUS_REBOOT 100
 #define BUS_STATUS_REBOOT_FAIL 255
+
+enum {
+  SENS_CLOCK,
+  SENS_MAIN,
+  SENS_WIRELESS,
+  SENS_WEATHER,
+  SENS_MAX_DATA
+};
 
 #define SENS_EXT 0x01
 #define SENS_AHT 0x02
@@ -526,7 +528,7 @@ void busUpdate(void) {
                 twi_write_byte(dayWeek); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
                   if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
-                  if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+                  if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
                   timeState = 0x03; //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
                 }
@@ -548,7 +550,7 @@ void busUpdate(void) {
             if (!twi_error()) { //если передача была успешной
               if (busReadBufferArg()) { //если время обновлено в часах
                 if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
-                if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+                if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
                 timeState = 0x03; //установили флаги актуального времени
               }
               busShiftBuffer(); //сместили буфер команд
@@ -568,7 +570,7 @@ void busUpdate(void) {
             twi_write_byte((mainDate.year >> 8) & 0xFF);
             twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
-              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
               timeState = 0x03; //установили флаги актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
@@ -582,7 +584,7 @@ void busUpdate(void) {
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x01; //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
@@ -600,7 +602,7 @@ void busUpdate(void) {
             twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
               timeState |= 0x02; //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
             }
@@ -924,12 +926,12 @@ void busUpdate(void) {
 
         case READ_SENS_DATA:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_TEMP)) { //начинаем передачу
-            sens.temp[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
-            sens.press[0] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
-            sens.hum[0] = twi_read_byte(TWI_NACK);
+            sens.temp[SENS_CLOCK] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+            sens.press[SENS_CLOCK] = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_ACK) << 8);
+            sens.hum[SENS_CLOCK] = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
-              if (sens.temp[0] != 0x7FFF) sens.status |= SENS_EXT;
-              else sens.temp[0] = 0;
+              if (sens.temp[SENS_CLOCK] != 0x7FFF) sens.status |= SENS_EXT;
+              else sens.temp[SENS_CLOCK] = 0;
               sens.update |= SENS_EXT;
               busShiftBuffer(); //сместили буфер команд
             }
@@ -1227,29 +1229,36 @@ void busUpdate(void) {
           }
           break;
 
-        case WRITE_SENS_DATA:
-          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            twi_write_byte((busReadBufferArg()) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
-            twi_write_byte(sens.mainTemp[0] & 0xFF);
-            twi_write_byte((sens.mainTemp[0] >> 8) & 0xFF);
-            twi_write_byte(sens.mainPress[0] & 0xFF);
-            twi_write_byte((sens.mainPress[0] >> 8) & 0xFF);
-            twi_write_byte(sens.mainHum[0]);
-            if (!twi_error()) { //если передача была успешной
-              busShiftBuffer(); //сместили буфер команд
-              busShiftBuffer(); //сместили буфер команд
+        case WRITE_SENS_1_DATA: {
+            if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+              uint8_t _sens = busReadBufferArg();
+              if (_sens < SENS_MAX_DATA) {
+                twi_write_byte(BUS_WRITE_SENS_DATA); //регистр команды
+                twi_write_byte(sens.temp[_sens] & 0xFF);
+                twi_write_byte((sens.temp[_sens] >> 8) & 0xFF);
+                twi_write_byte(sens.press[_sens] & 0xFF);
+                twi_write_byte((sens.press[_sens] >> 8) & 0xFF);
+                twi_write_byte(sens.hum[_sens]);
+              }
+              if (!twi_error()) { //если передача была успешной
+                busShiftBuffer(); //сместили буфер команд
+                busShiftBuffer(); //сместили буфер команд
+              }
             }
           }
           break;
 
-        case WRITE_WEATHER_DATA: {
+        case WRITE_SENS_2_DATA: {
             if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-              twi_write_byte((busReadBufferArg()) ? BUS_WRITE_MAIN_SENS_DATA : BUS_WRITE_SENS_DATA); //регистр команды
-              twi_write_byte(sens.mainTemp[1] & 0xFF);
-              twi_write_byte((sens.mainTemp[1] >> 8) & 0xFF);
-              twi_write_byte(sens.mainPress[1] & 0xFF);
-              twi_write_byte((sens.mainPress[1] >> 8) & 0xFF);
-              twi_write_byte(sens.mainHum[1]);
+              uint8_t _sens = busReadBufferArg();
+              if (_sens < SENS_MAX_DATA) {
+                twi_write_byte(BUS_WRITE_MAIN_SENS_DATA); //регистр команды
+                twi_write_byte(sens.temp[_sens] & 0xFF);
+                twi_write_byte((sens.temp[_sens] >> 8) & 0xFF);
+                twi_write_byte(sens.press[_sens] & 0xFF);
+                twi_write_byte((sens.press[_sens] >> 8) & 0xFF);
+                twi_write_byte(sens.hum[_sens]);
+              }
               if (!twi_error()) { //если передача была успешной
                 busShiftBuffer(); //сместили буфер команд
                 busShiftBuffer(); //сместили буфер команд

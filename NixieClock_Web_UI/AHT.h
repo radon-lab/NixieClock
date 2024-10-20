@@ -62,16 +62,18 @@ uint8_t readTempAHT(void) //чтение температуры/влажност
   uint32_t hum_raw = ((uint32_t)twi_read_byte(TWI_ACK) << 16) | ((uint32_t)twi_read_byte(TWI_ACK) << 8);
   uint8_t data_raw = twi_read_byte(TWI_ACK);
   uint32_t temp_raw = ((uint32_t)(data_raw & 0x0F) << 16) | ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_NACK);
+
+  if (!sens.status) sens.temp[SENS_MAIN] = ((temp_raw * 2000) >> 20) - 500;
+
   hum_raw = ((hum_raw | data_raw) >> 4);
+  hum_raw = (hum_raw * 100) >> 20;
+  if (!sens.status) sens.hum[SENS_MAIN] = hum_raw;
+  else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2;
 
-  sens.temp[1] = ((temp_raw * 2000) >> 20) - 500;
-  sens.hum[1] = (hum_raw * 100) >> 20;
-  sens.press[1] = 0; //сбросили давление
-  sens.status |= SENS_AHT;
+  if ((uint16_t)sens.temp[SENS_MAIN] > 850) sens.temp[SENS_MAIN] = 0; //если вышли за предел
+  if (sens.hum[SENS_MAIN] > 99) sens.hum[SENS_MAIN] = 99; //если вышли за предел
 
-  if ((uint16_t)sens.temp[1] > 850) sens.temp[1] = 0; //если вышли за предел
-  if (sens.hum[1] > 99) sens.hum[1] = 99; //если вышли за предел
-
+  sens.status |= SENS_AHT; //установили флаг
   attemptsAHT = 0; //сбросили попытки запроса
   return 0; //выходим
 }

@@ -169,7 +169,7 @@ uint8_t rtcGetTime(boolean mode) //запрашиваем время из RTC
       mainDate.month = unpackREG(twi_read_byte(TWI_ACK)); //получаем месяц
       mainDate.year = unpackREG(twi_read_byte(TWI_NACK)) + 2000; //получаем год
       if (!twi_error()) { //если передача была успешной
-        if (timeState != 0x03) climateTimer = 0; //обновляем состояние микроклимата
+        if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
         timeState = 0x03; //установили флаги актуального времени
         return 0; //выходим
       }

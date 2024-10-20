@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.0.9 релиз от 16.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.3 релиз от 20.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -45,6 +45,8 @@ WiFiUDP udp;
 char buffSendIp[20]; //буфер ip адреса
 char buffSendName[20]; //буфер имени
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
+
+uint32_t rtcMemory[2]; //память нажатий кнопки сброса
 
 uint8_t send_host_num = 0; //текущий номер хоста
 
@@ -697,15 +699,77 @@ void checkCRC(uint8_t* crc, uint8_t data) { //сверка контрольно�
   }
 }
 //--------------------------------------------------------------------
+void checkSettingsButton(void) {
+  if (ESP.rtcUserMemoryRead(32, rtcMemory, sizeof(rtcMemory))) {
+    if ((rtcMemory[0] ^ rtcMemory[1]) != 0xFFFFFFFF) {
+      rtcMemory[0] = 0; //сбросили нажатия кнопки
+      rtcMemory[1] = 0xFFFFFFFF; //сбросили контрольную сумму
+#if DEBUG_MODE
+      Serial.println F("Settings button reset!");
+#endif
+    }
+    else {
+      rtcMemory[0]++; //добавили нажатие кнопки
+      rtcMemory[1] = rtcMemory[0] ^ 0xFFFFFFFF; //установили контрольную сумму
+#if DEBUG_MODE
+      Serial.print F("Settings button click ");
+      Serial.print(rtcMemory[0]);
+      Serial.println F("...");
+#endif
+    }
+    if (rtcMemory[0] >= 3) { //если было достаточное количество нажатий
+      rtcMemory[0] = 0; //сбросили нажатия кнопки
+      rtcMemory[1] = 0xFFFFFFFF; //сбросили контрольную сумму
+      settingsMode = true; //включить режим настройки
+#if DEBUG_MODE
+      Serial.println F("Settings mode enable...");
+#endif
+    }
+  }
+  if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
+#if DEBUG_MODE
+    Serial.println F("Settings button update!");
+#endif
+  }
+}
+//--------------------------------------------------------------------
+void resetSettingsButton(void) {
+  if (rtcMemory[0]) { //если кнопка была нажата
+    rtcMemory[0] = 0; //сбросили нажатия кнопки
+    rtcMemory[1] = 0xFFFFFFFF; //сбросили контрольную сумму
+    if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
+#if DEBUG_MODE
+      Serial.println F("Settings button reset!");
+#endif
+    }
+  }
+}
+//--------------------------------------------------------------------
 void powerDown(void) {
 #if DEBUG_MODE
   Serial.println F("Power down...");
 #endif
 
+  delay(100); //ждем окончания передачи
+
   ui.stop(); //остановить ui
   udp.stop(); //остановить udp
-  WiFi.disconnect(); //отключаем wifi
-  ESP.deepSleep(60e6 * sleepTime[settings.period]);
+
+  WiFi.disconnect(); //отключаемся от сети
+  WiFi.mode(WIFI_OFF); //отключаем wifi
+
+  ESP.deepSleep(60e6 * sleepTime[settings.period]); //уходим в сон
+}
+//--------------------------------------------------------------------
+void lowBattery(void) {
+#if STATUS_LED > 0
+  for (uint8_t i = 0; i < 5; i++) {
+    digitalWrite(LED_BUILTIN, (boolean)(i & 0x01));
+    delay(200);
+  }
+  digitalWrite(LED_BUILTIN, HIGH);
+#endif
+  ESP.deepSleep(0); //уходим в сон
 }
 //--------------------------------------------------------------------
 void checkSensors(void) {
@@ -805,32 +869,6 @@ void updateSensors(void) {
 #endif
 }
 //--------------------------------------------------------------------
-void timeUpdate(void) {
-  static uint8_t updateTimer = 0;
-  static uint32_t secondsTimer = millis();
-
-  if ((millis() - secondsTimer) >= 1000) {
-    secondsTimer = millis();
-
-    if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
-
-    if (updateTimer == 2) checkSensors(); //проверка доступности сенсоров
-    else if (updateTimer == 3) updateSensors(); //обновить показания сенсоров
-    else if ((updateTimer > 15) && (settingsMode == true) && ui.online()) updateTimer = 15; //сбросить таймер
-    else if (updateTimer > 30) powerDown(); //отключить питание
-
-    sendReady = true; //установили флаг повторной попытки отправки данных
-
-#if STATUS_LED == 1
-    if (settingsMode == true) {
-      if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-    }
-#elif STATUS_LED == 2
-    if (settingsMode == true) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#endif
-  }
-}
-//--------------------------------------------------------------------
 void sendUpdate(void) {
   if ((sendReady == true) && (sensorReady == true) && (wifiStatus == WL_CONNECTED)) {
     if (send_host_num < (MAX_CLOCK * 2)) {
@@ -864,6 +902,32 @@ void sendUpdate(void) {
   }
 }
 //--------------------------------------------------------------------
+void timeUpdate(void) {
+  static uint8_t updateTimer = 0;
+  static uint32_t secondsTimer = millis();
+
+  if ((millis() - secondsTimer) >= 1000) {
+    secondsTimer = millis();
+
+    if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
+
+    if (updateTimer == 2) checkSensors(); //проверка доступности сенсоров
+    else if (updateTimer == 3) updateSensors(); //обновить показания сенсоров
+    else if ((updateTimer > 15) && (settingsMode == true) && ui.online()) updateTimer = 15; //сбросить таймер
+    else if (updateTimer > 30) powerDown(); //отключить питание
+
+    sendReady = true; //установили флаг повторной попытки отправки данных
+
+    resetSettingsButton(); //сбросить нажатия кнопки настроек
+
+#if STATUS_LED > 0
+    if (settingsMode == true) {
+      if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+    }
+#endif
+  }
+}
+//--------------------------------------------------------------------
 void wifiUpdate(void) {
   static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
 
@@ -885,7 +949,7 @@ void wifiUpdate(void) {
       case WL_CONNECTED:
         timerWifi = millis(); //сбросили таймер
         wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED == 1
+#if STATUS_LED > 0
         if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
 #endif
         udp.begin(UDP_LOCAL_PORT); //запускаем udp
@@ -895,7 +959,7 @@ void wifiUpdate(void) {
 #endif
         break;
       case WL_IDLE_STATUS:
-#if STATUS_LED == 1
+#if STATUS_LED > 0
         if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
@@ -911,7 +975,7 @@ void wifiUpdate(void) {
         }
         else {
           wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED == 1
+#if STATUS_LED > 0
           if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
@@ -937,7 +1001,7 @@ void wifiUpdate(void) {
     }
     else {
       wifiInterval = 0; //сбрасываем интервал
-#if STATUS_LED == 1
+#if STATUS_LED > 0
       if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
@@ -1001,40 +1065,21 @@ void wifiStartAP(void) {
   //начинаем поиск сетей
   WiFi.scanNetworksAsync(wifiScanResult);
 }
-
+//--------------------------------------------------------------------
 void setup() {
   //выключить питание wifi
   WiFi.forceSleepBegin();
 
+  //инициализация индикатора
+#if STATUS_LED > 0
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+#endif
+
   //обновить напряжение питания
   vccVoltage = ESP.getVcc();
   if (vccVoltage > BAT_VOLTAGE_CORRECT) vccVoltage -= BAT_VOLTAGE_CORRECT;
-  if (!getBatteryCharge()) ESP.deepSleep(0);
-
-  //проверка кнопки режима настройки
-#if DEBUG_MODE
-  settingsMode = true;
-#else
-  pinMode(SET_BTN_PIN, INPUT_PULLUP);
-  settingsMode = (boolean)!digitalRead(SET_BTN_PIN);
-#endif
-
-  //инициализация индикатора
-#if STATUS_LED > 0
-  if (settingsMode == true) {
-    pinMode(LED_BUILTIN, OUTPUT);
-#if STATUS_LED < 2
-    digitalWrite(LED_BUILTIN, HIGH);
-#else
-    digitalWrite(LED_BUILTIN, LOW);
-#endif
-  }
-#endif
-
-  //инициализация шины
-  pinMode(TWI_SDA_PIN, INPUT_PULLUP);
-  pinMode(TWI_SCL_PIN, INPUT_PULLUP);
-  twi_init();
+  if (!getBatteryCharge()) lowBattery();
 
 #if DEBUG_MODE
   Serial.begin(115200);
@@ -1044,6 +1089,19 @@ void setup() {
   Serial.print F(ESP_FIRMWARE_VERSION);
   Serial.println F("...");
 #endif
+
+  //проверка кнопки режима настройки
+  checkSettingsButton();
+
+  //инициализация индикатора
+#if STATUS_LED > 0
+  if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW);
+#endif
+
+  //инициализация шины
+  pinMode(TWI_SDA_PIN, INPUT_PULLUP);
+  pinMode(TWI_SCL_PIN, INPUT_PULLUP);
+  twi_init();
 
   //инициализация обновления по OTA
   if (settingsMode == true) {
@@ -1098,7 +1156,7 @@ void setup() {
   if (settingsMode == true) wifiStartAP();
   else WiFi.mode(WIFI_STA);
 }
-
+//--------------------------------------------------------------------
 void loop() {
   wifiUpdate(); //обработка статусов wifi
   timeUpdate(); //обработка времени

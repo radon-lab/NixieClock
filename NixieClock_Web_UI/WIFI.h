@@ -1,12 +1,13 @@
 int8_t wifiScanState = 2; //статус сканирования сети
-uint32_t wifiScanTimer = 0; //таймер начала поиска сети
 uint8_t wifiStatus = WL_IDLE_STATUS; //статус соединения wifi
+
+uint32_t wifiScanTimer = 0; //таймер начала поиска сети
 uint32_t wifiInterval = 5000; //интервал переподключения к wifi
 
 String wifiScanList = "Нет сетей"; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
-String getWifiState(void) { //получить состояние подключения wifi
+String getWifiState(void) {
   String data = "<big><big>";
   if (!settings.ssid[0]) data += "Некорректное имя сети!";
   else {

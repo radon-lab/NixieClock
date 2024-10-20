@@ -43,6 +43,9 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
     else return 1; //иначе выходим
   }
 
+  uint16_t temp_raw = 0; //буфер для рассчета температуры
+  uint16_t hum_raw = 0; //буфер для рассчета влажности
+
   switch (typeSHT) { //чтение данных
     case SHT20_ADDR: {
         if (twi_beginTransmission(SHT20_ADDR)) return 1; //начало передачи
@@ -53,9 +56,9 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
           yield(); //обработка данных
           if (((uint16_t)millis() - timer) >= SHT20_TEMP_TIME) return 1; //выходим если таймаут
         }
-        uint16_t temp_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | (twi_read_byte(TWI_ACK) & 0xFC);
+        temp_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | (twi_read_byte(TWI_ACK) & 0xFC);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        sens.temp[2] = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
+        if (!sens.status) sens.temp[SENS_MAIN] = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
 
         if (twi_beginTransmission(SHT20_ADDR)) return 1; //начало передачи
         twi_write_byte(SHT20_READ_HUM); //устанавливаем адрес записи
@@ -66,9 +69,9 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
           yield(); //обработка данных
           if (((uint16_t)millis() - timer) >= SHT20_HUM_TIME) return 1; //выходим если таймаут
         }
-        uint16_t hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | (twi_read_byte(TWI_ACK) & 0xFC);
+        hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | (twi_read_byte(TWI_ACK) & 0xFC);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        sens.hum[2] = (uint16_t)(hum_raw * 0.0019) - 6; //рассчитываем влажность
+        hum_raw = (uint16_t)(hum_raw * 0.0019) - 6; //рассчитываем влажность
       }
       break;
     case SHT30_ADDR: {
@@ -81,21 +84,23 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
           yield(); //обработка данных
           if (((uint16_t)millis() - timer) >= SHT30_MEAS_TIME) return 1; //выходим если таймаут
         }
-        uint16_t temp_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
+        temp_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
         twi_read_byte(TWI_ACK); //пропускаем контрольную сумму
-        uint16_t hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
+        hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        sens.temp[2] = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
-        sens.hum[2] = hum_raw * 0.00152; //рассчитываем влажность
+        if (!sens.status) sens.temp[SENS_MAIN] = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
+        hum_raw = hum_raw * 0.00152; //рассчитываем влажность
       }
       break;
   }
-  sens.press[2] = 0; //сбросили давление
-  sens.status |= SENS_SHT;
+  
+  if (!sens.status) sens.hum[SENS_MAIN] = hum_raw;
+  else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2;
 
-  if ((uint16_t)sens.temp[2] > 850) sens.temp[2] = 0; //если вышли за предел
-  if (sens.hum[2] > 99) sens.hum[2] = 99; //если вышли за предел
+  if ((uint16_t)sens.temp[SENS_MAIN] > 850) sens.temp[SENS_MAIN] = 0; //если вышли за предел
+  if (sens.hum[SENS_MAIN] > 99) sens.hum[SENS_MAIN] = 99; //если вышли за предел
 
+  sens.status |= SENS_SHT; //установили флаг
   attemptsSHT = 0; //сбросили попытки запроса
   return 0; //выходим
 }
