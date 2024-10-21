@@ -137,21 +137,6 @@ String backlModeList(void) { //список режимов подсветки
   }
   return str;
 }
-String playerVoiceList(void) { //список голосов для озвучки
-  String str;
-  str.reserve(100);
-  if (deviceInformation[PLAYER_TYPE]) {
-    str = F("Алёна,Филипп");
-    for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
-      str += F(",Голос_");
-      str += i;
-    }
-  }
-  else {
-    str = F("Не используется");
-  }
-  return str;
-}
 String dotModeList(boolean alm) { //список режимов основных разделительных точек
   String str;
   str.reserve(500);
@@ -191,6 +176,21 @@ String flipModeList(void) { //список режимов смены минут
   String str;
   str.reserve(370);
   str = F("Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат");
+  return str;
+}
+String playerVoiceList(void) { //список голосов для озвучки
+  String str;
+  str.reserve(100);
+  if (deviceInformation[PLAYER_TYPE]) {
+    str = F("Алёна,Филипп");
+    for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
+      str += F(",Голос_");
+      str += i;
+    }
+  }
+  else {
+    str = F("Не используется");
+  }
   return str;
 }
 
@@ -716,7 +716,7 @@ void build(void) {
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Звуки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL("Голос озвучки", "", UI_LABEL_COLOR); GP.SELECT("mainVoice", "Алёна,Филипп", mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP.LABEL("Голос озвучки", "", UI_LABEL_COLOR); GP.SELECT("mainVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
         M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP.SLIDER("mainSoundVol", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BREAK();
         GP_HR_TEXT("Звук смены часа", "hint3", UI_LINE_COLOR, UI_HINT_COLOR);
