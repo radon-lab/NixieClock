@@ -14,7 +14,7 @@
   EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
-  1МБ - FS:64KB OTA:~470KB(только обновление esp по OTA).
+  1МБ - FS:none OTA:~502KB(только обновление esp по OTA).
   1МБ - FS:512KB OTA:~246KB(только локальные файлы FS и обновление прошивки часов).
   2МБ - FS:1MB OTA:~512KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
   4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
@@ -71,8 +71,9 @@ GPtime alarmTime; //время будильника
 char buffMultiIp[20]; //буфер ip адреса
 char buffMultiName[20]; //буфер имени
 
-boolean clockUpdate = true; //флаг запрета обновления часов
-boolean otaUpdate = true; //флаг запрета обновления есп
+boolean clockUpdate = false; //флаг запрета обновления часов
+boolean otaUpdate = false; //флаг запрета обновления есп
+boolean fsUpdate = false; //флаг запрета обновления фс
 boolean climateLocal = false; //флаг локальных скриптов графика
 boolean alarmSvgImage = false; //флаг локальных изображений будильника
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
@@ -909,15 +910,19 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
       GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.BREAK();
-      String formatText = "Поддерживаемые форматы файлов: ";
-      if (clockUpdate) formatText += "hex";
+      String formatText;
+      formatText.reserve(100);
+      formatText = F("Поддерживаемые форматы файлов: ");
+      if (clockUpdate) formatText += F("hex");
       if (otaUpdate) {
-        if (clockUpdate) formatText += ", ";
-        formatText += "bin и bin.gz.";
+        if (clockUpdate) formatText += F(", ");
+        formatText += F("bin и bin.gz.");
+      }
+      else formatText += '.';
+      if (fsUpdate) {
         GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
         GP.BREAK();
       }
-      else formatText += ".";
       GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.BREAK();
       GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -926,6 +931,8 @@ void build(void) {
       }
       if (otaUpdate) {
         M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+      }
+      if (fsUpdate) {
         M_BOX(GP.LABEL("Файловая система ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
       }
       GP.BLOCK_END();
@@ -1023,16 +1030,18 @@ void build(void) {
         M_BOX(GP.LABEL("ID датчика", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetId(), INT32_MAX, "", true););
       }
 
-      String rtcStatus = "Не обнаружен...";
+      String rtcStatus;
+      rtcStatus.reserve(50);
+      rtcStatus = F("Не обнаружен...");
       GP.BREAK();
       GP_HR_TEXT("Модуль RTC", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (deviceInformation[DS3231_ENABLE]) {
-        rtcStatus = "Подключен к часам";
+        rtcStatus = F("Подключен к часам");
       }
       else if (rtcGetFoundStatus()) {
         M_BOX(GP.LABEL("Коррекция", "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
         GP.UPDATE_CLICK("syncAging", "syncAging");
-        rtcStatus = (!rtcGetNormalStatus()) ? "Батарея разряжена" : "Работает исправно";
+        rtcStatus = (!rtcGetNormalStatus()) ? F("Батарея разряжена") : F("Работает исправно");
       }
       M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", rtcStatus, INT32_MAX, "", true););
 
@@ -1946,11 +1955,11 @@ void action() {
 String getTimerState(void) { //получить состояние таймера
   String str;
   str.reserve(50);
-  
+
   str = statusTimerList[timer.mode & 0x03];
   if (((timer.mode & 0x03) == 2) && !timer.count) str += " - тревога";
   else if (timer.mode & 0x80) str += " - пауза";
-  
+
   return str;
 }
 //------------------------Преобразовать время в формат ЧЧ:ММ:СС--------------------------
@@ -2053,6 +2062,7 @@ boolean checkFsData(const char** data, int8_t size) {
 void initFileSystemData(void) {
   if (!LittleFS.begin()) Serial.println F("File system error");
   else {
+    fsUpdate = true; //включаем обновление
     Serial.println F("File system init");
 
     if (checkFsData(climateFsData, 1)) {
@@ -2076,18 +2086,18 @@ void initFileSystemData(void) {
 
     FSInfo fs_info;
     LittleFS.info(fs_info);
-    if ((fs_info.totalBytes - fs_info.usedBytes) < 120000) {
-      clockUpdate = false; //выключаем обновление
-      Serial.println F("Clock update disable, running out of memory");
+    if ((fs_info.totalBytes - fs_info.usedBytes) >= 120000) {
+      clockUpdate = true; //включаем обновление
+      Serial.println F("Clock update enable");
     }
-    else Serial.println F("Clock update enable");
+    else Serial.println F("Clock update disable, running out of memory");
   }
 
-  if (ESP.getFreeSketchSpace() < ESP.getSketchSize()) {
-    otaUpdate = false; //выключаем обновление
-    Serial.println F("OTA update disable, running out of memory");
+  if (ESP.getFreeSketchSpace() >= ESP.getSketchSize()) {
+    otaUpdate = true; //выключаем обновление
+    Serial.println F("OTA update enable");
   }
-  else Serial.println F("OTA update enable");
+  else Serial.println F("OTA update disable, running out of memory");
 }
 //--------------------------------------------------------------------
 void resetMainSettings(void) {
