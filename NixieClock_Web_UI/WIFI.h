@@ -4,22 +4,30 @@ uint8_t wifiStatus = WL_IDLE_STATUS; //статус соединения wifi
 uint32_t wifiScanTimer = 0; //таймер начала поиска сети
 uint32_t wifiInterval = 5000; //интервал переподключения к wifi
 
-String wifiScanList = "Нет сетей"; //список найденых wifi сетей
+String wifiScanList; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
 String getWifiState(void) {
-  String data = "<big><big>";
-  if (!settings.ssid[0]) data += "Некорректное имя сети!";
+  String str;
+  str.reserve(200);
+  str = F("<big><big>");
+  
+  if (!settings.ssid[0]) str += F("Некорректное имя сети!");
   else {
-    if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
-    else if (!wifiInterval) data += "Не удалось подключиться к \"";
-    else data += "Подключение к \"";
-    data += String(settings.ssid);
-    if ((wifiStatus == WL_CONNECTED) || !wifiInterval) data += "\"";
-    else data += "\"...";
+    if (wifiStatus == WL_CONNECTED) str += F("Подключено к \"");
+    else if (!wifiInterval) str += F("Не удалось подключиться к \"");
+    else str += F("Подключение к \"");
+    str += settings.ssid;
+    if ((wifiStatus == WL_CONNECTED) || !wifiInterval) str += F("\"");
+    else str += F("\"...");
   }
-  data += "</big></big>";
-  return data;
+  str += F("</big></big>");
+  return str;
+}
+//--------------------------------------------------------------------
+void wifiScanInitStr(void) {
+  wifiScanList.reserve(500);
+  wifiScanList = F("Нет сетей");
 }
 //--------------------------------------------------------------------
 void wifiScanResult(int networksFound) {
@@ -29,12 +37,12 @@ void wifiScanResult(int networksFound) {
     for (int i = 0; i < networksFound; i++) {
       if (i) wifiScanList += ',';
       wifiScanList += WiFi.SSID(i);
-      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
+      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += F(" 🔒");
     }
   }
   else {
     wifiScanState = -2;
-    wifiScanList = "Нет сетей";
+    wifiScanList = F("Нет сетей");
   }
 }
 //--------------------------------------------------------------------

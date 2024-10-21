@@ -89,13 +89,29 @@ uint8_t wirelessGetInterval(void) {
   return 0;
 }
 //--------------------------------------------------------------------
-String wirelessGetFoundId(void) {
-  String _id = "";
+String wirelessGetId(void) {
+  String str;
+  str.reserve(50);
+  str = "";
+  
   for (uint8_t i = 0; i < 6; i++) {
-    _id +=  String(wireless_found_buffer[i], HEX);
+    str +=  String(wireless_buffer[i], HEX);
   }
-  _id.toUpperCase();
-  return _id;
+  str.toUpperCase();
+  
+  return str;
+}
+String wirelessGetFoundId(void) {
+  String str;
+  str.reserve(50);
+  str = "";
+  
+  for (uint8_t i = 0; i < 6; i++) {
+    str +=  String(wireless_found_buffer[i], HEX);
+  }
+  str.toUpperCase();
+  
+  return str;
 }
 //--------------------------------------------------------------------
 void wirelessSetData(uint8_t* _buff) {

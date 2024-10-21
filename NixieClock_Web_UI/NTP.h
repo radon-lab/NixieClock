@@ -77,14 +77,17 @@ uint8_t ntpGetAttempts(void) {
 }
 //--------------------------------------------------------------------
 String getNtpState(void) {
-  String data = "";
-  if (!ntpGetAttempts()) data += ntpStatusList[ntpGetStatus()];
+  String str = "";
+  str.reserve(70);
+  
+  if (!ntpGetAttempts()) str = ntpStatusList[ntpGetStatus()];
   else {
-    data += "Попытка подключения[";
-    data += ntpGetAttempts();
-    data += "]...";
+    str = F("Попытка подключения[");
+    str += ntpGetAttempts();
+    str += F("]...");
   }
-  return data;
+  
+  return str;
 }
 //--------------------------------------------------------------------
 uint32_t ntpGetMillis(void) {

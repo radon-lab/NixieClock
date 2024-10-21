@@ -22,7 +22,9 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix);
 
 //--------------------------------------------------------------------
 String climateGetMainSensList(void) {
-  String str = "";
+  String str;
+  str.reserve(50);
+  str = "";
 
   uint8_t sensor = 0x02;
   for (uint8_t i = 1; i < 4; i++) {
@@ -38,10 +40,12 @@ String climateGetMainSensList(void) {
 }
 //--------------------------------------------------------------------
 String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
-  String str = "Нет данных";
+  String str;
+  str.reserve(30);
+  str = F("Нет данных");
 
   if (temp != 0x7FFF) {
-    str = String(temp / 10.0, 1) + "°С";
+    str = String(temp / 10.0, 1) + F("°С");
     if (hum) {
       str += ' ';
       str += hum;
@@ -50,7 +54,7 @@ String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
     if (press) {
       str += ' ';
       str += press;
-      str += "mm.Hg";
+      str += F("mm.Hg");
     }
   }
 
@@ -58,7 +62,9 @@ String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
 }
 //--------------------------------------------------------------------
 String climateGetSensList(uint8_t data) {
-  String str = "";
+  String str;
+  str.reserve(100);
+  str = "";
 
   for (uint8_t i = 0; i < 4; i++) {
     str += ',';

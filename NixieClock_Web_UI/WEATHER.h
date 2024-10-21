@@ -56,7 +56,7 @@ int16_t weatherArrMain[2][WEATHER_BUFFER]; //буфер температуры �
 int16_t weatherArrExt[1][WEATHER_BUFFER]; //буфер давления погоды
 uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времени погоды
 
-String weather_answer = ""; //ответ от сервера погоды
+String weather_answer; //ответ от сервера погоды
 
 const char *weatherStatusList[] = {"Отсутсвует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
 
@@ -85,14 +85,17 @@ uint8_t weatherGetAttempts(void) {
 }
 //--------------------------------------------------------------------
 String getWeatherState(void) {
-  String data = "";
-  if (!weatherGetAttempts()) data += weatherStatusList[weatherGetStatus()];
+  String str;
+  str.reserve(100);
+  
+  if (!weatherGetAttempts()) str = weatherStatusList[weatherGetStatus()];
   else {
-    data += "Попытка запроса[";
-    data += weatherGetAttempts();
-    data += "]...";
+    str = F("Попытка запроса[");
+    str += weatherGetAttempts();
+    str += F("]...");
   }
-  return data;
+  
+  return str;
 }
 //--------------------------------------------------------------------
 void weatherSetCoordinates(uint8_t city) {
@@ -104,6 +107,10 @@ void weatherSetCoordinates(float latitude, float longitude) {
   weather_longitude = longitude;
 }
 //--------------------------------------------------------------------
+void weatherInitStr(void) {
+  weather_answer.reserve(1500);
+  weather_answer = "";
+}
 void weatherSendRequest(void) {
   if (weather_state <= WEATHER_GOOD) {
     if (client.connected()) client.stop();

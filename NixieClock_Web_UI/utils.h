@@ -4,109 +4,103 @@ void GP_PAGE_TITLE(const String& name) {
 void GP_LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
   GP.TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
 }
-String GP_FLOAT_DEC(float val, uint16_t dec) {
-  String data = "";
-  if (!dec) data += (int)round(val);
-  else data += String(val, (uint16_t)dec);
-  return data;
+void GP_FLOAT_DEC(float val, uint16_t dec) {
+  if (!dec) *_GPP += (int)round(val);
+  else *_GPP += String(val, (uint16_t)dec);
 }
 void GP_SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
-  String data = "";
-  data += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
-  if (dis) data += F(" class='dsbl'");
-  data += '>';
-  data += lable;
-  data += F("</lable>\n<input type='range' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += F("' value='");
-  data += value;
-  data += F("' min='");
-  data += min;
-  data += F("' max='");
-  data += max;
-  data += F("' step='");
-  data += step;
-  data += F("' style='background-image:linear-gradient(");
-  data += FPSTR(st);
-  data += ',';
-  data += FPSTR(st);
-  data += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;margin:10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
-  if (oninp) data += F("oninput='GP_change(this);GP_click(this)'");
-  else data += F("onchange='GP_click(this)' oninput='GP_change(this)'");
-  data += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
-  if (dis) data += F("class='dsbl' disabled");
-  data += F(">\n<output align='center' id='");
-  data += name;
-  data += F("_val' name='");
-  data += min_lable;
-  data += ',';
-  data += max_lable;
-  data += F("' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
-  if (dis) data += F(" class='dsbl'");
-  data += F(">");
-  data += GP_FLOAT_DEC(value, dec);
-  data += F("</output>\n");
-  GP.SEND(data);
+  *_GPP += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
+  if (dis) *_GPP += F(" class='dsbl'");
+  *_GPP += '>';
+  *_GPP += lable;
+  *_GPP += F("</lable>\n<input type='range' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += F("' value='");
+  *_GPP += value;
+  *_GPP += F("' min='");
+  *_GPP += min;
+  *_GPP += F("' max='");
+  *_GPP += max;
+  *_GPP += F("' step='");
+  *_GPP += step;
+  *_GPP += F("' style='background-image:linear-gradient(");
+  *_GPP += FPSTR(st);
+  *_GPP += ',';
+  *_GPP += FPSTR(st);
+  *_GPP += F(");background-size:0% 100%;height:30px;width:100%;max-width:430px;margin:10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)' onload='GP_change(this)' ");
+  if (oninp) *_GPP += F("oninput='GP_change(this);GP_click(this)'");
+  else *_GPP += F("onchange='GP_click(this)' oninput='GP_change(this)'");
+  *_GPP += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
+  if (dis) *_GPP += F("class='dsbl' disabled");
+  *_GPP += F(">\n<output align='center' id='");
+  *_GPP += name;
+  *_GPP += F("_val' name='");
+  *_GPP += min_lable;
+  *_GPP += ',';
+  *_GPP += max_lable;
+  *_GPP += F("' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
+  if (dis) *_GPP += F(" class='dsbl'");
+  *_GPP += F(">");
+  GP_FLOAT_DEC(value, dec);
+  *_GPP += F("</output>\n");
+  GP.send();
 }
-String GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
-  String data = "";
-  data += F("<input type='button' class='spinBtn ");
-  data += (step > 0) ? F("spinR") : F("spinL");
-  data += F("' name='");
-  data += name;
-  data += F("' min='");
-  data += step;
-  data += F("' max='");
-  data += dec;
-  data += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{GP_spin(this);_spinF=1},");
-  data += 200;
-  data += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
-  data += (step > 0) ? '+' : '-';
-  data += F("' ");
+void GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
+  *_GPP += F("<input type='button' class='spinBtn ");
+  *_GPP += (step > 0) ? F("spinR") : F("spinL");
+  *_GPP += F("' name='");
+  *_GPP += name;
+  *_GPP += F("' min='");
+  *_GPP += step;
+  *_GPP += F("' max='");
+  *_GPP += dec;
+  *_GPP += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{GP_spin(this);_spinF=1},");
+  *_GPP += 200;
+  *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
+  *_GPP += (step > 0) ? '+' : '-';
+  *_GPP += F("' ");
   if (st != GP_GREEN) {
-    data += F(" style='background:");
-    data += FPSTR(st);
-    data += F(";'");
+    *_GPP += F(" style='background:");
+    *_GPP += FPSTR(st);
+    *_GPP += F(";'");
   }
-  if (dis) data += F(" disabled");
-  data += F(">\n");
-  return data;
+  if (dis) *_GPP += F(" disabled");
+  *_GPP += F(">\n");
 }
 void GP_SPINNER_MAIN(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-  String data = "";
-  data += F("<div id='spinner' class='spinner'>\n");
-  data += GP_SPINNER_BTN(name, -step, st, dec, dis);
-  data += F("<input type='number' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
+  *_GPP += F("<div id='spinner' class='spinner'>\n");
+  GP_SPINNER_BTN(name, -step, st, dec, dis);
+  *_GPP += F("<input type='number' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
   if (w.length()) {
-    data += F("' style='width:");
-    data += w;
+    *_GPP += F("' style='width:");
+    *_GPP += w;
   }
-  data += F("' step='");
-  data += GP_FLOAT_DEC(step, dec);
-  data += F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='");
-  if (!dec) data += F("GP_spinc(this);");
-  data += F("GP_click(this);GP_spinw(this)' value='");
-  data += GP_FLOAT_DEC(value, dec);
+  *_GPP += F("' step='");
+  GP_FLOAT_DEC(step, dec);
+  *_GPP += F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='");
+  if (!dec) *_GPP += F("GP_spinc(this);");
+  *_GPP += F("GP_click(this);GP_spinw(this)' value='");
+  GP_FLOAT_DEC(value, dec);
   if (!isnan(min)) {
-    data += F("' min='");
-    data += GP_FLOAT_DEC(min, dec);
+    *_GPP += F("' min='");
+    GP_FLOAT_DEC(min, dec);
   }
   if (!isnan(max)) {
-    data += F("' max='");
-    data += GP_FLOAT_DEC(max, dec);
+    *_GPP += F("' max='");
+    GP_FLOAT_DEC(max, dec);
   }
-  data += F("' ");
-  if (dis) data += F("disabled ");
-  if (!w.length()) data += F("class='spin_inp'");
-  data += F(">\n");
-  data += GP_SPINNER_BTN(name, step, st, dec, dis);
-  data += F("</div>\n");
-  GP.SEND(data);
+  *_GPP += F("' ");
+  if (dis) *_GPP += F("disabled ");
+  if (!w.length()) *_GPP += F("class='spin_inp'");
+  *_GPP += F(">\n");
+  GP_SPINNER_BTN(name, step, st, dec, dis);
+  *_GPP += F("</div>\n");
+  GP.send();
 }
 void GP_SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
   GP.SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
@@ -121,199 +115,183 @@ void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
   GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
 }
 void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
-  String data = "";
-  data += F("<style>a:link.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";text-decoration:none;} a:visited.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";} a:hover.");
-  data += id;
-  data += F("_link{filter:brightness(0.75);}</style>\n<a href='");
-  data += url;
-  data += F("' class='");
-  data += id + "_link";
-  data += F("'>");
-  data += text;
-  data += F("</a>\n");
-  GP.SEND(data);
+  *_GPP += F("<style>a:link.");
+  *_GPP += id;
+  *_GPP += F("_link{color:");
+  *_GPP += FPSTR(color);
+  *_GPP += F(";text-decoration:none;} a:visited.");
+  *_GPP += id;
+  *_GPP += F("_link{color:");
+  *_GPP += FPSTR(color);
+  *_GPP += F(";} a:hover.");
+  *_GPP += id;
+  *_GPP += F("_link{filter:brightness(0.75);}</style>\n<a href='");
+  *_GPP += url;
+  *_GPP += F("' class='");
+  *_GPP += id + "_link";
+  *_GPP += F("'>");
+  *_GPP += text;
+  *_GPP += F("</a>\n");
+  GP.send();
 }
 void GP_UI_LINK(const String& url, const String& name, PGM_P color) {
-  String data = "";
-  data += F("<a href='http://");
-  data += url;
-  data += "'";
+  *_GPP += F("<a href='http://");
+  *_GPP += url;
+  *_GPP += "'";
   if (WiFi.localIP().toString().equals(url)) {
-    data += F(" class='sbsel' style='background:");
-    data += FPSTR(color);
-    data += F(" !important;'");
+    *_GPP += F(" class='sbsel' style='background:");
+    *_GPP += FPSTR(color);
+    *_GPP += F(" !important;'");
   }
-  data += ">";
-  data += name;
-  data += F("</a>\n");
-  GP.SEND(data);
+  *_GPP += ">";
+  *_GPP += name;
+  *_GPP += F("</a>\n");
+  GP.send();
 }
 void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int size = 30, PGM_P st_0 = GP_GRAY, PGM_P st_1 = GP_GREEN, bool dis = false) {
-  String data = "";
-  data += F("<style>#__");
-  data += name;
-  data += F(" span::before{background-color:");
-  data += FPSTR(st_0);
-  data += F(";border:none;padding:");
-  data += (size / 2) + 2;
-  data += F("px;}</style>\n");
+  *_GPP += F("<style>#__");
+  *_GPP += name;
+  *_GPP += F(" span::before{background-color:");
+  *_GPP += FPSTR(st_0);
+  *_GPP += F(";border:none;padding:");
+  *_GPP += (size / 2) + 2;
+  *_GPP += F("px;}</style>\n");
 
-  data += F("<style>#__");
-  data += name;
-  data += F(" input:checked+span::before{background-color:");
-  data += FPSTR(st_1);
-  data += F(";background-image:none;}</style>\n");
+  *_GPP += F("<style>#__");
+  *_GPP += name;
+  *_GPP += F(" input:checked+span::before{background-color:");
+  *_GPP += FPSTR(st_1);
+  *_GPP += F(";background-image:none;}</style>\n");
 
-  data += F("<label id='__");
-  data += name;
-  data += F("' class='check_c'");
-  data += F(" style='-webkit-mask:center/contain no-repeat url(");
-  data += uri;
-  data += F(");display:inline-block;width:");
-  data += size;
-  data += F("px;'>");
-  data += F("<input type='checkbox' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += "' ";
-  if (state) data += F("checked ");
-  if (dis) data += F("disabled ");
-  data += F("onclick='GP_click(this)' style='height:");
-  data += size;
-  data += F("px;'><span></span></label>\n"
+  *_GPP += F("<label id='__");
+  *_GPP += name;
+  *_GPP += F("' class='check_c'");
+  *_GPP += F(" style='-webkit-mask:center/contain no-repeat url(");
+  *_GPP += uri;
+  *_GPP += F(");display:inline-block;width:");
+  *_GPP += size;
+  *_GPP += F("px;'>");
+  *_GPP += F("<input type='checkbox' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += "' ";
+  if (state) *_GPP += F("checked ");
+  if (dis) *_GPP += F("disabled ");
+  *_GPP += F("onclick='GP_click(this)' style='height:");
+  *_GPP += size;
+  *_GPP += F("px;'><span></span></label>\n"
             "<input type='hidden' value='0' name='");
-  data += name;
-  data += "'>\n";
-  GP.SEND(data);
+  *_GPP += name;
+  *_GPP += "'>\n";
+  GP.send();
 }
 void GP_HR(PGM_P st, int width = 0) {
-  String data = "";
-  data += F("<hr style='border-color:");
-  data += FPSTR(st);
-  data += F(";margin:5px ");
-  data += width;
-  data += F("px'>\n");
-  GP.SEND(data);
+  *_GPP += F("<hr style='border-color:");
+  *_GPP += FPSTR(st);
+  *_GPP += F(";margin:5px ");
+  *_GPP += width;
+  *_GPP += F("px'>\n");
+  GP.send();
 }
 void GP_HR_TEXT(const String& text, const String& name, PGM_P st_0, PGM_P st_1) {
-  String data = "";
-
-  data += F("<label id='");
-  data += name;
-  data += F("' class='thinText' style='color:");
-  data += FPSTR(st_0);
-  data += F("'>");
-  data += text;
-  data += F("</label>\n");
-  data += F("<hr style='border-color:");
-  data += FPSTR(st_1);
-  data += F(";margin-top:-17px;padding-bottom:17px'>\n");
-
-  GP.SEND(data);
+  *_GPP += F("<label id='");
+  *_GPP += name;
+  *_GPP += F("' class='thinText' style='color:");
+  *_GPP += FPSTR(st_0);
+  *_GPP += F("'>");
+  *_GPP += text;
+  *_GPP += F("</label>\n");
+  *_GPP += F("<hr style='border-color:");
+  *_GPP += FPSTR(st_1);
+  *_GPP += F(";margin-top:-17px;padding-bottom:17px'>\n");
+  GP.send();
 }
 void GP_LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-  String data = "";
+  *_GPP += F("<style>#__");
+  *_GPP += name;
+  *_GPP += F(" input:checked+span::before{background-color:");
+  *_GPP += FPSTR(st_1);
+  *_GPP += F(";background-image:none}\n");
 
-  data += F("<style>#__");
-  data += name;
-  data += F(" input:checked+span::before{background-color:");
-  data += FPSTR(st_1);
-  data += F(";background-image:none}\n");
+  *_GPP += F("#__");
+  *_GPP += name;
+  *_GPP += F(" span::before{background-color:");
+  *_GPP += FPSTR(st_0);
+  *_GPP += F(";border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}\n");
 
-  data += F("#__");
-  data += name;
-  data += F(" span::before{background-color:");
-  data += FPSTR(st_0);
-  data += F(";border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);}\n");
+  *_GPP += F("#__");
+  *_GPP += name;
+  *_GPP += F(" input[type=checkbox]{cursor:default;margin-left:0px}</style>\n");
 
-  data += F("#__");
-  data += name;
-  data += F(" input[type=checkbox]{cursor:default;}</style>\n");
-
-  data += F("<label id='__");
-  data += name;
-  data += F("' class='check_c' style='display:block;height:30px;margin-top:-13px;cursor:default'><input type='checkbox' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += "' ";
-  if (state) data += F("checked ");
-  data += F("disabled ");
-  data += F("onclick='GP_click(this)'><span></span></label>\n"
+  *_GPP += F("<label id='__");
+  *_GPP += name;
+  *_GPP += F("' class='check_c' style='display:block;height:30px;margin-top:-13px;cursor:default'><input type='checkbox' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += "' ";
+  if (state) *_GPP += F("checked ");
+  *_GPP += F("disabled ");
+  *_GPP += F("onclick='GP_click(this)'><span></span></label>\n"
             "<input type='hidden' value='0' name='");
-  data += name;
-  data += "'>\n";
-  GP.SEND(data);
+  *_GPP += name;
+  *_GPP += "'>\n";
+  GP.send();
 }
 void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
-  String data = "";
+  *_GPP += F("<input type='range' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += F("' value='");
+  *_GPP += value;
+  *_GPP += F("' min='");
+  *_GPP += min;
+  *_GPP += F("' max='");
+  *_GPP += max;
+  *_GPP += F("' step='");
+  *_GPP += step;
+  *_GPP += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
+  *_GPP += FPSTR(st);
+  *_GPP += ',';
+  *_GPP += FPSTR(st);
+  *_GPP += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='GP_change(this)' disabled>\n");
 
-  data += F("<input type='range' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += F("' value='");
-  data += value;
-  data += F("' min='");
-  data += min;
-  data += F("' max='");
-  data += max;
-  data += F("' step='");
-  data += step;
-  data += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
-  data += FPSTR(st);
-  data += ',';
-  data += FPSTR(st);
-  data += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='GP_change(this)' disabled>\n");
-
-  data += F("<output style='display:none' id='");
-  data += name;
-  data += F("_val'></output>\n");
-
-  GP.SEND(data);
+  *_GPP += F("<output style='display:none' id='");
+  *_GPP += name;
+  *_GPP += F("_val'></output>\n");
+  GP.send();
 }
 void GP_PLOT_STOCK_BEGIN(boolean local = 0) {
-  String data = "";
-  if (local) data += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
-  else data += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
-  GP.SEND(data);
+  if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
+  else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
+  GP.send();
 }
 void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
-  String data = "";
-  data += '[';
-  data += time;
-  data += F("000");
-  data += ',';
-  if (dec) data += (float)val / dec;
-  else data += val;
-  data += "],\n";
-  GP.SEND(data);
+  *_GPP += '[';
+  *_GPP += time;
+  *_GPP += F("000");
+  *_GPP += ',';
+  if (dec) *_GPP += (float)val / dec;
+  else *_GPP += val;
+  *_GPP += "],\n";
+  GP.send();
 }
 void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-  String data = "";
+  *_GPP += F("<div class='chartBlock' style='width:95%;height:");
+  *_GPP += height;
+  *_GPP += F("px' id='");
+  *_GPP += id;
+  *_GPP += F("'></div>");
 
-  data += F("<div class='chartBlock' style='width:95%;height:");
-  data += height;
-  data += F("px' id='");
-  data += id;
-  data += F("'></div>");
-
-  data += F("<script>Highcharts.setOptions({colors:['");
-  data += FPSTR(st_0);
-  data += F("','");
-  data += FPSTR(st_1);
-  data += F("']});\nHighcharts.stockChart('");
-  data += id;
-  data += F("',{chart:{},\n"
+  *_GPP += F("<script>Highcharts.setOptions({colors:['");
+  *_GPP += FPSTR(st_0);
+  *_GPP += F("','");
+  *_GPP += FPSTR(st_1);
+  *_GPP += F("']});\nHighcharts.stockChart('");
+  *_GPP += id;
+  *_GPP += F("',{chart:{},\n"
             "rangeSelector:{buttons:[\n"
             "{count:1,type:'minute',text:'1M'},\n"
             "{count:1,type:'hour',text:'1H'},\n"
@@ -325,29 +303,27 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
            );
 
   if (vals_0 != NULL) {
-    data += F("{name:'");
-    data += labels[0];
-    data += F("',data:[\n");
-    GP.SEND(data);
-    data = "";
+    *_GPP += F("{name:'");
+    *_GPP += labels[0];
+    *_GPP += F("',data:[\n");
+    GP.send();
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_0[s], dec);
     }
-    data += "]},\n";
+    *_GPP += "]},\n";
   }
   if (vals_1 != NULL) {
-    data += F("{name:'");
-    data += labels[1];
-    data += F("',data:[\n");
-    GP.SEND(data);
-    data = "";
+    *_GPP += F("{name:'");
+    *_GPP += labels[1];
+    *_GPP += F("',data:[\n");
+    GP.send();
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_1[s], dec);
     }
-    data += "]},\n";
+    *_GPP += "]},\n";
   }
-  data += F("]});</script>\n");
-  GP.SEND(data);
+  *_GPP += F("]});</script>\n");
+  GP.send();
 }
 void GP_BLOCK_SHADOW_BEGIN(void) {
   GP.SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));

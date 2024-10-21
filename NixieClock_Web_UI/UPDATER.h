@@ -47,7 +47,7 @@ void updateCRC(uint8_t* crc, uint8_t data) { //сверка контрольно
 //--------------------------------------------------------------------
 boolean checkFileData(void) {
   firmwareFile = LittleFS.open("/update/firmware.hex", "r");
-  
+
   if (firmwareFile && (firmwareFile.size() != 0)) {
     uint8_t file_crc = 0;
     uint8_t file_size = 0;
@@ -153,19 +153,30 @@ void updaterSetIdle(void) {
 }
 //--------------------------------------------------------------------
 String getUpdaterState(void) { //получить состояние загрузчика
-  String data = "<big><b>";
+  String str;
+  str.reserve(150);
+  str = F("<big><b>");
+
   switch (updaterStatus()) {
-    case UPDATER_IDLE: data += "Обновление завершено!"; break;
-    case UPDATER_ERROR: data += "Сбой при загрузке прошивки!"; break;
-    case UPDATER_TIMEOUT: data += "Время ожидания истекло!"; break;
-    case UPDATER_NO_FILE: data += "Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"; break;
-    case UPDATER_NOT_HEX: data += "Ошибка!<br><small>Расширение файла не поддерживается!</small>"; break;
-    case UPDATER_UPL_ABORT: data += "Ошибка!<br><small>Загрузка файла прервана!</small>"; break;
-    default: data += (updaterProgress()) ? ("Загрузка прошивки..." + String(constrain(map(updaterProgress(), 0, 252, 0, 100), 0, 100)) + "%") : "Подключение..."; break;
+    case UPDATER_IDLE: str += F("Обновление завершено!"); break;
+    case UPDATER_ERROR: str += F("Сбой при загрузке прошивки!"); break;
+    case UPDATER_TIMEOUT: str += F("Время ожидания истекло!"); break;
+    case UPDATER_NO_FILE: str += F("Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"); break;
+    case UPDATER_NOT_HEX: str += F("Ошибка!<br><small>Расширение файла не поддерживается!</small>"); break;
+    case UPDATER_UPL_ABORT: str += F("Ошибка!<br><small>Загрузка файла прервана!</small>"); break;
+    default:
+      if (updaterProgress()) {
+        str += F("Загрузка прошивки...");
+        str += constrain(map(updaterProgress(), 0, 252, 0, 100), 0, 100);
+        str += '%';
+      }
+      else str += F("Подключение...");
+      break;
   }
-  data += "</b></big>";
+  str += F("</b></big>");
   updaterSetIdle();
-  return data;
+
+  return str;
 }
 //--------------------------------------------------------------------
 void updaterStart(void) {
@@ -192,7 +203,7 @@ boolean updaterRun(void) {
     updater_state = UPDATER_TIMEOUT;
     Serial.println("Updater timeout write page " + String(updater_page_cnt));
   }
-  
+
   switch (updater_state) {
     case UPDETER_LOAD:
       updater_page_crc = 0;
