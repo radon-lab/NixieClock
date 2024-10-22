@@ -74,6 +74,7 @@ char buffMultiName[20]; //буфер имени
 boolean clockUpdate = false; //флаг запрета обновления часов
 boolean otaUpdate = false; //флаг запрета обновления есп
 boolean fsUpdate = false; //флаг запрета обновления фс
+
 boolean climateLocal = false; //флаг локальных скриптов графика
 boolean alarmSvgImage = false; //флаг локальных изображений будильника
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
@@ -94,6 +95,11 @@ uint8_t sensorTimer = 0; //таймер обновления микроклим�
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
+#if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
+#undef STATUS_LED
+#define STATUS_LED -1
+#endif
+
 #include "NTP.h"
 #include "WIRE.h"
 #include "UPDATER.h"
@@ -104,6 +110,7 @@ uint8_t uploadState = 0; //флаг состояния загрузки файл
 #include "CLIMATE.h"
 
 #include "WIFI.h"
+#include "utils.h"
 
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
@@ -116,13 +123,6 @@ const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_r
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
-
-#include "utils.h"
-
-#if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
-#undef STATUS_LED
-#define STATUS_LED -1
-#endif
 
 String backlModeList(void) { //список режимов подсветки
   String str;
@@ -259,7 +259,7 @@ void build(void) {
     if (sensorGetValidStatus()) GP.UI_LINK("/climate", "Микроклимат");
     if (weatherGetValidStatus()) GP.UI_LINK("/weather", "Погода");
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
-    if (otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
+    if (fsUpdate || otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/information", "Об устройстве");
     GP.UI_LINK("/network", "Сетевые настройки");
 
@@ -304,7 +304,7 @@ void build(void) {
       GP_LINE_LED("bar_ntp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
-    if (wifiStatus == WL_CONNECTED) {
+    if (wifiGetConnectStatus()) {
       updateList += F(",bar_wifi");
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Сигнал WiFi", "", UI_MENU_TEXT_COLOR, 15);
@@ -652,7 +652,7 @@ void build(void) {
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Метеостанция", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
-        M_BOX(GP.LABEL("Озвучка часа", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
+        M_BOX(GP.LABEL("Раз в час", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
         GP.BREAK();
         GP_HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
@@ -904,25 +904,25 @@ void build(void) {
       GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioFreq",
                       "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
-    else if (ui.uri("/update") && (otaUpdate || clockUpdate)) { //обновление ESP
+    else if (ui.uri("/update") && (fsUpdate || otaUpdate || clockUpdate)) { //обновление ESP
       GP_PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
       GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.BREAK();
-      String formatText;
-      formatText.reserve(100);
-      formatText = F("Поддерживаемые форматы файлов: ");
-      if (clockUpdate) formatText += F("hex");
-      if (otaUpdate) {
-        if (clockUpdate) formatText += F(", ");
-        formatText += F("bin и bin.gz.");
-      }
-      else formatText += '.';
       if (fsUpdate) {
         GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
         GP.BREAK();
       }
+      String formatText;
+      formatText.reserve(100);
+      formatText = F("Поддерживаемые форматы файлов: ");
+      if (clockUpdate) formatText += F("hex");
+      if (fsUpdate || otaUpdate) {
+        if (clockUpdate) formatText += F(", ");
+        formatText += F("bin и bin.gz.");
+      }
+      else formatText += '.';
       GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
       GP.BREAK();
       GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -945,7 +945,7 @@ void build(void) {
       M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
-      if (wifiStatus == WL_CONNECTED) {
+      if (wifiGetConnectStatus()) {
         M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
@@ -1025,9 +1025,9 @@ void build(void) {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
       }
       if (wirelessGetSensorStastus()) {
+        M_BOX(GP.LABEL("UID", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetId(settings.wirelessId), INT32_MAX, "", true););
         M_BOX(GP.LABEL("Сигнал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
         M_BOX(GP.LABEL("Батарея", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetBattery()) + "%", INT32_MAX, "", true););
-        M_BOX(GP.LABEL("ID датчика", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetId(), INT32_MAX, "", true););
       }
 
       String rtcStatus;
@@ -1061,16 +1061,16 @@ void build(void) {
       GP_PAGE_TITLE("Сетевые настройки");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
-      if ((wifiStatus == WL_CONNECTED) || wifiInterval) {
+      if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) {
         GP.FORM_BEGIN("/network");
-        if (wifiStatus == WL_CONNECTED) {
+        if (wifiGetConnectStatus()) {
           GP.TEXT("", "", settings.ssid, "", 0, "", true);
           GP.BREAK();
           GP.TEXT("", "", WiFi.localIP().toString(), "", 0, "", true);
           GP.SPAN("Подключение установлено", GP_CENTER, "", UI_INFO_COLOR); //описание
         }
         else {
-          GP.SPAN(getWifiState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+          GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
           updateList += F(",syncNetwork");
         }
 
@@ -1084,7 +1084,7 @@ void build(void) {
         GP.FORM_END();
       }
       else {
-        if (wifiScanState < 0) wifiScanState = -wifiScanState;
+        if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
         updateList += F(",syncReload");
         GP.RELOAD("syncReload");
@@ -1103,14 +1103,14 @@ void build(void) {
           GP.SEND("</div>\n");
         }
         else {
-          GP.SELECT("wifiNetwork", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
+          GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
           GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
           GP.BREAK();
           GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-          if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
+          if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
           else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
           GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
           GP.SEND("</div>\n");
@@ -1629,11 +1629,7 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("extScan")) {
-        if (wifiScanState > 0) { //начинаем поиск
-          wifiScanList = "Поиск...";
-          wifiScanState = 127;
-          wifiScanTimer = millis();
-        }
+        if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
       }
     }
     //--------------------------------------------------------------------
@@ -1785,13 +1781,13 @@ void action() {
   }
   /**************************************************************************/
   if (ui.form()) {
-    if (!wifiInterval && (wifiStatus != WL_CONNECTED)) {
+    if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
-        wifiInterval = 1; //устанавливаем интервал переподключения
+        wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
         if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
           int network = 0; //номер сети из списка
           if (ui.copyInt("wifiNetwork", network)) strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
-          else wifiInterval = 0; //сбрасываем интервал переподключения
+          else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
         }
         settings.ssid[63] = '\0'; //устанавливаем последний символ
         ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
@@ -1800,8 +1796,7 @@ void action() {
       }
     }
     else if (ui.form("/network")) {
-      wifiInterval = 0; //сбрасываем интервал переподключения
-      wifiStatus = 255; //отключаемся от точки доступа
+      wifiResetConnectStatus(); //отключаемся от точки доступа
       settings.ssid[0] = '\0'; //устанавливаем последний символ
       settings.pass[0] = '\0'; //устанавливаем последний символ
       memory.update(); //обновить данные в памяти
@@ -1828,11 +1823,11 @@ void action() {
       }
 
       if (ui.update("syncNetwork")) { //если было обновление
-        ui.answer(getWifiState());
+        ui.answer(wifiGetConnectState());
       }
-      if (ui.update("syncReload") && (wifiScanState < 0)) { //если было обновление
+      if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
         ui.answer(1);
-        wifiScanState = -wifiScanState;
+        wifiResetScanCompleteStatus();
       }
 
       if (ui.update("syncAging")) { //если было обновление
@@ -1900,7 +1895,7 @@ void action() {
         ui.answer(1);
       }
       if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
-        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID: " + wirelessGetFoundId());
+        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID: " + wirelessGetId(wireless_found_buffer));
       }
     }
     //--------------------------------------------------------------------
@@ -2241,7 +2236,7 @@ void timeUpdate(void) {
       playbackTimer--;
     }
 #if STATUS_LED == 1
-    if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+    if (!wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #elif STATUS_LED == 2
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif

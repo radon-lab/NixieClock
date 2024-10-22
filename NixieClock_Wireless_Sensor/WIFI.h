@@ -2,27 +2,24 @@ int8_t wifi_scan_state = 2; //статус сканирования сети
 uint32_t wifi_scan_timer = 0; //таймер начала поиска сети
 
 uint8_t wifi_status = WL_IDLE_STATUS; //статус соединения wifi
-uint32_t wifi_interval = 5000; //интервал переподключения к wifi
+uint32_t wifi_interval = 100; //интервал переподключения к wifi
 
-String wifi_scan_list; //список найденых wifi сетей
+String wifi_scan_list = "Нет сетей"; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
 String wifiGetConnectState(void) {
-  String str;
-  str.reserve(200);
-  str = F("<big><big>");
-
-  if (!settings.ssid[0]) str += F("Некорректное имя сети!");
+  String data = "<big><big>";
+  if (!settings.ssid[0]) data += "Некорректное имя сети!";
   else {
-    if (wifi_status == WL_CONNECTED) str += F("Подключено к \"");
-    else if (!wifi_interval) str += F("Не удалось подключиться к \"");
-    else str += F("Подключение к \"");
-    str += settings.ssid;
-    if ((wifi_status == WL_CONNECTED) || !wifi_interval) str += F("\"");
-    else str += F("\"...");
+    if (wifi_status == WL_CONNECTED) data += "Подключено к \"";
+    else if (!wifi_interval) data += "Не удалось подключиться к \"";
+    else data += "Подключение к \"";
+    data += String(settings.ssid);
+    if ((wifi_status == WL_CONNECTED) || !wifi_interval) data += "\"";
+    else data += "\"...";
   }
-  str += F("</big></big>");
-  return str;
+  data += "</big></big>";
+  return data;
 }
 //--------------------------------------------------------------------
 boolean wifiGetConnectStatus(void) {
@@ -58,11 +55,6 @@ void wifiStartScanNetworks(void) {
   wifi_scan_timer = millis();
 }
 //--------------------------------------------------------------------
-void wifiScanInitStr(void) {
-  wifi_scan_list.reserve(500);
-  wifi_scan_list = F("Нет сетей");
-}
-//--------------------------------------------------------------------
 void wifiScanResult(int networksFound) {
   wifi_scan_list = "";
   if (networksFound) {
@@ -70,19 +62,21 @@ void wifiScanResult(int networksFound) {
     for (int i = 0; i < networksFound; i++) {
       if (i) wifi_scan_list += ',';
       wifi_scan_list += WiFi.SSID(i);
-      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifi_scan_list += F(" 🔒");
+      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifi_scan_list += " 🔒";
     }
   }
   else {
     wifi_scan_state = -2;
-    wifi_scan_list = F("Нет сетей");
+    wifi_scan_list = "Нет сетей";
   }
 }
 //--------------------------------------------------------------------
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
+#if DEBUG_MODE
   Serial.println F("");
+#endif
 
   //настраиваем точку доступа
   IPAddress local(AP_IP);
@@ -92,10 +86,15 @@ void wifiStartAP(void) {
   WiFi.softAPConfig(local, local, subnet);
 
   //запускаем точку доступа
-  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
+  if (!WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL)) {
+#if DEBUG_MODE
+    Serial.println F("Wifi access point start failed, wrong settings");
+#endif
+  }
+#if DEBUG_MODE
   else {
     Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID);
+    Serial.print(AP_SSID);
     if (AP_PASS[0] != '\0') {
       Serial.print F(" ][ pass: ");
       Serial.print(AP_PASS);
@@ -105,6 +104,7 @@ void wifiStartAP(void) {
     Serial.print(WiFi.softAPIP());
     Serial.println F(" ]");
   }
+#endif
 
   //начинаем поиск сетей
   WiFi.scanNetworksAsync(wifiScanResult);
@@ -120,74 +120,75 @@ void wifiUpdate(void) {
 
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
+#if DEBUG_MODE
       Serial.println F("Wifi disconnecting...");
-      ntpStop(); //остановили ntp
-      weatherDisconnect(); //отключились от сервера погоды
+#endif
+      udp.stop(); //остановить udp
       WiFi.disconnect(); //отключаем wifi
-      if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
     }
     wifi_status = WiFi.status();
     switch (wifi_status) {
       case WL_CONNECTED:
         timerWifi = millis(); //сбросили таймер
-        wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
+        wifi_interval = 0; //сбрасываем интервал переподключения
+#if STATUS_LED > 0
+        if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
 #endif
-        ntpStart(); //запустить ntp
-        weatherCheck(); //запросить прогноз погоды
-
+        udp.begin(UDP_LOCAL_PORT); //запускаем udp
+#if DEBUG_MODE
         Serial.print F("Wifi connected, IP address: ");
         Serial.println(WiFi.localIP());
+#endif
         break;
       case WL_IDLE_STATUS:
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#if STATUS_LED > 0
+        if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
+#if DEBUG_MODE
         Serial.println F("Wifi idle status");
+#endif
         break;
       default:
         if ((wifi_status == WL_DISCONNECTED) || (wifi_status == WL_NO_SSID_AVAIL)) {
           timerWifi = millis(); //сбросили таймер
-          if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал переподключения
+          if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 10000; //устанавливаем интервал переподключения
           else wifi_interval = 5000; //устанавливаем интервал переподключения
           WiFi.disconnect(); //отключаем wifi
         }
         else {
           wifi_interval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED == 1
-          digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#if STATUS_LED > 0
+          if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
+#if DEBUG_MODE
           Serial.println F("Wifi connect error...");
+#endif
         }
-        ntpStop(); //остановили ntp
-        weatherDisconnect(); //отключились от сервера погоды
+        udp.stop(); //остановить udp
         break;
     }
   }
 
-  if (wifi_interval && ((millis() - timerWifi) >= wifi_interval)) {
-    if (wifi_status == WL_CONNECTED) { //если подключены
-      wifi_interval = 0; //сбрасываем интервал переподключения
-      WiFi.mode(WIFI_STA); //отключили точку доступа
-      Serial.println F("Wifi access point disabled");
-    }
-    else { //иначе новое поключение
-      wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
-      if (wifi_status != WL_CONNECT_FAILED) {
-        timerWifi = millis(); //сбросили таймер
-        wifi_interval = 30000; //устанавливаем интервал переподключения
-        Serial.print F("Wifi connecting to \"");
-        Serial.print(settings.ssid);
-        Serial.println F("\"...");
-      }
-      else {
-        wifi_interval = 0; //сбрасываем интервал
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+  if (wifi_interval && ((millis() - timerWifi) >= wifi_interval)) { //новое поключение
+    if (WiFi.SSID().equals(settings.ssid) && WiFi.psk().equals(settings.pass) && (settings.ssid[0] != '\0')) wifi_status = WiFi.begin(); //подключаемся к wifi
+    else wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
+    if (wifi_status != WL_CONNECT_FAILED) {
+      timerWifi = millis(); //сбросили таймер
+      wifi_interval = 10000; //устанавливаем интервал переподключения
+#if DEBUG_MODE
+      Serial.print F("Wifi connecting to \"");
+      Serial.print(settings.ssid);
+      Serial.println F("\"...");
 #endif
-        Serial.println F("Wifi connection failed, wrong settings");
-      }
+    }
+    else {
+      wifi_interval = 0; //сбрасываем интервал
+#if STATUS_LED > 0
+      if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+#endif
+#if DEBUG_MODE
+      Serial.println F("Wifi connection failed, wrong settings");
+#endif
     }
   }
 }

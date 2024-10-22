@@ -1,9 +1,7 @@
-uint8_t climateCountAvg = 0; //счетчик циклов обновления микроклимата
-int16_t climateTempAvg = 0; //буфер средней температуры микроклимата
-uint16_t climateHumAvg = 0; //буфер средней влажности микроклимата
-uint16_t climatePressAvg = 0; //буфер среднего давления микроклимата
-
-int8_t climateState = -1; //флаг состояние активации микроклимата
+uint8_t climate_count_avg = 0; //счетчик циклов обновления микроклимата
+int16_t climate_temp_avg = 0; //буфер средней температуры микроклимата
+uint16_t climate_hum_avg = 0; //буфер средней влажности микроклимата
+uint16_t climate_press_avg = 0; //буфер среднего давления микроклимата
 
 int16_t climateArrMain[2][CLIMATE_BUFFER]; //буфер температуры и влажности микроклимата
 int16_t climateArrExt[1][CLIMATE_BUFFER]; //буфер давления микроклимата
@@ -108,10 +106,10 @@ uint8_t climateGetBarHum(void) {
 }
 //--------------------------------------------------------------------
 void climateReset(void) {
-  climateTempAvg = 0;
-  climateHumAvg = 0;
-  climatePressAvg = 0;
-  climateCountAvg = 0;
+  climate_temp_avg = 0;
+  climate_hum_avg = 0;
+  climate_press_avg = 0;
+  climate_count_avg = 0;
 }
 //--------------------------------------------------------------------
 void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
@@ -140,29 +138,29 @@ void climateUpdate(boolean mode) {
   static int8_t first_start = -1;
 
   if (climateGetChartTemp() != 0x7FFF) {
-    uint32_t unixNow = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
+    uint32_t unix_now = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
 
     if ((first_start < timeState) || (mode == CLIMATE_RESET)) {
       first_start = timeState;
-      climateDefault(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
+      climateDefault(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unix_now);
       climateReset(); //сброс усреднения
     }
     else if (settings.climateChart == SENS_WIRELESS) {
-      climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
+      climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unix_now);
     }
     else {
-      climateTempAvg += climateGetChartTemp();
-      climatePressAvg += climateGetChartPress();
-      climateHumAvg += climateGetChartHum();
+      climate_temp_avg += climateGetChartTemp();
+      climate_press_avg += climateGetChartPress();
+      climate_hum_avg += climateGetChartHum();
 
-      if (++climateCountAvg >= settings.climateTime) {
-        if (settings.climateAvg && (climateCountAvg > 1)) {
-          if (climateTempAvg) climateTempAvg /= climateCountAvg;
-          if (climatePressAvg) climatePressAvg /= climateCountAvg;
-          if (climateHumAvg) climateHumAvg /= climateCountAvg;
-          climateAdd(climateTempAvg, climateHumAvg, climatePressAvg, unixNow);
+      if (++climate_count_avg >= settings.climateTime) {
+        if (settings.climateAvg && (climate_count_avg > 1)) {
+          if (climate_temp_avg) climate_temp_avg /= climate_count_avg;
+          if (climate_press_avg) climate_press_avg /= climate_count_avg;
+          if (climate_hum_avg) climate_hum_avg /= climate_count_avg;
+          climateAdd(climate_temp_avg, climate_hum_avg, climate_press_avg, unix_now);
         }
-        else climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unixNow);
+        else climateAdd(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unix_now);
         climateReset(); //сброс усреднения
       }
     }

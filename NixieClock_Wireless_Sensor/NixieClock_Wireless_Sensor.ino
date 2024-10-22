@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.3 релиз от 20.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 22.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -48,14 +48,7 @@ uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
 
 uint32_t rtcMemory[2]; //память нажатий кнопки сброса
 
-uint8_t send_host_num = 0; //текущий номер хоста
-
-int8_t wifiScanState = 2; //статус сканирования сети
-uint32_t wifiScanTimer = 0; //таймер начала поиска сети
-uint8_t wifiStatus = WL_IDLE_STATUS; //статус соединения wifi
-uint32_t wifiInterval = 100; //интервал переподключения к wifi
-
-String wifiScanList = "Нет сетей"; //список найденых wifi сетей
+uint8_t sendHostNum = 0; //текущий номер хоста
 
 boolean otaUpdate = true; //флаг запрета обновления есп
 boolean sendReady = false; //флаг повторной попытки отправки данных
@@ -85,6 +78,13 @@ enum {
 
 const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 
+#define REG_READ(reg) (*(volatile uint32*)(reg))
+
+#if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
+#undef STATUS_LED
+#define STATUS_LED -1
+#endif
+
 #include "WIRE.h"
 #include "AHT.h"
 #include "SHT.h"
@@ -92,161 +92,10 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 #include "DHT.h"
 #include "DS.h"
 
-#if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
-#undef STATUS_LED
-#define STATUS_LED -1
-#endif
+#include "WIFI.h"
+#include "utils.h"
 
 ADC_MODE(ADC_VCC);
-
-void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
-  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
-}
-void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
-  String data = "";
-  data += F("<style>a:link.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";text-decoration:none;} a:visited.");
-  data += id;
-  data += F("_link{color:");
-  data += FPSTR(color);
-  data += F(";} a:hover.");
-  data += id;
-  data += F("_link{filter:brightness(0.75);}</style>\n<a href='");
-  data += url;
-  data += F("' class='");
-  data += id + "_link";
-  data += F("'>");
-  data += text;
-  data += F("</a>\n");
-  GP.SEND(data);
-}
-void GP_HR(PGM_P st, int width = 0) {
-  String data = "";
-  data += F("<hr style='border-color:");
-  data += FPSTR(st);
-  data += F(";margin:5px ");
-  data += width;
-  data += F("px'>\n");
-  GP.SEND(data);
-}
-void GP_HR_TEXT(const String& text, const String& name, PGM_P st_0, PGM_P st_1) {
-  String data = "";
-
-  data += F("<label id='");
-  data += name;
-  data += F("' class='thinText' style='color:");
-  data += FPSTR(st_0);
-  data += F("'>");
-  data += text;
-  data += F("</label>\n");
-  data += F("<hr style='border-color:");
-  data += FPSTR(st_1);
-  data += F(";margin-top:-17px;padding-bottom:17px'>\n");
-
-  GP.SEND(data);
-}
-void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
-  String data = "";
-
-  data += F("<input type='range' name='");
-  data += name;
-  data += F("' id='");
-  data += name;
-  data += F("' value='");
-  data += value;
-  data += F("' min='");
-  data += min;
-  data += F("' max='");
-  data += max;
-  data += F("' step='");
-  data += step;
-  data += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
-  data += FPSTR(st);
-  data += ',';
-  data += FPSTR(st);
-  data += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='GP_change(this)' disabled>\n");
-
-  data += F("<output style='display:none' id='");
-  data += name;
-  data += F("_val'></output>\n");
-
-  GP.SEND(data);
-}
-void GP_BLOCK_SHADOW_BEGIN(void) {
-  GP.SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));
-}
-void GP_BLOCK_SHADOW_END(void) {
-  GP.SEND(F("</div>\n"));
-}
-void GP_FOOTER_BEGIN(void) {
-  GP.SEND("<div style='flex-grow:1;display:block;padding:0px;'></div>\n<footer>");
-}
-void GP_FOOTER_END(void) {
-  GP.SEND("</footer>");
-}
-void GP_BUILD_END(void) {
-  GP.SEND(F("</div>\n<div id='onlBlock' class='onlBlock'>Нет соединения</div>\n"));
-  GP.JS_BOTTOM();
-  GP.PAGE_END();
-}
-void GP_FIX_SCRIPTS(void) {
-  GP.SEND(F(
-            "<script>var _err=0;\n"
-            "function GP_send(req,r=null,upd=null){\n"
-            "var xhttp=new XMLHttpRequest();\n"
-            "xhttp.open(upd?'GET':'POST',req,true);\n"
-            "xhttp.send();\n"
-            "xhttp.timeout=_tout;\n"
-            "xhttp.onreadystatechange=function(){\n"
-            "if(this.status||(++_err>=5)){onlShow(!this.status);_err=0;}\n"
-            "if(this.status||upd){\n"
-            "if(this.readyState==4&&this.status==200){\n"
-            "if(r){\n"
-            "if(r==1)location.reload();\n"
-            "else location.href=r;}\n"
-            "if(upd)GP_apply(upd,this.responseText);}}}}\n"
-            "function GP_spinc(arg){\n"
-            "if (arg.className=='spin_inp'){\n"
-            "arg.value-=arg.value%arg.step;}}\n"
-            "function GP_change(arg){\n"
-            "arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';\n"
-            "const _output=getEl(arg.id+'_val');\n"
-            "const _range=_output.name.split(',');\n"
-            "if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}\n"
-            "else if((arg.value>=Number(arg.max))&&_range[1]){_output.value=_range[1];}\n"
-            "else _output.value=arg.value;}</script>\n"
-          )
-         );
-}
-void GP_FIX_STYLES(void) {
-  GP.SEND(F(
-            "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
-            ".onlBlock{z-index:3;background:#810000bf;width:15px;height:180px;border-radius:25px 0 0 25px;writing-mode:vertical-lr;text-align:center;}\n" //фикс плашки офлайн
-            ".display{border-radius:5px;}\n" //фикс лейбл блоков
-            ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
-            ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
-            ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
-            ".check_c>span::before{border-color:#444;background-color:#2a2d35}\n" //фикс чекбоксов
-            ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09}\n" //фикс чекбоксов
-            ".miniButton{padding:1px 7px;}\n" //фикс кнопок
-            "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
-            "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста
-            "input[type='time'],input[type='date']{height:34px;border:none!important;}\n" //фикс выбора времени и даты
-            "input[type='number']{text-align:center;}\n" //фикс ввода чисел
-            "input[type=range]:disabled{filter:brightness(0.6);}\n" //фикс слайдеров
-            "input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}\n" //фикс слайдеров
-            "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
-            "select:disabled{filter:brightness(0.6);}\n" //фикс выпадающего списка
-            "select{width:200px;cursor:pointer;}\n" //фикс выпадающего списка
-            "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
-            "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
-            "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
-          )
-         );
-}
 
 void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
@@ -267,7 +116,7 @@ void build(void) {
   GP_HR(UI_MENU_LINE_COLOR, 6);
 
   //состояние соединения
-  if (wifiStatus == WL_CONNECTED) {
+  if (wifiGetConnectStatus()) {
     updateList += ",bar_wifi";
     GP_BLOCK_SHADOW_BEGIN();
     GP.LABEL("Сигнал WiFi", "", UI_MENU_TEXT_COLOR, 15);
@@ -318,7 +167,7 @@ void build(void) {
     M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
-    if (wifiStatus == WL_CONNECTED) {
+    if (wifiGetConnectStatus()) {
       M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
@@ -351,7 +200,7 @@ void build(void) {
     GP.BREAK();
     GP_HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
-    M_BOX(GP.LABEL("ID", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("UID", "", UI_LABEL_COLOR); GP.LABEL(getSensorId(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("CORE", "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("GyverPortal", "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
@@ -388,16 +237,16 @@ void build(void) {
     GP.PAGE_TITLE("Сетевые настройки");
 
     GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
-    if ((wifiStatus == WL_CONNECTED) || wifiInterval) {
+    if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) {
       GP.FORM_BEGIN("/network");
-      if (wifiStatus == WL_CONNECTED) {
+      if (wifiGetConnectStatus()) {
         GP.TEXT("", "", settings.ssid, "", 0, "", true);
         GP.BREAK();
         GP.TEXT("", "", WiFi.localIP().toString(), "", 0, "", true);
         GP.SPAN("Подключение установлено", GP_CENTER, "", UI_INFO_COLOR); //описание
       }
       else {
-        GP.SPAN(getWifiState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+        GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
         updateList += ",syncNetwork";
       }
 
@@ -411,7 +260,7 @@ void build(void) {
       GP.FORM_END();
     }
     else {
-      if (wifiScanState < 0) wifiScanState = -wifiScanState;
+      if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
       updateList += ",syncReload";
       GP.RELOAD("syncReload");
@@ -430,14 +279,14 @@ void build(void) {
         GP.SEND("</div>\n");
       }
       else {
-        GP.SELECT("wifiNetwork", wifiScanList, 0, 0, (boolean)(wifiScanState != 1));
+        GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
         GP.BREAK();
         GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
         GP.BREAK();
         GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        if (wifiScanState != 1) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
+        if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
         else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
         GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
         GP.SEND("</div>\n");
@@ -446,7 +295,7 @@ void build(void) {
     }
     GP.BLOCK_END();
 
-    if (ui.uri("/network") && (wifiStatus == WL_CONNECTED)) { //сетевые настройки
+    if (ui.uri("/network") && wifiGetConnectStatus()) { //сетевые настройки
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка данных", UI_BLOCK_COLOR);
       for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
         if (i) {
@@ -529,7 +378,7 @@ void action() {
           if (!WiFi.localIP().toString().equals(buffSendIp)) { //если не собственный адрес
             for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
               if (settings.send[i][0] == '\0') { //если ячейка не заполнена
-                send_host_num = 0; //сбросили текущий хост
+                sendHostNum = 0; //сбросили текущий хост
                 strncpy(settings.send[i], buffSendIp, 20); //копируем себе
                 settings.send[i][19] = '\0'; //устанавливаем последний символ
                 strncpy(settings.send[i + 1], buffSendName, 20); //копируем себе
@@ -558,11 +407,7 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("extScan")) {
-        if (wifiScanState > 0) { //начинаем поиск
-          wifiScanList = "Поиск...";
-          wifiScanState = 127;
-          wifiScanTimer = millis();
-        }
+        if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
       }
 
       if (ui.click("extPeriod")) {
@@ -573,13 +418,13 @@ void action() {
   }
   /**************************************************************************/
   if (ui.form()) {
-    if (!wifiInterval && (wifiStatus != WL_CONNECTED)) {
+    if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
-        wifiInterval = 1; //устанавливаем интервал переподключения
+        wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
         if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
           int network = 0; //номер сети из списка
           if (ui.copyInt("wifiNetwork", network)) strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
-          else wifiInterval = 0; //сбрасываем интервал переподключения
+          else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
         }
         settings.ssid[63] = '\0'; //устанавливаем последний символ
         ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
@@ -588,8 +433,7 @@ void action() {
       }
     }
     else if (ui.form("/network")) {
-      wifiInterval = 0; //сбрасываем интервал переподключения
-      wifiStatus = 255; //отключаемся от точки доступа
+      wifiResetConnectStatus(); //отключаемся от точки доступа
       settings.ssid[0] = '\0'; //устанавливаем последний символ
       settings.pass[0] = '\0'; //устанавливаем последний символ
       memory.update(); //обновить данные в памяти
@@ -599,11 +443,11 @@ void action() {
   if (ui.update()) {
     if (ui.updateSub("sync")) {
       if (ui.update("syncNetwork")) { //если было обновление
-        ui.answer(getWifiState());
+        ui.answer(wifiGetConnectState());
       }
-      if (ui.update("syncReload") && (wifiScanState < 0)) { //если было обновление
+      if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
         ui.answer(1);
-        wifiScanState = -wifiScanState;
+        wifiResetScanCompleteStatus();
       }
     }
     //--------------------------------------------------------------------
@@ -643,21 +487,6 @@ String getBatteryState(void) { //получить состояние батар�
   data += '%';
   return data;
 }
-//-----------------------Получить состояние подключения wifi-----------------------------
-String getWifiState(void) { //получить состояние подключения wifi
-  String data = "<big><big>";
-  if (!settings.ssid[0]) data += "Некорректное имя сети!";
-  else {
-    if (wifiStatus == WL_CONNECTED) data += "Подключено к \"";
-    else if (!wifiInterval) data += "Не удалось подключиться к \"";
-    else data += "Подключение к \"";
-    data += String(settings.ssid);
-    if ((wifiStatus == WL_CONNECTED) || !wifiInterval) data += "\"";
-    else data += "\"...";
-  }
-  data += "</big></big>";
-  return data;
-}
 //--------------------------------------------------------------------
 String getTimeFromMs(uint32_t data) {
   data /= 1000;
@@ -690,6 +519,42 @@ String StrLengthConstrain(String data, uint8_t size) {
     data += "…";
   }
   return data;
+}
+//--------------------------------------------------------------------
+char getHexChar(uint8_t hex) {
+  if (hex > 15) return 'F';
+  if (hex > 9) return ('A' + (hex - 10));
+  return ('0' + hex);
+}
+//--------------------------------------------------------------------
+String getSensorId(void) {
+  String str;
+  str.reserve(20);
+  str = "";
+
+  uint8_t mac[6];
+  efuseGetDefaultMacAddress(mac);
+
+  for (uint8_t i = 0; i < 6; i++) {
+    str += getHexChar(mac[i] >> 4);
+    str += getHexChar(mac[i] & 0x0F);
+    if (i < 5) str += ':';
+  }
+
+  return str;
+}
+//--------------------------------------------------------------------
+void efuseGetDefaultMacAddress(uint8_t* mac) {
+  uint32_t _efuse_low = REG_READ(0x3FF00050);
+  uint32_t _efuse_mid = REG_READ(0x3FF00054);
+  uint32_t _efuse_high = REG_READ(0x3FF0005C);
+
+  mac[0] = _efuse_high >> 16;
+  mac[1] = _efuse_high >> 8;
+  mac[2] = _efuse_high;
+  mac[3] = _efuse_mid >> 8;
+  mac[4] = _efuse_mid;
+  mac[5] = _efuse_low >> 24;
 }
 //--------------------------------------------------------------------
 void checkCRC(uint8_t* crc, uint8_t data) { //сверка контрольной суммы
@@ -841,7 +706,7 @@ void updateSensors(void) {
   }
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
 
-  WiFi.macAddress(buffSendData); //получить mac адрес
+  efuseGetDefaultMacAddress(buffSendData); //получить mac адрес
 
   buffSendData[6] = (settingsMode == true) ? UDP_FOUND_CMD : UDP_WRITE_CMD;
 
@@ -870,29 +735,29 @@ void updateSensors(void) {
 }
 //--------------------------------------------------------------------
 void sendUpdate(void) {
-  if ((sendReady == true) && (sensorReady == true) && (wifiStatus == WL_CONNECTED)) {
-    if (send_host_num < (MAX_CLOCK * 2)) {
-      if ((settings.send[send_host_num][0] != '\0') || !send_host_num) {
+  if (wifiGetConnectStatus() && (sendReady == true) && (sensorReady == true)) {
+    if (sendHostNum < (MAX_CLOCK * 2)) {
+      if ((settings.send[sendHostNum][0] != '\0') || !sendHostNum) {
 #if DEBUG_MODE
         Serial.print F("Send data to [ ");
-        Serial.print((settings.send[send_host_num][0] != '\0') ? settings.send[send_host_num] : UDP_BROADCAST_ADDR);
+        Serial.print((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR);
         Serial.println F(" ]...");
 #endif
-        if (!udp.beginPacket((settings.send[send_host_num][0] != '\0') ? settings.send[send_host_num] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
+        if (!udp.beginPacket((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
           sendReady = false; //сбросили флаг повторной попытки отправки данных
 #if DEBUG_MODE
           Serial.println F("Send data fail!");
 #endif
         }
         else {
-          send_host_num += 2;
+          sendHostNum += 2;
 #if DEBUG_MODE
           Serial.println F("Send data ok...");
 #endif
         }
       }
       else {
-        send_host_num = (MAX_CLOCK * 2);
+        sendHostNum = (MAX_CLOCK * 2);
 #if DEBUG_MODE
         Serial.println F("Send all data completed...");
 #endif
@@ -922,148 +787,10 @@ void timeUpdate(void) {
 
 #if STATUS_LED > 0
     if (settingsMode == true) {
-      if ((wifiStatus != WL_CONNECTED) && wifiInterval) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+      if (!wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
     }
 #endif
   }
-}
-//--------------------------------------------------------------------
-void wifiUpdate(void) {
-  static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
-
-  if ((wifiScanState == 127) && (millis() - wifiScanTimer) >= 100) { //если необходимо начать поиск
-    wifiScanState = 0; //сбрасываем статус
-    WiFi.scanNetworksAsync(wifiScanResult); //начинаем поиск
-  }
-
-  if (wifiStatus != WiFi.status()) { //если изменился статус
-    if (wifiStatus == 255) { //если нужно отключиться
-#if DEBUG_MODE
-      Serial.println F("Wifi disconnecting...");
-#endif
-      udp.stop(); //остановить udp
-      WiFi.disconnect(); //отключаем wifi
-    }
-    wifiStatus = WiFi.status();
-    switch (wifiStatus) {
-      case WL_CONNECTED:
-        timerWifi = millis(); //сбросили таймер
-        wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED > 0
-        if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
-        udp.begin(UDP_LOCAL_PORT); //запускаем udp
-#if DEBUG_MODE
-        Serial.print F("Wifi connected, IP address: ");
-        Serial.println(WiFi.localIP());
-#endif
-        break;
-      case WL_IDLE_STATUS:
-#if STATUS_LED > 0
-        if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-#if DEBUG_MODE
-        Serial.println F("Wifi idle status");
-#endif
-        break;
-      default:
-        if ((wifiStatus == WL_DISCONNECTED) || (wifiStatus == WL_NO_SSID_AVAIL)) {
-          timerWifi = millis(); //сбросили таймер
-          if (wifiStatus == WL_NO_SSID_AVAIL) wifiInterval = 10000; //устанавливаем интервал переподключения
-          else wifiInterval = 5000; //устанавливаем интервал переподключения
-          WiFi.disconnect(); //отключаем wifi
-        }
-        else {
-          wifiInterval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED > 0
-          if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-#if DEBUG_MODE
-          Serial.println F("Wifi connect error...");
-#endif
-        }
-        udp.stop(); //остановить udp
-        break;
-    }
-  }
-
-  if (wifiInterval && ((millis() - timerWifi) >= wifiInterval)) { //новое поключение
-    if (WiFi.SSID().equals(settings.ssid) && WiFi.psk().equals(settings.pass) && (settings.ssid[0] != '\0')) wifiStatus = WiFi.begin(); //подключаемся к wifi
-    else wifiStatus = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
-    if (wifiStatus != WL_CONNECT_FAILED) {
-      timerWifi = millis(); //сбросили таймер
-      wifiInterval = 10000; //устанавливаем интервал переподключения
-#if DEBUG_MODE
-      Serial.print F("Wifi connecting to \"");
-      Serial.print(settings.ssid);
-      Serial.println F("\"...");
-#endif
-    }
-    else {
-      wifiInterval = 0; //сбрасываем интервал
-#if STATUS_LED > 0
-      if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
-#if DEBUG_MODE
-      Serial.println F("Wifi connection failed, wrong settings");
-#endif
-    }
-  }
-}
-//--------------------------------------------------------------------
-void wifiScanResult(int networksFound) {
-  wifiScanList = "";
-  if (networksFound) {
-    wifiScanState = -1;
-    for (int i = 0; i < networksFound; i++) {
-      if (i) wifiScanList += ',';
-      wifiScanList += WiFi.SSID(i);
-      if (WiFi.encryptionType(i) != ENC_TYPE_NONE) wifiScanList += " 🔒";
-    }
-  }
-  else {
-    wifiScanState = -2;
-    wifiScanList = "Нет сетей";
-  }
-}
-//--------------------------------------------------------------------
-void wifiStartAP(void) {
-  //настраиваем режим работы
-  WiFi.mode(WIFI_AP_STA);
-#if DEBUG_MODE
-  Serial.println F("");
-#endif
-
-  //настраиваем точку доступа
-  IPAddress local(AP_IP);
-  IPAddress subnet(255, 255, 255, 0);
-
-  //задаем настройки сети
-  WiFi.softAPConfig(local, local, subnet);
-
-  //запускаем точку доступа
-  if (!WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL)) {
-#if DEBUG_MODE
-    Serial.println F("Wifi access point start failed, wrong settings");
-#endif
-  }
-#if DEBUG_MODE
-  else {
-    Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print(AP_SSID);
-    if (AP_PASS[0] != '\0') {
-      Serial.print F(" ][ pass: ");
-      Serial.print(AP_PASS);
-    }
-    else Serial.print F(" ][ open ");
-    Serial.print F(" ][ ip: ");
-    Serial.print(WiFi.softAPIP());
-    Serial.println F(" ]");
-  }
-#endif
-
-  //начинаем поиск сетей
-  WiFi.scanNetworksAsync(wifiScanResult);
 }
 //--------------------------------------------------------------------
 void setup() {
