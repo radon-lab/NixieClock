@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 22.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 23.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -192,7 +192,7 @@ void build(void) {
     GP_HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
     M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(vccVoltage / 1000.0, 2) +  + F(" V"), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(getBatteryVoltage(), 2) +  + F(" V"), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Циклов в секунду", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
@@ -472,12 +472,13 @@ void action() {
     }
   }
 }
-//---------------------------Получить состояние батареи----------------------------------
-uint8_t getWiFiSignal(void) { //получить состояние батареи
-  return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
+//---------------------------Получить напряжение батареи---------------------------------
+float getBatteryVoltage(void) { //получить состояние батареи
+  return (vccVoltage / 1000.0);
 }
 //---------------------------Получить состояние батареи----------------------------------
 uint8_t getBatteryCharge(void) { //получить состояние батареи
+  if (vccVoltage < BAT_VOLTAGE_MIN) return 0;
   return map(constrain(vccVoltage, BAT_VOLTAGE_MIN, BAT_VOLTAGE_MAX), BAT_VOLTAGE_MAX, BAT_VOLTAGE_MIN, 20, 0) * 5;
 }
 //---------------------------Получить состояние батареи----------------------------------
@@ -486,6 +487,10 @@ String getBatteryState(void) { //получить состояние батар�
   data += getBatteryCharge();
   data += '%';
   return data;
+}
+//---------------------------Получить состояние батареи----------------------------------
+uint8_t getWiFiSignal(void) { //получить состояние батареи
+  return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
 }
 //--------------------------------------------------------------------
 String getTimeFromMs(uint32_t data) {
@@ -812,6 +817,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println F("");
   Serial.println F("Startup...");
+  Serial.print F("Supply voltage ");
+  Serial.print(getBatteryVoltage(), 2);
+  Serial.println F("...");
   Serial.print F("Firmware version ");
   Serial.print F(ESP_FIRMWARE_VERSION);
   Serial.println F("...");
