@@ -105,6 +105,16 @@ uint8_t climateGetBarHum(void) {
   return sens.hum[settings.climateBar];
 }
 //--------------------------------------------------------------------
+String climateGetBarTempStr(void) {
+  return String(climateGetBarTempFloat(), 1) + "°С";
+}
+String climateGetBarPressStr(void) {
+  return String(climateGetBarHum()) + "%";
+}
+String climateGetBarHumStr(void) {
+  return String(climateGetBarPress()) + "mm.Hg";
+}
+//--------------------------------------------------------------------
 void climateReset(void) {
   climate_temp_avg = 0;
   climate_hum_avg = 0;

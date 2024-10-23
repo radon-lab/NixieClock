@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 22.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 23.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -92,7 +92,6 @@ uint8_t waitTimer = 0; //таймер ожидания опроса шины
 uint8_t sensorChart = 0; //буфер обновления источника данных для микроклимата
 uint8_t sensorTimer = 0; //таймер обновления микроклимата
 
-int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
@@ -280,7 +279,7 @@ void build(void) {
     updateList += F(",bar_clock");
     GP_BLOCK_SHADOW_BEGIN();
     GP.LABEL("Статус часов", "", UI_MENU_TEXT_COLOR, 15);
-    GP_LINE_LED("bar_clock", (clockState != 0), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+    GP_LINE_LED("bar_clock", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
     GP_BLOCK_SHADOW_END();
 
     if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
@@ -327,14 +326,14 @@ void build(void) {
     GP.BOX_BEGIN(GP_RIGHT, "100%");
     if (climateGetBarTemp() != 0x7FFF) {
       updateList += F(",barTemp");
-      GP.LABEL_BLOCK(String(climateGetBarTempFloat(), 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
+      GP.LABEL_BLOCK(climateGetBarTempStr(), "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
       if (climateGetBarHum()) {
         updateList += F(",barHum");
-        GP.LABEL_BLOCK(String(climateGetBarHum()) + "%", "barHum", UI_BAR_HUM_COLOR, 18, 1);
+        GP.LABEL_BLOCK(climateGetBarHumStr(), "barHum", UI_BAR_HUM_COLOR, 18, 1);
       }
       if (climateGetBarPress()) {
         updateList += F(",barPress");
-        GP.LABEL_BLOCK(String(climateGetBarPress()) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
+        GP.LABEL_BLOCK(climateGetBarPressStr(), "barPress", UI_BAR_PRESS_COLOR, 18, 1);
       }
     }
     else {
@@ -765,15 +764,17 @@ void build(void) {
       );
       GP.NAV_BLOCK_END();
 
+      updateList += F(",climateReload");
+      GP.RELOAD("climateReload");
+
       GP.CONFIRM("climateWarn", "Статистика микроклимата будет сброшена, продолжить?");
       GP.UPDATE_CLICK("climateWarn", "climateChart");
-      GP.RELOAD_CLICK("climateWarn");
     }
     else if (ui.uri("/climate")) { //микроклимат
       GP_PAGE_TITLE("Микроклимат");
 
       uint16_t heightSize = 500;
-      if (climateGetBarPress()) heightSize = 300;
+      if (climateGetChartPress()) heightSize = 300;
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Микроклимат", UI_BLOCK_COLOR);
       GP_PLOT_STOCK_BEGIN(climateLocal);
@@ -1720,7 +1721,7 @@ void action() {
           climateUpdate(CLIMATE_RESET);
           memory.update(); //обновить данные в памяти
         }
-        sensorChart = 0;
+        sensorChart = SENS_MAX_DATA;
       }
     }
     //--------------------------------------------------------------------
@@ -1842,26 +1843,26 @@ void action() {
       }
 
       if (ui.update("barTemp")) { //если было обновление
-        ui.answer(String(climateGetBarTempFloat(), 1) + "°С");
+        ui.answer(climateGetBarTempStr());
       }
       if (ui.update("barHum")) { //если было обновление
-        ui.answer(String(climateGetBarHum()) + "%");
+        ui.answer(climateGetBarHumStr());
       }
       if (ui.update("barPress")) { //если было обновление
-        ui.answer(String(climateGetBarPress()) + "mm.Hg");
+        ui.answer(climateGetBarPressStr());
       }
 
       if (ui.update("bar_clock")) { //если было обновление
-        ui.answer((boolean)(clockState != 0));
+        ui.answer(busGetClockStatus());
       }
       if (ui.update("bar_sens")) { //если было обновление
-        ui.answer((boolean)wirelessGetOnlineStastus());
+        ui.answer(wirelessGetOnlineStastus());
       }
       if (ui.update("bar_rtc")) { //если было обновление
-        ui.answer((boolean)rtcGetNormalStatus());
+        ui.answer(rtcGetNormalStatus());
       }
       if (ui.update("bar_ntp")) { //если было обновление
-        ui.answer((boolean)ntpGetSyncStatus());
+        ui.answer(ntpGetSyncStatus());
       }
 
       if (ui.update("bar_wifi")) { //если было обновление
@@ -1895,13 +1896,17 @@ void action() {
         ui.answer(1);
       }
       if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
-        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nID: " + wirelessGetId(wireless_found_buffer));
+        ui.answer("Обнаружен беспроводной датчик температуры, подключить?\nUID: " + wirelessGetId(wireless_found_buffer));
       }
     }
     //--------------------------------------------------------------------
     if (ui.updateSub("climate")) {
       if (ui.update("climateWarn")) { //если было обновление
         ui.answer(1);
+      }
+      if (ui.update("climateReload") && (sensorChart >= SENS_MAX_DATA)) { //если было обновление
+        ui.answer(1);
+        sensorChart = 0;
       }
     }
     //--------------------------------------------------------------------
@@ -2226,8 +2231,7 @@ void timeUpdate(void) {
     if (timer.mode) busSetComand(READ_TIMER_TIME);
     if (!waitTimer) { //если пришло время опросить статус часов
       waitTimer = 4; //установили таймер ожидания
-      if (clockState > 0) clockState--; //если есть попытки подключения
-      else if (clockState < 0) clockState = 3; //иначе первый запрос состояния
+      busUpdateClockStatus(); //обновить статус часов
       busSetComand(READ_STATUS); //запрос статуса часов
     }
     else waitTimer--;

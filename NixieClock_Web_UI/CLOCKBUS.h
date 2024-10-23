@@ -358,6 +358,7 @@ struct busData {
   uint16_t timerInterval = 0;
   uint32_t timerStart = 0;
 } bus;
+int8_t clockState = 0; //флаг состояния соединения с часами
 
 #define SYSTEM_REBOOT 100
 
@@ -404,6 +405,15 @@ void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos) {
   twi_write_byte(command); //регистр команды
   twi_write_byte(data & 0xFF); //отправляем дополнительные натройки
   twi_write_byte((data >> 8) & 0xFF); //отправляем дополнительные натройки
+}
+//--------------------------------------------------------------------
+boolean busGetClockStatus(void) {
+  return (boolean)(clockState != 0);
+}
+//--------------------------------------------------------------------
+void busUpdateClockStatus(void) {
+  if (clockState > 0) clockState--; //если есть попытки подключения
+  else if (clockState < 0) clockState = 3; //иначе первый запрос состояния
 }
 //--------------------------------------------------------------------
 void busTimerSetInterval(uint16_t time) {
