@@ -754,8 +754,8 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Датчики", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Датчик 1", "", UI_LABEL_COLOR); GP.SELECT("climateSend/0", (deviceInformation[SENS_TEMP]) ? "Датчик в часах" : "Датчик в есп,Беспроводной датчик,Данные о погоде", settings.climateSend[0] - 1, 0, (boolean)(deviceInformation[SENS_TEMP])););
-        M_BOX(GP.LABEL("Датчик 2", "", UI_LABEL_COLOR); GP.SELECT("climateSend/1", "Датчик в есп,Беспроводной датчик,Данные о погоде", settings.climateSend[1] - 1, 0););
+        M_BOX(GP.LABEL("Датчик 1", "", UI_LABEL_COLOR); GP.SELECT("climateSend/0", (deviceInformation[SENS_TEMP]) ? "Датчик в часах" : "Датчик в есп,Беспроводной датчик,Данные о погоде", settings.climateSend[0] - 1, 0, (boolean)(deviceInformation[SENS_TEMP]), true););
+        M_BOX(GP.LABEL("Датчик 2", "", UI_LABEL_COLOR); GP.SELECT("climateSend/1", "Датчик в есп,Беспроводной датчик,Данные о погоде", settings.climateSend[1] - 1, 0, false, true););
         GP.BREAK();
         GP_HR_TEXT("Коррекция", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Температура, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););

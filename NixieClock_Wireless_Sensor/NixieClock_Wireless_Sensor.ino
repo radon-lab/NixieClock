@@ -192,8 +192,8 @@ void build(void) {
     GP_HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
     M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(getBatteryVoltage(), 2) +  + F(" V"), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(getBatteryVoltage(), 2) + " V", "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + " MHz", "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Циклов в секунду", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
 
@@ -473,13 +473,13 @@ void action() {
   }
 }
 //---------------------------Получить напряжение батареи---------------------------------
-float getBatteryVoltage(void) { //получить состояние батареи
+float getBatteryVoltage(void) { //получить напряжение батареи
   return (vccVoltage / 1000.0);
 }
 //---------------------------Получить состояние батареи----------------------------------
 uint8_t getBatteryCharge(void) { //получить состояние батареи
-  if (vccVoltage < BAT_VOLTAGE_MIN) return 0;
-  return map(constrain(vccVoltage, BAT_VOLTAGE_MIN, BAT_VOLTAGE_MAX), BAT_VOLTAGE_MAX, BAT_VOLTAGE_MIN, 20, 0) * 5;
+  if (vccVoltage <= BAT_VOLTAGE_MIN) return 0;
+  return constrain((uint8_t)(((vccVoltage - BAT_VOLTAGE_MIN) / ((BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN) / 20.0)) + 1) * 5, 5, 100);
 }
 //---------------------------Получить состояние батареи----------------------------------
 String getBatteryState(void) { //получить состояние батареи
