@@ -615,9 +615,11 @@ void resetSettingsButton(void) {
   }
 }
 //--------------------------------------------------------------------
-void powerDown(void) {
+void sleepMode(void) {
 #if DEBUG_MODE
-  Serial.println F("Power down...");
+  Serial.print F("Sleep mode, wake after ");
+  Serial.print(sleepTime[settings.period]);
+  Serial.println F(" min...");
 #endif
 
   delay(100); //ждем окончания передачи
@@ -711,27 +713,6 @@ void updateSensors(void) {
   }
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
 
-  efuseGetDefaultMacAddress(buffSendData); //получить mac адрес
-
-  buffSendData[6] = (settingsMode == true) ? UDP_FOUND_CMD : UDP_WRITE_CMD;
-
-  buffSendData[7] = (uint8_t)sens.temp;
-  buffSendData[8] = (uint8_t)(sens.temp >> 8);
-
-  buffSendData[9] = (uint8_t)sens.press;
-  buffSendData[10] = (uint8_t)(sens.press >> 8);
-
-  buffSendData[11] = (uint8_t)sens.hum;
-
-  buffSendData[12] = (uint8_t)getBatteryCharge();
-  buffSendData[13] = (uint8_t)getWiFiSignal();
-  buffSendData[14] = (uint8_t)sleepTime[settings.period];
-
-  uint8_t crc = 0;
-  for (uint8_t i = 0; i < (UDP_SEND_SIZE - 1); i++) checkCRC(&crc, buffSendData[i]);
-
-  buffSendData[15] = (uint8_t)crc;
-
   sensorReady = true; //установили флаг готовности замера
 
 #if DEBUG_MODE
@@ -739,10 +720,44 @@ void updateSensors(void) {
 #endif
 }
 //--------------------------------------------------------------------
+void updateBuffer(void) {
+  boolean _init = false; //флаг инициализации данных
+
+  if (_init != true) { //если данные не сформированы
+    _init = true; //устанавливаем флаг инициализации данных
+
+    efuseGetDefaultMacAddress(buffSendData); //получить mac адрес
+
+    buffSendData[6] = (settingsMode == true) ? UDP_FOUND_CMD : UDP_WRITE_CMD;
+
+    buffSendData[7] = (uint8_t)sens.temp;
+    buffSendData[8] = (uint8_t)(sens.temp >> 8);
+
+    buffSendData[9] = (uint8_t)sens.press;
+    buffSendData[10] = (uint8_t)(sens.press >> 8);
+
+    buffSendData[11] = (uint8_t)sens.hum;
+
+    buffSendData[12] = (uint8_t)getBatteryCharge();
+    buffSendData[13] = (uint8_t)getWiFiSignal();
+    buffSendData[14] = (uint8_t)sleepTime[settings.period];
+
+    uint8_t crc = 0;
+    for (uint8_t i = 0; i < (UDP_SEND_SIZE - 1); i++) checkCRC(&crc, buffSendData[i]);
+
+    buffSendData[15] = (uint8_t)crc;
+
+#if DEBUG_MODE
+    Serial.println F("Send buffer update...");
+#endif
+  }
+}
+//--------------------------------------------------------------------
 void sendUpdate(void) {
   if (wifiGetConnectStatus() && (sendReady == true) && (sensorReady == true)) {
     if (sendHostNum < (MAX_CLOCK * 2)) {
       if ((settings.send[sendHostNum][0] != '\0') || !sendHostNum) {
+        updateBuffer(); //обновить буфер отправки
 #if DEBUG_MODE
         Serial.print F("Send data to [ ");
         Serial.print((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR);
@@ -768,7 +783,7 @@ void sendUpdate(void) {
 #endif
       }
     }
-    else if (settingsMode == false) powerDown(); //отключить питание
+    else if (settingsMode == false) sleepMode(); //отключить питание
   }
 }
 //--------------------------------------------------------------------
@@ -784,7 +799,7 @@ void timeUpdate(void) {
     if (updateTimer == 2) checkSensors(); //проверка доступности сенсоров
     else if (updateTimer == 3) updateSensors(); //обновить показания сенсоров
     else if ((updateTimer > 15) && (settingsMode == true) && ui.online()) updateTimer = 15; //сбросить таймер
-    else if (updateTimer > 30) powerDown(); //отключить питание
+    else if (updateTimer > 30) sleepMode(); //отключить питание
 
     sendReady = true; //установили флаг повторной попытки отправки данных
 
