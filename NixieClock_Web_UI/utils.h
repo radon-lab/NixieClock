@@ -376,13 +376,14 @@ void GP_FIX_STYLES(void) {
             "<style>.headbar{z-index:3;}\n" //фикс меню в мобильной версии
             ".onlBlock{z-index:3;background:#810000bf;width:15px;height:180px;border-radius:25px 0 0 25px;writing-mode:vertical-lr;text-align:center;}\n" //фикс плашки офлайн
             ".display{border-radius:5px;}\n" //фикс лейбл блоков
+            ".sidebar{scrollbar-width:none;}\n" //фикс меню
             ".sblock{display:flex;flex-direction:column;min-height:98%;margin:0;}\n" //фикс меню
             ".sblock>a{border-radius:25px;}\n" //фикс кнопок меню
             ".spinBtn{font-size:24px!important;padding-left:3.5px;padding-top:0.5px;}\n" //фикс кнопок спинера
-            ".check_c>span::before{border-color:#444;background-color:#2a2d35}\n" //фикс чекбоксов
-            ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09}\n" //фикс чекбоксов
-            ".navtab>ul{background:none!important;margin-bottom:5px}\n" //фикс блока меню
-            ".navtab>ul>li{display:block;border-radius:25px;margin:5px;width:40%;box-shadow:rgba(0, 0, 0, 0.45) 0px 0px 15px}\n" //фикс кнопки блока меню
+            ".check_c>span::before{border-color:#444;background-color:#2a2d35;}\n" //фикс чекбоксов
+            ".check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09;}\n" //фикс чекбоксов
+            ".navtab>ul{background:none!important;margin-bottom:5px;}\n" //фикс блока меню
+            ".navtab>ul>li{display:block;border-radius:25px;margin:5px;width:40%;box-shadow:rgba(0, 0, 0, 0.45) 0px 0px 15px;}\n" //фикс кнопки блока меню
             ".miniButton{padding:1px 7px;}\n" //фикс кнопок
             "input[type='submit'],input[type='button'],button{line-height:90%;border-radius:28px;}\n" //фикс кнопок
             "input[type='text'],input[type='password'],input[type='time'],input[type='date'],select,textarea{text-align:center;appearance:none;}\n" //фикс положения текста
@@ -393,6 +394,7 @@ void GP_FIX_STYLES(void) {
             "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
             "select:disabled{filter:brightness(0.6);}\n" //фикс выпадающего списка
             "select{width:200px;cursor:pointer;}\n" //фикс выпадающего списка
+            "html{scrollbar-width:none;}\n" //фикс прокрутки страницы
             "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
             "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
