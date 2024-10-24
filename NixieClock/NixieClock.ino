@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 06.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 24.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -455,6 +455,12 @@ enum {
   REPLAY_CYCLE //проиграть по кругу
 };
 
+//перечисления режимов озвучки температуры
+enum {
+  SPEAK_TEMP_MAIN, //озвучка основной температуры
+  SPEAK_TEMP_HOUR //озвучка температуры при смене часа
+};
+
 //перечисления режимов анимации времени
 enum {
   ANIM_NULL, //нет анимации
@@ -506,6 +512,7 @@ struct Settings_4 { //расширенные настройки
   uint8_t alarmDotWait = ((!ALARM_WAIT_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_WAIT_BLINK_DOT));
   uint8_t tempCorrectSensor = SHOW_TEMP_CORRECT_MODE;
   uint8_t tempMainSensor = SHOW_TEMP_MAIN_SENS;
+  uint8_t tempHourSensor = HOUR_SOUND_MAIN_SENS;
 } extendedSettings;
 
 const uint8_t deviceInformation[] = { //комплектация часов
@@ -4619,12 +4626,20 @@ uint8_t settings_main(void) //настроки основные
 //----------------------------Воспроизвести температуру--------------------------------------
 void speakTemp(boolean mode) //воспроизвести температуру
 {
-  uint16_t _ceil = (getTemperature()) / 10;
-  uint16_t _dec = (getTemperature()) % 10;
+#if ESP_ENABLE
+  uint8_t _sens = (!mode) ? extendedSettings.tempMainSensor : extendedSettings.tempHourSensor;
+  uint16_t _ceil = getTemperature(_sens) / 10;
+  uint16_t _dec = getTemperature(_sens) % 10;
+#else
+  uint16_t _ceil = getTemperature() / 10;
+  uint16_t _dec = getTemperature() % 10;
+#endif
 
   if (!mode) playerSetTrackNow(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
   else playerSetTrack(PLAYER_TEMP_SOUND, PLAYER_GENERAL_FOLDER);
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if ESP_ENABLE
+  if (getTemperatureSign(_sens)) playerSetTrack(PLAYER_SENS_TEMP_OTHER, PLAYER_END_NUMBERS_FOLDER);
+#elif SENS_PORT_ENABLE
   if (getTemperatureSign()) playerSetTrack(PLAYER_SENS_TEMP_OTHER, PLAYER_END_NUMBERS_FOLDER);
 #endif
   if (_dec && !mode) {
@@ -4705,7 +4720,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.knockSound) speakTemp(0); //воспроизвести температуру
+  if (mainSettings.knockSound) speakTemp(SPEAK_TEMP_MAIN); //воспроизвести температуру
 #endif
 
   for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {
@@ -4775,7 +4790,7 @@ uint8_t showTemp(void) //показать температуру
 #if PLAYER_TYPE
         if (mainSettings.knockSound) {
           switch (mode) {
-            case 0: speakTemp(0); break; //воспроизвести температуру
+            case 0: speakTemp(SPEAK_TEMP_MAIN); break; //воспроизвести температуру
             case 1: speakHum(humidity); break; //воспроизвести влажность
             case 2: speakPress(pressure); break; //воспроизвести давление
           }
@@ -6246,7 +6261,11 @@ void hourSound(void) //звук смены часа
       if (temp & 0x02) speakTime(temp & 0x01); //воспроизвести время
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
-        if (getTemperature() <= 990) speakTemp(1); //воспроизвести целую температуру
+#if ESP_ENABLE
+        if (getTemperature(extendedSettings.tempHourSensor) <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
+#else
+        if (getTemperature() <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
+#endif
       }
 #endif
 #else

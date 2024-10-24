@@ -105,6 +105,7 @@ struct Settings_3 { //расширенные настройки
   uint8_t alarmDotWait;
   uint8_t tempCorrectSensor;
   uint8_t tempMainSensor;
+  uint8_t tempHourSensor;
 } extendedSettings;
 
 struct Settings_4 { //настройки радио
@@ -242,8 +243,9 @@ enum {
 };
 
 enum {
-  EXT_SHOW_CORRECT,
-  EXT_SHOW_SENS
+  EXT_SENSOR_CORRECT,
+  EXT_SENSOR_MAIN,
+  EXT_SENSOR_HOUR
 };
 enum {
   SENS_DATA_MAIN,
@@ -303,7 +305,7 @@ enum {
   READ_EXTENDED_SET,
   WRITE_EXTENDED_SHOW_MODE,
   WRITE_EXTENDED_SHOW_TIME,
-  WRITE_EXTENDED_SHOW_SET,
+  WRITE_EXTENDED_SENSOR_SET,
   WRITE_EXTENDED_ALARM,
 
   SET_SHOW_TIME,
@@ -980,7 +982,8 @@ void busUpdate(void) {
             extendedSettings.alarmDotOn = twi_read_byte(TWI_ACK);
             extendedSettings.alarmDotWait = twi_read_byte(TWI_ACK);
             extendedSettings.tempCorrectSensor = twi_read_byte(TWI_ACK);
-            extendedSettings.tempMainSensor = twi_read_byte(TWI_NACK);
+            extendedSettings.tempMainSensor = twi_read_byte(TWI_ACK);
+            extendedSettings.tempHourSensor = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
@@ -1004,11 +1007,12 @@ void busUpdate(void) {
             }
           }
           break;
-        case WRITE_EXTENDED_SHOW_SET:
+        case WRITE_EXTENDED_SENSOR_SET:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             switch (busReadBufferArg()) {
-              case EXT_SHOW_CORRECT: busWriteTwiRegByte(extendedSettings.tempCorrectSensor, BUS_WRITE_EXTENDED_SET, 15); break; //отправляем дополнительные натройки
-              case EXT_SHOW_SENS: busWriteTwiRegByte(extendedSettings.tempMainSensor, BUS_WRITE_EXTENDED_SET, 16); break; //отправляем дополнительные натройки
+              case EXT_SENSOR_CORRECT: busWriteTwiRegByte(extendedSettings.tempCorrectSensor, BUS_WRITE_EXTENDED_SET, 15); break; //отправляем дополнительные натройки
+              case EXT_SENSOR_MAIN: busWriteTwiRegByte(extendedSettings.tempMainSensor, BUS_WRITE_EXTENDED_SET, 16); break; //отправляем дополнительные натройки
+              case EXT_SENSOR_HOUR: busWriteTwiRegByte(extendedSettings.tempHourSensor, BUS_WRITE_EXTENDED_SET, 17); break; //отправляем дополнительные натройки
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд

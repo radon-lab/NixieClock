@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 23.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 24.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -634,15 +634,15 @@ void build(void) {
       showModeList = F("Пусто,Дата,Год,Дата и год");
       if (deviceInformation[LAMP_NUM] < 6) showModeList += F("(недоступно)");
       if (deviceInformation[SENS_TEMP]) {
-        showModeList += climateGetSensList((climateGetTemp(SENS_CLOCK) != 0x7FFF) ? SENS_CLOCK : SENS_MAX_DATA);
+        showModeList += climateGetSensList((climateAvailableTemp(SENS_CLOCK)) ? SENS_CLOCK : SENS_MAX_DATA);
       }
-      else if (climateGetTemp(settings.climateSend[0]) != 0x7FFF) {
+      else if (climateAvailableTemp(settings.climateSend[0])) {
         showModeList += climateGetSensList(settings.climateSend[0]);
       }
-      else if (climateGetTemp(settings.climateSend[1]) != 0x7FFF) {
+      else if (climateAvailableTemp(settings.climateSend[1])) {
         showModeList += climateGetSensList(SENS_MAX_DATA);
       }
-      if (climateGetTemp(settings.climateSend[1]) != 0x7FFF) {
+      if (climateAvailableTemp(settings.climateSend[1])) {
         showModeList += climateGetSensList(settings.climateSend[1]);
       }
 
@@ -650,8 +650,8 @@ void build(void) {
       GP.NAV_BLOCK_BEGIN();
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Метеостанция", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)(!weatherGetValidStatus() && !deviceInformation[SENS_TEMP] && !sensorAvaibleData() && !wirelessGetSensorStastus())););
-        M_BOX(GP.LABEL("Раз в час", "", UI_LABEL_COLOR); GP.SELECT("climateSoundSens", "Датчик 1,Датчик 2", 0, 0, true););
+        M_BOX(GP.LABEL("По кнопке", "", UI_LABEL_COLOR); GP.SELECT("climateMainSens", "Датчик 1,Датчик 2", extendedSettings.tempMainSensor, 0, (boolean)((!climateAvailableTemp(settings.climateSend[0]) && !climateAvailableTemp(settings.climateSend[1])) || deviceInformation[BTN_EASY_MAIN_MODE])););
+        M_BOX(GP.LABEL("Раз в час", "", UI_LABEL_COLOR); GP.SELECT("climateHourSens", "Датчик 1,Датчик 2", extendedSettings.tempHourSensor, 0, (boolean)((!climateAvailableTemp(settings.climateSend[0]) && !climateAvailableTemp(settings.climateSend[1])) || !deviceInformation[PLAYER_TYPE])););
         GP.BREAK();
         GP_HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
@@ -1689,10 +1689,13 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.clickSub("climate")) {
       if (ui.clickInt("climateMainSens", extendedSettings.tempMainSensor)) {
-        busSetComand(WRITE_EXTENDED_SHOW_SET, EXT_SHOW_SENS);
+        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_MAIN);
+      }
+      if (ui.clickInt("climateHourSens", extendedSettings.tempHourSensor)) {
+        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_HOUR);
       }
       if (ui.clickInt("climateCorrectType", extendedSettings.tempCorrectSensor)) {
-        busSetComand(WRITE_EXTENDED_SHOW_SET, EXT_SHOW_CORRECT);
+        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_CORRECT);
       }
 
       if (ui.clickInt("climateBar", settings.climateBar)) {

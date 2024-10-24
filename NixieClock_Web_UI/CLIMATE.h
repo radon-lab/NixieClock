@@ -82,6 +82,10 @@ int16_t climateGetTemp(uint8_t data) {
   return sens.temp[data];
 }
 //--------------------------------------------------------------------
+boolean climateAvailableTemp(uint8_t data) {
+  return (sens.temp[data] != 0x7FFF);
+}
+//--------------------------------------------------------------------
 int16_t climateGetChartTemp(void) {
   return climateGetTemp(settings.climateChart);
 }
