@@ -115,19 +115,6 @@ struct Settings_4 { //настройки радио
   uint16_t stationsSave[10]; //память радиостанций
 } radioSettings;
 
-//----------------Температура--------------
-struct sensorData {
-  int16_t temp[4] = {0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF}; //температура
-  uint16_t press[4]; //давление
-  uint8_t hum[4]; //влажность
-  uint8_t search; //флаги найденых датчиков температуры
-  uint8_t status; //флаги активных датчиков температуры
-  uint8_t update; //флаги опрошенных датчиков температуры
-  uint8_t type; //тип датчика температуры
-  boolean init; //флаг инициализации порта
-  boolean err; //ошибка сенсора
-} sens;
-
 //------------Таймера/Секундомер-----------
 struct timerData {
   uint8_t mode; //режим таймера/секундомера
@@ -367,18 +354,7 @@ int8_t clockState = 0; //флаг состояния соединения с ч�
 #define BUS_STATUS_REBOOT 100
 #define BUS_STATUS_REBOOT_FAIL 255
 
-enum {
-  SENS_CLOCK,
-  SENS_MAIN,
-  SENS_WIRELESS,
-  SENS_WEATHER,
-  SENS_MAX_DATA
-};
-
-#define SENS_EXT 0x01
-#define SENS_AHT 0x02
-#define SENS_SHT 0x04
-#define SENS_BME 0x08
+#include "CLIMATE.h"
 
 #include "AHT.h"
 #include "SHT.h"

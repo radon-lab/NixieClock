@@ -58,8 +58,14 @@ void readTempAHT(void) //чтение температуры/влажности
   uint32_t temp_raw = ((uint32_t)(data_raw & 0x0F) << 16) | ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_NACK);
   hum_raw = ((hum_raw | data_raw) >> 4);
 
-  if (sens.temp == 0x7FFF) sens.temp = ((temp_raw * 2000) >> 20) - 500;
-  if (!sens.hum) sens.hum = (hum_raw * 100) >> 20;
+  temp_raw = ((temp_raw * 2000) >> 20) - 500; //рассчитываем температуру
+  hum_raw = (hum_raw * 100) >> 20; //рассчитываем влажность
+
+  if (sens.temp == 0x7FFF) sens.temp = temp_raw; //записываем температуру
+  else sens.temp = (sens.temp + temp_raw) / 2; //усредняем температуру
+  
+  if (!sens.hum) sens.hum = hum_raw; //записываем влажность
+  else sens.hum = (sens.hum + hum_raw) / 2; //усредняем влажность
 
   settings.sensor |= (0x01 << SENS_AHT); //установили флаг сенсора
 }

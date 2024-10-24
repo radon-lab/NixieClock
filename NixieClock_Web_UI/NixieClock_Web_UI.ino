@@ -106,7 +106,6 @@ uint8_t uploadState = 0; //флаг состояния загрузки файл
 #include "WIRELESS.h"
 
 #include "WEATHER.h"
-#include "CLIMATE.h"
 
 #include "WIFI.h"
 #include "utils.h"
@@ -634,16 +633,16 @@ void build(void) {
       showModeList = F("Пусто,Дата,Год,Дата и год");
       if (deviceInformation[LAMP_NUM] < 6) showModeList += F("(недоступно)");
       if (deviceInformation[SENS_TEMP]) {
-        showModeList += climateGetSensList((climateAvailableTemp(SENS_CLOCK)) ? SENS_CLOCK : SENS_MAX_DATA);
+        showModeList += climateGetShowDataList((climateAvailableTemp(SENS_CLOCK)) ? SENS_CLOCK : SENS_MAX_DATA);
       }
       else if (climateAvailableTemp(settings.climateSend[0])) {
-        showModeList += climateGetSensList(settings.climateSend[0]);
+        showModeList += climateGetShowDataList(settings.climateSend[0]);
       }
       else if (climateAvailableTemp(settings.climateSend[1])) {
-        showModeList += climateGetSensList(SENS_MAX_DATA);
+        showModeList += climateGetShowDataList(SENS_MAX_DATA);
       }
       if (climateAvailableTemp(settings.climateSend[1])) {
-        showModeList += climateGetSensList(settings.climateSend[1]);
+        showModeList += climateGetShowDataList(settings.climateSend[1]);
       }
 
       GP.NAV_TABS("Основные,Дополнительно");
@@ -793,7 +792,7 @@ void build(void) {
       GP_HR_TEXT("Датчик в часах", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_CLOCK] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_CLOCK], sens.press[SENS_CLOCK], sens.hum[SENS_CLOCK]), "", 0, "", true););
-        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", (sens.type < 6) ? climateTempSensList[sens.type] : "Неизвестно...", INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", (sens.type < 6) ? climateTempSensList[sens.type] : climateGetSensList(sens.type, false), INT32_MAX, "", true););
       }
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
@@ -803,7 +802,7 @@ void build(void) {
       GP_HR_TEXT("Датчик в есп", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_MAIN] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_MAIN], sens.press[SENS_MAIN], sens.hum[SENS_MAIN]), "", 0, "", true););
-        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", climateGetMainSensList(), INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", climateGetSensList(sens.search, true), INT32_MAX, "", true););
       }
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););

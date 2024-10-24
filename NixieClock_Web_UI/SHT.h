@@ -58,7 +58,7 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
         }
         temp_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | (twi_read_byte(TWI_ACK) & 0xFC);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        if (!sens.status) sens.temp[SENS_MAIN] = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
+        temp_raw = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
 
         if (twi_beginTransmission(SHT20_ADDR)) return 1; //начало передачи
         twi_write_byte(SHT20_READ_HUM); //устанавливаем адрес записи
@@ -88,14 +88,18 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
         twi_read_byte(TWI_ACK); //пропускаем контрольную сумму
         hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        if (!sens.status) sens.temp[SENS_MAIN] = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
+        
+        temp_raw = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
         hum_raw = hum_raw * 0.00152; //рассчитываем влажность
       }
       break;
   }
+
+  if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //записываем температуру
+  else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
   
-  if (!sens.status) sens.hum[SENS_MAIN] = hum_raw;
-  else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2;
+  if (!sens.status) sens.hum[SENS_MAIN] = hum_raw; //записываем влажность
+  else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2; //усредняем влажность
 
   if ((uint16_t)sens.temp[SENS_MAIN] > 850) sens.temp[SENS_MAIN] = 0; //если вышли за предел
   if (sens.hum[SENS_MAIN] > 99) sens.hum[SENS_MAIN] = 99; //если вышли за предел

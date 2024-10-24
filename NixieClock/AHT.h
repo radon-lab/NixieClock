@@ -15,7 +15,7 @@
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempAHT(void) //чтение температуры/влажности
 {
-  static uint8_t typeAHT; //тип датчика SHT
+  static uint8_t typeAHT; //тип датчика AHT
 
   if (!typeAHT) { //если датчик не определен
     if (!wireBeginTransmission(AHT10_ADDR)) { //если AHT10
@@ -58,11 +58,21 @@ void readTempAHT(void) //чтение температуры/влажности
   uint32_t temp_raw = ((uint32_t)(data_raw & 0x0F) << 16) | ((uint16_t)wireRead() << 8) | wireReadEndByte();
   hum_raw = ((hum_raw | data_raw) >> 4);
 
-  sens.temp = ((temp_raw * 2000) >> 20) - 500;
-  sens.hum = (hum_raw * 100) >> 20;
+  temp_raw = ((temp_raw * 2000) >> 20) - 500; //рассчитываем температуру
+  hum_raw = (hum_raw * 100) >> 20; //рассчитываем влажность
 
-  if ((uint16_t)sens.temp > 850) sens.temp = 0; //если вышли за предел
-  if (sens.hum > 99) sens.hum = 99; //если вышли за предел
-  sens.press = 0; //сбросили давление
   sens.err = 0; //сбросили ошибку датчика температуры
+
+#if SENS_BME_ENABLE || SENS_SHT_ENABLE
+  if (sens.type & ((0x01 << SENS_BME) | (0x01 << SENS_SHT))) {
+    sens.temp = (sens.temp + temp_raw) >> 1; //усредняем температуру
+    if (sens.hum) sens.hum = (sens.hum + hum_raw) >> 1; //усредняем влажность
+    else sens.hum = hum_raw; //иначе копируем влажность
+    return; //выходим
+  }
+  sens.press = 0; //сбрасываем давление
+#endif
+
+  sens.temp = temp_raw; //копируем температуру
+  sens.hum = hum_raw; //копируем влажность
 }

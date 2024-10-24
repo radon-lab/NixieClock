@@ -12,6 +12,31 @@ enum {
   CLIMATE_RESET //сбросить данные в статистике микроклимата
 };
 
+struct sensorData {
+  int16_t temp[4] = {0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF}; //температура
+  uint16_t press[4]; //давление
+  uint8_t hum[4]; //влажность
+  uint8_t search; //флаги найденых датчиков температуры
+  uint8_t status; //флаги активных датчиков температуры
+  uint8_t update; //флаги опрошенных датчиков температуры
+  uint8_t type; //тип датчика температуры
+  boolean init; //флаг инициализации порта
+  boolean err; //ошибка сенсора
+} sens;
+
+enum {
+  SENS_CLOCK,
+  SENS_MAIN,
+  SENS_WIRELESS,
+  SENS_WEATHER,
+  SENS_MAX_DATA
+};
+
+#define SENS_EXT 0x01
+#define SENS_AHT 0x02
+#define SENS_SHT 0x04
+#define SENS_BME 0x08
+
 const char *climateDataList[] = {"(часы)", "(есп)", "(датчик)", "(погода)", "(недоступно)"};
 const char *climateShowList[] = {"Температура", "Влажность", "Давление", "Температура и влажность"};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
@@ -19,18 +44,18 @@ const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20
 void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix);
 
 //--------------------------------------------------------------------
-String climateGetMainSensList(void) {
+String climateGetSensList(uint8_t sens, boolean shift) {
   String str;
   str.reserve(50);
   str = "";
-
-  uint8_t sensor = 0x02;
-  for (uint8_t i = 1; i < 4; i++) {
-    if (sens.search & sensor) {
+  
+  if (shift) sens >>= 1;
+  for (uint8_t i = shift; i < 6; i++) {
+    if (sens & 0x01) {
       if (str[0] != '\0') str += '+';
       str += climateTempSensList[i];
     }
-    sensor <<= 1;
+    sens >>= 1;
   }
   if (str[0] == '\0') str = "Нет данных";
 
@@ -59,7 +84,7 @@ String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
   return str;
 }
 //--------------------------------------------------------------------
-String climateGetSensList(uint8_t data) {
+String climateGetShowDataList(uint8_t data) {
   String str;
   str.reserve(100);
   str = "";

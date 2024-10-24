@@ -194,7 +194,11 @@ uint8_t readTempBME(void) //чтение температуры/давления
         temp_val_1 = (temp_val_1 * 3038) >> 16;
         temp_val_2 = (-7357 * (press_raw)) >> 16;
 
-        if (!sens.status) sens.temp[SENS_MAIN] = (temp_raw + 8) >> 4; //установили температуру
+        temp_raw = (temp_raw + 8) >> 4; //рассчитываем температуру
+        
+        if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
+        else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
+        
         sens.press[SENS_MAIN] = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
       }
       break;
@@ -215,8 +219,10 @@ uint8_t readTempBME(void) //чтение температуры/давления
         int32_t temp_val_1 = ((((temp_raw >> 3) - ((int32_t)CalibrationBME.TEMP_1 << 1))) * ((int32_t)CalibrationBME.TEMP_2)) >> 11;
         int32_t temp_val_2 = (((((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1)) * ((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1))) >> 12) * ((int32_t)CalibrationBME.TEMP_3)) >> 14;
         temp_raw = temp_val_1 + temp_val_2; //цельночисленная температура
+        temp_raw = ((temp_raw * 5 + 128) >> 8) / 10; //рассчитываем температуру
 
-        if (!sens.status) sens.temp[SENS_MAIN] = ((temp_raw * 5 + 128) >> 8) / 10; //установили температуру
+        if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
+        else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
 
         int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
         int32_t press_val_2 = ((press_val_1 >> 2) * (press_val_1 >> 2) >> 11) * (int32_t)CalibrationBME.PRESS_6;
@@ -242,11 +248,11 @@ uint8_t readTempBME(void) //чтение температуры/давления
         hum_val = (hum_val - (((((hum_val >> 15) * (hum_val >> 15)) >> 7) * ((int32_t)CalibrationBME.HUM_1)) >> 4));
         hum_val = (hum_val < 0) ? 0 : hum_val;
         hum_val = (hum_val > 419430400) ? 419430400 : hum_val;
-        
+
         hum_val = (hum_val >> 12) / 1024.0; //записываем влажность в %
-        
-        if (!sens.status) sens.hum[SENS_MAIN] = hum_val;
-        else if (hum_val) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_val) / 2;
+
+        if (!sens.status) sens.hum[SENS_MAIN] = hum_val; //установили влажность
+        else if (hum_val) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_val) / 2; //усредняем влажность
       }
       break;
   }

@@ -188,8 +188,8 @@ void readTempBME(void) //чтение температуры/давления/в
         temp_val_1 = (temp_val_1 * 3038) >> 16;
         temp_val_2 = (-7357 * (press_raw)) >> 16;
 
-        if (sens.temp == 0x7FFF) sens.temp = (temp_raw + 8) >> 4; //установили температуру
-        if (!sens.press) sens.press = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
+        sens.temp = (temp_raw + 8) >> 4; //установили температуру
+        sens.press = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
       }
       break;
     case BME280_ADDR: {
@@ -210,7 +210,7 @@ void readTempBME(void) //чтение температуры/давления/в
         int32_t temp_val_2 = (((((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1)) * ((temp_raw >> 4) - ((int32_t)CalibrationBME.TEMP_1))) >> 12) * ((int32_t)CalibrationBME.TEMP_3)) >> 14;
         temp_raw = temp_val_1 + temp_val_2; //цельночисленная температура
 
-        if (sens.temp == 0x7FFF) sens.temp = ((temp_raw * 5 + 128) >> 8) / 10; //установили температуру
+        sens.temp = ((temp_raw * 5 + 128) >> 8) / 10; //установили температуру
 
         int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
         int32_t press_val_2 = ((press_val_1 >> 2) * (press_val_1 >> 2) >> 11) * (int32_t)CalibrationBME.PRESS_6;
@@ -225,7 +225,7 @@ void readTempBME(void) //чтение температуры/давления/в
           press_val_1 = (((int32_t)CalibrationBME.PRESS_9) * ((int32_t)(((press_raw >> 3) * (press_raw >> 3)) >> 13))) >> 12;
           press_val_2 = (((int32_t)(press_raw >> 2)) * ((int32_t)CalibrationBME.PRESS_8)) >> 13;
 
-          if (!sens.press) sens.press = (uint32_t)((int32_t)press_raw + ((press_val_1 + press_val_2 + CalibrationBME.PRESS_7) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
+          sens.press = (uint32_t)((int32_t)press_raw + ((press_val_1 + press_val_2 + CalibrationBME.PRESS_7) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
         }
 
         int32_t hum_val  = (temp_raw - ((int32_t)76800)); //компенсация температуры
@@ -236,7 +236,7 @@ void readTempBME(void) //чтение температуры/давления/в
         hum_val = (hum_val < 0) ? 0 : hum_val;
         hum_val = (hum_val > 419430400) ? 419430400 : hum_val;
 
-        if (!sens.hum) sens.hum = (hum_val >> 12) / 1024.0; //записываем влажность в %
+        sens.hum = (hum_val >> 12) / 1024.0; //записываем влажность в %
       }
       break;
   }

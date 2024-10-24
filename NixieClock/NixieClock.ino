@@ -67,6 +67,16 @@ struct sensorData {
   boolean err; //ошибка встроенного датчика температуры
 } sens;
 
+enum {
+  SENS_DS3231, //датчик DS3231
+  SENS_AHT, //датчики AHT
+  SENS_SHT, //датчики SHT
+  SENS_BME, //датчики BME/BMP
+  SENS_DS18B20, //датчики DS18B20
+  SENS_DHT, //датчики DHT
+  SENS_ALL //датчиков всего
+};
+
 //----------------Библиотеки----------------
 #include <util/delay.h>
 
@@ -425,17 +435,6 @@ enum {
   ALARM_CHECK_MAIN, //основной режим проверки будильников
   ALARM_CHECK_SET, //проверка на установленный будильник
   ALARM_CHECK_INIT //проверка будильников при запуске
-};
-
-//перечисления датчиков температуры
-enum {
-  SENS_DS3231, //датчик DS3231
-  SENS_AHT, //датчики AHT
-  SENS_SHT, //датчики SHT
-  SENS_BME, //датчики BME/BMP
-  SENS_DS18B20, //датчики DS18B20
-  SENS_DHT, //датчики DHT
-  SENS_ALL //датчиков всего
 };
 
 //перечисления системных звуков
@@ -968,9 +967,6 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   checkTempSens(); //проверка установленного датчика температуры
-#if ESP_ENABLE
-  sens.init = 1; //установили флаг инициализации сенсора
-#endif
 #endif
 
   mainEnableWDT(); //основной запуск WDT
@@ -1227,48 +1223,69 @@ void updateMemory(void) //обновить данные в памяти
     memoryUpdate = 0; //сбрасываем флаги
   }
 }
-//-----------------Проверка установленного датчика температуры----------------------
-void checkTempSens(void) //проверка установленного датчика температуры
+//------------------Чтение установленных датчиков температуры-----------------------
+void readTempSens(void) //чтение установленных датчиков температуры
 {
-#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
-  for (sens.type = (SENS_ALL - 1); sens.type; sens.type--) { //перебираем все датчики температуры
-    readTempSens(); //чтение установленного датчика температуры
-    if (!sens.err) return; //если найден датчик температуры
-  }
-  SET_ERROR(TEMP_SENS_ERROR); //иначе выдаем ошибку
-#endif
-  readTempSens(); //чтение установленного датчика температуры
-}
-//------------------Чтение установленного датчика температуры-----------------------
-void readTempSens(void) //чтение установленного датчика температуры
-{
-  sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
-
-#if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-  switch (sens.type) { //выбор датчика температуры
+  if (sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL))) { //если датчик обнаружен
+    uint8_t pos = (0x01 << SENS_DHT); //установили тип датчика
+    for (uint8_t sensor = (SENS_ALL - 1); sensor; sensor--) { //перебираем все датчики температуры
+      sens.err = 1; //подняли флаг проверки датчика температуры на ошибку связи
+      if (sens.type & pos) { //если флаг датчика установлен
+        switch (sensor) { //выбор датчика температуры
 #if SENS_AHT_ENABLE
-    case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
+          case SENS_AHT: readTempAHT(); break; //чтение температуры/влажности с датчика AHT
 #endif
 #if SENS_SHT_ENABLE
-    case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
+          case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
 #endif
 #if SENS_BME_ENABLE
-    case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
+          case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
 #if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
-    case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
+          case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
 #endif
 #if (SENS_PORT_ENABLE == 2) || (SENS_PORT_ENABLE == 3)
-    case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
+          case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
+#endif
+        }
+        if (sens.err) sens.type &= ~pos; //сбросили флаг сенсора
+        else if (sensor >= SENS_DS18B20) { //если тип датчика DHT/DS18
+          sens.type = pos; //установили тип датчика
+          return; //выходим
+        }
+      }
+      pos >>= 1; //сместили тип датчика
+    }
+#if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+    if ((uint16_t)sens.temp > 850) sens.temp = 0; //если вышли за предел
+    if (sens.hum > 99) sens.hum = 99; //если вышли за предел
 #endif
   }
+}
+//------------------Обновление установленных датчиков температуры-----------------------
+void updateTempSens(void) //обновление установленных датчиков температуры
+{
+#if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
+  readTempSens(); //чтение установленного датчика температуры
 #endif
 
+  if (!(sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL)))) { //если основной датчик не отвечает
 #if DS3231_ENABLE == 2
-  if (sens.err) { //если основной датчик не отвечает
-    if (readTempRTC() && !sens.type) sens.err = 0; //чтение температуры с датчика DS3231
-  }
+    if (readTempRTC()) { //чтение температуры с датчика DS3231
+      sens.err = 0; //сбросили ошибку сенсора
+      sens.type |= (0x01 << SENS_DS3231); //установили флаг сенсора
+    }
+    else {
+      sens.type &= ~(0x01 << SENS_DS3231); //сбросили флаг сенсора
 #endif
+      sens.temp = 0x7FFF; //сбрасываем температуру
+      sens.hum = 0; //сбрасываем влажность
+      sens.press = 0; //сбрасываем давление
+      sens.err = 1; //установили ошибку сенсора
+#if DS3231_ENABLE == 2
+    }
+#endif
+  }
 
 #if ESP_ENABLE
   if (sens.init && !(deviceStatus & (0x01 << STATUS_UPDATE_SENS_DATA))) deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
@@ -1276,6 +1293,7 @@ void readTempSens(void) //чтение установленного датчик
     mainSens.temp = sens.temp; //устанавливаем температуру
     mainSens.press = sens.press; //устанавливаем давление
     mainSens.hum = sens.hum; //устанавливаем влажность
+    sens.init = 1; //установили флаг инициализации сенсора
   }
 #endif
 
@@ -1285,11 +1303,23 @@ void readTempSens(void) //чтение установленного датчик
   _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили интервал следующего опроса
 #endif
 }
+//-----------------Проверка установленного датчика температуры----------------------
+void checkTempSens(void) //проверка установленного датчика температуры
+{
+#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
+  sens.type = (0x01 << SENS_AHT) | (0x01 << SENS_SHT) | (0x01 << SENS_BME) | (0x01 << SENS_DS18B20) | (0x01 << SENS_DHT) | (0x01 << SENS_ALL);
+#endif
+  updateTempSens(); //чтение установленных датчиков температуры
+#if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
+  if (!sens.err) return; //если найден датчик температуры
+  SET_ERROR(TEMP_SENS_ERROR); //иначе выдаем ошибку
+#endif
+}
 //-------------------------Обновить показания температуры---------------------------
 void updateTemp(void) //обновить показания температуры
 {
   if (!_timer_ms[TMR_SENS]) { //если пришло время нового запроса температуры
-    readTempSens(); //чтение установленного датчика температуры
+    updateTempSens(); //обновление установленных датчиков температуры
   }
 }
 //-----------------------Получить текущий основной датчик--------------------------
