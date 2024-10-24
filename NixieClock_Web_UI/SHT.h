@@ -22,7 +22,12 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
   static uint8_t attemptsSHT; //попытки запроса датчика SHT
   uint16_t timer = (uint16_t)millis(); //установили таймер
 
-  if (sens.type == 2) return 2; //сенсор установлен на стороне часов
+  if (sens.type < 6) {
+    if (sens.type == 2) return 2; //сенсор установлен на стороне часов
+  }
+  else {
+    if (sens.type & SENS_SHT) return 2; //сенсор установлен на стороне часов
+  }
 
   if (attemptsSHT < 5) attemptsSHT++; //попытка запроса температуры
   else return 2; //иначе выходим
@@ -88,7 +93,7 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
         twi_read_byte(TWI_ACK); //пропускаем контрольную сумму
         hum_raw = ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_ACK);
         twi_read_byte(TWI_NACK); //пропускаем контрольную сумму
-        
+
         temp_raw = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
         hum_raw = hum_raw * 0.00152; //рассчитываем влажность
       }
@@ -97,7 +102,7 @@ uint8_t readTempSHT(void) //чтение температуры/влажност
 
   if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //записываем температуру
   else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
-  
+
   if (!sens.status) sens.hum[SENS_MAIN] = hum_raw; //записываем влажность
   else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2; //усредняем влажность
 

@@ -137,10 +137,10 @@ uint8_t climateGetBarHum(void) {
 String climateGetBarTempStr(void) {
   return String(climateGetBarTempFloat(), 1) + "°С";
 }
-String climateGetBarPressStr(void) {
+String climateGetBarHumStr(void) {
   return String(climateGetBarHum()) + "%";
 }
-String climateGetBarHumStr(void) {
+String climateGetBarPressStr(void) {
   return String(climateGetBarPress()) + "mm.Hg";
 }
 //--------------------------------------------------------------------

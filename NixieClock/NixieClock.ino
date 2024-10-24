@@ -1250,7 +1250,7 @@ void readTempSens(void) //чтение установленных датчико
         }
         if (sens.err) sens.type &= ~pos; //сбросили флаг сенсора
         else if (sensor >= SENS_DS18B20) { //если тип датчика DHT/DS18
-          sens.type = pos; //установили тип датчика
+          sens.type = pos | (0x01 << SENS_ALL); //установили тип датчика
           return; //выходим
         }
       }
@@ -4208,19 +4208,16 @@ uint8_t settings_main(void) //настроки основные
               break;
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
             case SET_TEMP_SENS: {
-#if ESP_ENABLE
                 if (!blink_data) {
+#if ESP_ENABLE
                   uint16_t temperature = getTemperature((extendedSettings.tempCorrectSensor == 2) ? SHOW_TEMP_ESP : SHOW_TEMP); //буфер температуры
                   if (temperature > 990) indiPrintNum(0, 0); //вывод ошибки
                   else indiPrintNum(temperature, 1, 2, 0); //вывод температуры
-                }
 #else
-                if (!blink_data) {
                   if (sens.err) indiPrintNum(0, 0); //вывод ошибки
                   else indiPrintNum(getTemperature(), 1, 2, 0); //вывод температуры
-                }
-                indiPrintNum(sens.type, 3); //вывод сенсора температуры
 #endif
+                }
               }
               break;
 #endif

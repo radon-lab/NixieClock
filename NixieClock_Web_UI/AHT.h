@@ -19,7 +19,12 @@ uint8_t readTempAHT(void) //чтение температуры/влажност
   static uint8_t attemptsAHT; //попытки запроса датчика AHT
   uint16_t timer = (uint16_t)millis(); //установили таймер
 
-  if (sens.type == 1) return 2; //сенсор установлен на стороне часов
+  if (sens.type < 6) {
+    if (sens.type == 1) return 2; //сенсор установлен на стороне часов
+  }
+  else {
+    if (sens.type & SENS_AHT) return 2; //сенсор установлен на стороне часов
+  }
 
   if (attemptsAHT < 5) attemptsAHT++; //попытка запроса температуры
   else return 2; //иначе выходим

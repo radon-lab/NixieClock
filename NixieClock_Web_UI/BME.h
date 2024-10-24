@@ -128,7 +128,12 @@ uint8_t readTempBME(void) //чтение температуры/давления
   static uint8_t attemptsBME; //попытки запроса датчика BME
   uint16_t timer = (uint16_t)millis(); //установили таймер
 
-  if (sens.type == 3) return 2; //сенсор установлен на стороне часов
+  if (sens.type < 6) {
+    if (sens.type == 3) return 2; //сенсор установлен на стороне часов
+  }
+  else {
+    if (sens.type & SENS_BME) return 2; //сенсор установлен на стороне часов
+  }
 
   if (attemptsBME < 5) attemptsBME++; //попытка запроса температуры
   else return 2; //иначе выходим
@@ -195,10 +200,10 @@ uint8_t readTempBME(void) //чтение температуры/давления
         temp_val_2 = (-7357 * (press_raw)) >> 16;
 
         temp_raw = (temp_raw + 8) >> 4; //рассчитываем температуру
-        
+
         if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
         else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
-        
+
         sens.press[SENS_MAIN] = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
       }
       break;
