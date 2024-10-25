@@ -33,7 +33,8 @@ const float weatherCoordinatesList[2][WEATHER_CITY_ARRAY] = { //координа
 enum {
   WEATHER_GET_TEMP, //получить температуру
   WEATHER_GET_HUM, //получить влажность
-  WEATHER_GET_PRESS //получить давление
+  WEATHER_GET_PRESS, //получить давление
+  WEATHER_GET_DAY //получить день/ночь
 };
 
 enum {
@@ -54,6 +55,7 @@ float weather_longitude = 0; //текущая долгота
 
 int16_t weatherArrMain[2][WEATHER_BUFFER]; //буфер температуры и влажности погоды
 int16_t weatherArrExt[1][WEATHER_BUFFER]; //буфер давления погоды
+int16_t weatherArrDay[1][WEATHER_BUFFER]; //буфер значений день/ночь
 uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времени погоды
 
 String weather_answer; //ответ от сервера погоды
@@ -128,6 +130,7 @@ const char* weatherGetParseType(uint8_t mod) {
     case WEATHER_GET_TEMP: return "\"temperature_2m\":[";
     case WEATHER_GET_HUM: return "\"relative_humidity_2m\":[";
     case WEATHER_GET_PRESS: return "\"surface_pressure\":[";
+    case WEATHER_GET_DAY: return "\"is_day\":[";
   }
   return "NULL";
 }
@@ -214,6 +217,7 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
           switch (mod) {
             case WEATHER_GET_HUM: buf[i] *= 10; break;
             case WEATHER_GET_PRESS: buf[i] = buf[i] * 0.750064; break;
+            case WEATHER_GET_DAY: buf[i] = constrain(buf[i], 0, 1); break;
           }
         }
       }
@@ -248,7 +252,7 @@ boolean weatherUpdate(void) {
         if (client.connected()) {
           client.println("GET /v1/forecast?latitude=" + String(weather_latitude, 4) +
                          "&longitude=" + String(weather_longitude, 4) +
-                         "&hourly=temperature_2m,relative_humidity_2m,surface_pressure&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 HTTP/1.1\r\nHost: api.open-meteo.com\r\n");
+                         "&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 HTTP/1.1\r\nHost: api.open-meteo.com\r\n");
           weather_answer = "";
           weather_timer = millis();
           weather_state = WEATHER_WAIT_ANSWER;

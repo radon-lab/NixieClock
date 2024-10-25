@@ -45,6 +45,7 @@
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
 
 #define BUS_ALARM_DISABLE 0xDA
+#define BUS_CHANGE_BRIGHT 0xDC
 
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
@@ -308,6 +309,7 @@ enum {
   WRITE_TIMER_MODE,
 
   WRITE_ALARM_DISABLE,
+  WRITE_CHANGE_BRIGHT,
 
   WRITE_STOP_SOUND,
   WRITE_TEST_MAIN_VOL,
@@ -348,6 +350,7 @@ struct busData {
   uint32_t timerStart = 0;
 } bus;
 int8_t clockState = 0; //флаг состояния соединения с часами
+uint8_t lightState = 2; //флаг состояния яркости часов
 
 #define SYSTEM_REBOOT 100
 
@@ -1108,6 +1111,15 @@ void busUpdate(void) {
         case WRITE_ALARM_DISABLE:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_ALARM_DISABLE); //регистр команды
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+        case WRITE_CHANGE_BRIGHT:
+          if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
+            twi_write_byte(BUS_CHANGE_BRIGHT); //регистр команды
+            twi_write_byte(lightState);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }

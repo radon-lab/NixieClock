@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.4 релиз от 24.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 25.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -607,6 +607,7 @@ struct busData {
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
 
 #define BUS_ALARM_DISABLE 0xDA
+#define BUS_CHANGE_BRIGHT 0xDC
 
 #define BUS_TEST_FLIP 0xEA
 #define BUS_TEST_SOUND 0xEB
@@ -1449,9 +1450,9 @@ void analogUpdate(void) //обработка аналоговых входов
 #if LIGHT_SENS_ENABLE
       case ANALOG_LIGHT_PIN:
 #if !LIGHT_SENS_PULL
-        adc_light = ADCH; //записываем результат опроса
+        light_adc = ADCH; //записываем результат опроса
 #else
-        adc_light = 255 - ADCH; //записываем результат опроса
+        light_adc = 255 - ADCH; //записываем результат опроса
 #endif
         ADMUX = 0; //сбросли признак чтения АЦП
         break;
@@ -1534,19 +1535,19 @@ void lightSensZoneUpdate(uint8_t min, uint8_t max) //обновление зон
 //-------------------Обработка сенсора яркости освещения---------------------------
 void lightSensUpdate(void) //обработка сенсора яркости освещения
 {
-  static uint8_t now_state_light;
+  static uint8_t now_light_state;
   if (mainSettings.timeBright[0] == mainSettings.timeBright[1]) { //если разрешена робота сенсора
     _timer_ms[TMR_LIGHT] = (1000 - LIGHT_SENS_TIME); //установили таймер
 
-    if (adc_light < debugSettings.light_zone[0][now_state_light]) {
-      if (now_state_light < 2) now_state_light++;
+    if (light_adc < debugSettings.light_zone[0][now_light_state]) {
+      if (now_light_state < 2) now_light_state++;
     }
-    else if (adc_light > debugSettings.light_zone[1][now_state_light]) {
-      if (now_state_light) now_state_light--;
+    else if (light_adc > debugSettings.light_zone[1][now_light_state]) {
+      if (now_light_state) now_light_state--;
     }
 
-    if (now_state_light != state_light) {
-      state_light = now_state_light;
+    if (now_light_state != light_state) {
+      light_state = now_light_state;
       changeBright(); //установка яркости
     }
   }
@@ -1932,8 +1933,8 @@ void debug_menu(void) //отладка
 #if LIGHT_SENS_ENABLE
         case DEB_LIGHT_SENS: //калибровка датчика освещения
           if (!_timer_ms[TMR_MS]) {
-            if (temp_min > adc_light) temp_min = adc_light;
-            if (temp_max < adc_light) temp_max = adc_light;
+            if (temp_min > light_adc) temp_min = light_adc;
+            if (temp_max < light_adc) temp_max = light_adc;
             analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
             _timer_ms[TMR_MS] = DEBUG_LIGHT_SENS_TIME; //установили таймер
             cur_update = 0; //обновление экрана
@@ -1976,7 +1977,7 @@ void debug_menu(void) //отладка
 #endif
 #if LIGHT_SENS_ENABLE
             case DEB_LIGHT_SENS: //калибровка датчика освещения
-              indiPrintNum(adc_light, 1, 3); //выводим значение АЦП датчика освещения
+              indiPrintNum(light_adc, 1, 3); //выводим значение АЦП датчика освещения
               break;
 #endif
             case DEB_RESET: indiPrintNum(cur_reset, 0, 2, 0); break; //сброс настроек отладки
@@ -2753,6 +2754,14 @@ uint8_t busUpdate(void) //обновление статуса шины
               bus.counter++; //сместили указатель
             }
             break;
+#if !LIGHT_SENS_ENABLE
+          case BUS_CHANGE_BRIGHT:
+            if (bus.counter < 1) {
+              bus.counter = 1; //сместили указатель
+              light_state = TWDR;
+            }
+            break;
+#endif
           case BUS_CONTROL_DEVICE:
             if (bus.counter < 1) {
               bus.counter = 1; //сместили указатель
@@ -2936,6 +2945,9 @@ uint8_t busUpdate(void) //обновление статуса шины
               alarmDisable(); //отключить будильник
             }
             break;
+#endif
+#if !LIGHT_SENS_ENABLE
+          case BUS_CHANGE_BRIGHT: changeBright(); break; //смена яркости
 #endif
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
@@ -6306,13 +6318,13 @@ void changeBright(void) //установка яркости от времени 
 {
   indi.sleepMode = SLEEP_DISABLE; //сбросили флаг режима сна индикаторов
 
-#if LIGHT_SENS_ENABLE
+#if LIGHT_SENS_ENABLE || ESP_ENABLE
   if (mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY])
 #endif
-    state_light = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
+    light_state = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
 
-  switch (state_light) {
-    case 0 : //дневной режим
+  switch (light_state) {
+    case 0: //дневной режим
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
       dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
@@ -6325,7 +6337,7 @@ void changeBright(void) //установка яркости от времени 
       if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
       break;
 #if LIGHT_SENS_ENABLE
-    case 1 : //промежуточный режим
+    case 1: //промежуточный режим
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
       dot.maxBright = dot.menuBright = mainSettings.dotBright[TIME_NIGHT] + ((mainSettings.dotBright[TIME_DAY] - mainSettings.dotBright[TIME_NIGHT]) >> 1); //установка максимальной яркости точек
 #else
@@ -6338,7 +6350,7 @@ void changeBright(void) //установка яркости от времени 
       if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
       break;
 #endif
-    case 2: //ночной режим
+    default: //ночной режим
       dot.maxBright = mainSettings.dotBright[TIME_NIGHT]; //установка максимальной яркости точек
       dot.menuBright = (dot.maxBright) ? dot.maxBright : 10; //установка максимальной яркости точек в меню
 #if BACKL_TYPE

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.4 релиз от 24.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 25.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -81,9 +81,8 @@ boolean timerSvgImage = false; //флаг локальных изображен�
 boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
 
 uint8_t timeState = 0; //флаг состояния актуальности времени
-uint32_t secondsTimer = 0; //таймер счета секундных интервалов
 
-int8_t syncState = -2; //флаг состояния синхронизации времени
+int8_t syncState = -1; //флаг состояния синхронизации времени
 uint8_t syncTimer = 0; //таймер запроса времени с ntp сервера
 
 int8_t playbackTimer = -1; //таймер остановки воспроизведения
@@ -93,6 +92,8 @@ uint8_t sensorChart = 0; //буфер обновления источника д
 uint8_t sensorTimer = 0; //таймер обновления микроклимата
 
 uint8_t uploadState = 0; //флаг состояния загрузки файла прошивки часов
+
+uint32_t secondsTimer = 0; //таймер счета секундных интервалов
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -682,14 +683,19 @@ void build(void) {
       M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BREAK();
       GP_HR_TEXT("Время смены яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
-      GP.HINT("hint1", "Одинаковое время - отключить смену яркости или активировать датчик освещения"); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
-      GP.BREAK();
-      GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
-      GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
-      GP.BLOCK_END();
-      );
+      String lightHint; //подсказка времени смены яркости
+      lightHint.reserve(170);
+      lightHint = F("Одинаковое время - отключить смену яркости");
+                  if (deviceInformation[LIGHT_SENS_ENABLE]) lightHint +=  " или активировать датчик освещения";
+                  else if (weatherGetValidStatus()) lightHint +=  " или активировать автоматическую смену яркости";
+                    GP.HINT("hint1", lightHint); //всплывающая подсказка
+                    M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+                    GP.BREAK();
+                    GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
+                    GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
+                    M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
+                    GP.BLOCK_END();
+        );
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Подсветка", UI_BLOCK_COLOR);
@@ -2164,8 +2170,16 @@ void weatherAveragData(void) {
   uint8_t time_now = constrain(time_diff, 0, 23);
   uint8_t time_next = constrain(time_now + 1, 0, 23);
 
+  if (timeState != 0x03) time_now = time_next = 0; //если нет актуального времени
+
+  uint8_t light_now = weatherArrDay[0][time_now];
+  if (light_now != weatherArrDay[0][time_next]) light_now = 1;
+  else if (light_now) light_now = 0;
+  else light_now = 2;
+
   if (!weatherGetGoodStatus() && (time_now > 12)) {
     weatherResetValidStatus(); //сбросили статус погоды
+    light_now = 2; //сбросили текущую яркость
     sens.temp[SENS_WEATHER] = 0x7FFF; //сбросили температуру погоды
     sens.hum[SENS_WEATHER] = 0; //сбросили влажность погоды
     sens.press[SENS_WEATHER] = 0; //сбросили давление погоды
@@ -2174,6 +2188,13 @@ void weatherAveragData(void) {
     sens.temp[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
     sens.hum[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
     sens.press[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
+  }
+
+  if (!deviceInformation[LIGHT_SENS_ENABLE]) { //если сенсор яркости освещения не используется
+    if (lightState != light_now) { //если яркость изменилась
+      lightState = light_now; //установили состояние яркости
+      busSetComand(WRITE_CHANGE_BRIGHT); //оправка состояния яркости
+    }
   }
 
   sensorSendData(SENS_WEATHER); //отправить данные
@@ -2260,6 +2281,7 @@ void timeUpdate(void) {
     weatherGetParseData(weatherArrMain[0], WEATHER_GET_TEMP, WEATHER_BUFFER);
     weatherGetParseData(weatherArrMain[1], WEATHER_GET_HUM, WEATHER_BUFFER);
     weatherGetParseData(weatherArrExt[0], WEATHER_GET_PRESS, WEATHER_BUFFER);
+    weatherGetParseData(weatherArrDay[0], WEATHER_GET_DAY, WEATHER_BUFFER);
     if (weatherGetValidStatus()) weatherAveragData();
   }
 }
