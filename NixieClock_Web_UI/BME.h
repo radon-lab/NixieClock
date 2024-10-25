@@ -201,7 +201,7 @@ uint8_t readTempBME(void) //чтение температуры/давления
 
         temp_raw = (temp_raw + 8) >> 4; //рассчитываем температуру
 
-        if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
+        if (!(sens.status & ~SENS_EXT)) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
         else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
 
         sens.press[SENS_MAIN] = (press_raw + ((temp_val_1 + temp_val_2 + 3791) >> 4)) * 0.00750062; //записываем давление в мм рт.ст.
@@ -226,7 +226,7 @@ uint8_t readTempBME(void) //чтение температуры/давления
         temp_raw = temp_val_1 + temp_val_2; //цельночисленная температура
         temp_raw = ((temp_raw * 5 + 128) >> 8) / 10; //рассчитываем температуру
 
-        if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
+        if (!(sens.status & ~SENS_EXT)) sens.temp[SENS_MAIN] = temp_raw; //установили температуру
         else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
 
         int32_t press_val_1 = (temp_raw >> 1) - 64000L; //компенсация температуры
@@ -256,7 +256,7 @@ uint8_t readTempBME(void) //чтение температуры/давления
 
         hum_val = (hum_val >> 12) / 1024.0; //записываем влажность в %
 
-        if (!sens.status) sens.hum[SENS_MAIN] = hum_val; //установили влажность
+        if (!(sens.status & ~SENS_EXT)) sens.hum[SENS_MAIN] = hum_val; //установили влажность
         else if (hum_val) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_val) / 2; //усредняем влажность
       }
       break;

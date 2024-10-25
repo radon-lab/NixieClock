@@ -57,10 +57,6 @@
 #define BUS_READ_STATUS 0xFE
 #define BUS_READ_DEVICE 0xFF
 
-#define DEVICE_RESET 0xCC
-#define DEVICE_UPDATE 0xDD
-#define DEVICE_REBOOT 0xEE
-
 //-----------------Настройки----------------
 struct Settings_1 {
   uint8_t indiBrightNight; //яркость индикаторов
@@ -351,6 +347,10 @@ struct busData {
 } bus;
 int8_t clockState = 0; //флаг состояния соединения с часами
 uint8_t lightState = 2; //флаг состояния яркости часов
+
+#define DEVICE_RESET 0xCC
+#define DEVICE_UPDATE 0xDD
+#define DEVICE_REBOOT 0xEE
 
 #define SYSTEM_REBOOT 100
 
@@ -922,7 +922,6 @@ void busUpdate(void) {
             sens.hum[SENS_CLOCK] = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
               if (sens.temp[SENS_CLOCK] != 0x7FFF) sens.status |= SENS_EXT;
-              else sens.temp[SENS_CLOCK] = 0;
               sens.update |= SENS_EXT;
               busShiftBuffer(); //сместили буфер команд
             }

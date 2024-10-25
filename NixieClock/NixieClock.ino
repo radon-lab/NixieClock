@@ -1309,6 +1309,8 @@ void checkTempSens(void) //проверка установленного дат�
 {
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   sens.type = (0x01 << SENS_AHT) | (0x01 << SENS_SHT) | (0x01 << SENS_BME) | (0x01 << SENS_DS18B20) | (0x01 << SENS_DHT) | (0x01 << SENS_ALL);
+#elif DS3231_ENABLE == 2
+  sens.type = (0x01 << SENS_ALL);
 #endif
   updateTempSens(); //чтение установленных датчиков температуры
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE

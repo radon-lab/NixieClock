@@ -67,14 +67,15 @@ uint8_t readTempAHT(void) //чтение температуры/влажност
   uint32_t hum_raw = ((uint32_t)twi_read_byte(TWI_ACK) << 16) | ((uint32_t)twi_read_byte(TWI_ACK) << 8);
   uint8_t data_raw = twi_read_byte(TWI_ACK);
   uint32_t temp_raw = ((uint32_t)(data_raw & 0x0F) << 16) | ((uint16_t)twi_read_byte(TWI_ACK) << 8) | twi_read_byte(TWI_NACK);
-  temp_raw = ((temp_raw * 2000) >> 20) - 500; //рассчитываем температуру
   hum_raw = ((hum_raw | data_raw) >> 4);
+
+  temp_raw = ((temp_raw * 2000) >> 20) - 500; //рассчитываем температуру
   hum_raw = (hum_raw * 100) >> 20; //рассчитываем влажность
 
-  if (!sens.status) sens.temp[SENS_MAIN] = temp_raw; //записываем температуру
+  if (!(sens.status & ~SENS_EXT)) sens.temp[SENS_MAIN] = temp_raw; //записываем температуру
   else sens.temp[SENS_MAIN] = (sens.temp[SENS_MAIN] + temp_raw) / 2; //усредняем температуру
 
-  if (!sens.status) sens.hum[SENS_MAIN] = hum_raw; //записываем влажность
+  if (!(sens.status & ~SENS_EXT)) sens.hum[SENS_MAIN] = hum_raw; //записываем влажность
   else if (hum_raw) sens.hum[SENS_MAIN] = (sens.hum[SENS_MAIN] + hum_raw) / 2; //усредняем влажность
 
   if ((uint16_t)sens.temp[SENS_MAIN] > 850) sens.temp[SENS_MAIN] = 0; //если вышли за предел

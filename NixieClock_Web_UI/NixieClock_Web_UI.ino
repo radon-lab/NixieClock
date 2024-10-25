@@ -2296,7 +2296,12 @@ void deviceUpdate(void) {
           case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
           case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
           case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
-          case STATUS_UPDATE_SENS_DATA: if (deviceInformation[SENS_TEMP]) busSetComand(READ_SENS_DATA); break;
+          case STATUS_UPDATE_SENS_DATA:
+            if (deviceInformation[SENS_TEMP]) {
+              busSetComand(READ_SENS_INFO);
+              busSetComand(READ_SENS_DATA);
+            }
+            break;
         }
       }
       deviceStatus >>= 1; //сместили буфер флагов
@@ -2403,7 +2408,6 @@ void setup() {
   busSetComand(READ_EXTENDED_SET);
   busSetComand(READ_RADIO_SET);
   busSetComand(READ_ALARM_ALL);
-  busSetComand(READ_SENS_INFO);
   busSetComand(READ_TIME_DATE, 0);
   busSetComand(READ_DEVICE);
 
