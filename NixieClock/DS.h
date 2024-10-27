@@ -128,5 +128,5 @@ void readTempDS(void)
   if (sens.temp > 850) sens.temp = 850;
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 }

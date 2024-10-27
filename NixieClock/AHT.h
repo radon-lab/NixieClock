@@ -61,7 +61,7 @@ void readTempAHT(void) //чтение температуры/влажности
   temp_raw = ((temp_raw * 2000) >> 20) - 500; //рассчитываем температуру
   hum_raw = (hum_raw * 100) >> 20; //рассчитываем влажность
 
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 
 #if SENS_BME_ENABLE || SENS_SHT_ENABLE
   if (sens.type & ((0x01 << SENS_BME) | (0x01 << SENS_SHT))) {

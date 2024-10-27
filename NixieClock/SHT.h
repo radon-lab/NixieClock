@@ -112,7 +112,7 @@ void readTempSHT(void) //чтение температуры/влажности
 #endif
   }
 
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 
 #if SENS_BME_ENABLE
   if (sens.type & (0x01 << SENS_BME)) {

@@ -72,5 +72,5 @@ void readTempDHT(void)
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
   if (sens.temp & 0x8000) sens.temp = -(sens.temp & 0x7FFF); //если температура отрицательная
   sens.press = 0; //сбросили давление
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 }
