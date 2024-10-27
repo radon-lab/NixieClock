@@ -697,7 +697,7 @@ void busUpdate(void) {
             if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_ALARM_NUM)) { //начинаем передачу
               uint8_t tempAll = twi_read_byte(TWI_NACK);
               if (tempAll > MAX_ALARMS) tempAll = MAX_ALARMS;
-              else if (alarm.all != tempAll) alarm.now = alarm.set = 0;
+              if (alarm.all != tempAll) alarm.now = alarm.set = 0;
               alarm.reload = 1;
               alarm.num = 0;
               alarm.all = tempAll;
@@ -732,7 +732,7 @@ void busUpdate(void) {
               else alarm_data[alarm.num][ALARM_DATA_STATION] = tempSound;
               if (!twi_error()) { //если передача была успешной
                 if (++alarm.num >= alarm.all) {
-                  if (alarm.reload || !alarm.set) alarm.reload = 2;
+                  alarm.reload = 2;
                   busShiftBuffer(); //сместили буфер команд
                 }
               }

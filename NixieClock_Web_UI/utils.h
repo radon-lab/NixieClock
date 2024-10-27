@@ -181,9 +181,9 @@ void GP_CHECK_ICON(const String& name, const String& uri, bool state = 0, int si
   *_GPP += F("onclick='GP_click(this)' style='height:");
   *_GPP += size;
   *_GPP += F("px;'><span></span></label>\n"
-            "<input type='hidden' value='0' name='");
+             "<input type='hidden' value='0' name='");
   *_GPP += name;
-  *_GPP += "'>\n";
+  *_GPP += F("'>\n");
   GP.send();
 }
 void GP_HR(PGM_P st, int width = 0) {
@@ -234,9 +234,9 @@ void GP_LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P 
   if (state) *_GPP += F("checked ");
   *_GPP += F("disabled ");
   *_GPP += F("onclick='GP_click(this)'><span></span></label>\n"
-            "<input type='hidden' value='0' name='");
+             "<input type='hidden' value='0' name='");
   *_GPP += name;
-  *_GPP += "'>\n";
+  *_GPP += F("'>\n");
   GP.send();
 }
 void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
@@ -275,7 +275,7 @@ void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
   *_GPP += ',';
   if (dec) *_GPP += (float)val / dec;
   else *_GPP += val;
-  *_GPP += "],\n";
+  *_GPP += F("],\n");
   GP.send();
 }
 void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
@@ -292,15 +292,15 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
   *_GPP += F("']});\nHighcharts.stockChart('");
   *_GPP += id;
   *_GPP += F("',{chart:{},\n"
-            "rangeSelector:{buttons:[\n"
-            "{count:1,type:'minute',text:'1M'},\n"
-            "{count:1,type:'hour',text:'1H'},\n"
-            "{count:1,type:'day',text:'1D'},\n"
-            "{type:'all',text:'All'}],\n"
-            "inputEnabled:false,selected:3},\n"
-            "time:{useUTC:true},\n"
-            "credits:{enabled:false},series:[\n"
-           );
+             "rangeSelector:{buttons:[\n"
+             "{count:1,type:'minute',text:'1M'},\n"
+             "{count:1,type:'hour',text:'1H'},\n"
+             "{count:1,type:'day',text:'1D'},\n"
+             "{type:'all',text:'All'}],\n"
+             "inputEnabled:false,selected:3},\n"
+             "time:{useUTC:true},\n"
+             "credits:{enabled:false},series:[\n"
+            );
 
   if (vals_0 != NULL) {
     *_GPP += F("{name:'");
@@ -310,7 +310,7 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_0[s], dec);
     }
-    *_GPP += "]},\n";
+    *_GPP += F("]},\n");
   }
   if (vals_1 != NULL) {
     *_GPP += F("{name:'");
@@ -320,9 +320,46 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_1[s], dec);
     }
-    *_GPP += "]},\n";
+    *_GPP += F("]},\n");
   }
   *_GPP += F("]});</script>\n");
+  GP.send();
+}
+void GP_NAV_TABS_M(const String& name, const String& list, int disp) {
+  *_GPP += F("<div class='navtab'><ul>\n");
+  GP_parser tab(list);
+  while (tab.parse()) {
+    *_GPP += F("<li ");
+    if (tab.count == disp) *_GPP += F("style='background:#2a2d35' ");
+    *_GPP += F("' class='");
+    *_GPP += name;
+    *_GPP += F("' onclick='openTab(\"");
+    *_GPP += name;
+    *_GPP += '/';
+    *_GPP += tab.count;
+    *_GPP += F("\",this,\"block_");
+    *_GPP += name;
+    *_GPP += F("\");GP_send(\"/GP_click?");
+    *_GPP += name;
+    *_GPP += '/';
+    *_GPP += tab.count;
+    *_GPP += F("=\");'>");
+    *_GPP += tab.str;
+    *_GPP += F("</li>\n");
+  }
+  *_GPP += F("</ul></div>\n");
+  GP.send();
+}
+void GP_NAV_BLOCK_BEGIN(const String& name, int pos, int disp) {
+  *_GPP += F("<div class='navblock block_");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += '/';
+  *_GPP += pos;
+  *_GPP += "' ";
+  if (pos == disp) *_GPP += F("style='display:block'");
+  *_GPP += F(">\n");
   GP.send();
 }
 void GP_BLOCK_SHADOW_BEGIN(void) {

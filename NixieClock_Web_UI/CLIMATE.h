@@ -37,6 +37,7 @@ enum {
 #define SENS_SHT 0x04
 #define SENS_BME 0x08
 
+const char *climateMainList[] = {"Датчик в часах", "Датчик в есп", "Беспроводной датчик", "Данные о погоде"};
 const char *climateDataList[] = {"(часы)", "(есп)", "(датчик)", "(погода)", "(недоступно)"};
 const char *climateShowList[] = {"Температура", "Влажность", "Давление", "Температура и влажность"};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
@@ -48,7 +49,7 @@ String climateGetSensList(uint8_t sens, boolean shift) {
   String str;
   str.reserve(50);
   str = "";
-  
+
   if (shift) sens >>= 1;
   for (uint8_t i = shift; i < 6; i++) {
     if (sens & 0x01) {
@@ -79,6 +80,28 @@ String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
       str += press;
       str += F("mm.Hg");
     }
+  }
+
+  return str;
+}
+//--------------------------------------------------------------------
+String climateGetSendDataList(void) {
+  String str;
+  str.reserve(100);
+  str = climateMainList[(!deviceInformation[SENS_TEMP]) ? settings.climateSend[0] : 0];
+  str += ',';
+  str += climateMainList[settings.climateSend[1]];
+  return str;
+}
+//--------------------------------------------------------------------
+String climateGetMainDataList(uint8_t start, uint8_t end) {
+  String str;
+  str.reserve(100);
+  str = "";
+
+  for (uint8_t i = start; i < end; i++) {
+    if (i != start) str += ',';
+    str += climateMainList[i];
   }
 
   return str;
