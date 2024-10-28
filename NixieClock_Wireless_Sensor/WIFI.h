@@ -88,7 +88,7 @@ void wifiStartAP(void) {
   //запускаем точку доступа
   if (!WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL)) {
 #if DEBUG_MODE
-    Serial.println F("Wifi access point start failed, wrong settings");
+    Serial.println F("Wifi access point start failed, wrong settings!");
 #endif
   }
 #if DEBUG_MODE
@@ -145,7 +145,7 @@ void wifiUpdate(void) {
         if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
-        Serial.println F("Wifi idle status");
+        Serial.println F("Wifi idle status...");
 #endif
         break;
       default:
@@ -187,7 +187,7 @@ void wifiUpdate(void) {
       if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
-      Serial.println F("Wifi connection failed, wrong settings");
+      Serial.println F("Wifi connection failed, wrong settings!");
 #endif
     }
   }

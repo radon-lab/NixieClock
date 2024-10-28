@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.4 релиз от 27.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 28.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -170,11 +170,11 @@ void build(void) {
     if (wifiGetConnectStatus()) {
       M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(strLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
     }
     if (WiFi.getMode() != WIFI_STA) {
-      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain(AP_SSID, 12), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(strLengthConstrain(AP_SSID, 12), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
     }
 
@@ -518,14 +518,6 @@ String getTimeFromMs(uint32_t data) {
   return str;
 }
 //--------------------------------------------------------------------
-String StrLengthConstrain(String data, uint8_t size) {
-  if (data.length() > size) {
-    data.remove(size);
-    data += "…";
-  }
-  return data;
-}
-//--------------------------------------------------------------------
 char getHexChar(uint8_t hex) {
   if (hex > 15) return 'F';
   if (hex > 9) return ('A' + (hex - 10));
@@ -547,6 +539,14 @@ String getSensorId(void) {
   }
 
   return str;
+}
+//--------------------------------------------------------------------
+String strLengthConstrain(String data, uint8_t size) {
+  if (data.length() > size) {
+    data.remove(size);
+    data += "…";
+  }
+  return data;
 }
 //--------------------------------------------------------------------
 void efuseGetDefaultMacAddress(uint8_t* mac) {
@@ -634,6 +634,9 @@ void sleepMode(void) {
 }
 //--------------------------------------------------------------------
 void lowBattery(void) {
+#if DEBUG_MODE
+  Serial.print F("Battery low, power down...");
+#endif
 #if STATUS_LED > 0
   for (uint8_t i = 0; i < 5; i++) {
     digitalWrite(LED_BUILTIN, (boolean)(i & 0x01));
@@ -642,6 +645,12 @@ void lowBattery(void) {
   digitalWrite(LED_BUILTIN, HIGH);
 #endif
   ESP.deepSleep(0); //уходим в сон
+}
+//--------------------------------------------------------------------
+void checkBattery(void) {
+  vccVoltage = ESP.getVcc();
+  if (vccVoltage > BAT_VOLTAGE_CORRECT) vccVoltage -= BAT_VOLTAGE_CORRECT;
+  if (!getBatteryCharge()) lowBattery();
 }
 //--------------------------------------------------------------------
 void checkSensors(void) {
@@ -798,17 +807,15 @@ void timeUpdate(void) {
 
     if (updateTimer == 2) checkSensors(); //проверка доступности сенсоров
     else if (updateTimer == 3) updateSensors(); //обновить показания сенсоров
-    else if ((updateTimer > 15) && (settingsMode == true) && ui.online()) updateTimer = 15; //сбросить таймер
-    else if (updateTimer > 30) sleepMode(); //отключить питание
+    else if ((updateTimer > (SETTINGS_MODE_TIME - 15)) && (settingsMode == true) && ui.online()) updateTimer = (SETTINGS_MODE_TIME - 15); //сбросить таймер
+    else if (updateTimer > SETTINGS_MODE_TIME) sleepMode(); //отключить питание
 
     sendReady = true; //установили флаг повторной попытки отправки данных
 
     resetSettingsButton(); //сбросить нажатия кнопки настроек
 
 #if STATUS_LED > 0
-    if (settingsMode == true) {
-      if (!wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-    }
+    if ((settingsMode == true) && !wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif
   }
 }
@@ -824,9 +831,7 @@ void setup() {
 #endif
 
   //обновить напряжение питания
-  vccVoltage = ESP.getVcc();
-  if (vccVoltage > BAT_VOLTAGE_CORRECT) vccVoltage -= BAT_VOLTAGE_CORRECT;
-  if (!getBatteryCharge()) lowBattery();
+  checkBattery();
 
 #if DEBUG_MODE
   Serial.begin(115200);
@@ -855,14 +860,14 @@ void setup() {
 
   //инициализация обновления по OTA
   if (settingsMode == true) {
-    if ((getBatteryCharge() >= 50) && (ESP.getFreeSketchSpace() < ESP.getSketchSize())) {
+    if ((getBatteryCharge() < 50) || (ESP.getFreeSketchSpace() < ESP.getSketchSize())) {
       otaUpdate = false; //выключаем обновление
 #if DEBUG_MODE
-      Serial.println F("OTA update disable, running out of memory");
+      Serial.println F("OTA update disable...");
 #endif
     }
 #if DEBUG_MODE
-    else Serial.println F("OTA update enable");
+    else Serial.println F("OTA update enable...");
 #endif
   }
 
