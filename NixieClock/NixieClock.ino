@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 27.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 28.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -550,6 +550,13 @@ struct mainSensorData {
   uint8_t hum; //влажность
 } mainSens;
 
+//переменные работы с устройством
+struct deviceData {
+  uint8_t status; //состояние часов
+  uint8_t light; //яркость подсветки часов
+  uint16_t failure; //сбои при запуске часов
+} device;
+
 //переменные работы с шиной
 struct busData {
   uint8_t position; //текущая позиция
@@ -605,6 +612,8 @@ struct busData {
 
 #define BUS_WRITE_SENS_DATA 0x22
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
+
+#define BUS_READ_FAILURE 0xA0
 
 #define BUS_ALARM_DISABLE 0xDA
 #define BUS_CHANGE_BRIGHT 0xDC
@@ -666,7 +675,6 @@ enum {
   STATUS_UPDATE_SENS_DATA,
   STATUS_UPDATE_ALARM_STATE
 };
-uint8_t deviceStatus; //состояние часов
 
 enum {
   MEM_UPDATE_MAIN_SET,
@@ -1198,7 +1206,7 @@ void setUpdateMemory(uint8_t mask) //установить флаг обновл�
 {
   memoryUpdate |= mask; //установили флаг
 #if ESP_ENABLE
-  deviceStatus |= mask; //запоминаем статус
+  device.status |= mask; //запоминаем статус
 #endif
 }
 //----------------------------Обновить данные в памяти------------------------------
@@ -1288,7 +1296,7 @@ void updateTempSens(void) //обновление установленных да
   }
 
 #if ESP_ENABLE
-  if (sens.init && !(deviceStatus & (0x01 << STATUS_UPDATE_SENS_DATA))) deviceStatus |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
+  if (sens.init && !(device.status & (0x01 << STATUS_UPDATE_SENS_DATA))) device.status |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
   else { //иначе копируем внутренние данные
     mainSens.temp = sens.temp; //устанавливаем температуру
     mainSens.press = sens.press; //устанавливаем давление
@@ -1708,7 +1716,7 @@ void checkRTC(void) //проверка модуля часов реальног�
     sendTime(); //отправляем последнее сохраненное время в RTC
   }
 #if ESP_ENABLE
-  else deviceStatus |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+  else device.status |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
 #endif
 #endif
 
@@ -1724,6 +1732,9 @@ void checkRTC(void) //проверка модуля часов реальног�
 void checkErrors(void) //проверка ошибок
 {
   uint16_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | ((uint16_t)EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) << 8); //прочитали регистр ошибок
+#if ESP_ENABLE
+  device.failure = _error_reg; //скопировали ошибки
+#endif
   if (_error_reg) { //если есть ошибка
 #if FLIP_ANIM_START == 1
     animShow = ANIM_MAIN; //установили флаг анимации
@@ -2344,7 +2355,7 @@ void checkAlarms(uint8_t check) //проверка будильников
           alarms.now = ALARM_WARN; //устанавливаем флаг тревоги
           if (mode_alarm == 1) { //если был установлен режим одиночный
 #if ESP_ENABLE
-            deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+            device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
             alarmWrite(alm, ALARM_MODE, 0); //выключаем будильник
           }
@@ -2758,7 +2769,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_CHANGE_BRIGHT:
             if (bus.counter < 1) {
               bus.counter = 1; //сместили указатель
-              light_state = TWDR;
+              device.light = TWDR;
             }
             break;
 #endif
@@ -2854,12 +2865,18 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
 #endif
+          case BUS_READ_FAILURE: //передача сбоев при запуске устройства
+            if (bus.counter < sizeof(device.failure)) {
+              TWDR = *((uint8_t*)&device.failure + bus.counter);
+              bus.counter++; //сместили указатель
+            }
+            break;
           case BUS_READ_STATUS: //передача статуса часов
 #if ALARM_TYPE
-            if (alarms.now >= ALARM_WAIT) deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_STATE);
+            if (alarms.now >= ALARM_WAIT) device.status |= (0x01 << STATUS_UPDATE_ALARM_STATE);
 #endif
-            TWDR = deviceStatus;
-            deviceStatus = 0;
+            TWDR = device.status;
+            device.status = 0;
             break;
           case BUS_READ_DEVICE: //передача комплектации
             if (bus.counter < sizeof(deviceInformation)) {
@@ -2921,7 +2938,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SEEK_RADIO_DOWN: bus.status |= BUS_COMMAND_RADIO_SEEK_DOWN; break; //запуск автопоиска радио
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-          case BUS_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; deviceStatus &= ~(0x01 << STATUS_UPDATE_SENS_DATA); break; //запрос температуры
+          case BUS_CHECK_TEMP: _timer_ms[TMR_SENS] = 0; device.status &= ~(0x01 << STATUS_UPDATE_SENS_DATA); break; //запрос температуры
 #endif
           case BUS_WRITE_EXTENDED_SET: memoryUpdate |= (0x01 << MEM_UPDATE_EXTENDED_SET); break; //расширенные настройки
           case BUS_SET_SHOW_TIME: _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); break; //установка таймера показа температуры
@@ -3236,7 +3253,7 @@ uint8_t settings_time(void) //настройки времени
         sendTime(); //отправить время в RTC
 #endif
 #if ESP_ENABLE
-        deviceStatus |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+        device.status |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
 #endif
         animShow = ANIM_MAIN; //установили флаг анимации
         return MAIN_PROGRAM;
@@ -3324,7 +3341,7 @@ uint8_t settings_time(void) //настройки времени
         sendTime(); //отправить время в RTC
 #endif
 #if ESP_ENABLE
-        deviceStatus |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+        device.status |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
 #endif
         return MAIN_PROGRAM;
     }
@@ -3661,7 +3678,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
         if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
 #endif
 #if ESP_ENABLE
-        deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+        device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
         alarm[ALARM_STATUS] = 255; //установили статус изменения будильника
         alarmWriteBlock(1, alarm); //записать блок основных данных будильника и выйти
@@ -3971,7 +3988,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
             else cur_alarm = (alarms.num > 0);
             alarmReadBlock(cur_alarm, alarm); //читаем блок данных
 #if ESP_ENABLE
-            deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+            device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
           }
         }
@@ -4023,7 +4040,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           cur_alarm = alarms.num;
           alarmReadBlock(cur_alarm, alarm); //читаем блок данных
 #if ESP_ENABLE
-          deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+          device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
         }
         else {
@@ -4073,7 +4090,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
           if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
 #endif
 #if ESP_ENABLE
-          deviceStatus |= (0x01 << STATUS_UPDATE_ALARM_SET);
+          device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
           alarm[ALARM_STATUS] = 255; //установили статус изменения будильника
           alarmWriteBlock(cur_alarm, alarm); //записать блок основных данных будильника
@@ -6321,6 +6338,9 @@ void changeBright(void) //установка яркости от времени 
   if (mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY])
 #endif
     light_state = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
+#if ESP_ENABLE
+  else light_state = device.light;
+#endif
 
   switch (light_state) {
     case 0: //дневной режим
@@ -7296,10 +7316,10 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
           break;
         case FLIP_HIGHLIGHTS: { //блики
             if (changeNum < LAMP_NUM) {
-              changeIndi = random(0, LAMP_NUM);
               if (changeCnt < 2) {
                 switch (changeCnt) {
                   case 0:
+                    changeIndi = random(0, LAMP_NUM);
                     for (uint8_t b = 0; b < changeNum; b++) {
                       while (changeBuffer[b] == changeIndi) {
                         changeIndi = random(0, LAMP_NUM);

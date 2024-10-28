@@ -44,6 +44,8 @@
 #define BUS_WRITE_SENS_DATA 0x22
 #define BUS_WRITE_MAIN_SENS_DATA 0x23
 
+#define BUS_READ_FAILURE 0xA0
+
 #define BUS_ALARM_DISABLE 0xDA
 #define BUS_CHANGE_BRIGHT 0xDC
 
@@ -122,6 +124,13 @@ struct timerData {
   uint8_t secs;
 } timer;
 
+//----------------Устройство--------------
+struct deviceData {
+  uint8_t status; //состояние часов
+  uint8_t light; //яркость подсветки часов
+  uint16_t failure; //сбои при запуске часов
+} device;
+
 //----------------Будильники--------------
 struct alarmData {
   uint8_t set; //настройка текущего будильника
@@ -144,18 +153,6 @@ enum {
   ALARM_DATA_MAX //всего данных
 };
 uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
-
-enum {
-  STATUS_UPDATE_MAIN_SET,
-  STATUS_UPDATE_FAST_SET,
-  STATUS_UPDATE_RADIO_SET,
-  STATUS_UPDATE_EXTENDED_SET,
-  STATUS_UPDATE_ALARM_SET,
-  STATUS_UPDATE_TIME_SET,
-  STATUS_UPDATE_SENS_DATA,
-  STATUS_MAX_DATA
-};
-uint8_t deviceStatus; //состояние часов
 
 enum {
   FIRMWARE_VERSION_1,
@@ -183,6 +180,17 @@ enum {
   INFORMATION_MAX
 };
 uint8_t deviceInformation[INFORMATION_MAX]; //информация о часах
+
+enum {
+  STATUS_UPDATE_MAIN_SET,
+  STATUS_UPDATE_FAST_SET,
+  STATUS_UPDATE_RADIO_SET,
+  STATUS_UPDATE_EXTENDED_SET,
+  STATUS_UPDATE_ALARM_SET,
+  STATUS_UPDATE_TIME_SET,
+  STATUS_UPDATE_SENS_DATA,
+  STATUS_MAX_DATA
+};
 
 enum {
   MAIN_INDI_BRIGHT_N,
@@ -316,6 +324,7 @@ enum {
 
   READ_STATUS,
   READ_DEVICE,
+  READ_FAILURE,
 
   WRITE_SENS_1_DATA,
   WRITE_SENS_2_DATA,
@@ -1188,12 +1197,12 @@ void busUpdate(void) {
 
         case READ_STATUS:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_STATUS)) { //начинаем передачу
-            deviceStatus = twi_read_byte(TWI_NACK);
-            if ((boolean)(deviceStatus & (0x01 << STATUS_MAX_DATA)) != alarm.status) {
+            device.status = twi_read_byte(TWI_NACK);
+            if ((boolean)(device.status & (0x01 << STATUS_MAX_DATA)) != alarm.status) {
               alarm.status = !alarm.status;
               alarm.reload = 2;
             }
-            deviceStatus &= ~(0x01 << STATUS_MAX_DATA);
+            device.status &= ~(0x01 << STATUS_MAX_DATA);
             if (!twi_error()) { //если передача была успешной
               clockState = -1; //установили флаг ответа от часов
               busShiftBuffer(); //сместили буфер команд
@@ -1224,6 +1233,14 @@ void busUpdate(void) {
             deviceInformation[PLAYER_MAX_SOUND] = twi_read_byte(TWI_ACK);
             deviceInformation[PLAYER_MAX_VOICE] = twi_read_byte(TWI_ACK);
             deviceInformation[ALARM_AUTO_VOL_MAX] = twi_read_byte(TWI_NACK);
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+        case READ_FAILURE:
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_FAILURE)) { //начинаем передачу
+            device.failure = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }

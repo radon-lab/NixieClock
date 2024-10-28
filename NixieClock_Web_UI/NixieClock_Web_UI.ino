@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 27.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 28.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -80,6 +80,8 @@ boolean alarmSvgImage = false; //флаг локальных изображен�
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
 
+boolean failureWarn = true; //флаг отображения предупреждения об сбоях
+
 uint8_t timeState = 0; //флаг состояния актуальности времени
 
 int8_t syncState = -1; //флаг состояния синхронизации времени
@@ -92,6 +94,7 @@ uint8_t sensorChart = 0; //буфер обновления источника д
 uint8_t sensorTimer = 0; //таймер обновления микроклимата
 
 uint8_t navMainTab = 0; //флаг открытой страницы основных настроек
+uint8_t navInfoTab = 0; //флаг открытой страницы информации об устройстве
 
 uint32_t secondsTimer = 0; //таймер счета секундных интервалов
 
@@ -122,6 +125,11 @@ const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_r
 const char *alarmModeList[] = {"Отключен", "Однократно", "Ежедневно", "По будням"};
 const char *alarmDaysList[] = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
 const char *statusTimerList[] = {"Отключен", "Секундомер", "Таймер", "Ошибка"};
+
+const char *failureDataList[] = {
+  "Нет связи с RTC", "Батарея RTC разряжена", "Короткий сигнал SQW", "Длинный сигнал SQW", "Датчик температуры недоступен", "Напряжение питания вне диапазона",
+  "Сбой чтения EEPROM", "Софт перезагрузка", "Сбой преобразователя", "Сбой PWM преобразователя", "Переполнение стека", "Переполнение тиков времени", "Сбой динамической индикации"
+};
 
 String backlModeList(void) { //список режимов подсветки
   String str;
@@ -276,31 +284,31 @@ void build(void) {
     GP_HR(UI_MENU_LINE_COLOR, 6);
 
     //состояние соединения
-    updateList += F(",bar_clock");
+    updateList += F(",barLink");
     GP_BLOCK_SHADOW_BEGIN();
     GP.LABEL("Статус часов", "", UI_MENU_TEXT_COLOR, 15);
-    GP_LINE_LED("bar_clock", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+    GP_LINE_LED("barLink", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
     GP_BLOCK_SHADOW_END();
 
     if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
-      updateList += F(",bar_rtc");
+      updateList += F(",barRtc");
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус RTC", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("bar_rtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
     if (wirelessGetSensorStastus()) {
-      updateList += F(",bar_sens");
+      updateList += F(",barSens");
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус датчика", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("bar_sens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
     if (ntpGetRunStatus()) {
-      updateList += F(",bar_ntp");
+      updateList += F(",barNtp");
       GP_BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус NTP", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("bar_ntp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP_LINE_LED("barNtp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
       GP_BLOCK_SHADOW_END();
     }
     if (wifiGetConnectStatus()) {
@@ -806,7 +814,7 @@ void build(void) {
       GP_HR_TEXT("Датчик в часах", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_CLOCK] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_CLOCK], sens.press[SENS_CLOCK], sens.hum[SENS_CLOCK]), "", 0, "", true););
-        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", (sens.type < 6) ? climateTempSensList[sens.type] : climateGetSensList(sens.type, false), INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.TEXT("", "", (sens.type < 6) ? climateTempSensList[sens.type] : climateGetSensList(sens.type, false), "", 0, "", true););
       }
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
@@ -816,7 +824,7 @@ void build(void) {
       GP_HR_TEXT("Датчик в есп", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_MAIN] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_MAIN], sens.press[SENS_MAIN], sens.hum[SENS_MAIN]), "", 0, "", true););
-        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.NUMBER("", climateGetSensList(sens.search, true), INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensList(sens.search, true), "", 0, "", true););
       }
       else {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
@@ -831,7 +839,7 @@ void build(void) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_WIRELESS], sens.press[SENS_WIRELESS], sens.hum[SENS_WIRELESS]), "", 0, "", true););
       }
       if (wirelessGetSensorStastus()) {
-        M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetInterval()) + " мин", INT32_MAX, "", true););
+        M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.TEXT("", "", String(wirelessGetInterval()) + " мин", "", 0, "", true););
       }
       GP.BLOCK_END();
     }
@@ -954,7 +962,28 @@ void build(void) {
     else if (ui.uri("/information")) { //информация о системе
       GP_PAGE_TITLE("Об устройстве");
 
+      GP_NAV_TABS_M("fastInfoTab", "Информация,Управление", navInfoTab);
+
+      GP_NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
+      M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Циклов в секунду", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
+
+      GP.BREAK();
+      GP_HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
+
+      M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
+
+      M_BOX(GP.LABEL("Всего(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFlashChipSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Занято(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getSketchSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
+
+      GP.BREAK();
+      GP_HR_TEXT("Локальная сеть", "", UI_LINE_COLOR, UI_HINT_COLOR);
+
       M_BOX(GP.LABEL("Уровень сигнала", "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(constrain(2 * (WiFi.RSSI() + 100), 0, 100)) + '%', "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
@@ -971,24 +1000,6 @@ void build(void) {
       }
 
       GP.BREAK();
-      GP_HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
-
-      M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
-
-      M_BOX(GP.LABEL("Всего(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFlashChipSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Занято(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getSketchSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-
-      GP.BREAK();
-      GP_HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
-
-      M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Циклов в секунду", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
-
-      GP.BREAK();
       GP_HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
       M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
@@ -999,8 +1010,26 @@ void build(void) {
       if (deviceInformation[HARDWARE_VERSION]) {
         M_BOX(GP.LABEL("Прошивка часов", "", UI_LABEL_COLOR); GP.LABEL(String(deviceInformation[FIRMWARE_VERSION_1]) + "." + deviceInformation[FIRMWARE_VERSION_2] + "." + deviceInformation[FIRMWARE_VERSION_3], "", UI_INFO_COLOR););
       }
-      GP.BLOCK_END();
 
+      if (!(device.failure & 0x80)) {
+        GP.BREAK();
+        GP_HR_TEXT("Состояние", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        if (!device.failure) {
+          M_BOX(GP.LABEL("Связь с часами", "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? "Работает нормально..." : "Отсутствует...", "", UI_INFO_COLOR, 0, false, true););
+        }
+        else {
+          for (uint8_t i = 0; i < 13; i++) {
+            if (device.failure & (0x01 << i)) {
+              M_BOX(GP.LABEL(String("Ошибка 00") + ((i < 10) ? "0" : "") + (i + 1), "", UI_LABEL_COLOR); GP.LABEL(failureDataList[i], "", UI_INFO_COLOR, 0, false, true););
+            }
+          }
+        }
+      }
+      GP.BREAK();
+      GP.BLOCK_END();
+      GP.NAV_BLOCK_END();
+
+      GP_NAV_BLOCK_BEGIN("fastInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", "Устройство", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.name, "", 19););
       GP.BREAK();
@@ -1050,12 +1079,14 @@ void build(void) {
       GP.BREAK();
       GP_HR_TEXT("Модуль RTC", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (deviceInformation[DS3231_ENABLE]) {
-        rtcStatus = F("Подключен к часам");
+        if ((device.failure & 0x80) || !(device.failure & 0x03)) rtcStatus = F("Подключен к часам");
+        else if (device.failure & 0x02) rtcStatus = F("Батарея разряжена");
       }
       else if (rtcGetFoundStatus()) {
         M_BOX(GP.LABEL("Коррекция", "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
         GP.UPDATE_CLICK("syncAging", "syncAging");
-        rtcStatus = (!rtcGetNormalStatus()) ? F("Батарея разряжена") : F("Работает исправно");
+        if (!rtcGetNormalStatus()) rtcStatus = F("Батарея разряжена");
+        else rtcStatus = F("Работает исправно");
       }
       M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", rtcStatus, INT32_MAX, "", true););
 
@@ -1063,6 +1094,7 @@ void build(void) {
       GP_HR_TEXT("Управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR););
       GP.BLOCK_END();
+      GP.NAV_BLOCK_END();
 
       GP.CONFIRM("extReset", "Сбросить все настройки устройства?");
       GP.CONFIRM("extReboot", "Перезагрузить устройство?");
@@ -1161,6 +1193,11 @@ void build(void) {
 
         GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
       }
+    }
+
+    if (!(device.failure & 0x80) && device.failure && failureWarn) {
+      updateList += F(",mainFailWarn");
+      GP.ALERT("mainFailWarn", "Внимание! Обнаружен сбой при запуске устройства!\nПодробнее во вкладке - Об устройстве.");
     }
 
     wirelessResetFoundState();
@@ -1388,6 +1425,9 @@ void action() {
 
       if (ui.clickSub("fastMainTab")) {
         navMainTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
+      }
+      if (ui.clickSub("fastInfoTab")) {
+        navInfoTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
       }
     }
     //--------------------------------------------------------------------
@@ -1872,16 +1912,16 @@ void action() {
         ui.answer(climateGetBarPressStr());
       }
 
-      if (ui.update("bar_clock")) { //если было обновление
+      if (ui.update("barLink")) { //если было обновление
         ui.answer(busGetClockStatus());
       }
-      if (ui.update("bar_sens")) { //если было обновление
+      if (ui.update("barSens")) { //если было обновление
         ui.answer(wirelessGetOnlineStastus());
       }
-      if (ui.update("bar_rtc")) { //если было обновление
+      if (ui.update("barRtc")) { //если было обновление
         ui.answer(rtcGetNormalStatus());
       }
-      if (ui.update("bar_ntp")) { //если было обновление
+      if (ui.update("barNtp")) { //если было обновление
         ui.answer(ntpGetSyncStatus());
       }
 
@@ -1898,9 +1938,14 @@ void action() {
       if (ui.update("mainTimer")) { //если было обновление
         ui.answer(convertTimerTime());
       }
+
       if (ui.update("mainReload") && (alarm.reload >= 2)) { //если было обновление
         ui.answer(1);
         alarm.reload = 0;
+      }
+      if (ui.update("mainFailWarn") && (failureWarn == true)) { //если было обновление
+        ui.answer(1);
+        failureWarn = false;
       }
     }
     //--------------------------------------------------------------------
@@ -2299,9 +2344,9 @@ void timeUpdate(void) {
 }
 //--------------------------------------------------------------------
 void deviceUpdate(void) {
-  if (deviceStatus) { //если статус обновился
+  if (device.status) { //если статус обновился
     for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
-      if (deviceStatus & 0x01) { //если флаг установлен
+      if (device.status & 0x01) { //если флаг установлен
         switch (i) { //выбираем действие
           case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
           case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
@@ -2316,9 +2361,9 @@ void deviceUpdate(void) {
             break;
         }
       }
-      deviceStatus >>= 1; //сместили буфер флагов
+      device.status >>= 1; //сместили буфер флагов
     }
-    deviceStatus = 0; //сбрасываем все флаги
+    device.status = 0; //сбрасываем все флаги
   }
 
   switch (sens.update) { //если все датчики опрошены
@@ -2421,6 +2466,7 @@ void setup() {
   busSetComand(READ_RADIO_SET);
   busSetComand(READ_ALARM_ALL);
   busSetComand(READ_TIME_DATE, 0);
+  busSetComand(READ_FAILURE);
   busSetComand(READ_DEVICE);
 
   busSetComand(WRITE_RTC_INIT);
