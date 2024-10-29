@@ -703,7 +703,7 @@ void build(void) {
       M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
       M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BREAK();
-      GP_HR_TEXT("Время смены яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP_HR_TEXT("Время ночной яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint1", lightHint); //всплывающая подсказка
       M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
       GP.BREAK();
@@ -2236,7 +2236,7 @@ void weatherAveragData(void) {
 
   if (!weatherGetGoodStatus() && (time_now > 12)) {
     weatherResetValidStatus(); //сбросили статус погоды
-    light_now = 2; //сбросили текущую яркость
+    light_now = 0; //сбросили текущую яркость
     sens.temp[SENS_WEATHER] = 0x7FFF; //сбросили температуру погоды
     sens.hum[SENS_WEATHER] = 0; //сбросили влажность погоды
     sens.press[SENS_WEATHER] = 0; //сбросили давление погоды
