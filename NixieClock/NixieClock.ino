@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 28.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 29.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -6338,7 +6338,7 @@ void changeBright(void) //установка яркости от времени 
   if (mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY])
 #endif
     light_state = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
-#if ESP_ENABLE
+#if !LIGHT_SENS_ENABLE && ESP_ENABLE
   else light_state = device.light;
 #endif
 

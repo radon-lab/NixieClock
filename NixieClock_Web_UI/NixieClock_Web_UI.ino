@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 28.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 29.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2248,8 +2248,8 @@ void weatherAveragData(void) {
   }
 
   if (!deviceInformation[LIGHT_SENS_ENABLE]) { //если сенсор яркости освещения не используется
-    if (lightState != light_now) { //если яркость изменилась
-      lightState = light_now; //установили состояние яркости
+    if (device.light != light_now) { //если яркость изменилась
+      device.light = light_now; //установили состояние яркости
       busSetComand(WRITE_CHANGE_BRIGHT); //оправка состояния яркости
     }
   }

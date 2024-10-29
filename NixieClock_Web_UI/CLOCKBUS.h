@@ -355,7 +355,6 @@ struct busData {
   uint32_t timerStart = 0;
 } bus;
 int8_t clockState = 0; //флаг состояния соединения с часами
-uint8_t lightState = 2; //флаг состояния яркости часов
 
 #define DEVICE_RESET 0xCC
 #define DEVICE_UPDATE 0xDD
@@ -1127,7 +1126,7 @@ void busUpdate(void) {
         case WRITE_CHANGE_BRIGHT:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
             twi_write_byte(BUS_CHANGE_BRIGHT); //регистр команды
-            twi_write_byte(lightState);
+            twi_write_byte(device.light);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
