@@ -169,6 +169,13 @@ String dotModeList(boolean alm) { //список режимов основных
   }
   return str;
 }
+String flipModeList(boolean set) { //список режимов смены минут
+  String str;
+  str.reserve(370);
+  str = (set) ? F("Основной эффект,") : F("Без анимации,");
+  str += F("Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат");
+  return str;
+}
 String secsModeList(void) { //список режимов смены секунд
   String str;
   str.reserve(200);
@@ -178,12 +185,6 @@ String secsModeList(void) { //список режимов смены секун�
   else {
     str = F("Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе");
   }
-  return str;
-}
-String flipModeList(void) { //список режимов смены минут
-  String str;
-  str.reserve(370);
-  str = F("Без анимации,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат");
   return str;
 }
 String playerVoiceList(void) { //список голосов для озвучки
@@ -373,7 +374,7 @@ void build(void) {
           GP.BLOCK_BEGIN(GP_THIN, "", "Эффекты", UI_BLOCK_COLOR);
           M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
           M_BOX(GP.LABEL("Точки", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList(false), fastSettings.dotMode););
-          M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(), fastSettings.flipMode););
+          M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(false), fastSettings.flipMode););
           M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Подсветка", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
@@ -667,17 +668,17 @@ void build(void) {
         GP.BLOCK_BEGIN(GP_THIN, "", "Метеостанция", UI_BLOCK_COLOR);
         M_BOX(
           GP.LABEL("По кнопке", "", UI_LABEL_COLOR);
-          GP.SELECT("climateMainSens", climateGetSendDataList(), extendedSettings.tempMainSensor, 0, (boolean)((!climateAvailableTemp(settings.climateSend[0]) && !climateAvailableTemp(settings.climateSend[1])) || deviceInformation[BTN_EASY_MAIN_MODE]));
+          GP.SELECT("climateMainSens", (!deviceInformation[BTN_EASY_MAIN_MODE]) ? climateGetSendDataList() : "Не используется", extendedSettings.tempMainSensor, 0, (boolean)(sensorGetDisabledStatus() || deviceInformation[BTN_EASY_MAIN_MODE]));
         );
         M_BOX(
           GP.LABEL("Раз в час", "", UI_LABEL_COLOR);
-          GP.SELECT("climateHourSens", climateGetSendDataList(), extendedSettings.tempHourSensor, 0, (boolean)((!climateAvailableTemp(settings.climateSend[0]) && !climateAvailableTemp(settings.climateSend[1])) || !deviceInformation[PLAYER_TYPE]));
+          GP.SELECT("climateHourSens", (deviceInformation[PLAYER_TYPE]) ? climateGetSendDataList() : "Не используется", extendedSettings.tempHourSensor, 0, (boolean)(sensorGetDisabledStatus() || !deviceInformation[PLAYER_TYPE]));
         );
         GP.BREAK();
         GP_HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
         M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
-        M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", "Основной эффект,Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат", mainSettings.autoShowFlip););
+        M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
         GP.BREAK();
         GP_HR_TEXT("Отображение", "hint4", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint4", "Источник и время в секундах"); //всплывающая подсказка
@@ -696,7 +697,7 @@ void build(void) {
       GP.BREAK();
       GP_HR_TEXT("Эффекты", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(), fastSettings.flipMode););
+      M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(false), fastSettings.flipMode););
       M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
       GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -2218,7 +2219,11 @@ boolean sensorAvaibleData(void) {
 }
 //--------------------------------------------------------------------
 boolean sensorGetValidStatus(void) {
-  return (boolean)(climateGetChartTemp() != 0x7FFF);
+  return (boolean)(climateAvailableTemp(settings.climateChart));
+}
+//--------------------------------------------------------------------
+boolean sensorGetDisabledStatus(void) {
+  return (boolean)(!climateAvailableTemp(settings.climateSend[0]) && !climateAvailableTemp(settings.climateSend[1]));
 }
 //--------------------------------------------------------------------
 void weatherAveragData(void) {
