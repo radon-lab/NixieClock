@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 29.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 30.10.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -6355,7 +6355,7 @@ void changeBright(void) //установка яркости от времени 
       indi.maxBright = mainSettings.indiBright[TIME_DAY]; //установка максимальной яркости индикаторов
       if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
       break;
-#if LIGHT_SENS_ENABLE
+#if LIGHT_SENS_ENABLE || ESP_ENABLE
     case 1: //промежуточный режим
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
       dot.maxBright = dot.menuBright = mainSettings.dotBright[TIME_NIGHT] + ((mainSettings.dotBright[TIME_DAY] - mainSettings.dotBright[TIME_NIGHT]) >> 1); //установка максимальной яркости точек

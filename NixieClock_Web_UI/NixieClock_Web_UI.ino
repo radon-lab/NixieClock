@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 29.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 30.10.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1275,8 +1275,8 @@ void action() {
         else {
           mainTime = ui.getSystemTime(); //запросить время браузера
           mainDate = ui.getSystemDate(); //запросить дату браузера
-          busSetComand(WRITE_TIME_DATE);
-          if (rtcGetFoundStatus()) busSetComand(WRITE_RTC_TIME); //отправить время в RTC
+          busSetCommand(WRITE_TIME_DATE);
+          if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
         }
       }
 
@@ -1299,7 +1299,7 @@ void action() {
       if (ui.click("syncAging")) {
         if (rtcGetFoundStatus()) {
           rtc_aging = constrain(ui.getInt("syncAging"), -128, 127);
-          busSetComand(WRITE_RTC_AGING);
+          busSetCommand(WRITE_RTC_AGING);
         }
       }
     }
@@ -1327,56 +1327,56 @@ void action() {
       if (alarm.set) { //если режим настройки будильника
         if (ui.click("alarmVol")) {
           alarm_data[alarm.now][ALARM_DATA_VOLUME] = ui.getInt("alarmVol");
-          busSetComand(WRITE_SELECT_ALARM, ALARM_VOLUME);
-          if ((!alarm_data[alarm.now][ALARM_DATA_RADIO] || !deviceInformation[RADIO_ENABLE]) && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetComand(WRITE_TEST_ALARM_VOL);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_VOLUME);
+          if ((!alarm_data[alarm.now][ALARM_DATA_RADIO] || !deviceInformation[RADIO_ENABLE]) && alarm_data[alarm.now][ALARM_DATA_MODE]) busSetCommand(WRITE_TEST_ALARM_VOL);
         }
         else if (playbackTimer > -1) playbackTimer = 0; //сбросили воспроизведение
         if (ui.click("alarmSoundType")) {
           alarm_data[alarm.now][ALARM_DATA_RADIO] = ui.getBool("alarmSoundType");
-          busSetComand(WRITE_SELECT_ALARM, ALARM_RADIO);
-          busSetComand(WRITE_SELECT_ALARM, ALARM_SOUND);
-          busSetComand(WRITE_SELECT_ALARM, ALARM_VOLUME);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_RADIO);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_SOUND);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_VOLUME);
         }
         if (ui.click("alarmSound")) {
           if (!alarm_data[alarm.now][ALARM_DATA_RADIO]) {
             alarm_data[alarm.now][ALARM_DATA_SOUND] = ui.getInt("alarmSound");
             if ((!deviceInformation[PLAYER_TYPE] || alarm_data[alarm.now][ALARM_DATA_VOLUME]) && (!deviceInformation[RADIO_ENABLE] || !radioSettings.powerState)) {
-              busSetComand(WRITE_TEST_ALARM_SOUND);
+              busSetCommand(WRITE_TEST_ALARM_SOUND);
               playbackTimer = 5;
             }
-            busSetComand(WRITE_SELECT_ALARM, ALARM_SOUND);
+            busSetCommand(WRITE_SELECT_ALARM, ALARM_SOUND);
           }
         }
         if (ui.click("alarmRadio")) {
           if (alarm_data[alarm.now][ALARM_DATA_RADIO]) {
             alarm_data[alarm.now][ALARM_DATA_STATION] = ui.getInt("alarmRadio");
-            busSetComand(WRITE_SELECT_ALARM, ALARM_SOUND);
+            busSetCommand(WRITE_SELECT_ALARM, ALARM_SOUND);
           }
         }
         if (ui.clickTime("alarmTime", alarmTime)) {
           alarm_data[alarm.now][ALARM_DATA_HOUR] = alarmTime.hour;
           alarm_data[alarm.now][ALARM_DATA_MINS] = alarmTime.minute;
-          busSetComand(WRITE_SELECT_ALARM, ALARM_TIME);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_TIME);
         }
         if (ui.click("alarmMode")) {
           alarm_data[alarm.now][ALARM_DATA_MODE] = ui.getInt("alarmMode");
-          busSetComand(WRITE_SELECT_ALARM, ALARM_MODE);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_MODE);
         }
         if (ui.clickSub("alarmDay")) {
           uint8_t day = constrain(ui.clickNameSub(1).toInt(), 1, 7);
           if (ui.getBool(String("alarmDay/") + day)) alarm_data[alarm.now][ALARM_DATA_DAYS] |= (0x01 << day);
           else alarm_data[alarm.now][ALARM_DATA_DAYS] &= ~(0x01 << day);
-          busSetComand(WRITE_SELECT_ALARM, ALARM_DAYS);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_DAYS);
         }
         if (ui.click("alarmDel") && !alarm.reload) {
           if (alarm.all > 1) {
             alarm.all--;
-            busSetComand(DEL_ALARM, alarm.now);
-            busSetComand(READ_ALARM_ALL);
+            busSetCommand(DEL_ALARM, alarm.now);
+            busSetCommand(READ_ALARM_ALL);
           }
           else {
             alarm_data[alarm.now][ALARM_DATA_MODE] = 0;
-            busSetComand(WRITE_SELECT_ALARM, ALARM_MODE);
+            busSetCommand(WRITE_SELECT_ALARM, ALARM_MODE);
           }
           alarm.set = 0;
         }
@@ -1394,33 +1394,33 @@ void action() {
             alarm.now = alarm.all;
             alarm.all++;
             alarm.set = 2;
-            busSetComand(NEW_ALARM);
-            busSetComand(READ_ALARM_ALL);
+            busSetCommand(NEW_ALARM);
+            busSetCommand(READ_ALARM_ALL);
           }
         }
         if (ui.click("alarmDis")) {
-          busSetComand(WRITE_ALARM_DISABLE);
+          busSetCommand(WRITE_ALARM_DISABLE);
         }
       }
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("fast")) {
       if (ui.clickInt("fastDot", fastSettings.dotMode)) {
-        busSetComand(WRITE_FAST_SET, FAST_DOT_MODE);
+        busSetCommand(WRITE_FAST_SET, FAST_DOT_MODE);
       }
       if (ui.clickInt("fastFlip", fastSettings.flipMode)) {
-        busSetComand(WRITE_FAST_SET, FAST_FLIP_MODE);
+        busSetCommand(WRITE_FAST_SET, FAST_FLIP_MODE);
       }
       if (ui.clickInt("fastSecsFlip", fastSettings.secsMode)) {
-        busSetComand(WRITE_FAST_SET, FAST_SECS_MODE);
+        busSetCommand(WRITE_FAST_SET, FAST_SECS_MODE);
       }
       if (ui.clickInt("fastBackl", fastSettings.backlMode)) {
-        busSetComand(WRITE_FAST_SET, FAST_BACKL_MODE);
+        busSetCommand(WRITE_FAST_SET, FAST_BACKL_MODE);
       }
       if (ui.click("fastColor")) {
         uint8_t color = constrain(ui.getInt("fastColor"), 0, 28);
         fastSettings.backlColor = (color > 25) ? (color + 227) : (color * 10);
-        busSetComand(WRITE_FAST_SET, FAST_BACKL_COLOR);
+        busSetCommand(WRITE_FAST_SET, FAST_BACKL_COLOR);
       }
 
       if (ui.clickSub("fastMainTab")) {
@@ -1433,35 +1433,35 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.clickSub("main")) {
       if (ui.clickDate("mainDate", mainDate)) {
-        busSetComand(WRITE_DATE);
+        busSetCommand(WRITE_DATE);
       }
       if (ui.clickTime("mainTime", mainTime)) {
-        busSetComand(WRITE_TIME);
+        busSetCommand(WRITE_TIME);
       }
       if (ui.clickBool("mainTimeFormat", mainSettings.timeFormat)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
       }
       if (ui.clickBool("mainGlitch", mainSettings.glitchMode)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_GLITCH_MODE);
+        busSetCommand(WRITE_MAIN_SET, MAIN_GLITCH_MODE);
       }
 
       if (ui.clickInt("mainIndiBrtDay", mainSettings.indiBrightDay)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_D);
+        busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_D);
       }
       if (ui.clickInt("mainIndiBrtNight", mainSettings.indiBrightNight)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_N);
+        busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_N);
       }
       if (ui.clickInt("mainBurnFlip", mainSettings.burnMode)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_BURN_MODE);
+        busSetCommand(WRITE_MAIN_SET, MAIN_BURN_MODE);
       }
       if (ui.clickInt("mainBurnTime", mainSettings.burnTime)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_BURN_TIME);
+        busSetCommand(WRITE_MAIN_SET, MAIN_BURN_TIME);
       }
 
       if (ui.click("mainAutoShow")) {
         if (ui.getBool("mainAutoShow")) mainSettings.autoShowTime &= 0x7F;
         else mainSettings.autoShowTime |= 0x80;
-        busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
+        busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
       }
       if (ui.click("mainAutoShowTime")) {
         if (mainSettings.autoShowTime & 0x80) {
@@ -1469,72 +1469,72 @@ void action() {
         }
         else {
           mainSettings.autoShowTime = ui.getInt("mainAutoShowTime");
-          busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
+          busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
         }
       }
       if (ui.clickInt("mainAutoShowFlip", mainSettings.autoShowFlip)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_FLIP);
+        busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_FLIP);
       }
       if (ui.click("mainTempCorrect")) {
         mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("mainTempCorrect") * 10), -127, 127);
-        busSetComand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
       }
 
       if (ui.clickInt("mainTimeBrightS", mainSettings.timeBrightStart)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_S);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_S);
       }
       if (ui.clickInt("mainTimeBrightE", mainSettings.timeBrightEnd)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_E);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_E);
       }
 
       if (ui.clickInt("mainHourSoundS", mainSettings.timeHourStart)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_HOUR_S);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_S);
       }
       if (ui.clickInt("mainHourSoundE", mainSettings.timeHourEnd)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_HOUR_E);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_E);
       }
 
       if (ui.clickInt("mainSleepD", mainSettings.timeSleepDay)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_D);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_D);
       }
       if (ui.clickInt("mainSleepN", mainSettings.timeSleepNight)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_N);
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_N);
       }
 
       if (ui.clickInt("mainDotBrtDay", mainSettings.dotBrightDay)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_D);
+        busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_D);
       }
       if (ui.clickInt("mainDotBrtNight", mainSettings.dotBrightNight)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
+        busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
 
       if (ui.clickInt("mainBacklBrightDay", mainSettings.backlBrightDay)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_D);
+        busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_D);
       }
       if (ui.clickInt("mainBacklBrightNight", mainSettings.backlBrightNight)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_N);
+        busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_N);
       }
 
       if (ui.click("mainSound")) {
         mainSettings.knockSound = ui.getBool("mainSound");
-        busSetComand(WRITE_MAIN_SET, MAIN_KNOCK_SOUND);
+        busSetCommand(WRITE_MAIN_SET, MAIN_KNOCK_SOUND);
       }
       if (ui.clickInt("mainVoice", mainSettings.voiceSound)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_VOICE_SOUND);
-        busSetComand(WRITE_TEST_MAIN_VOICE);
+        busSetCommand(WRITE_MAIN_SET, MAIN_VOICE_SOUND);
+        busSetCommand(WRITE_TEST_MAIN_VOICE);
       }
       if (ui.clickInt("mainSoundVol", mainSettings.volumeSound)) {
-        busSetComand(WRITE_MAIN_SET, MAIN_VOLUME_SOUND);
-        busSetComand(WRITE_TEST_MAIN_VOL);
+        busSetCommand(WRITE_MAIN_SET, MAIN_VOLUME_SOUND);
+        busSetCommand(WRITE_TEST_MAIN_VOL);
       }
       if (ui.click("mainHourTemp")) {
         if (ui.getBool("mainHourTemp")) mainSettings.hourSound |= 0x80;
         else mainSettings.hourSound &= ~0x80;
-        busSetComand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
+        busSetCommand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
       }
       if (ui.click("mainHourSound")) {
         mainSettings.hourSound = (mainSettings.hourSound & 0x80) | constrain(ui.getInt("mainHourSound"), 0, 3);
-        busSetComand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
+        busSetCommand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
       }
     }
     //--------------------------------------------------------------------
@@ -1543,34 +1543,34 @@ void action() {
         uint8_t pos = ui.clickNameSub(1).toInt();
         uint8_t mode = ui.getInt(String("extShowMode/") + pos);
         extendedSettings.autoShowModes[pos] = mode;
-        busSetComand(WRITE_EXTENDED_SHOW_MODE, pos);
+        busSetCommand(WRITE_EXTENDED_SHOW_MODE, pos);
       }
       if (ui.clickSub("extShowTime")) {
         uint8_t pos = ui.clickNameSub(1).toInt();
         uint8_t time = ui.getInt(String("extShowTime/") + pos);
         extendedSettings.autoShowTimes[pos] = time;
-        busSetComand(WRITE_EXTENDED_SHOW_TIME, pos);
+        busSetCommand(WRITE_EXTENDED_SHOW_TIME, pos);
       }
 
       if (ui.click("extAlarmTimeout")) {
         extendedSettings.alarmTime = ui.getInt("extAlarmTimeout");
-        busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT);
+        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT);
       }
       if (ui.click("extAlarmWaitTime")) {
         extendedSettings.alarmWaitTime = ui.getInt("extAlarmWaitTime");
-        busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_WAIT);
+        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_WAIT);
       }
       if (ui.click("extAlarmSoundTime")) {
         extendedSettings.alarmSoundTime = ui.getInt("extAlarmSoundTime");
-        busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT_SOUND);
+        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT_SOUND);
       }
       if (ui.click("extAlarmDotOn")) {
         extendedSettings.alarmDotOn = ui.getInt("extAlarmDotOn");
-        busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_ON);
+        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_ON);
       }
       if (ui.click("extAlarmDotWait")) {
         extendedSettings.alarmDotWait = ui.getInt("extAlarmDotWait");
-        busSetComand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_WAIT);
+        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_WAIT);
       }
 
       if (ui.click("extDeviceName")) {
@@ -1712,23 +1712,23 @@ void action() {
               if (timer.count) {
                 timer.mode = 2;
                 if (timer.count) timer.time = timer.count;
-                busSetComand(WRITE_TIMER_SET);
+                busSetCommand(WRITE_TIMER_SET);
               }
               else timer.mode = 1;
-              busSetComand(WRITE_TIMER_TIME);
+              busSetCommand(WRITE_TIMER_TIME);
             }
             else if (timer.mode & 0x80) {
               timer.mode &= 0x7F;
-              busSetComand(WRITE_TIMER_STATE);
+              busSetCommand(WRITE_TIMER_STATE);
             }
-            busSetComand(WRITE_TIMER_MODE);
+            busSetCommand(WRITE_TIMER_MODE);
             break;
           case 1: //остановка
             if (timer.mode) {
               timer.mode = 0;
               timer.count = 0;
-              busSetComand(WRITE_TIMER_TIME);
-              busSetComand(SET_UPDATE);
+              busSetCommand(WRITE_TIMER_TIME);
+              busSetCommand(SET_UPDATE);
             }
             else {
               timer.hour = timer.mins = timer.secs = 0;
@@ -1737,7 +1737,7 @@ void action() {
           case 2: //пауза
             if (timer.mode && !(timer.mode & 0x80)) {
               timer.mode |= 0x80;
-              busSetComand(WRITE_TIMER_STATE);
+              busSetCommand(WRITE_TIMER_STATE);
             }
             break;
         }
@@ -1746,13 +1746,13 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.clickSub("climate")) {
       if (ui.clickInt("climateMainSens", extendedSettings.tempMainSensor)) {
-        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_MAIN);
+        busSetCommand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_MAIN);
       }
       if (ui.clickInt("climateHourSens", extendedSettings.tempHourSensor)) {
-        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_HOUR);
+        busSetCommand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_HOUR);
       }
       if (ui.clickInt("climateCorrectType", extendedSettings.tempCorrectSensor)) {
-        busSetComand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_CORRECT);
+        busSetCommand(WRITE_EXTENDED_SENSOR_SET, EXT_SENSOR_CORRECT);
       }
 
       if (ui.clickInt("climateBar", settings.climateBar)) {
@@ -1788,34 +1788,34 @@ void action() {
     if (ui.clickSub("radio")) {
       if (ui.click("radioPower")) {
         radioSettings.powerState = ui.getBool("radioPower");
-        busSetComand(WRITE_RADIO_POWER);
+        busSetCommand(WRITE_RADIO_POWER);
       }
       if (radioSettings.powerState) {
         if (ui.click("radioMode")) {
-          busSetComand(WRITE_RADIO_MODE);
+          busSetCommand(WRITE_RADIO_MODE);
         }
         if (ui.click("radioSeekDown")) {
-          busSetComand(RADIO_SEEK_DOWN);
+          busSetCommand(RADIO_SEEK_DOWN);
         }
         if (ui.click("radioSeekUp")) {
-          busSetComand(RADIO_SEEK_UP);
+          busSetCommand(RADIO_SEEK_UP);
         }
         if (ui.click("radioFreqDown")) {
-          busSetComand(READ_RADIO_FREQ);
-          busSetComand(RADIO_FREQ_DOWN);
+          busSetCommand(READ_RADIO_FREQ);
+          busSetCommand(RADIO_FREQ_DOWN);
         }
         if (ui.click("radioFreqUp")) {
-          busSetComand(READ_RADIO_FREQ);
-          busSetComand(RADIO_FREQ_UP);
+          busSetCommand(READ_RADIO_FREQ);
+          busSetCommand(RADIO_FREQ_UP);
         }
         if (ui.click("radioVol")) {
           radioSettings.volume = constrain(ui.getInt("radioVol"), 0, 15);
-          busSetComand(WRITE_RADIO_VOL);
+          busSetCommand(WRITE_RADIO_VOL);
         }
         if (ui.click("radioFreq")) {
           uint16_t stationFreq = (uint16_t)(ui.getFloat("radioFreq") * 10);
           radioSettings.stationsFreq = constrain(stationFreq, 870, 1080);
-          busSetComand(WRITE_RADIO_FREQ);
+          busSetCommand(WRITE_RADIO_FREQ);
         }
       }
       if (ui.clickSub("radioCh")) {
@@ -1824,9 +1824,9 @@ void action() {
           radioSettings.stationsFreq = radioSettings.stationsSave[stationNum];
           if (!radioSettings.powerState) {
             radioSettings.powerState = true;
-            busSetComand(WRITE_RADIO_POWER);
+            busSetCommand(WRITE_RADIO_POWER);
           }
-          busSetComand(WRITE_RADIO_FREQ);
+          busSetCommand(WRITE_RADIO_FREQ);
         }
       }
       if (ui.clickSub("radioSta")) {
@@ -1835,7 +1835,7 @@ void action() {
         stationFreq = (stationFreq) ? constrain(stationFreq, 870, 1080) : 0;
         if (radioSettings.stationsSave[stationNum] != stationFreq) {
           radioSettings.stationsSave[stationNum] = stationFreq;
-          busSetComand(WRITE_RADIO_STA, stationNum);
+          busSetCommand(WRITE_RADIO_STA, stationNum);
         }
       }
     }
@@ -1933,7 +1933,7 @@ void action() {
     if (ui.updateSub("main")) {
       if (ui.update("mainTimerState")) { //если было обновление
         ui.answer(getTimerState());
-        if (!timer.mode) busSetComand(READ_TIMER_STATE);
+        if (!timer.mode) busSetCommand(READ_TIMER_STATE);
       }
       if (ui.update("mainTimer")) { //если было обновление
         ui.answer(convertTimerTime());
@@ -1984,7 +1984,7 @@ void action() {
       }
       if (ui.update("radioPower")) { //если было обновление
         ui.answer(radioSettings.powerState);
-        busSetComand(READ_RADIO_POWER);
+        busSetCommand(READ_RADIO_POWER);
       }
       if (ui.updateSub("radioSta")) {
         uint8_t stationNum = constrain(ui.updateNameSub(1).toInt(), 0, 9);
@@ -2001,7 +2001,7 @@ void action() {
     if (ui.fileName().endsWith(".hex") || ui.fileName().endsWith(".HEX")) {
       updaterSetIdle(); //сбросили флаг ошибки
       Serial.println("Updater load file: " + ui.fileName());
-      if (deviceInformation[HARDWARE_VERSION]) busSetComand(UPDATE_FIRMWARE);
+      if (deviceInformation[HARDWARE_VERSION]) busSetCommand(UPDATE_FIRMWARE);
       else updaterStart(); //запуск обновления
     }
     else {
@@ -2195,13 +2195,13 @@ void resetMainSettings(void) {
 }
 //--------------------------------------------------------------------
 void sensorSendData(uint8_t sens) {
-  if (!deviceInformation[SENS_TEMP] && (settings.climateSend[0] == sens)) busSetComand(WRITE_SENS_1_DATA, settings.climateSend[0]); //отправить данные
-  if (settings.climateSend[1] == sens) busSetComand(WRITE_SENS_2_DATA, settings.climateSend[1]); //отправить данные
+  if (!deviceInformation[SENS_TEMP] && (settings.climateSend[0] == sens)) busSetCommand(WRITE_SENS_1_DATA, settings.climateSend[0]); //отправить данные
+  if (settings.climateSend[1] == sens) busSetCommand(WRITE_SENS_2_DATA, settings.climateSend[1]); //отправить данные
   if (settings.climateChart == sens) climateUpdate(CLIMATE_UPDATE); //обновляем показания графиков
 }
 //--------------------------------------------------------------------
 void sensorUpdateData(void) {
-  if (deviceInformation[SENS_TEMP]) busSetComand(WRITE_CHECK_SENS);
+  if (deviceInformation[SENS_TEMP]) busSetCommand(WRITE_CHECK_SENS);
   else sens.update |= SENS_EXT;
   sens.status = 0;
 }
@@ -2250,7 +2250,7 @@ void weatherAveragData(void) {
   if (!deviceInformation[LIGHT_SENS_ENABLE]) { //если сенсор яркости освещения не используется
     if (device.light != light_now) { //если яркость изменилась
       device.light = light_now; //установили состояние яркости
-      busSetComand(WRITE_CHANGE_BRIGHT); //оправка состояния яркости
+      busSetCommand(WRITE_CHANGE_BRIGHT); //оправка состояния яркости
     }
   }
 
@@ -2281,8 +2281,8 @@ void timeUpdate(void) {
         }
         if (weatherGetValidStatus()) weatherAveragData(); //усреднить показания погоды
 
-        if (!(mainTime.minute % 15) && rtcGetFoundStatus() && (!settings.ntpSync || !ntpGetSyncStatus())) busSetComand(READ_RTC_TIME); //отправить время в RTC
-        else busSetComand(READ_TIME_DATE, 0); //прочитали время из часов
+        if (!(mainTime.minute % 15) && rtcGetFoundStatus() && (!settings.ntpSync || !ntpGetSyncStatus())) busSetCommand(READ_RTC_TIME); //отправить время в RTC
+        else busSetCommand(READ_TIME_DATE, 0); //прочитали время из часов
 
         if (settings.ntpSync) {
           if (!settings.ntpDst) {
@@ -2308,15 +2308,15 @@ void timeUpdate(void) {
       }
       secondsTimer += 1000; //прибавили секунду
     }
-    if (timer.mode) busSetComand(READ_TIMER_TIME);
+    if (timer.mode) busSetCommand(READ_TIMER_TIME);
     if (!waitTimer) { //если пришло время опросить статус часов
       waitTimer = 4; //установили таймер ожидания
       busUpdateClockStatus(); //обновить статус часов
-      busSetComand(READ_STATUS); //запрос статуса часов
+      busSetCommand(READ_STATUS); //запрос статуса часов
     }
     else waitTimer--;
     if (playbackTimer > -1) {
-      if (!playbackTimer) busSetComand(WRITE_STOP_SOUND); //остановка воспроизведения
+      if (!playbackTimer) busSetCommand(WRITE_STOP_SOUND); //остановка воспроизведения
       playbackTimer--;
     }
 #if STATUS_LED == 1
@@ -2329,7 +2329,7 @@ void timeUpdate(void) {
   if (ntpUpdate()) { //обработка ntp
     if (settings.ntpSync || !syncState) {
       syncTimer = ntpSyncTime[settings.ntpTime];
-      busSetComand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
+      busSetCommand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
     }
   }
 
@@ -2348,15 +2348,15 @@ void deviceUpdate(void) {
     for (uint8_t i = 0; i < STATUS_MAX_DATA; i++) { //проверяем все флаги
       if (device.status & 0x01) { //если флаг установлен
         switch (i) { //выбираем действие
-          case STATUS_UPDATE_MAIN_SET: busSetComand(READ_MAIN_SET); break;
-          case STATUS_UPDATE_FAST_SET: busSetComand(READ_FAST_SET); break;
-          case STATUS_UPDATE_RADIO_SET: busSetComand(READ_RADIO_SET); break;
-          case STATUS_UPDATE_ALARM_SET: busSetComand(READ_ALARM_ALL); break;
-          case STATUS_UPDATE_TIME_SET: busSetComand(READ_TIME_DATE, 1); break;
+          case STATUS_UPDATE_MAIN_SET: busSetCommand(READ_MAIN_SET); break;
+          case STATUS_UPDATE_FAST_SET: busSetCommand(READ_FAST_SET); break;
+          case STATUS_UPDATE_RADIO_SET: busSetCommand(READ_RADIO_SET); break;
+          case STATUS_UPDATE_ALARM_SET: busSetCommand(READ_ALARM_ALL); break;
+          case STATUS_UPDATE_TIME_SET: busSetCommand(READ_TIME_DATE, 1); break;
           case STATUS_UPDATE_SENS_DATA:
             if (deviceInformation[SENS_TEMP]) {
-              busSetComand(READ_SENS_INFO);
-              busSetComand(READ_SENS_DATA);
+              busSetCommand(READ_SENS_INFO);
+              busSetCommand(READ_SENS_DATA);
             }
             break;
         }
@@ -2369,9 +2369,9 @@ void deviceUpdate(void) {
   switch (sens.update) { //если все датчики опрошены
     case SENS_EXT:
       sens.update = 0; //сбрасываем флаги опроса
-      busSetComand(CHECK_INTERNAL_AHT);
-      busSetComand(CHECK_INTERNAL_SHT);
-      busSetComand(CHECK_INTERNAL_BME);
+      busSetCommand(CHECK_INTERNAL_AHT);
+      busSetCommand(CHECK_INTERNAL_SHT);
+      busSetCommand(CHECK_INTERNAL_BME);
       break;
     case (SENS_AHT | SENS_SHT | SENS_BME):
       sens.update = 0; //сбрасываем флаги опроса
@@ -2460,16 +2460,16 @@ void setup() {
   weatherDisconnect();
 
   //запрашиваем настройки часов
-  busSetComand(READ_MAIN_SET);
-  busSetComand(READ_FAST_SET);
-  busSetComand(READ_EXTENDED_SET);
-  busSetComand(READ_RADIO_SET);
-  busSetComand(READ_ALARM_ALL);
-  busSetComand(READ_TIME_DATE, 0);
-  busSetComand(READ_FAILURE);
-  busSetComand(READ_DEVICE);
+  busSetCommand(READ_MAIN_SET);
+  busSetCommand(READ_FAST_SET);
+  busSetCommand(READ_EXTENDED_SET);
+  busSetCommand(READ_RADIO_SET);
+  busSetCommand(READ_ALARM_ALL);
+  busSetCommand(READ_TIME_DATE, 0);
+  busSetCommand(READ_FAILURE);
+  busSetCommand(READ_DEVICE);
 
-  busSetComand(WRITE_RTC_INIT);
+  busSetCommand(WRITE_RTC_INIT);
 
   busTimerSetInterval(1500);
 }
