@@ -552,8 +552,8 @@ struct mainSensorData {
 
 //переменные работы с устройством
 struct deviceData {
-  uint8_t status; //состояние часов
   uint8_t light; //яркость подсветки часов
+  uint8_t status; //флаги состояния часов
   uint16_t failure; //сбои при запуске часов
 } device;
 
@@ -642,7 +642,6 @@ enum {
   BUS_COMMAND_BIT_2,
   BUS_COMMAND_BIT_3,
   BUS_COMMAND_BIT_4,
-  BUS_COMMAND_TIME,
   BUS_COMMAND_WAIT,
   BUS_COMMAND_UPDATE
 };
@@ -1556,7 +1555,7 @@ void lightSensUpdate(void) //обработка сенсора яркости о
 
     if (now_light_state != light_state) {
       light_state = now_light_state;
-      changeBright(); //установка яркости
+      light_update = 1; //устанавливаем флаг изменения яркости
     }
   }
 }
@@ -2593,7 +2592,7 @@ void busCommand(void) //проверка команды шины
 {
   if (bus.status & ~(0x01 << BUS_COMMAND_WAIT)) {
 #if RADIO_ENABLE || (TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE))
-    uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
+    uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
     bus.status &= (0x01 << BUS_COMMAND_WAIT); //сбросили статус
     if (status) { //если установлены флаги
       changeAnimState = ANIM_RESET_DOT; //установили сброс анимации
@@ -2908,7 +2907,7 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if DS3231_ENABLE
             bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
 #endif
-            bus.status |= (0x01 << BUS_COMMAND_TIME);
+            light_update = 1;
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
             break;
           case BUS_WRITE_FAST_SET: memoryUpdate |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
@@ -2964,7 +2963,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #endif
 #if !LIGHT_SENS_ENABLE
-          case BUS_CHANGE_BRIGHT: changeBright(); break; //смена яркости
+          case BUS_CHANGE_BRIGHT: light_update = 1; break; //смена яркости
 #endif
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука
@@ -3188,8 +3187,8 @@ void systemTask(void) //системная задача
             }
           }
         }
-        changeBright(); //установка яркости от времени суток
         hourSound(); //звук смены часа
+        light_update = 1; //устанавливаем флаг изменения яркости
       }
       if (fastSettings.flipMode && (animShow < ANIM_MAIN)) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
@@ -3205,6 +3204,11 @@ void systemTask(void) //системная задача
       if (mainTask == SLEEP_PROGRAM) indi.sleepMode = SLEEP_DISABLE; //отключаем сон если в режиме сна
     }
 #endif
+
+    if (light_update) { //если нужно изменить яркость
+      light_update = 0; //сбрасываем флаг изменения яркости
+      changeBright(); //установка текущей яркости
+    }
 
     RESET_WDT; //сбрасываем таймер WDT
   }
@@ -5214,7 +5218,7 @@ void autoShowMenu(void) //меню автоматического показа
       dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-      if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) return; //обновление шины
+      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
 #endif
 
 #if ESP_ENABLE || SENS_PORT_ENABLE
@@ -6893,7 +6897,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return ((bus.status & (0x01 << BUS_COMMAND_TIME)) ? SLEEP_PROGRAM : MAIN_PROGRAM); //выходим
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //выходим
 #endif
 
     if (!indi.update) { //если пришло время обновить индикаторы
@@ -7163,7 +7167,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) return; //обновление шины
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
 #endif
 
     if (type != FLIP_NORMAL) { //если анимация времени
@@ -7414,7 +7418,7 @@ uint8_t mainScreen(void) //главный экран
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~((0x01 << BUS_COMMAND_TIME) | (0x01 << BUS_COMMAND_WAIT))) { //обновление шины
+    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
       if (!changeAnimState) changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
       return MAIN_PROGRAM; //перезапуск основной программы
     }
@@ -7425,12 +7429,6 @@ uint8_t mainScreen(void) //главный экран
 #endif
 
     if (!indi.update) { //если пришло время обновить индикаторы
-#if ESP_ENABLE
-      if (bus.status & (0x01 << BUS_COMMAND_TIME)) { //обновление шины
-        bus.status &= ~(0x01 << BUS_COMMAND_TIME); //сбросить флаг
-        changeBright(); //установка яркости от времени суток
-      }
-#endif
 #if ALARM_TYPE
       if (alarms.now == ALARM_WARN) return ALARM_PROGRAM; //тревога будильника
 #endif

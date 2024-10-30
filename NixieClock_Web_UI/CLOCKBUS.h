@@ -338,8 +338,8 @@ enum {
 };
 
 struct deviceData {
-  uint8_t status = 0x00; //состояние часов
   uint8_t light = 0xFF; //яркость подсветки часов
+  uint8_t status = 0x00; //флаги состояния часов
   uint16_t failure = 0x00; //сбои при запуске часов
 } device;
 
