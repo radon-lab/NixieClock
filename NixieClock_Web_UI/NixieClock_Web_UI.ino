@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 30.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 05.11.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2209,7 +2209,10 @@ void sensorUpdateData(void) {
 //--------------------------------------------------------------------
 void sensorInitData(void) {
   static boolean first_start = false;
-  if (!first_start) sens.search = sens.status; //установить показания датчиков
+  if (!first_start) {
+    if (deviceInformation[SENS_TEMP]) settings.climateSend[0] = SENS_CLOCK; //установить сенсор в часах
+    sens.search = sens.status; //установить показания датчиков
+  }
   else sens.search |= 0x80;
   first_start = true;
 }
