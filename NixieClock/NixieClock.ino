@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 30.10.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 17.11.24
   Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -1334,6 +1334,11 @@ void updateTemp(void) //обновить показания температур
 uint8_t getMainSens(void)
 {
   return (extendedSettings.tempMainSensor) ? SHOW_TEMP_ESP : SHOW_TEMP;
+}
+//---------------------Получить текущий датчик озвучки часа------------------------
+uint8_t getHourSens(void)
+{
+  return (extendedSettings.tempHourSensor) ? SHOW_TEMP_ESP : SHOW_TEMP;
 }
 //------------------------Получить показания температуры---------------------------
 int16_t getTemperatureData(uint8_t data)
@@ -4686,7 +4691,7 @@ uint8_t settings_main(void) //настроки основные
 void speakTemp(boolean mode) //воспроизвести температуру
 {
 #if ESP_ENABLE
-  uint8_t _sens = (!mode) ? extendedSettings.tempMainSensor : extendedSettings.tempHourSensor;
+  uint8_t _sens = (!mode) ? getMainSens() : getHourSens();
   uint16_t _ceil = getTemperature(_sens) / 10;
   uint16_t _dec = getTemperature(_sens) % 10;
 #else
@@ -6321,7 +6326,7 @@ void hourSound(void) //звук смены часа
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
       if (temp & 0x80) { //воспроизвести температуру
 #if ESP_ENABLE
-        if (getTemperature(extendedSettings.tempHourSensor) <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
+        if (getTemperature(getHourSens()) <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
 #else
         if (getTemperature() <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
 #endif
