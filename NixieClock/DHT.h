@@ -7,7 +7,7 @@
 boolean wireReset(uint8_t time)
 {
   SENS_LO;
-  for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) dataUpdate(); //ждем
+  for (_timer_ms[TMR_SENS] = time; _timer_ms[TMR_SENS];) systemTask(); //ждем
   SENS_HI;
   _delay_us(2);
   for (uint8_t c = DHT_RESET_WAIT_TIME; c; c--) {
@@ -31,11 +31,6 @@ boolean wireReset(uint8_t time)
 //-------------------------------------------Сигнал сброса шины----------------------------------------------
 boolean wireGetData(uint8_t* buff, uint8_t time)
 {
-  if (!sens.init) { //если порт не инициализирован
-    sens.init = 1; //устанавливаем флаг инициализации
-    SENS_INIT; //инициализируем порт
-  }
-
   if (wireReset(time)) return 1; //посылаем сигнал сброса, если нет ответа то выходим
 
   uint16_t low; //буфер низкого уровня
@@ -66,16 +61,16 @@ void readTempDHT(void)
   uint8_t data[5]; //буфер приема
 
   if (wireGetData(data, DHT_RESET_TIME)) return; //посылаем сигнал сброса, если нет ответа то выходим
-  if (data[0] > 3) { //проверяем тип датчика
+  if (data[0] > 3) { //если тип датчика DHT11
     sens.temp = ((uint16_t)data[2] * 10) + data[3]; //установили температуру
     sens.hum = data[0]; //установили влажность
   }
-  else {
+  else { //иначе тип датчика DHT22
     sens.temp = ((uint16_t)(data[2] & 0x7F) << 8) | data[3]; //установили температуру
     sens.hum = (((uint16_t)data[0] << 8) | data[1]) / 10; //установили влажность
   }
-  if (sens.temp > 850) sens.temp = 0; //если вышли за предел
   if (sens.hum > 99) sens.hum = 99; //если вышли за предел
+  if (sens.temp & 0x8000) sens.temp = -(sens.temp & 0x7FFF); //если температура отрицательная
   sens.press = 0; //сбросили давление
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 }

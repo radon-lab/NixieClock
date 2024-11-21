@@ -19,13 +19,15 @@ enum {
 void irInit(void) //инициализация IR приемника
 {
   IR_INIT; //инициализация ИК приемника
-  DECODE_PCMSK(IR_PIN) |= (0x01 << IR_BIT); //настраиваем маску прерывания порта
-  PCICR |= (0x01 << DECODE_PCIE(IR_PIN)); //разрешаем прерывание порта
+  DECODE_PCMSK(IR_PIN) = (0x01 << IR_BIT); //настраиваем маску прерывания порта
+  PCICR = (0x01 << DECODE_PCIE(IR_PIN)); //разрешаем прерывание порта
 }
 //-------------------------------Проверка принятой команды-------------------------------
 void irCheckCommand(uint8_t* _command) //проверка принятой команды
 {
+#if IR_CHECK_CRC_ADDR
   if (_command[0] != (_command[1] ^ 0xFF)) return; //проверяем контрольную сумму адреса
+#endif
   if (_command[2] != (_command[3] ^ 0xFF)) return; //проверяем контрольную сумму команды
   irState |= IR_READY; //установили флаг готовности
   irCommand = ((uint16_t)_command[0] << 8) | _command[2]; //скопировали команду

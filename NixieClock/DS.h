@@ -106,10 +106,6 @@ void readTempDS(void)
 {
   static uint8_t typeDS; //тип датчика DS
 
-  if (!sens.init) { //если порт не инициализирован
-    sens.init = 1; //устанавливаем флаг инициализации
-    SENS_INIT; //инициализируем порт
-  }
   if (!typeDS) { //если тип датчика не определен
     typeDS = readSensCode(); //читаем тип датчика
     switch (typeDS) {
@@ -120,17 +116,17 @@ void readTempDS(void)
   }
 
   if (requestTemp()) return; //запрашиваем температуру, если нет ответа выходим
-  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) dataUpdate(); //ждем окончания преобразования
+  for (_timer_ms[TMR_SENS] = DS_CONVERT_TIME; _timer_ms[TMR_SENS];) systemTask(); //ждем окончания преобразования
   if (readTemp()) return; //чтаем температуру, если нет ответа выходим
 
-  uint16_t raw = oneWireRead() | ((uint16_t)oneWireRead() << 8); //читаем сырое значение
-  if (raw & 0x8000) raw = 0; //если значение отрицательное
+  int16_t raw = oneWireRead() | ((uint16_t)oneWireRead() << 8); //читаем сырое значение
 
   switch (typeDS) {
     case DS18S20_ADDR: sens.temp = raw * 5; break; //переводим в температуру для DS18S20
-    case DS18B20_ADDR: sens.temp = (raw * 10) >> 4; break; //переводим в температуру для DS18B20
+    case DS18B20_ADDR: sens.temp = (raw * 10) / 16; break; //переводим в температуру для DS18B20
   }
+  if (sens.temp > 850) sens.temp = 850;
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность
-  sens.err = 0; //сбросили ошибку датчика температуры
+  sens.update = 1; //установили флаг обновления сенсора
 }

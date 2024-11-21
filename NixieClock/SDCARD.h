@@ -242,11 +242,6 @@ boolean cardInit(void)
 {
   buffer.cardType = 0; //сбрасываем тип карты
 
-  SD_CS_INIT; //иничиализация CS
-  SD_SCK_INIT; //иничиализация SCK
-  SD_MISO_INIT; //иничиализация MISO
-  SD_MOSI_INIT; //иничиализация MOSI
-
   //отправляем 80 импульсов для перехода в SPI режими
   for (uint8_t i = 160; i; i--) {
     SD_SCK_INV; //инвертируем пин SCK

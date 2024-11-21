@@ -18,9 +18,24 @@
 //--------------------------------------Чтение температуры/влажности------------------------------------------
 void readTempSHT(void) //чтение температуры/влажности
 {
-  static uint8_t typeSHT; //тип датчика BME
+  static uint8_t typeSHT; //тип датчика SHT
 
   if (!typeSHT) { //если датчик не определен
+#if SENS_SHT_ENABLE == 1
+    if (!wireBeginTransmission(SHT20_ADDR)) { //если SHT20
+      typeSHT = SHT20_ADDR; //установлили тип датчика
+      wireWrite(SHT20_WRITE_REG); //устанавливаем адрес записи
+      wireWrite(0xC1); //записываем настройку
+      wireEnd(); //остановка шины wire
+    }
+#elif SENS_SHT_ENABLE == 2
+    if (!wireBeginTransmission(SHT30_ADDR)) { //если SHT30
+      typeSHT = SHT30_ADDR; //установлили тип датчика
+      wireWrite(0x30); //записываем настройку
+      wireWrite(0x66); //записываем настройку
+      wireEnd(); //остановка шины wire
+    }
+#else
     if (!wireBeginTransmission(SHT20_ADDR)) { //если SHT20
       typeSHT = SHT20_ADDR; //установлили тип датчика
       wireWrite(SHT20_WRITE_REG); //устанавливаем адрес записи
@@ -33,24 +48,29 @@ void readTempSHT(void) //чтение температуры/влажности
       wireWrite(0x66); //записываем настройку
       wireEnd(); //остановка шины wire
     }
+#endif
     else return; //иначе выходим
   }
 
+  uint16_t temp_raw = 0; //буфер расчета температуры
+  uint16_t hum_raw = 0; //буфер расчета влажности
+
   switch (typeSHT) { //чтение данных
+#if (SENS_SHT_ENABLE == 1) || (SENS_SHT_ENABLE != 2)
     case SHT20_ADDR: {
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
         wireWrite(SHT20_READ_TEMP); //устанавливаем адрес записи
-        _delay_us(20); //ждем
         wireEnd(); //остановка шины wire
 
         _timer_ms[TMR_SENS] = SHT20_TEMP_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
-        uint16_t temp_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
+        temp_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
         wireReadEndByte(); //пропускаем контрольную сумму
-        sens.temp = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
+        
+        temp_raw = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
 
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
         wireWrite(SHT20_READ_HUM); //устанавливаем адрес записи
@@ -58,14 +78,17 @@ void readTempSHT(void) //чтение температуры/влажности
 
         _timer_ms[TMR_SENS] = SHT20_HUM_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
-        uint16_t hum_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
+        hum_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
         wireReadEndByte(); //пропускаем контрольную сумму
-        sens.hum = (uint16_t)(hum_raw * 0.0019) - 6; //рассчитываем влажность
+        
+        hum_raw = (uint16_t)(hum_raw * 0.0019) - 6; //рассчитываем влажность
       }
       break;
+#endif
+#if (SENS_SHT_ENABLE == 2) || (SENS_SHT_ENABLE != 1)
     case SHT30_ADDR: {
         if (wireBeginTransmission(SHT30_ADDR)) return; //начало передачи
         wireWrite(SHT30_READ_DATA); //устанавливаем адрес записи
@@ -74,21 +97,33 @@ void readTempSHT(void) //чтение температуры/влажности
 
         _timer_ms[TMR_SENS] = SHT30_MEAS_TIME; //установили таймер
         while (wireBeginTransmission(SHT30_ADDR, 1)) { //ждем окончания преобразования
-          dataUpdate(); //обработка данных
+          systemTask(); //обработка данных
           if (!_timer_ms[TMR_SENS]) return; //выходим если таймаут
         }
-        uint16_t temp_raw = ((uint16_t)wireRead() << 8) | wireRead();
+        temp_raw = ((uint16_t)wireRead() << 8) | wireRead();
         wireRead(); //пропускаем контрольную сумму
-        uint16_t hum_raw = ((uint16_t)wireRead() << 8) | wireRead();
+        hum_raw = ((uint16_t)wireRead() << 8) | wireRead();
         wireReadEndByte(); //пропускаем контрольную сумму
-        sens.temp = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
-        sens.hum = hum_raw * 0.00152; //рассчитываем влажность
+        
+        temp_raw = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
+        hum_raw = hum_raw * 0.00152; //рассчитываем влажность
       }
       break;
+#endif
   }
-  
-  if (sens.temp > 850) sens.temp = 0; //если вышли за предел
-  if (sens.hum > 99) sens.hum = 99; //если вышли за предел
-  sens.press = 0; //сбросили давление
-  sens.err = 0; //сбросили ошибку датчика температуры
+
+  sens.update = 1; //установили флаг обновления сенсора
+
+#if SENS_BME_ENABLE
+  if (sens.type & (0x01 << SENS_BME)) {
+    sens.temp = (sens.temp + temp_raw) >> 1; //усредняем температуру
+    if (sens.hum) sens.hum = (sens.hum + hum_raw) >> 1; //усредняем влажность
+    else sens.hum = hum_raw; //иначе копируем влажность
+    return; //выходим
+  }
+  sens.press = 0; //сбрасываем давление
+#endif
+
+  sens.temp = temp_raw; //копируем температуру
+  sens.hum = hum_raw; //копируем влажность
 }

@@ -2,6 +2,12 @@ boolean ledUpdate = 0; //флаг отрисовки светодиодов
 uint8_t ledColor[LAMP_NUM]; //массив цветов
 uint8_t ledBright[LAMP_NUM]; //массив яркости
 
+const uint8_t ledWhiteTable[][3] = { //таблица оттенков белого GRB
+  155, 255, 60,  //2400
+  208, 255, 170, //4100
+  255, 255, 255  //6500
+};
+
 enum {
   WHITE_OFF, //выключить установку белого цвета
   WHITE_ON //включить установку белого цвета
@@ -72,7 +78,7 @@ void showLeds(void)
 #endif
       uint8_t count = 0;
       uint8_t pallet = ledColor[f];
-      if (pallet != 255) {
+      if (pallet < 253) {
         while (pallet > 85) {
           pallet -= 85;
           count++;
@@ -98,10 +104,10 @@ void showLeds(void)
         }
       }
       else {
-        pallet = (uint8_t)((ledBright[f] * 86) >> 8);
-        *ledLink++ = pallet;
-        *ledLink++ = pallet;
-        *ledLink++ = pallet;
+        pallet -= 253;
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][0]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][1]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][2]) >> 8);
       }
     }
 
@@ -119,7 +125,7 @@ void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 {
   if (_led < LAMP_NUM) {
     ledUpdate = 1; //устанавливаем флаг обновления
-    if (_mode == WHITE_OFF && _color == 255) _color = 0;
+    if (_mode == WHITE_OFF && _color >= 253) _color = 0;
     ledColor[_led] = _color;
   }
 }
@@ -127,7 +133,7 @@ void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 void setLedHue(uint8_t _color, boolean _mode)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
-  if (_mode == WHITE_OFF && _color == 255) _color = 0;
+  if (_mode == WHITE_OFF && _color >= 253) _color = 0;
   for (uint8_t f = 0; f < LAMP_NUM; f++) ledColor[f] = _color;
 }
 //---------------------------Установка цвета подсветки меню в формате HV----------------------------

@@ -4,14 +4,14 @@
 #define RTC_CLEAR_OSF 0x01 //проверить и очистить флаг OSF
 
 //структура времени
-struct time { 
+struct time {
   uint8_t s = 0; //секунды
   uint8_t m = 0; //минуты
   uint8_t h = 8; //часы
   uint8_t DD = 1; //день
   uint8_t MM = 1; //месяц
-  uint16_t YY = 2021; //год
-  uint8_t DW = 5; //день недели
+  uint16_t YY = 2000; //год
+  uint8_t DW = 6; //день недели
 } RTC;
 
 const uint8_t daysInMonth[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
@@ -45,7 +45,7 @@ boolean readAgingRTC(int8_t* data) //чтение коррекции хода
 {
   if (wireRequestFrom(RTC_ADDR, 0x10)) return 0; //запрашиваем чтение данных, если нет ответа выходим
   *data = wireReadEndByte(); //записываем результат
-  return 1;
+  return 1; //выходим
 }
 //-------------------------------Запись коррекции хода-------------------------------------
 void writeAgingRTC(int8_t data) //запись коррекции хода
@@ -75,9 +75,9 @@ boolean getOSF(boolean mode) //проверка флага OSF
       }
     }
     SET_ERROR(DS3231_OSF_ERROR); //установили ошибку осцилятора модуля RTC
-    return 0;
+    return 0; //выходим
   }
-  return 1;
+  return 1; //выходим
 }
 //-----------------------------------Настройка SQW-----------------------------------------
 boolean setSQW(void) //настройка SQW
@@ -158,7 +158,7 @@ boolean getTime(boolean mode) //запрашиваем время из RTC
     RTC.MM = unpackREG(wireRead()); //получаем месяц
     RTC.YY = unpackREG(wireReadEndByte()) + 2000; //получаем год
     RTC.DW = getWeekDay(RTC.YY, RTC.MM, RTC.DD); //получаем день недели
-    return 1;
+    return 1; //выходим
   }
   return 0; //выходим
 }
