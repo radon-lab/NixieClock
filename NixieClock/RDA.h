@@ -98,8 +98,8 @@ void setPowerRDA(boolean _pwr)
   playerSetMuteNow(_pwr); //выключаем приглушение звука плеера
 #endif
 #if AMP_PORT_ENABLE
-  if (_pwr) AMP_ENABLE;
-  else AMP_DISABLE;
+  if (_pwr) { DF_BUSY_OUT; AMP_ENABLE; }
+  else { DF_BUSY_INP; AMP_DISABLE; }
 #endif
 }
 //-------------------------------------Установить частоту радиостанции----------------------------------------

@@ -24,17 +24,17 @@
 #define CONV_PIN  9  //пин преобразователя(9..10)(pin D)
 #define DOT_1_PIN 10 //пин секундных точек(левой неонки)(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
 #define DOT_2_PIN 11 //пин секундных точек(правой неонки)(0..13)(pin D)
-#define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
-#define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 9..10)(pin D)
+#define BACKL_PIN 12 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
+#define BUZZ_PIN  11 //пин пищалки(бузер - 0..13 | SD карта - 9..10)(pin D)
 
 //Дополнительная периферия
 #define DOTL_PIN 0 //пин левых(основных) разделительных точек в индикаторах(0..13)(pin D)
 #define DOTR_PIN 1 //пин правых(дополнительных) разделительных точек в индикаторах(0..13)(pin D)
-#define SENS_PIN 1 //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
+#define SENS_PIN 13//пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
 #define SQW_PIN  2 //пин SQW(только пин 2)(pin D)
-#define AMP_PIN  8 //пин управления питанием усилителя(0..13)(pin D)
+#define AMP_PIN  0 //пин управления питанием усилителя(0..13)(pin D)
 #define MOV_PIN  8 //пин датчика движения(0..13)(pin D)
-#define IR_PIN   7 //пин инфракрасного приемника(0..13)(pin D)
+#define IR_PIN   11//пин инфракрасного приемника(0..13)(pin D)
 
 //DF плеер
 #define DF_RX_PIN   1 //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
@@ -283,6 +283,7 @@
 #define DF_BUSY_CHK   (BIT_READ(PIN_REG(DF_BUSY_PORT), DF_BUSY_BIT))
 #define DF_BUSY_SET   (BIT_SET(DF_BUSY_PORT, DF_BUSY_BIT))
 #define DF_BUSY_INP   (BIT_CLEAR(DDR_REG(DF_BUSY_PORT), DF_BUSY_BIT))
+#define DF_BUSY_OUT   (BIT_SET(DDR_REG(DF_BUSY_PORT), DF_BUSY_BIT))
 
 #define DF_BUSY_INIT  DF_BUSY_SET; DF_BUSY_INP
 

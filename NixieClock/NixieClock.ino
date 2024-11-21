@@ -1422,7 +1422,7 @@ uint8_t getHumidity(void)
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
-  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
+  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + CONSTRAIN(debugSettings.hvCorrect, -35, 35);
 }
 //------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
@@ -2037,7 +2037,7 @@ void debug_menu(void) //отладка
                 break;
 #if GEN_FEEDBACK == 1
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
-                if (debugSettings.hvCorrect > -30) debugSettings.hvCorrect--; //значение ацп преобразователя
+                if (debugSettings.hvCorrect > -35) debugSettings.hvCorrect--; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
 #endif
@@ -2080,7 +2080,7 @@ void debug_menu(void) //отладка
                 break;
 #if GEN_FEEDBACK == 1
               case DEB_HV_ADC: //коррекция значения ацп преобразователя
-                if (debugSettings.hvCorrect < 30) debugSettings.hvCorrect++; //значение ацп преобразователя
+                if (debugSettings.hvCorrect < 35) debugSettings.hvCorrect++; //значение ацп преобразователя
                 updateTresholdADC(); //обновление предела удержания напряжения
                 break;
 #endif
