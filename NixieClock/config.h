@@ -276,6 +276,9 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_MAX 1000        //максимальная ячейка памяти(1000)
 #define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
+//Настройки обновления данных из PCF8591
+#define PCF8591_UPDATE_TIME 50        //таймаут обновления PCF8591 (мс)
+
 //Версия прошивки
 #define FIRMWARE_VERSION "2.2.5"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x13        //версия прошивки для интерфейса wire
