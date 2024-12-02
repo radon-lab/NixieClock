@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 28.10.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 02.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -630,7 +630,13 @@ void sleepMode(void) {
   WiFi.disconnect(); //отключаемся от сети
   WiFi.mode(WIFI_OFF); //отключаем wifi
 
-  ESP.deepSleep(60e6 * sleepTime[settings.period]); //уходим в сон
+#if SLEEP_MODE
+  ESP.deepSleep((60e6 * sleepTime[settings.period]) - (millis() * 1000)); //уходим в сон
+#else
+  WiFi.forceSleepBegin(); //выключаем питание wifi
+  delay((60e3 * sleepTime[settings.period]) - millis()); //ждем окончания сна
+  ESP.restart(); //перезагрузка
+#endif
 }
 //--------------------------------------------------------------------
 void lowBattery(void) {
