@@ -6,7 +6,7 @@
 
 #define SEND_DATA_PERIOD 0 //период отправки данных по умолчанию(0 - 5(мин) | 1 - 10(мин) | 2 - 15(мин) | 3 - 30(мин) | 4 - 60(мин))
 
-#define SETTINGS_MODE_TIME 30 //время работы точки доступа в режиме настройки(15..120)(сек)
+#define SETTINGS_MODE_TIME 30 //время работы точки доступа в режиме настройки(20..120)(сек)
 
 #define BAT_VOLTAGE_MIN 2500 //минимальное напряжение для расчета заряда батареи(2500..3000)(мВ)
 #define BAT_VOLTAGE_MAX 3000 //максимальное напряжение для расчета заряда батареи(3000..3500)(мВ)
@@ -52,7 +52,7 @@
 
 #define MAX_CLOCK 4 //максимум часов для отправки данных(2..5)
 
-#define UDP_SEND_SIZE 16 //размер пакета данных(9)
+#define UDP_SEND_SIZE 16 //размер пакета данных(16)
 #define UDP_LOCAL_PORT 888 //локальный порт udp(888)
 #define UDP_CLOCK_PORT 8888 //порт udp часов(8888)
 #define UDP_BROADCAST_ADDR "255.255.255.255" //широковещательный адрес(255.255.255.255)
@@ -60,4 +60,4 @@
 #define UDP_WRITE_CMD 0xFF //команда отправки данных(0xFF)
 #define UDP_FOUND_CMD 0xCC //команда обнаружения датчика(0xCC)
 
-#define ESP_FIRMWARE_VERSION "1.1.5" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.6" //версия прошивки модуля esp

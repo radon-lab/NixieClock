@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.5 релиз от 02.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 08.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -46,14 +46,16 @@ char buffSendIp[20]; //буфер ip адреса
 char buffSendName[20]; //буфер имени
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
 
-uint32_t rtcMemory[2]; //память нажатий кнопки сброса
+uint32_t rtcMemory[7]; //память нажатий кнопки сброса
 
 uint8_t sendHostNum = 0; //текущий номер хоста
 
 boolean otaUpdate = true; //флаг запрета обновления есп
 boolean sendReady = false; //флаг повторной попытки отправки данных
-boolean sensorReady = false; //флаг окончания замера температуры
 boolean settingsMode = false; //флаг режима настройки сенсора
+
+boolean sensorReady = false; //флаг окончания замера температуры
+uint8_t sensorStartWait = 0; //время ожидания после первого запуска
 
 uint16_t vccVoltage = 0; //напряжение питания
 
@@ -79,6 +81,11 @@ enum {
 const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 
 #define REG_READ(reg) (*(volatile uint32*)(reg))
+
+#define WIFI_SETTINGS ((uint8_t*)&rtcMemory[2])
+#define WIFI_LOCAL_IP ((uint8_t*)&rtcMemory[4])
+#define WIFI_GATEWAY_IP ((uint8_t*)&rtcMemory[5])
+#define WIFI_SUBNET_MASK ((uint8_t*)&rtcMemory[6])
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -420,16 +427,17 @@ void action() {
   if (ui.form()) {
     if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
-        wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
         if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
           int network = 0; //номер сети из списка
-          if (ui.copyInt("wifiNetwork", network)) strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
-          else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
+          if (ui.copyInt("wifiNetwork", network)) {
+            strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
+            settings.ssid[63] = '\0'; //устанавливаем последний символ
+            ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
+            settings.pass[63] = '\0'; //устанавливаем последний символ
+            wifiSetConnectStatus(); //подключиться к сети
+            memory.update(); //обновить данные в памяти
+          }
         }
-        settings.ssid[63] = '\0'; //устанавливаем последний символ
-        ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
-        settings.pass[63] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
       }
     }
     else if (ui.form("/network")) {
@@ -574,6 +582,13 @@ void checkSettingsButton(void) {
     if ((rtcMemory[0] ^ rtcMemory[1]) != 0xFFFFFFFF) {
       rtcMemory[0] = 0; //сбросили нажатия кнопки
       rtcMemory[1] = 0xFFFFFFFF; //сбросили контрольную сумму
+      rtcMemory[2] = 0xFFFFFFFF; //сбросили блок настроек wifi
+      rtcMemory[3] = 0xFFFFFFFF; //сбросили блок настроек wifi
+      rtcMemory[4] = 0xFFFFFFFF; //сбросили блок настроек dhcp
+      rtcMemory[5] = 0xFFFFFFFF; //сбросили блок настроек dhcp
+      rtcMemory[6] = 0xFFFFFFFF; //сбросили блок настроек dhcp
+
+      sensorStartWait = 2;
 #if DEBUG_MODE
       Serial.println F("Settings button reset!");
 #endif
@@ -804,25 +819,26 @@ void sendUpdate(void) {
 //--------------------------------------------------------------------
 void timeUpdate(void) {
   static uint8_t updateTimer = 0;
-  static uint32_t secondsTimer = millis();
+  static uint32_t secondsTimer = 0;
 
-  if ((millis() - secondsTimer) >= 1000) {
+  if (!secondsTimer || ((millis() - secondsTimer) >= 1000)) {
     secondsTimer = millis();
 
-    if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
-
-    if (updateTimer == 2) checkSensors(); //проверка доступности сенсоров
-    else if (updateTimer == 3) updateSensors(); //обновить показания сенсоров
+    if (updateTimer == sensorStartWait) checkSensors(); //проверка доступности сенсоров
+    else if (updateTimer == (sensorStartWait + 1)) updateSensors(); //обновить показания сенсоров
     else if ((updateTimer > (SETTINGS_MODE_TIME - 15)) && (settingsMode == true) && ui.online()) updateTimer = (SETTINGS_MODE_TIME - 15); //сбросить таймер
     else if (updateTimer > SETTINGS_MODE_TIME) sleepMode(); //отключить питание
 
-    sendReady = true; //установили флаг повторной попытки отправки данных
+    if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
 
-    resetSettingsButton(); //сбросить нажатия кнопки настроек
+    if (updateTimer > 1) {
+      sendReady = true; //установили флаг повторной попытки отправки данных
 
+      resetSettingsButton(); //сбросить нажатия кнопки настроек
 #if STATUS_LED > 0
-    if ((settingsMode == true) && !wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
+      if ((settingsMode == true) && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif
+    }
   }
 }
 //--------------------------------------------------------------------
@@ -877,17 +893,15 @@ void setup() {
 #endif
   }
 
-  //сбрасываем настройки группового управления
-  for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.send[i][0] = '\0';
-
   //устанавливаем период по умолчанию
   settings.period = SEND_DATA_PERIOD;
 
-  //восстанавливаем настройки сети
-  strncpy(settings.ssid, WiFi.SSID().c_str(), 64);
-  settings.ssid[63] = '\0';
-  strncpy(settings.pass, WiFi.psk().c_str(), 64);
-  settings.pass[63] = '\0';
+  //сбрасываем настройки группового управления
+  for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.send[i][0] = '\0';
+
+  //сбрасываем настройки сети
+  settings.ssid[0] = '\0';
+  settings.pass[0] = '\0';
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
@@ -912,14 +926,16 @@ void setup() {
   WiFi.forceSleepWake();
 
   //настраиваем wifi
+  WiFi.persistent(false);
   if (WiFi.getAutoConnect() != false) WiFi.setAutoConnect(false);
-  if (WiFi.getAutoReconnect() != true) WiFi.setAutoReconnect(true);
+  if (WiFi.getAutoReconnect() != false) WiFi.setAutoReconnect(false);
   if (settingsMode == true) wifiStartAP();
   else WiFi.mode(WIFI_STA);
 }
 //--------------------------------------------------------------------
 void loop() {
-  wifiUpdate(); //обработка статусов wifi
+  if (wifiUpdate()) sleepMode(); //обработка статусов wifi
+
   timeUpdate(); //обработка времени
   sendUpdate(); //обработка канала связи
 

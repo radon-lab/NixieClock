@@ -1,8 +1,8 @@
 int8_t wifi_scan_state = 2; //статус сканирования сети
 uint32_t wifi_scan_timer = 0; //таймер начала поиска сети
 
-uint8_t wifi_status = WL_IDLE_STATUS; //статус соединения wifi
-uint32_t wifi_interval = 100; //интервал переподключения к wifi
+uint8_t wifi_status = 254; //статус соединения wifi
+uint32_t wifi_interval = 0; //интервал переподключения к wifi
 
 String wifi_scan_list = "Нет сетей"; //список найденых wifi сетей
 
@@ -12,7 +12,7 @@ String wifiGetConnectState(void) {
   if (!settings.ssid[0]) data += "Некорректное имя сети!";
   else {
     if (wifi_status == WL_CONNECTED) data += "Подключено к \"";
-    else if (!wifi_interval) data += "Не удалось подключиться к \"";
+    else if (!wifi_interval && (wifi_status != 254)) data += "Не удалось подключиться к \"";
     else data += "Подключение к \"";
     data += String(settings.ssid);
     if ((wifi_status == WL_CONNECTED) || !wifi_interval) data += "\"";
@@ -26,7 +26,7 @@ boolean wifiGetConnectStatus(void) {
   return (wifi_status == WL_CONNECTED);
 }
 boolean wifiGetConnectWaitStatus(void) {
-  return (wifi_interval != 0);
+  return ((wifi_interval != 0) || (wifi_status == 254));
 }
 void wifiSetConnectWaitInterval(uint32_t time) {
   wifi_interval = time;
@@ -34,6 +34,10 @@ void wifiSetConnectWaitInterval(uint32_t time) {
 void wifiResetConnectStatus(void) {
   wifi_interval = 0;
   wifi_status = 255;
+}
+void wifiSetConnectStatus(void) {
+  wifi_interval = 0;
+  wifi_status = 254;
 }
 //--------------------------------------------------------------------
 boolean wifiGetScanAllowStatus(void) {
@@ -110,7 +114,7 @@ void wifiStartAP(void) {
   WiFi.scanNetworksAsync(wifiScanResult);
 }
 //--------------------------------------------------------------------
-void wifiUpdate(void) {
+boolean wifiUpdate(void) {
   static uint32_t timerWifi = millis(); //таймер попытки подключения к wifi
 
   if ((wifi_scan_state == 127) && (millis() - wifi_scan_timer) >= 100) { //если необходимо начать поиск
@@ -120,75 +124,102 @@ void wifiUpdate(void) {
 
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
-#if DEBUG_MODE
-      Serial.println F("Wifi disconnecting...");
+#if STATUS_LED > 0
+      if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
       udp.stop(); //остановить udp
       WiFi.disconnect(); //отключаем wifi
-    }
-    wifi_status = WiFi.status();
-    switch (wifi_status) {
-      case WL_CONNECTED:
-        timerWifi = millis(); //сбросили таймер
-        wifi_interval = 0; //сбрасываем интервал переподключения
-#if STATUS_LED > 0
-        if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
-        udp.begin(UDP_LOCAL_PORT); //запускаем udp
+      
+      WIFI_SETTINGS[7] = 0x00;
+      if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
 #if DEBUG_MODE
-        Serial.print F("Wifi connected, IP address: ");
-        Serial.println(WiFi.localIP());
+        Serial.println F("Wifi settings reset!");
 #endif
-        break;
-      case WL_IDLE_STATUS:
+      }
+#if DEBUG_MODE
+      Serial.println F("Wifi disconnecting...");
+#endif
+    }
+    else if (wifi_status == 254) { //если нужно подключиться
+#if DEBUG_MODE
+      Serial.println F("Wifi start connecting...");
+#endif
+      if (WIFI_SETTINGS[7] == 0xCC) {
+        wifi_status = WiFi.begin(settings.ssid, settings.pass, WIFI_SETTINGS[6], WIFI_SETTINGS); //подключаемся к wifi
+        WiFi.config(WIFI_LOCAL_IP, WIFI_GATEWAY_IP, WIFI_SUBNET_MASK); //восстанавливаем настройки dhcp
+      }
+      else wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
+      if (wifi_status != WL_CONNECT_FAILED) {
+        timerWifi = millis(); //сбросили таймер
+        if (WIFI_SETTINGS[7] == 0xCC) wifi_interval = 3000; //устанавливаем интервал ожидания
+        else wifi_interval = 15000; //устанавливаем интервал ожидания
+#if DEBUG_MODE
+        Serial.print F("Wifi connecting to \"");
+        Serial.print(settings.ssid);
+        Serial.println F("\"...");
+#endif
+      }
+      else {
+        wifi_interval = 0; //сбрасываем интервал
 #if STATUS_LED > 0
         if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
 #if DEBUG_MODE
-        Serial.println F("Wifi idle status...");
+        Serial.println F("Wifi connection failed, wrong settings!");
 #endif
-        break;
-      default:
-        if ((wifi_status == WL_DISCONNECTED) || (wifi_status == WL_NO_SSID_AVAIL)) {
-          timerWifi = millis(); //сбросили таймер
-          if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 10000; //устанавливаем интервал переподключения
-          else wifi_interval = 5000; //устанавливаем интервал переподключения
-          WiFi.disconnect(); //отключаем wifi
-        }
-        else {
-          wifi_interval = 0; //сбрасываем интервал переподключения
+        if (settingsMode == false) return true;
+      }
+    }
+
+    wifi_status = WiFi.status();
+
+    if (wifi_status == WL_CONNECTED) {
+      timerWifi = millis(); //сбросили таймер
+      wifi_interval = 0; //сбрасываем интервал переподключения
 #if STATUS_LED > 0
-          if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+      if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
 #endif
+      udp.begin(UDP_LOCAL_PORT); //запускаем udp
+      for (uint8_t i = 0; i < 6; i++) WIFI_SETTINGS[i] = WiFi.BSSID()[i];
+      WIFI_SETTINGS[6] = WiFi.channel();
+      WIFI_SETTINGS[7] = 0xCC;
+      for (uint8_t i = 0; i < 4; i++) {
+        WIFI_LOCAL_IP[i] = WiFi.localIP()[i];
+        WIFI_GATEWAY_IP[i] = WiFi.gatewayIP()[i];
+        WIFI_SUBNET_MASK[i] = WiFi.subnetMask()[i];
+      }
+      if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
 #if DEBUG_MODE
-          Serial.println F("Wifi connect error...");
+        Serial.println F("Wifi settings update!");
 #endif
-        }
-        udp.stop(); //остановить udp
-        break;
+      }
+#if DEBUG_MODE
+      Serial.print F("Wifi connected, IP address: ");
+      Serial.println(WiFi.localIP());
+#endif
     }
   }
 
   if (wifi_interval && ((millis() - timerWifi) >= wifi_interval)) { //новое поключение
-    if (WiFi.SSID().equals(settings.ssid) && WiFi.psk().equals(settings.pass) && (settings.ssid[0] != '\0')) wifi_status = WiFi.begin(); //подключаемся к wifi
-    else wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
-    if (wifi_status != WL_CONNECT_FAILED) {
-      timerWifi = millis(); //сбросили таймер
-      wifi_interval = 10000; //устанавливаем интервал переподключения
-#if DEBUG_MODE
-      Serial.print F("Wifi connecting to \"");
-      Serial.print(settings.ssid);
-      Serial.println F("\"...");
-#endif
-    }
-    else {
-      wifi_interval = 0; //сбрасываем интервал
+    wifi_interval = 0; //сбрасываем интервал переподключения
+    WiFi.disconnect(); //отключаем wifi
 #if STATUS_LED > 0
-      if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
+    if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
+    if (WIFI_SETTINGS[7] == 0xCC) {
+      wifi_status = 254;
+      WIFI_SETTINGS[7] = 0x00;
+      if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
 #if DEBUG_MODE
-      Serial.println F("Wifi connection failed, wrong settings!");
+        Serial.println F("Wifi settings reset!");
+#endif
+      }
+#if DEBUG_MODE
+      Serial.println F("Wifi connect timeout!");
 #endif
     }
+    else if (settingsMode == false) return true;
   }
+
+  return false;
 }
