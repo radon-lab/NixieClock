@@ -32,7 +32,8 @@ struct settingsData {
   uint8_t period;
   char ssid[64];
   char pass[64];
-  char send[MAX_CLOCK * 2][20];
+  char send[MAX_CLOCK][20];
+  uint8_t attempt[MAX_CLOCK];
 } settings;
 
 #include <EEManager.h>
@@ -43,7 +44,7 @@ WiFiUDP udp;
 
 //переменные
 char buffSendIp[20]; //буфер ip адреса
-char buffSendName[20]; //буфер имени
+uint8_t buffSendAttempt; //буфер количества попыток
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
 
 uint32_t rtcMemory[7]; //память нажатий кнопки сброса
@@ -51,7 +52,6 @@ uint32_t rtcMemory[7]; //память нажатий кнопки сброса
 uint8_t sendHostNum = 0; //текущий номер хоста
 
 boolean otaUpdate = true; //флаг запрета обновления есп
-boolean sendReady = false; //флаг повторной попытки отправки данных
 boolean settingsMode = false; //флаг режима настройки сенсора
 
 boolean sensorReady = false; //флаг окончания замера температуры
@@ -59,8 +59,8 @@ uint8_t sensorStartWait = 0; //время ожидания после перво
 
 uint16_t vccVoltage = 0; //напряжение питания
 
-const uint8_t sleepTime[] = {5, 10, 15, 30, 60};
-const char sleepTimeList[] = "Каждые 5 мин,Каждые 10 мин,Каждые 15 мин,Каждые 30 мин,Каждый 1 час";
+const uint8_t sleepTime[] = {1, 5, 10, 15, 30, 60};
+const char sleepTimeList[] = "Каждую 1 мин,Каждые 5 мин,Каждые 10 мин,Каждые 15 мин,Каждые 30 мин,Каждый 1 час";
 
 //температура
 struct sensorData {
@@ -304,23 +304,23 @@ void build(void) {
 
     if (ui.uri("/network") && wifiGetConnectStatus()) { //сетевые настройки
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка данных", UI_BLOCK_COLOR);
-      for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+      for (uint8_t i = 0; i < MAX_CLOCK; i++) {
         if (i) {
           GP.HR(UI_MENU_LINE_COLOR);
         }
         if (settings.send[i][0] != '\0') {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.send[i], "", 20, "", true); GP.TEXT("", "Название", (settings.send[i + 1][0] != '\0') ? settings.send[i + 1] : settings.send[i], "", 20, "", true););
+            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.send[i], "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
             GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
         }
         else {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("extSendIp", "IP адрес", "", "", 15); GP.TEXT("extSendName", "Название", "", "", 19););
+            M_BOX(GP_LEFT, GP.TEXT("extSendIp", "IP адрес", "", "", 15); GP.NUMBER("extSendAttempt", "Попыток", INT32_MAX, "", false););
             GP.BUTTON_MINI("extSendAdd", "Добавить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
           buffSendIp[0] = '\0';
-          buffSendName[0] = '\0';
+          buffSendAttempt = 1;
           break;
         }
       }
@@ -368,28 +368,22 @@ void action() {
   if (ui.click()) {
     if (ui.clickSub("ext")) {
       if (ui.clickSub("extSendDel")) {
-        for (uint8_t multiNum = constrain(ui.clickNameSub(1).toInt(), 0, ((MAX_CLOCK - 1) * 2)); multiNum < ((MAX_CLOCK - 1) * 2); multiNum++) {
-          strncpy(settings.send[multiNum], settings.send[multiNum + 2], 20); //копируем себе
+        for (uint8_t multiNum = constrain(ui.clickNameSub(1).toInt(), 0, (MAX_CLOCK - 1)); multiNum < (MAX_CLOCK - 1); multiNum++) {
+          strncpy(settings.send[multiNum], settings.send[multiNum + 1], 20); //копируем себе
         }
-        settings.send[((MAX_CLOCK - 1) * 2)][0] = '\0'; //устанавливаем последний символ
-        settings.send[((MAX_CLOCK - 1) * 2) + 1][0] = '\0'; //устанавливаем последний символ
-
-        if (settings.send[2][0] == '\0') {
-          settings.send[0][0] = '\0'; //устанавливаем последний символ
-          settings.send[1][0] = '\0'; //устанавливаем последний символ
-        }
+        settings.send[MAX_CLOCK - 1][0] = '\0'; //сбрасываем адрес отправки
+        settings.attempt[MAX_CLOCK - 1] = 1; //устанавливаем попытки по умолчанию
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("extSendAdd")) {
         if (buffSendIp[0] != '\0') { //если строка не пустая
           if (!WiFi.localIP().toString().equals(buffSendIp)) { //если не собственный адрес
-            for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
+            for (uint8_t i = 0; i < MAX_CLOCK; i++) {
               if (settings.send[i][0] == '\0') { //если ячейка не заполнена
-                sendHostNum = 0; //сбросили текущий хост
+                sendHostNum = i; //установили текущий хост
                 strncpy(settings.send[i], buffSendIp, 20); //копируем себе
                 settings.send[i][19] = '\0'; //устанавливаем последний символ
-                strncpy(settings.send[i + 1], buffSendName, 20); //копируем себе
-                settings.send[i + 1][19] = '\0'; //устанавливаем последний символ
+                settings.attempt[i] = buffSendAttempt; //копируем себе
                 memory.update(); //обновить данные в памяти
                 break;
               }
@@ -403,9 +397,8 @@ void action() {
         strncpy(buffSendIp, ui.getString("extSendIp").c_str(), 20); //копируем себе
         buffSendIp[19] = '\0'; //устанавливаем последний символ
       }
-      if (ui.click("extSendName")) {
-        strncpy(buffSendName, ui.getString("extSendName").c_str(), 20); //копируем себе
-        buffSendName[19] = '\0'; //устанавливаем последний символ
+      if (ui.click("extSendAttempt")) {
+        buffSendAttempt = constrain(ui.getInt("extSendAttempt"), 1, 5); //копируем себе
       }
 
       if (ui.click("extClear")) {
@@ -432,12 +425,12 @@ void action() {
           if (ui.copyInt("wifiNetwork", network)) {
             strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
             settings.ssid[63] = '\0'; //устанавливаем последний символ
-            ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
-            settings.pass[63] = '\0'; //устанавливаем последний символ
-            wifiSetConnectStatus(); //подключиться к сети
-            memory.update(); //обновить данные в памяти
           }
         }
+        ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
+        settings.pass[63] = '\0'; //устанавливаем последний символ
+        wifiSetConnectStatus(); //подключиться к сети
+        memory.update(); //обновить данные в памяти
       }
     }
     else if (ui.form("/network")) {
@@ -784,32 +777,34 @@ void updateBuffer(void) {
 }
 //--------------------------------------------------------------------
 void sendUpdate(void) {
-  if (wifiGetConnectStatus() && (sendReady == true) && (sensorReady == true)) {
-    if (sendHostNum < (MAX_CLOCK * 2)) {
+  if (wifiGetConnectStatus() && (sensorReady == true)) {
+    if (sendHostNum < MAX_CLOCK) {
       if ((settings.send[sendHostNum][0] != '\0') || !sendHostNum) {
         updateBuffer(); //обновить буфер отправки
 #if DEBUG_MODE
-        Serial.print F("Send data to [ ");
+        Serial.print F("Send package to [ ");
         Serial.print((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR);
         Serial.println F(" ]...");
 #endif
-        if (!udp.beginPacket((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
-          sendReady = false; //сбросили флаг повторной попытки отправки данных
+        for (uint8_t i = ((settings.send[sendHostNum][0] != '\0') && (settingsMode == false)) ? settings.attempt[sendHostNum] : 1; i; i--) {
+          if (!udp.beginPacket((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
 #if DEBUG_MODE
-          Serial.println F("Send data fail!");
+            Serial.println F("Send package fail!");
+#endif
+            break;
+          }
+#if DEBUG_MODE
+          else {
+            Serial.println F("Send package ok...");
+          }
 #endif
         }
-        else {
-          sendHostNum += 2;
-#if DEBUG_MODE
-          Serial.println F("Send data ok...");
-#endif
-        }
+        sendHostNum++;
       }
       else {
-        sendHostNum = (MAX_CLOCK * 2);
+        sendHostNum = MAX_CLOCK;
 #if DEBUG_MODE
-        Serial.println F("Send all data completed...");
+        Serial.println F("Send all packages completed...");
 #endif
       }
     }
@@ -827,13 +822,11 @@ void timeUpdate(void) {
     if (updateTimer == sensorStartWait) checkSensors(); //проверка доступности сенсоров
     else if (updateTimer == (sensorStartWait + 1)) updateSensors(); //обновить показания сенсоров
     else if ((updateTimer > (SETTINGS_MODE_TIME - 15)) && (settingsMode == true) && ui.online()) updateTimer = (SETTINGS_MODE_TIME - 15); //сбросить таймер
-    else if (updateTimer > SETTINGS_MODE_TIME) sleepMode(); //отключить питание
+    else if (updateTimer > ((settingsMode == false) ? 15 : SETTINGS_MODE_TIME)) sleepMode(); //отключить питание
 
     if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
 
     if (updateTimer > 1) {
-      sendReady = true; //установили флаг повторной попытки отправки данных
-
       resetSettingsButton(); //сбросить нажатия кнопки настроек
 #if STATUS_LED > 0
       if ((settingsMode == true) && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
@@ -896,8 +889,11 @@ void setup() {
   //устанавливаем период по умолчанию
   settings.period = SEND_DATA_PERIOD;
 
-  //сбрасываем настройки группового управления
-  for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.send[i][0] = '\0';
+  //сбрасываем настройки отправки данных
+  for (uint8_t i = 0; i < MAX_CLOCK; i++) {
+    settings.send[i][0] = '\0';
+    settings.attempt[i] = 1;
+  }
 
   //сбрасываем настройки сети
   settings.ssid[0] = '\0';
@@ -905,7 +901,7 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xAB);
+  memory.begin(0, 0xAC);
 
   //подключаем конструктор и запускаем веб интерфейс
   if (settingsMode == true) {
