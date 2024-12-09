@@ -383,7 +383,7 @@ void action() {
                 sendHostNum = i; //установили текущий хост
                 strncpy(settings.send[i], buffSendIp, 20); //копируем себе
                 settings.send[i][19] = '\0'; //устанавливаем последний символ
-                settings.attempt[i] = buffSendAttempt; //копируем себе
+                settings.attempt[i] = constrain(buffSendAttempt, 1, 5); //копируем себе
                 memory.update(); //обновить данные в памяти
                 break;
               }
