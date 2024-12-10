@@ -102,6 +102,7 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 #include "DS.h"
 
 #include "WIFI.h"
+#include "PING.h"
 #include "utils.h"
 
 ADC_MODE(ADC_VCC);
@@ -784,7 +785,7 @@ void updateBuffer(void) {
 }
 //--------------------------------------------------------------------
 void sendUpdate(void) {
-  if (wifiGetConnectStatus() && (sensorReady == true)) {
+  if (wifiGetConnectStatus() && pingCheck() && (sensorReady == true)) {
     if (sendHostNum < MAX_CLOCK) {
       if ((settings.send[sendHostNum][0] != '\0') || !sendHostNum) {
         updateBuffer(); //обновить буфер отправки
