@@ -40,7 +40,7 @@
 #define UI_MENU_TEXT_COLOR "#aaa" //цвет текста блоков меню веб интерфейса
 #define UI_MENU_WIFI_COLOR "#e67b09" //цвет блока меню уровень сигнала wifi веб интерфейса
 
-#define UI_BAR_BATTERY_COLOR GP_WHITE //цвет времени в статус баре
+#define UI_BAR_BATTERY_COLOR GP_WHITE //цвет заряда батареи в статус баре
 #define UI_BAR_TEMP_COLOR GP_GREEN //цвет температуры в статус баре
 #define UI_BAR_HUM_COLOR GP_BLUE //цвет влажности в статус баре
 #define UI_BAR_PRESS_COLOR GP_PINK //цвет давления в статус баре

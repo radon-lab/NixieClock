@@ -141,9 +141,9 @@ boolean wifiUpdate(void) {
 #if DEBUG_MODE
       Serial.println F("Wifi start connecting...");
 #endif
-      if (WIFI_SETTINGS[7] == 0xCC) {
+      if ((WIFI_SETTINGS[7] == 0xCC) && (settingsMode == false)) {
         wifi_status = WiFi.begin(settings.ssid, settings.pass, WIFI_SETTINGS[6], WIFI_SETTINGS); //подключаемся к wifi
-        WiFi.config(WIFI_LOCAL_IP, WIFI_GATEWAY_IP, WIFI_SUBNET_MASK); //восстанавливаем настройки dhcp
+        WiFi.config(WIFI_LOCAL_IP, WIFI_GATEWAY_IP, WIFI_SUBNET_MASK, WIFI_DNS_1, WIFI_DNS_2); //восстанавливаем настройки dhcp
       }
       else wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
 
@@ -185,6 +185,8 @@ boolean wifiUpdate(void) {
         WIFI_LOCAL_IP[i] = WiFi.localIP()[i];
         WIFI_GATEWAY_IP[i] = WiFi.gatewayIP()[i];
         WIFI_SUBNET_MASK[i] = WiFi.subnetMask()[i];
+        WIFI_DNS_1[i] = WiFi.dnsIP(0)[i];
+        WIFI_DNS_2[i] = WiFi.dnsIP(1)[i];
       }
       if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
 #if DEBUG_MODE

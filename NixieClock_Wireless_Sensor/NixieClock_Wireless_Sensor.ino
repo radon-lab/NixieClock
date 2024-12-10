@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 09.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 10.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -47,7 +47,7 @@ char buffSendIp[20]; //буфер ip адреса
 uint8_t buffSendAttempt; //буфер количества попыток
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
 
-uint32_t rtcMemory[7]; //память нажатий кнопки сброса
+uint32_t rtcMemory[9]; //память нажатий кнопки сброса
 
 uint8_t sendHostNum = 0; //текущий номер хоста
 
@@ -86,6 +86,8 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 #define WIFI_LOCAL_IP ((uint8_t*)&rtcMemory[4])
 #define WIFI_GATEWAY_IP ((uint8_t*)&rtcMemory[5])
 #define WIFI_SUBNET_MASK ((uint8_t*)&rtcMemory[6])
+#define WIFI_DNS_1 ((uint8_t*)&rtcMemory[7])
+#define WIFI_DNS_2 ((uint8_t*)&rtcMemory[8])
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -574,12 +576,14 @@ void checkSettingsButton(void) {
   if (ESP.rtcUserMemoryRead(32, rtcMemory, sizeof(rtcMemory))) {
     if ((rtcMemory[0] ^ rtcMemory[1]) != 0xFFFFFFFF) {
       rtcMemory[0] = 0; //сбросили нажатия кнопки
-      rtcMemory[1] = 0xFFFFFFFF; //сбросили контрольную сумму
-      rtcMemory[2] = 0xFFFFFFFF; //сбросили блок настроек wifi
-      rtcMemory[3] = 0xFFFFFFFF; //сбросили блок настроек wifi
-      rtcMemory[4] = 0xFFFFFFFF; //сбросили блок настроек dhcp
-      rtcMemory[5] = 0xFFFFFFFF; //сбросили блок настроек dhcp
-      rtcMemory[6] = 0xFFFFFFFF; //сбросили блок настроек dhcp
+      rtcMemory[1] = 0xFFFFFFFF; //установили контрольную сумму
+      rtcMemory[2] = 0x00; //сбросили блок настроек wifi
+      rtcMemory[3] = 0x00; //сбросили блок настроек wifi
+      rtcMemory[4] = 0x00; //сбросили блок настроек dhcp
+      rtcMemory[5] = 0x00; //сбросили блок настроек dhcp
+      rtcMemory[6] = 0x00; //сбросили блок настроек dhcp
+      rtcMemory[7] = 0x00; //сбросили блок настроек dns
+      rtcMemory[8] = 0x00; //сбросили блок настроек dns
 
       sensorStartWait = 2;
 #if DEBUG_MODE
