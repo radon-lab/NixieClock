@@ -184,14 +184,15 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   if (climateDates[CLIMATE_BUFFER - 1] > unix) {
     climateDefault(temp, hum, press, unix);
   }
+  else if (climateDates[CLIMATE_BUFFER - 1] == unix) {
+    climateArrMain[0][CLIMATE_BUFFER - 1] = temp;
+    if (hum) climateArrMain[1][CLIMATE_BUFFER - 1] = hum * 10;
+    if (press) climateArrExt[0][CLIMATE_BUFFER - 1] = press;
+  }
   else {
     GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
-    if (hum) {
-      GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
-    }
-    if (press) {
-      GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
-    }
+    if (hum) GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
+    if (press) GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
     GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
   }
 }

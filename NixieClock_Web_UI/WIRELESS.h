@@ -108,20 +108,10 @@ String wirelessGetId(uint8_t* id) {
   return str;
 }
 //--------------------------------------------------------------------
-void wirelessSetData(uint8_t* _buff) {
-  int16_t _temp = _buff[7] | ((int16_t)_buff[8] << 8);
-  if (_temp != 0x7FFF) {
-    sens.temp[SENS_WIRELESS] = _temp;
-    sens.press[SENS_WIRELESS] = _buff[9] | ((uint16_t)_buff[10] << 8);
-    sens.hum[SENS_WIRELESS] = _buff[11];
-    wireless_status = WIRELESS_ONLINE;
-  }
-  else wireless_status = WIRELESS_NOT_SENSOR;
-  wireless_battery = _buff[12];
-  wireless_signal = _buff[13];
-  wireless_interval = _buff[14];
-  wireless_timeout = 120000UL * (_buff[14] + 1);
-  wireless_timer = millis();
+void wirelessResetData(void) {
+  sens.temp[SENS_WIRELESS] = 0x7FFF;
+  sens.press[SENS_WIRELESS] = 0;
+  sens.hum[SENS_WIRELESS] = 0;
 }
 void wirelessCopyData(void) {
   if (wireless_found != true) {
@@ -130,6 +120,29 @@ void wirelessCopyData(void) {
       wireless_found_buffer[i] = wireless_buffer[i];
     }
   }
+}
+boolean wirelessSetData(uint8_t* _buff) {
+  boolean _update = false;
+  int16_t _temp = _buff[7] | ((int16_t)_buff[8] << 8);
+  if (_temp != 0x7FFF) {
+    uint16_t _press = _buff[9] | ((uint16_t)_buff[10] << 8);
+    if (((millis() - wireless_timer) >= 30000) || (sens.temp[SENS_WIRELESS] != _temp) || (sens.press[SENS_WIRELESS] != _press) || (sens.hum[SENS_WIRELESS] != _buff[11])) _update = true;
+    sens.temp[SENS_WIRELESS] = _temp;
+    sens.press[SENS_WIRELESS] = _press;
+    sens.hum[SENS_WIRELESS] = _buff[11];
+    wireless_status = WIRELESS_ONLINE;
+  }
+  else {
+    _update = true;
+    wirelessResetData();
+    wireless_status = WIRELESS_NOT_SENSOR;
+  }
+  wireless_battery = _buff[12];
+  wireless_signal = _buff[13];
+  wireless_interval = _buff[14];
+  wireless_timeout = 120000UL * (_buff[14] + 1);
+  wireless_timer = millis();
+  return _update;
 }
 boolean wirelessCheckData(void) {
   uint8_t _crc = 0; //буфер контрольной суммы
@@ -156,17 +169,14 @@ boolean wirelessUpdate(void) {
       if (wireless.remotePort() == WIRELESS_SENSOR_PORT) {
         if (wireless.read(wireless_buffer, WIRELESS_PACKET_SIZE) == WIRELESS_PACKET_SIZE) {
           if (wirelessCheckData() && wireless_buffer[6]) {
-            if (wirelessCheckId()) wirelessSetData(wireless_buffer);
+            if (wirelessCheckId()) return wirelessSetData(wireless_buffer);
             else if (wireless_buffer[6] == WIRELESS_SET_CMD) wirelessCopyData();
-            return true;
           }
         }
       }
     }
     if (wireless_timeout && ((millis() - wireless_timer) >= wireless_timeout)) {
-      sens.temp[SENS_WIRELESS] = 0x7FFF;
-      sens.press[SENS_WIRELESS] = 0;
-      sens.hum[SENS_WIRELESS] = 0;
+      wirelessResetData();
       wireless_timeout = 0;
       wireless_status = WIRELESS_OFFLINE;
       return true;

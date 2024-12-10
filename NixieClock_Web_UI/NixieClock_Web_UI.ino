@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 05.11.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 10.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -2222,7 +2222,7 @@ boolean sensorAvaibleData(void) {
 }
 //--------------------------------------------------------------------
 boolean sensorGetValidStatus(void) {
-  return (boolean)(climateAvailableTemp(settings.climateChart));
+  return (boolean)(climateAvailableTemp(settings.climateChart) || ((settings.climateChart == SENS_WIRELESS) && wirelessGetSensorStastus()));
 }
 //--------------------------------------------------------------------
 boolean sensorGetDisabledStatus(void) {
