@@ -658,7 +658,7 @@ void sleepMode(void) {
 //--------------------------------------------------------------------
 void lowBattery(void) {
 #if DEBUG_MODE
-  Serial.print F("Battery low, power down...");
+  Serial.println F("Battery low, power down...");
 #endif
 #if STATUS_LED > 0
   for (uint8_t i = 0; i < 5; i++) {
@@ -667,6 +667,7 @@ void lowBattery(void) {
   }
   digitalWrite(LED_BUILTIN, HIGH);
 #endif
+  resetSettingsButton(); //сбросить нажатия кнопки настроек
   ESP.deepSleep(0); //уходим в сон
 }
 //--------------------------------------------------------------------
@@ -674,6 +675,24 @@ void checkBattery(void) {
   vccVoltage = ESP.getVcc();
   if (vccVoltage > BAT_VOLTAGE_CORRECT) vccVoltage -= BAT_VOLTAGE_CORRECT;
   if (!getBatteryCharge()) lowBattery();
+}
+//--------------------------------------------------------------------
+void checkSettings(void) {
+  if (settings.ssid[0] == '\0') {
+    delay(1000);
+    resetSettingsButton(); //сбросить нажатия кнопки настроек
+#if DEBUG_MODE
+    Serial.println F("Wifi is not configured, power down...");
+#endif
+#if STATUS_LED > 0
+    for (uint8_t i = 0; i < 3; i++) {
+      digitalWrite(LED_BUILTIN, (boolean)(i & 0x01));
+      delay(500);
+    }
+    digitalWrite(LED_BUILTIN, HIGH);
+#endif
+    ESP.deepSleep(0); //уходим в сон
+  }
 }
 //--------------------------------------------------------------------
 void checkSensors(void) {
@@ -911,6 +930,9 @@ void setup() {
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
   memory.begin(0, 0xAD);
+
+  //проверяем настройки сети
+  if (settingsMode == false) checkSettings();
 
   //подключаем конструктор и запускаем веб интерфейс
   if (settingsMode == true) {
