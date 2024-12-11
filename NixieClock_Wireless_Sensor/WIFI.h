@@ -144,9 +144,6 @@ boolean wifiUpdate(void) {
 #endif
     }
     else if (wifi_status == 254) { //если нужно подключиться
-#if DEBUG_MODE
-      Serial.println F("Wifi start connecting...");
-#endif
       if ((WIFI_SETTINGS[7] == 0xCC) && (settingsMode == false)) {
         wifi_status = WiFi.begin(settings.ssid, settings.pass, WIFI_SETTINGS[6], WIFI_SETTINGS); //подключаемся к wifi
         WiFi.config(WIFI_LOCAL_IP, WIFI_GATEWAY_IP, WIFI_SUBNET_MASK, WIFI_DNS_1, WIFI_DNS_2); //восстанавливаем настройки dhcp
