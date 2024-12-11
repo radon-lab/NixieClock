@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 10.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 11.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -32,8 +32,8 @@ struct settingsData {
   uint8_t period;
   char ssid[64];
   char pass[64];
-  char send[MAX_CLOCK][20];
   uint8_t attempt[MAX_CLOCK];
+  IPAddress send[MAX_CLOCK];
 } settings;
 
 #include <EEManager.h>
@@ -311,9 +311,9 @@ void build(void) {
         if (i) {
           GP.HR(UI_MENU_LINE_COLOR);
         }
-        if (settings.send[i][0] != '\0') {
+        if (settings.send[i]) {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.send[i], "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
+            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.send[i].toString(), "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
             GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
         }
@@ -372,25 +372,28 @@ void action() {
     if (ui.clickSub("ext")) {
       if (ui.clickSub("extSendDel")) {
         for (uint8_t multiNum = constrain(ui.clickNameSub(1).toInt(), 0, (MAX_CLOCK - 1)); multiNum < (MAX_CLOCK - 1); multiNum++) {
-          strncpy(settings.send[multiNum], settings.send[multiNum + 1], 20); //копируем себе
+          settings.send[multiNum] = settings.send[multiNum + 1]; //смещаем адреса
+          settings.attempt[multiNum] = settings.attempt[multiNum + 1]; //смещаем количество попыток
         }
-        settings.send[MAX_CLOCK - 1][0] = '\0'; //сбрасываем адрес отправки
+        settings.send[MAX_CLOCK - 1] = IPAddress(0, 0, 0, 0); //сбрасываем адрес отправки
         settings.attempt[MAX_CLOCK - 1] = 1; //устанавливаем попытки по умолчанию
         memory.update(); //обновить данные в памяти
       }
       if (ui.click("extSendAdd")) {
         if (buffSendIp[0] != '\0') { //если строка не пустая
-          if (!WiFi.localIP().toString().equals(buffSendIp)) { //если не собственный адрес
-            for (uint8_t i = 0; i < MAX_CLOCK; i++) {
-              if (settings.send[i][0] == '\0') { //если ячейка не заполнена
-                sendHostNum = i; //установили текущий хост
-                strncpy(settings.send[i], buffSendIp, 20); //копируем себе
-                settings.send[i][19] = '\0'; //устанавливаем последний символ
-                settings.attempt[i] = constrain(buffSendAttempt, 1, 5); //копируем себе
-                memory.update(); //обновить данные в памяти
-                break;
+          IPAddress _send_ip; //ip адрес нового хоста
+          if (_send_ip.fromString(buffSendIp)) { //если адрес действительный
+            if (WiFi.localIP() != _send_ip) { //если не собственный адрес
+              for (uint8_t i = 0; i < MAX_CLOCK; i++) {
+                if (!settings.send[i]) { //если ячейка не заполнена
+                  sendHostNum = i; //установили текущий хост
+                  settings.send[i] = _send_ip; //копируем адрес
+                  settings.attempt[i] = constrain(buffSendAttempt, 1, 5); //копируем количество попыток
+                  memory.update(); //обновить данные в памяти
+                  break;
+                }
+                else if (settings.send[i] == _send_ip) break;
               }
-              else if (String(settings.send[i]).equals(buffSendIp)) break;
             }
           }
         }
@@ -638,8 +641,6 @@ void sleepMode(void) {
   if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
 #endif
 
-  delay(100); //ждем окончания передачи
-
   ui.stop(); //остановить ui
   udp.stop(); //остановить udp
 
@@ -787,15 +788,14 @@ void updateBuffer(void) {
 void sendUpdate(void) {
   if (wifiGetConnectStatus() && pingCheck() && (sensorReady == true)) {
     if (sendHostNum < MAX_CLOCK) {
-      if ((settings.send[sendHostNum][0] != '\0') || !sendHostNum) {
+      if (settings.send[sendHostNum] || !sendHostNum) {
         updateBuffer(); //обновить буфер отправки
 #if DEBUG_MODE
-        Serial.print F("Send package to [ ");
-        Serial.print((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR);
-        Serial.println F(" ]...");
+        Serial.print F("Send package to IP address: ");
+        Serial.println((settings.send[sendHostNum]) ? settings.send[sendHostNum].toString() : wifiGetBroadcastIP().toString());
 #endif
-        for (uint8_t i = ((settings.send[sendHostNum][0] != '\0') && (settingsMode == false)) ? settings.attempt[sendHostNum] : 1; i; i--) {
-          if (!udp.beginPacket((settings.send[sendHostNum][0] != '\0') ? settings.send[sendHostNum] : UDP_BROADCAST_ADDR, UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
+        for (uint8_t i = ((settings.send[sendHostNum]) && (settingsMode == false)) ? settings.attempt[sendHostNum] : 1; i; i--) {
+          if (!udp.beginPacket((settings.send[sendHostNum]) ? settings.send[sendHostNum] : wifiGetBroadcastIP(), UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
 #if DEBUG_MODE
             Serial.println F("Send package fail!");
 #endif
@@ -811,6 +811,7 @@ void sendUpdate(void) {
       }
       else {
         sendHostNum = MAX_CLOCK;
+        pingReset();
 #if DEBUG_MODE
         Serial.println F("Send all packages completed...");
 #endif
@@ -899,7 +900,7 @@ void setup() {
 
   //сбрасываем настройки отправки данных
   for (uint8_t i = 0; i < MAX_CLOCK; i++) {
-    settings.send[i][0] = '\0';
+    settings.send[i] = IPAddress(0, 0, 0, 0);
     settings.attempt[i] = 1;
   }
 
@@ -909,7 +910,7 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xAC);
+  memory.begin(0, 0xAD);
 
   //подключаем конструктор и запускаем веб интерфейс
   if (settingsMode == true) {

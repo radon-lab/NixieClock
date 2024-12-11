@@ -8,6 +8,7 @@ enum {
 };
 uint8_t ping_state = PING_START;
 
+//--------------------------------------------------------------------
 void pingUpdate(void *opt, void *resp) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -25,7 +26,11 @@ void pingUpdate(void *opt, void *resp) {
 #endif
   ping_state = PING_END;
 }
-
+//--------------------------------------------------------------------
+void pingReset(void) {
+  if (ping_state == PING_END) ping_state = PING_START;
+}
+//--------------------------------------------------------------------
 boolean pingCheck(void) {
   switch (ping_state) {
     case PING_START:

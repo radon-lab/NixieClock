@@ -55,7 +55,6 @@
 #define UDP_SEND_SIZE 16 //размер пакета данных(16)
 #define UDP_LOCAL_PORT 888 //локальный порт udp(888)
 #define UDP_CLOCK_PORT 8888 //порт udp часов(8888)
-#define UDP_BROADCAST_ADDR "255.255.255.255" //широковещательный адрес(255.255.255.255)
 
 #define UDP_WRITE_CMD 0xFF //команда отправки данных(0xFF)
 #define UDP_FOUND_CMD 0xCC //команда обнаружения датчика(0xCC)

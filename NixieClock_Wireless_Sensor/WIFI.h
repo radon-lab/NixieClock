@@ -7,6 +7,12 @@ uint32_t wifi_interval = 0; //интервал переподключения к
 String wifi_scan_list = "Нет сетей"; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
+IPAddress wifiGetBroadcastIP(void) {
+  struct ip_info data;
+  wifi_get_ip_info(STATION_IF, &data);
+  return IPAddress(data.ip.addr | ~(data.netmask.addr));
+}
+//--------------------------------------------------------------------
 String wifiGetConnectState(void) {
   String data = "<big><big>";
   if (!settings.ssid[0]) data += "Некорректное имя сети!";
