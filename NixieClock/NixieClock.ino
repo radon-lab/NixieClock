@@ -1,7 +1,7 @@
 /*
   Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 17.11.24
-  Специльно для проекта "Часы на ГРИ и Arduino v2 | AlexGyver" - https://alexgyver.ru/nixieclock_v2
-  Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
+  Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
+  Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab.

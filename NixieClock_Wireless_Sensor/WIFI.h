@@ -152,10 +152,19 @@ boolean wifiUpdate(void) {
 
       timerWifi = millis(); //сбросили таймер
       if (wifi_status != WL_CONNECT_FAILED) {
-        if ((WIFI_SETTINGS[7] == 0xCC) && (settingsMode == false)) wifi_interval = 3000; //устанавливаем интервал ожидания
-        else wifi_interval = 15000; //устанавливаем интервал ожидания
+        if ((WIFI_SETTINGS[7] == 0xCC) && (settingsMode == false)) {
+          wifi_interval = 3000; //устанавливаем интервал ожидания
 #if DEBUG_MODE
-        Serial.print F("Wifi connecting to \"");
+          Serial.print F("Wifi fast connecting to \"");
+#endif
+        }
+        else {
+          wifi_interval = 15000; //устанавливаем интервал ожидания
+#if DEBUG_MODE
+          Serial.print F("Wifi connecting to \"");
+#endif
+        }
+#if DEBUG_MODE
         Serial.print(settings.ssid);
         Serial.println F("\"...");
 #endif
