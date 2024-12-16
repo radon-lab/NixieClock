@@ -176,7 +176,10 @@ void climateReset(void) {
 //--------------------------------------------------------------------
 void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
-    climateAdd(temp, hum, press, unix);
+    climateArrMain[0][i] = temp;
+    if (hum) climateArrMain[1][i] = hum * 10;
+    if (press) climateArrExt[0][i] = press;
+    climateDates[i] = unix;
   }
 }
 //--------------------------------------------------------------------

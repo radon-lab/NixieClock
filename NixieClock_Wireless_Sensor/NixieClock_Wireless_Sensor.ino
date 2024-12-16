@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 11.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 16.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -49,7 +49,10 @@ uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
 
 uint32_t rtcMemory[9]; //память нажатий кнопки сброса
 
+boolean sendAnswerWait = false; //флаг ожидания ответа от хоста
 uint8_t sendHostNum = 0; //текущий номер хоста
+uint8_t sendHostAttempt = 0; //текущий номер попытки отправки данных хоста
+uint32_t sendAnswerTimer = 0; //таймер ожидания ответа от хоста
 
 boolean otaUpdate = true; //флаг запрета обновления есп
 boolean settingsMode = false; //флаг режима настройки сенсора
@@ -307,13 +310,16 @@ void build(void) {
 
     if (ui.uri("/network") && wifiGetConnectStatus()) { //сетевые настройки
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка данных", UI_BLOCK_COLOR);
+
+      IPAddress addrSend;
       for (uint8_t i = 0; i < MAX_CLOCK; i++) {
         if (i) {
           GP.HR(UI_MENU_LINE_COLOR);
         }
-        if (settings.send[i]) {
+        addrSend = settings.send[i];
+        if (addrSend) {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.send[i].toString(), "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
+            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", addrSend.toString(), "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
             GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
           );
         }
@@ -361,6 +367,7 @@ void buildUpdater(bool UpdateEnd, const String & UpdateError) {
     GP.HR(UI_LINE_COLOR);
     M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
     GP.UPDATE("syncUpdate,syncWarn");
+    setUpdateCompleted();
   }
   GP.BLOCK_END();
 
@@ -594,7 +601,7 @@ void checkSettingsButton(void) {
       Serial.println F("Settings button reset!");
 #endif
     }
-    else {
+    else if (rtcMemory[0] < 64) {
       rtcMemory[0]++; //добавили нажатие кнопки
       rtcMemory[1] = rtcMemory[0] ^ 0xFFFFFFFF; //установили контрольную сумму
 #if DEBUG_MODE
@@ -628,6 +635,16 @@ void resetSettingsButton(void) {
       Serial.println F("Settings button reset!");
 #endif
     }
+  }
+}
+//--------------------------------------------------------------------
+void setUpdateCompleted(void) {
+  rtcMemory[0] = 64; //установили флаг завершения обновления
+  rtcMemory[1] = rtcMemory[0] ^ 0xFFFFFFFF; //установили контрольную сумму
+  if (ESP.rtcUserMemoryWrite(32, rtcMemory, sizeof(rtcMemory))) {
+#if DEBUG_MODE
+    Serial.println F("Firmware mark update!");
+#endif
   }
 }
 //--------------------------------------------------------------------
@@ -779,7 +796,9 @@ void updateBuffer(void) {
 
     efuseGetDefaultMacAddress(buffSendData); //получить mac адрес
 
-    buffSendData[6] = (settingsMode == true) ? UDP_FOUND_CMD : UDP_WRITE_CMD;
+    if (settingsMode == true) buffSendData[6] = UDP_FOUND_CMD;
+    else if (settings.send[0]) buffSendData[6] = UDP_ANSWER_CMD;
+    else buffSendData[6] = UDP_WRITE_CMD;
 
     buffSendData[7] = (uint8_t)sens.temp;
     buffSendData[8] = (uint8_t)(sens.temp >> 8);
@@ -804,33 +823,81 @@ void updateBuffer(void) {
   }
 }
 //--------------------------------------------------------------------
+boolean sendCheck(void) {
+  if (sendAnswerWait) {
+    if (udp.parsePacket() == UDP_ANSWER_SIZE) {
+      if (udp.remotePort() == UDP_CLOCK_PORT) {
+        if (udp.remoteIP() == settings.send[sendHostNum]) {
+          if (udp.read() == UDP_ANSWER_CMD) {
+#if DEBUG_MODE
+            Serial.println F("Send answer ok...");
+#endif
+            sendHostAttempt = 0;
+            sendHostNum++;
+          }
+#if DEBUG_MODE
+          else {
+            Serial.println F("Send answer error!");
+          }
+#endif
+          sendAnswerWait = false;
+        }
+      }
+    }
+    else if ((millis() - sendAnswerTimer) >= UDP_ANSWER_WAIT_TIME) {
+#if DEBUG_MODE
+      Serial.println F("Send answer timeout!");
+#endif
+      sendAnswerWait = false;
+    }
+  }
+  return !sendAnswerWait;
+}
+//--------------------------------------------------------------------
+void sendReset(void) {
+#if DEBUG_MODE
+  Serial.println F("Send wait answer...");
+#endif
+  udp.flush();
+  sendAnswerWait = true;
+  sendAnswerTimer = millis();
+}
+//--------------------------------------------------------------------
 void sendUpdate(void) {
-  if (wifiGetConnectStatus() && pingCheck() && (sensorReady == true)) {
+  if (wifiGetConnectStatus() && pingCheck() && sendCheck() && (sensorReady == true)) {
     if (sendHostNum < MAX_CLOCK) {
       if (settings.send[sendHostNum] || !sendHostNum) {
         updateBuffer(); //обновить буфер отправки
 #if DEBUG_MODE
         Serial.print F("Send package to IP address: ");
-        Serial.println((settings.send[sendHostNum]) ? settings.send[sendHostNum].toString() : wifiGetBroadcastIP().toString());
+        if (settings.send[sendHostNum]) {
+          IPAddress addr = settings.send[sendHostNum];
+          Serial.println(addr.toString());
+        }
+        else Serial.println(wifiGetBroadcastIP().toString());
 #endif
-        for (uint8_t i = ((settings.send[sendHostNum]) && (settingsMode == false)) ? settings.attempt[sendHostNum] : 1; i; i--) {
-          if (!udp.beginPacket((settings.send[sendHostNum]) ? settings.send[sendHostNum] : wifiGetBroadcastIP(), UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
+        if (!udp.beginPacket((settings.send[sendHostNum]) ? settings.send[sendHostNum] : wifiGetBroadcastIP(), UDP_CLOCK_PORT) || (udp.write(buffSendData, UDP_SEND_SIZE) != UDP_SEND_SIZE) || !udp.endPacket()) {
 #if DEBUG_MODE
-            Serial.println F("Send package fail!");
-#endif
-            break;
-          }
-#if DEBUG_MODE
-          else {
-            Serial.println F("Send package ok...");
-          }
+          Serial.println F("Send package fail!");
 #endif
         }
-        sendHostNum++;
+#if DEBUG_MODE
+        else {
+          Serial.println F("Send package ok...");
+        }
+#endif
+        if (buffSendData[6] == UDP_ANSWER_CMD) {
+          if (++sendHostAttempt >= settings.attempt[sendHostNum]) {
+            sendHostAttempt = 0;
+            sendHostNum++;
+          }
+          sendReset();
+        }
+        else sendHostNum++;
       }
       else {
         sendHostNum = MAX_CLOCK;
-        pingReset();
+        if (buffSendData[6] != UDP_ANSWER_CMD) pingReset();
 #if DEBUG_MODE
         Serial.println F("Send all packages completed...");
 #endif

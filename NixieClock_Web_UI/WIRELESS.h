@@ -2,7 +2,8 @@
 #define WIRELESS_LOCAL_PORT 8888 //локальный порт(8888)
 #define WIRELESS_SENSOR_PORT 888 //локальный порт(888)
 
-#define WIRELESS_SET_CMD 0xCC //команда обнаружение нового беспроводного датчика
+#define WIRELESS_SET_CMD 0xCC //команда обнаружение нового беспроводного датчика(0xCC)
+#define WIRELESS_ANSW_CMD 0xAA //команда отправки ответа беспроводному датчику(0xAA)
 
 enum {
   WIRELESS_STOPPED, //сервис не запущен
@@ -163,12 +164,19 @@ boolean wirelessCheckId(void) {
   return 1;
 }
 //--------------------------------------------------------------------
+void wirelessSendAnswer(uint8_t answ) {
+  wireless.beginPacket(wireless.remoteIP(), wireless.remotePort());
+  wireless.write(answ);
+  wireless.endPacket();
+}
+//--------------------------------------------------------------------
 boolean wirelessUpdate(void) {
   if (wireless_status != WIRELESS_STOPPED) {
     if (wireless.parsePacket() == WIRELESS_PACKET_SIZE) {
       if (wireless.remotePort() == WIRELESS_SENSOR_PORT) {
         if (wireless.read(wireless_buffer, WIRELESS_PACKET_SIZE) == WIRELESS_PACKET_SIZE) {
           if (wirelessCheckData() && wireless_buffer[6]) {
+            if (wireless_buffer[6] == WIRELESS_ANSW_CMD) wirelessSendAnswer(WIRELESS_ANSW_CMD);
             if (wirelessCheckId()) return wirelessSetData(wireless_buffer);
             else if (wireless_buffer[6] == WIRELESS_SET_CMD) wirelessCopyData();
           }

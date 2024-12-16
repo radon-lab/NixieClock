@@ -58,5 +58,9 @@
 
 #define UDP_WRITE_CMD 0xFF //команда отправки данных(0xFF)
 #define UDP_FOUND_CMD 0xCC //команда обнаружения датчика(0xCC)
+#define UDP_ANSWER_CMD 0xAA //команда ожидания ответа(0xAA)
+
+#define UDP_ANSWER_SIZE 1 //размер пакета ответа(1)
+#define UDP_ANSWER_WAIT_TIME 1000 //время ожидания ответа(100..2000)(мс)
 
 #define ESP_FIRMWARE_VERSION "1.1.6" //версия прошивки модуля esp

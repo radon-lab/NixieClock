@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 10.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 16.12.24
   Специльно для проекта "Часы на ГРИ v2. Альтернативная прошивка"
   Страница проекта - https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/
 
@@ -795,20 +795,27 @@ void build(void) {
     else if (ui.uri("/climate")) { //микроклимат
       GP_PAGE_TITLE("Микроклимат");
 
-      uint16_t heightSize = 500;
-      if (climateGetChartPress()) heightSize = 300;
-
       GP.BLOCK_BEGIN(GP_THIN, "", "Микроклимат", UI_BLOCK_COLOR);
-      GP_PLOT_STOCK_BEGIN(climateLocal);
+      if (climateDates[CLIMATE_BUFFER - 1] != 0) {
+        uint16_t heightSize = 500;
+        if (climateGetChartPress()) heightSize = 300;
 
-      if (climateGetChartHum()) {
-        GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        GP_PLOT_STOCK_BEGIN(climateLocal);
+
+        if (climateGetChartHum()) {
+          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        }
+        else {
+          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        }
+        if (climateGetChartPress()) {
+          GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 0, heightSize, UI_BAR_PRESS_COLOR);
+        }
       }
       else {
-        GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
-      }
-      if (climateGetChartPress()) {
-        GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 0, heightSize, UI_BAR_PRESS_COLOR);
+        GP.BLOCK_BEGIN(GP_TAB, "93%;padding:20% 5px", "", GP_DEFAULT);
+        GP.LABEL("Нет актуальных данных...", "", GP_GRAY, 40, true, true); //описание
+        GP.BLOCK_END();
       }
 
       GP.BREAK();

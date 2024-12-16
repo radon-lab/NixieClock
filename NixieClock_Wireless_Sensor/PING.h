@@ -21,7 +21,7 @@ void pingUpdate(void *opt, void *resp) {
     Serial.println("ms");
   }
   else {
-    Serial.println("Ping end error!");
+    Serial.println("Ping end timeout!");
   }
 #endif
   ping_state = PING_END;
