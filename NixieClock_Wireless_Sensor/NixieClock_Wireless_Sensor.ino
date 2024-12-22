@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 16.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 22.12.24
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -650,7 +650,11 @@ void setUpdateCompleted(void) {
 //--------------------------------------------------------------------
 void sleepMode(void) {
 #if DEBUG_MODE
+#if SLEEP_MODE
   Serial.print F("Sleep mode, wake after ");
+#else
+  Serial.print F("Wait mode, wake after ");
+#endif
   Serial.print(sleepTime[settings.period]);
   Serial.println F(" min...");
 #endif
@@ -789,7 +793,7 @@ void updateSensors(void) {
 }
 //--------------------------------------------------------------------
 void updateBuffer(void) {
-  boolean _init = false; //флаг инициализации данных
+  static boolean _init = false; //флаг инициализации данных
 
   if (_init != true) { //если данные не сформированы
     _init = true; //устанавливаем флаг инициализации данных
