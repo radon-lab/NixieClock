@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.5 релиз от 16.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.6 релиз от 22.12.24
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -803,13 +803,13 @@ void build(void) {
         GP_PLOT_STOCK_BEGIN(climateLocal);
 
         if (climateGetChartHum()) {
-          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
         else {
-          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
         if (climateGetChartPress()) {
-          GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 0, heightSize, UI_BAR_PRESS_COLOR);
+          GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 2, 0, heightSize, UI_BAR_PRESS_COLOR);
         }
       }
       else {
@@ -855,28 +855,35 @@ void build(void) {
       GP_PAGE_TITLE("Погода");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Погода на сутки", UI_BLOCK_COLOR);
-      GP_PLOT_STOCK_BEGIN(climateLocal);
-      GP_PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
-      GP_PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 10, 300, UI_BAR_PRESS_COLOR);
-      GP.BREAK();
-      GP.BLOCK_END();
-
-      uint8_t time_start = (weatherDates[0] % 86400UL) / 3600UL;
-
-      GP.BLOCK_BEGIN(GP_THIN, "", "Погода по часам", UI_BLOCK_COLOR);
-      for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
-        if (i) {
-          GP.HR(UI_MENU_LINE_COLOR);
-          GP.BREAK();
-        }
-        M_BOX(
-          GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", GP_DEFAULT, 30);
-          GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_BAR_TEMP_COLOR);
-          GP.LABEL(String(weatherArrMain[1][i] / 10) + "%", "", UI_BAR_HUM_COLOR);
-          GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_BAR_PRESS_COLOR);
-        );
+      if (weatherGetValidStatus()) {
+        GP_PLOT_STOCK_BEGIN(climateLocal);
+        GP_PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 1, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        GP_PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 2, 10, 300, UI_BAR_PRESS_COLOR);
         GP.BREAK();
-        if (++time_start > 23) time_start = 0;
+        GP.BLOCK_END();
+
+        uint8_t time_start = (weatherDates[0] % 86400UL) / 3600UL;
+
+        GP.BLOCK_BEGIN(GP_THIN, "", "Погода по часам", UI_BLOCK_COLOR);
+        for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
+          if (i) {
+            GP.HR(UI_MENU_LINE_COLOR);
+            GP.BREAK();
+          }
+          M_BOX(
+            GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", GP_DEFAULT, 30);
+            GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_BAR_TEMP_COLOR);
+            GP.LABEL(String(weatherArrMain[1][i]) + "%", "", UI_BAR_HUM_COLOR);
+            GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_BAR_PRESS_COLOR);
+          );
+          GP.BREAK();
+          if (++time_start > 23) time_start = 0;
+        }
+      }
+      else {
+        GP.BLOCK_BEGIN(GP_TAB, "93%;padding:20% 5px", "", GP_DEFAULT);
+        GP.LABEL("Нет актуальных данных...", "", GP_GRAY, 40, true, true); //описание
+        GP.BLOCK_END();
       }
       GP.BLOCK_END();
     }
@@ -2258,7 +2265,7 @@ void weatherAveragData(void) {
   }
   else {
     sens.temp[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrMain[0][time_now], weatherArrMain[0][time_next]); //температура погоды
-    sens.hum[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]) / 10; //влажность погоды
+    sens.hum[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrMain[1][time_now], weatherArrMain[1][time_next]); //влажность погоды
     sens.press[SENS_WEATHER] = map(mainTime.minute, 0, 59, weatherArrExt[0][time_now], weatherArrExt[0][time_next]) / 10; //давление погоды
   }
 

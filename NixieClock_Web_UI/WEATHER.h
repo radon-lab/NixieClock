@@ -215,7 +215,6 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
             buf[i] = -buf[i];
           }
           switch (mod) {
-            case WEATHER_GET_HUM: buf[i] *= 10; break;
             case WEATHER_GET_PRESS: buf[i] = buf[i] * 0.750064; break;
             case WEATHER_GET_DAY: buf[i] = constrain(buf[i], 0, 1); break;
           }

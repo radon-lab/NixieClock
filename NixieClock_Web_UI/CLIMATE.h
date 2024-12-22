@@ -42,8 +42,6 @@ const char *climateDataList[] = {"(часы)", "(есп)", "(датчик)", "(�
 const char *climateShowList[] = {"Температура", "Влажность", "Давление", "Температура и влажность"};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
 
-void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix);
-
 //--------------------------------------------------------------------
 String climateGetSensList(uint8_t sens, boolean shift) {
   String str;
@@ -177,7 +175,7 @@ void climateReset(void) {
 void climateDefault(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   for (uint8_t i = 0; i < CLIMATE_BUFFER; i++) {
     climateArrMain[0][i] = temp;
-    if (hum) climateArrMain[1][i] = hum * 10;
+    if (hum) climateArrMain[1][i] = hum;
     if (press) climateArrExt[0][i] = press;
     climateDates[i] = unix;
   }
@@ -189,12 +187,12 @@ void climateAdd(int16_t temp, int16_t hum, int16_t press, uint32_t unix) {
   }
   else if (climateDates[CLIMATE_BUFFER - 1] == unix) {
     climateArrMain[0][CLIMATE_BUFFER - 1] = temp;
-    if (hum) climateArrMain[1][CLIMATE_BUFFER - 1] = hum * 10;
+    if (hum) climateArrMain[1][CLIMATE_BUFFER - 1] = hum;
     if (press) climateArrExt[0][CLIMATE_BUFFER - 1] = press;
   }
   else {
     GPaddInt(temp, climateArrMain[0], CLIMATE_BUFFER);
-    if (hum) GPaddInt(hum * 10, climateArrMain[1], CLIMATE_BUFFER);
+    if (hum) GPaddInt(hum, climateArrMain[1], CLIMATE_BUFFER);
     if (press) GPaddInt(press, climateArrExt[0], CLIMATE_BUFFER);
     GPaddUnix(unix, climateDates, CLIMATE_BUFFER);
   }

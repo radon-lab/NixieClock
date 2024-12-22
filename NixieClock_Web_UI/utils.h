@@ -266,6 +266,8 @@ void GP_LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, 
 void GP_PLOT_STOCK_BEGIN(boolean local = 0) {
   if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
   else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
+  *_GPP += F("<script src='https://code.highcharts.com/modules/exporting.js'></script>\n");
+
   GP.send();
 }
 void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
@@ -278,27 +280,49 @@ void GP_PLOT_STOCK_ADD(uint32_t time, int16_t val, uint8_t dec) {
   *_GPP += F("],\n");
   GP.send();
 }
-void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
+void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, int16_t* vals_0, int16_t* vals_1, uint8_t size, uint8_t type = 0, uint8_t dec = 0, uint16_t height = 400, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
   *_GPP += F("<div class='chartBlock' style='width:95%;height:");
   *_GPP += height;
   *_GPP += F("px' id='");
   *_GPP += id;
   *_GPP += F("'></div>");
 
-  *_GPP += F("<script>Highcharts.setOptions({colors:['");
+  *_GPP += F("<script>Highcharts.setOptions({"
+             "lang:{contextButtonTitle:'Меню',viewFullscreen:'Во весь экран',exitFullscreen:'Свернуть',"
+             "printChart:'Печать...',resetZoom:'Сбросить',resetZoomTitle:'Сбросить маштаб'},\n"
+             "global:{buttonTheme:{height:12,fill:'#505053',stroke:'#505053',style:{color:'#DDDDDD'},"
+             "states:{hover:{fill:'#737373'},select:{fill:'#505053'}}}},\ncolors:['"
+            );
+
   *_GPP += FPSTR(st_0);
   *_GPP += F("','");
   *_GPP += FPSTR(st_1);
-  *_GPP += F("']});\nHighcharts.stockChart('");
+  *_GPP += F("']});\nHighcharts.chart('");
   *_GPP += id;
-  *_GPP += F("',{chart:{},\n"
-             "rangeSelector:{buttons:[\n"
-             "{count:1,type:'minute',text:'1M'},\n"
-             "{count:1,type:'hour',text:'1H'},\n"
-             "{count:1,type:'day',text:'1D'},\n"
-             "{type:'all',text:'All'}],\n"
-             "inputEnabled:false,selected:3},\n"
+  *_GPP += F("',{chart:{type:'spline',borderRadius:10,panning:true,panKey:'shift',\n"
+             "zooming:{type:'x',mouseWheel:false,resetButton:{position:{align:'left',verticalAlign:'top',x:43,y:9},relativeTo:'chart'}}},\n"
+
+             "title:{style:{color:'#00000000'}},\n"
+             "rangeSelector:'none',\n"
+
+             "plotOptions:{series:{marker:{enabled:false},lineWidth:3.5}},\n"
+
+             "tooltip:{crosshairs:true,shared:true},\n"
+             "legend:{floating:true,backgroundColor:undefined,align:'right',verticalAlign:'top'},\n"
+
+             "exporting:{buttons:{contextButton:{align:'left',x:0,y:-1,menuItems:['printChart','viewFullscreen']}}},\n"
+             "navigation:{menuStyle:{background:'#E0E0E0'},menuItemStyle:{color:'#000000'}},\n"
+
              "time:{useUTC:true},\n"
+
+             "xAxis:{type:'datetime'},\n"
+             "yAxis:[{title:{enabled:false},tickLength:0,\n"
+             "labels:{align:'left',x:3,y:16},\n"
+             "showFirstLabel:false},\n"
+             "{title:{enabled:false},tickLength:0,\n"
+             "labels:{align:'right',x:-3,y:16},\n"
+             "showFirstLabel:false,opposite:true}],\n"
+
              "credits:{enabled:false},series:[\n"
             );
 
@@ -310,17 +334,23 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_0[s], dec);
     }
-    *_GPP += F("]},\n");
+    *_GPP += F("],\n");
+    if (type == 1) *_GPP += F("tooltip:{valueSuffix:'°C'}");
+    else if (type == 2) *_GPP += F("tooltip:{valueSuffix:'mm.Hg'}");
+    *_GPP += F("},\n");
   }
   if (vals_1 != NULL) {
     *_GPP += F("{name:'");
     *_GPP += labels[1];
     *_GPP += F("',data:[\n");
     GP.send();
+    if (type == 1) dec = 0;
     for (uint16_t s = 0; s < size; s++) {
       GP_PLOT_STOCK_ADD(times[s], vals_1[s], dec);
     }
-    *_GPP += F("]},\n");
+    *_GPP += F("],\n");
+    if (type == 1) *_GPP += F("tooltip:{valueSuffix:'%'},\n");
+    *_GPP += F("marker:{symbol:'circle'},yAxis:1},\n");
   }
   *_GPP += F("]});</script>\n");
   GP.send();
