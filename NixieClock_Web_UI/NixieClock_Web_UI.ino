@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.6 релиз от 22.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.2.6 релиз от 25.12.24
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -220,7 +220,7 @@ void build(void) {
       GP.UPDATE("syncUpdate,syncWarn", 300);
     }
     GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0"););
     GP.BLOCK_END();
   }
   else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
@@ -233,7 +233,7 @@ void build(void) {
     GP.LABEL("WebUI HW: 0x" + String(HW_VERSION, HEX));
     if (otaUpdate) {
       GP.HR(UI_LINE_COLOR);
-      GP.BUTTON_MINI_LINK("/ota_update", "Обновить прошивку", UI_BUTTON_COLOR);
+      GP.BUTTON_MINI_LINK("/ota_update", "Обновить прошивку", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0");
     }
     GP.BLOCK_END();
   }
@@ -244,7 +244,7 @@ void build(void) {
     GP.SPAN("<big><b>Выполняется перезагрузка, подождите...</b></big>", GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN("<small>Не выключайте устройство до завершения перезагрузки!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
     GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0"););
     GP.UPDATE("syncReboot,syncWarn");
     GP.BLOCK_END();
   }
@@ -368,7 +368,7 @@ void build(void) {
           M_BOX(GP.LABEL("Автосинхронизация", "", UI_LABEL_COLOR); GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
           M_BOX(GP.LABEL("Учитывать летнее время", "", UI_LABEL_COLOR); GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
           GP.HR(UI_LINE_COLOR);
-          GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? "Время с устройства" : "Синхронизация с сервером", "", UI_BUTTON_COLOR);
+          GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? "Время с устройства" : "Синхронизация с сервером", "", UI_BUTTON_COLOR, "300px;margin-top:20px;margin-bottom:0");
           GP.BLOCK_END();
 
           GP.BLOCK_BEGIN(GP_THIN, "", "Эффекты", UI_BLOCK_COLOR);
@@ -467,8 +467,8 @@ void build(void) {
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP_CENTER,
-                GP.BUTTON_MINI("alarmBack", (alarm.set == 1) ? "Назад" : "Добавить", "", UI_ALARM_BACK_COLOR, "210px!important", false, true);
-                GP.BUTTON_MINI("alarmDel", (alarm.all > 1) ? ((alarm.set == 1) ? "Удалить" : "Отмена") : "Отключить", "", (alarm.all > 1) ? UI_ALARM_DEL_COLOR : UI_ALARM_DIS_COLOR, "210px!important", false, (boolean)(alarm.all <= 1));
+                GP.BUTTON_MINI("alarmBack", (alarm.set == 1) ? "Назад" : "Добавить", "", UI_ALARM_BACK_COLOR, "210px!important;margin-top:10px;margin-bottom:0", false, true);
+                GP.BUTTON_MINI("alarmDel", (alarm.all > 1) ? ((alarm.set == 1) ? "Удалить" : "Отмена") : "Отключить", "", (alarm.all > 1) ? UI_ALARM_DEL_COLOR : UI_ALARM_DIS_COLOR, "210px!important;margin-top:10px;margin-bottom:0", false, (boolean)(alarm.all <= 1));
                );
         }
         else { //иначе режим отображения
@@ -1107,7 +1107,7 @@ void build(void) {
 
       GP.BREAK();
       GP_HR_TEXT("Управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR););
+      M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR, "300px;margin-top:5px"); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR, "300px;margin-top:5px"););
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
@@ -1137,10 +1137,10 @@ void build(void) {
 
         GP.HR(UI_LINE_COLOR);
         if (ui.uri("/connection")) {
-          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
+          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0");
         }
         else {
-          GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
+          GP_SUBMIT("Отключиться", UI_BUTTON_COLOR);
         }
         GP.FORM_END();
       }
@@ -1159,8 +1159,8 @@ void build(void) {
           GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-          GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+          GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:14px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
           GP.SEND("</div>\n");
         }
         else {
@@ -1171,9 +1171,9 @@ void build(void) {
           GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-          if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
-          else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-          GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
+          if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "300px;margin-top:14px;margin-bottom:0", true);
+          else GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:14px;margin-bottom:0", false, true);
           GP.SEND("</div>\n");
         }
         GP.FORM_END();
@@ -1189,7 +1189,7 @@ void build(void) {
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!ntpGetRunStatus()));
+        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncStatus", "syncCheck");
@@ -1203,7 +1203,7 @@ void build(void) {
              );
         GP.SPAN(getWeatherState(), GP_CENTER, "syncWeather", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "", (boolean)(!weatherGetRunStatus()));
+        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0", (boolean)(!weatherGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
@@ -1238,18 +1238,18 @@ void buildUpdater(bool UpdateEnd, const String & UpdateError) {
   if (!UpdateEnd) {
     GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    M_BOX(GP_CENTER, GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0"););
   }
   else if (UpdateError.length()) {
     GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
     GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP_BUTTON_MINI_LINK("/ota_update", "⠀<big><big>↻</big></big>⠀", UI_BUTTON_COLOR); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    M_BOX(GP_CENTER, GP_BUTTON_MINI_LINK("/ota_update", "⠀<big><big>↻</big></big>⠀", UI_BUTTON_COLOR); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0"););
   }
   else {
     GP.SPAN("<big><b>Выполняется обновление прошивки...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
     GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
     GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "auto;margin-top:10px;margin-bottom:0"););
     GP.UPDATE("syncUpdate,syncWarn");
   }
   GP.BLOCK_END();

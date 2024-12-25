@@ -47,6 +47,19 @@ void GP_SLIDER_MAX(const String& lable, const String& min_lable, const String& m
   *_GPP += F("</output>\n");
   GP.send();
 }
+void GP_SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
+  *_GPP += F("<input type='submit' value='");
+  *_GPP += text;
+  *_GPP += F("' style='background:");
+  *_GPP += FPSTR(st);
+  *_GPP += F(";margin-top:10px;margin-bottom:0");
+  if (cls.length()) {
+    *_GPP += F("' class='");
+    *_GPP += cls;
+  }
+  *_GPP += F("'>\n");
+  GP.send();
+}
 void GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
   *_GPP += F("<input type='button' class='spinBtn ");
   *_GPP += (step > 0) ? F("spinR") : F("spinL");
@@ -61,11 +74,9 @@ void GP_SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool 
   *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
   *_GPP += (step > 0) ? '+' : '-';
   *_GPP += F("' ");
-  if (st != GP_GREEN) {
-    *_GPP += F(" style='background:");
-    *_GPP += FPSTR(st);
-    *_GPP += F(";'");
-  }
+  *_GPP += F(" style='background:");
+  *_GPP += FPSTR(st);
+  *_GPP += F(";'");
   if (dis) *_GPP += F(" disabled");
   *_GPP += F(">\n");
 }
