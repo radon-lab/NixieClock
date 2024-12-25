@@ -368,7 +368,7 @@ void build(void) {
           M_BOX(GP.LABEL("Автосинхронизация", "", UI_LABEL_COLOR); GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
           M_BOX(GP.LABEL("Учитывать летнее время", "", UI_LABEL_COLOR); GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
           GP.HR(UI_LINE_COLOR);
-          GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? "Время с устройства" : "Синхронизация с сервером", "", UI_BUTTON_COLOR, "300px;margin-top:20px;margin-bottom:0");
+          GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? "Время с устройства" : "Синхронизация с сервером", "", UI_BUTTON_COLOR, "90%;margin-top:20px;margin-bottom:5px");
           GP.BLOCK_END();
 
           GP.BLOCK_BEGIN(GP_THIN, "", "Эффекты", UI_BLOCK_COLOR);
@@ -1107,7 +1107,7 @@ void build(void) {
 
       GP.BREAK();
       GP_HR_TEXT("Управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR, "300px;margin-top:5px"); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR, "300px;margin-top:5px"););
+      M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR, "90%;margin-top:5px"); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR, "90%;margin-top:5px"););
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
@@ -1137,7 +1137,7 @@ void build(void) {
 
         GP.HR(UI_LINE_COLOR);
         if (ui.uri("/connection")) {
-          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0");
+          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0");
         }
         else {
           GP_SUBMIT("Отключиться", UI_BUTTON_COLOR);
@@ -1160,7 +1160,7 @@ void build(void) {
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
           GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
-          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:14px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
           GP.SEND("</div>\n");
         }
         else {
@@ -1171,9 +1171,9 @@ void build(void) {
           GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-          if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "300px;margin-top:14px;margin-bottom:0", true);
+          if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%;margin-top:10px;margin-bottom:0", true);
           else GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
-          GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:14px;margin-bottom:0", false, true);
+          GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", false, true);
           GP.SEND("</div>\n");
         }
         GP.FORM_END();
@@ -1189,7 +1189,7 @@ void build(void) {
         GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
         GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus()));
+        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncStatus", "syncCheck");
@@ -1203,7 +1203,7 @@ void build(void) {
              );
         GP.SPAN(getWeatherState(), GP_CENTER, "syncWeather", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "300px;margin-top:14px;margin-bottom:0", (boolean)(!weatherGetRunStatus()));
+        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!weatherGetRunStatus()));
         GP.BLOCK_END();
 
         GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
