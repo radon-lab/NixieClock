@@ -318,7 +318,7 @@ void GP_PLOT_STOCK_DARK(const String& id, const char** labels, uint32_t* times, 
 
              "plotOptions:{series:{marker:{enabled:false},lineWidth:3.5}},\n"
 
-             "tooltip:{crosshairs:true,shared:true},\n"
+             "tooltip:{crosshairs:true,shared:true,style:{fontSize:'0.95em'}},\n"
              "legend:{floating:true,backgroundColor:undefined,align:'right',verticalAlign:'top'},\n"
 
              "exporting:{buttons:{contextButton:{align:'left',x:0,y:-1,menuItems:['printChart','viewFullscreen']}}},\n"
