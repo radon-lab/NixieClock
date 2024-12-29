@@ -180,33 +180,20 @@ uint8_t rtcGetTime(boolean mode) //запрашиваем время из RTC
   return status; //возвращаем статус
 }
 //-------------------------------------Инициализируем модуль RTC------------------------------------------
-boolean rtcInitTime(void) //инициализируем модуль RTC
+uint8_t rtcInitTime(void) //инициализируем модуль RTC
 {
   static uint8_t attemptsRTC; //попытки инициализации модуля RTC
 
-  if (deviceInformation[DS3231_ENABLE]) {
-    rtc_status = RTC_NOT_FOUND;
-    return 2; //выходим
-  }
+  rtc_status = RTC_NOT_FOUND; //модуль RTC не обнаружен
+
+  if (deviceInformation[DS3231_ENABLE]) return 2; //выходим
 
   if (attemptsRTC < 5) attemptsRTC++; //попытка запроса температуры
-  else {
-    rtc_status = RTC_NOT_FOUND;
-    return 2; //выходим
-  }
+  else return 2; //иначе выходим
 
-  if (rtcDisable32K()) { //отключение вывода 32K
-    rtc_status = RTC_NOT_FOUND;
-    return 1; //выходим
-  }
-  if (rtcSetSQW()) { //настройка SQW
-    rtc_status = RTC_NOT_FOUND;
-    return 1; //выходим
-  }
-  if (rtcReadAging()) { //чтение коррекции хода
-    rtc_status = RTC_NOT_FOUND;
-    return 1; //выходим
-  }
+  if (rtcDisable32K()) return 1; //отключение вывода 32K
+  if (rtcSetSQW()) return 1; //настройка SQW
+  if (rtcReadAging()) return 1; //чтение коррекции хода
 
   rtc_status = RTC_ONLINE; //модуль RTC работает нормально
 
