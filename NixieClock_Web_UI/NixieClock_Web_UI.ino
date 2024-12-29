@@ -1026,7 +1026,7 @@ void build(void) {
         M_BOX(GP.LABEL("Прошивка часов", "", UI_LABEL_COLOR); GP.LABEL(String(deviceInformation[FIRMWARE_VERSION_1]) + "." + deviceInformation[FIRMWARE_VERSION_2] + "." + deviceInformation[FIRMWARE_VERSION_3], "", UI_INFO_COLOR););
       }
 
-      if (!(device.failure & 0x80)) {
+      if (!(device.failure & 0x8000)) {
         GP.BREAK();
         GP_HR_TEXT("Состояние", "", UI_LINE_COLOR, UI_HINT_COLOR);
         if (!device.failure) {
@@ -1093,8 +1093,8 @@ void build(void) {
       rtcStatus = F("Не обнаружен...");
       GP.BREAK();
       GP_HR_TEXT("Модуль RTC", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      if (deviceInformation[DS3231_ENABLE]) {
-        if ((device.failure & 0x80) || !(device.failure & 0x03)) rtcStatus = F("Подключен к часам");
+      if (deviceInformation[DS3231_ENABLE] && !(device.failure & 0x8000)) {
+        if (!(device.failure & 0x03)) rtcStatus = F("Подключен к часам");
         else if (device.failure & 0x02) rtcStatus = F("Батарея разряжена");
       }
       else if (rtcGetFoundStatus()) {
@@ -1210,7 +1210,7 @@ void build(void) {
       }
     }
 
-    if (!(device.failure & 0x80) && device.failure && failureWarn) {
+    if (!(device.failure & 0x8000) && device.failure && failureWarn) {
       updateList += F(",mainFailWarn");
       GP.ALERT("mainFailWarn", "Внимание! Обнаружен сбой при запуске устройства!\nПодробнее во вкладке - Об устройстве.");
     }
