@@ -128,7 +128,7 @@ void wifiUpdate(void) {
       Serial.println F("Wifi disconnecting...");
       ntpStop(); //остановили ntp
       weatherDisconnect(); //отключились от сервера погоды
-      WiFi.disconnect(); //отключаем wifi
+      WiFi.disconnect(); //отключаемся от точки доступа
       if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
     }
     wifi_status = WiFi.status();
@@ -136,12 +136,13 @@ void wifiUpdate(void) {
       case WL_CONNECTED:
         timerWifi = millis(); //сбросили таймер
         wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
-#if STATUS_LED == 1
-        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
+
         ntpStart(); //запустить ntp
         weatherCheck(); //запросить прогноз погоды
 
+#if STATUS_LED == 1
+        digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
+#endif
         Serial.print F("Wifi connected, IP address: ");
         Serial.println(WiFi.localIP());
         break;
@@ -154,9 +155,10 @@ void wifiUpdate(void) {
       default:
         if ((wifi_status == WL_DISCONNECTED) || (wifi_status == WL_NO_SSID_AVAIL)) {
           timerWifi = millis(); //сбросили таймер
-          if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал переподключения
+          if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал ожидания
           else wifi_interval = 5000; //устанавливаем интервал переподключения
-          wifi_station_disconnect(); //отключаем wifi
+          wifi_station_disconnect(); //отключаемся от точки доступа
+          Serial.println F("Wifi reconnect...");
         }
         else {
           wifi_interval = 0; //сбрасываем интервал переподключения
@@ -181,13 +183,13 @@ void wifiUpdate(void) {
       wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
       if (wifi_status != WL_CONNECT_FAILED) {
         timerWifi = millis(); //сбросили таймер
-        wifi_interval = 30000; //устанавливаем интервал переподключения
+        wifi_interval = 30000; //устанавливаем интервал ожидания
         Serial.print F("Wifi connecting to \"");
         Serial.print(settings.ssid);
         Serial.println F("\"...");
       }
       else {
-        wifi_interval = 0; //сбрасываем интервал
+        wifi_interval = 0; //сбрасываем интервал переподключения
 #if STATUS_LED == 1
         digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
