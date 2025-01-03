@@ -79,6 +79,11 @@ void wifiScanResult(int networksFound) {
   }
 }
 //--------------------------------------------------------------------
+void wifiSetConnectMode(void) {
+  if (WiFi.getAutoConnect() != false) WiFi.setAutoConnect(false);
+  if (WiFi.getAutoReconnect() != true) WiFi.setAutoReconnect(true);
+}
+//--------------------------------------------------------------------
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
@@ -151,7 +156,7 @@ void wifiUpdate(void) {
           timerWifi = millis(); //сбросили таймер
           if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал переподключения
           else wifi_interval = 5000; //устанавливаем интервал переподключения
-          WiFi.disconnect(); //отключаем wifi
+          wifi_station_disconnect(); //отключаем wifi
         }
         else {
           wifi_interval = 0; //сбрасываем интервал переподключения

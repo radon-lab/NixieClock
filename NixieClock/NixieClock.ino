@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.5 релиз от 17.11.24
+  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 03.01.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2242,7 +2242,7 @@ void alarmInit(void) //инициализация будильника
 void alarmDisable(void) //отключение будильника
 {
 #if PLAYER_TYPE
-  playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
+  if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
 #else
   melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
 #endif
@@ -2538,7 +2538,7 @@ uint8_t alarmWarn(void) //тревога будильника
           _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
           _timer_sec[TMR_ALM_SOUND] = 0;
 #if PLAYER_TYPE
-          playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
+          if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
 #else
           melodyPlay(SOUND_ALARM_WAIT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
 #endif
@@ -4692,10 +4692,10 @@ void speakTemp(boolean mode) //воспроизвести температуру
 {
 #if ESP_ENABLE
   uint8_t _sens = (!mode) ? getMainSens() : getHourSens();
-  uint16_t _ceil = getTemperature(_sens) / 10;
+  uint16_t _int = getTemperature(_sens) / 10;
   uint16_t _dec = getTemperature(_sens) % 10;
 #else
-  uint16_t _ceil = getTemperature() / 10;
+  uint16_t _int = getTemperature() / 10;
   uint16_t _dec = getTemperature() % 10;
 #endif
 
@@ -4707,15 +4707,15 @@ void speakTemp(boolean mode) //воспроизвести температуру
   if (getTemperatureSign()) playerSetTrack(PLAYER_SENS_TEMP_OTHER, PLAYER_END_NUMBERS_FOLDER);
 #endif
   if (_dec && !mode) {
-    playerSpeakNumber(_ceil, OTHER_NUM);
-    playerSetTrack(PLAYER_SENS_CEIL_START + (boolean)playerGetSpeak(_ceil), PLAYER_END_NUMBERS_FOLDER);
+    playerSpeakNumber(_int, OTHER_NUM);
+    playerSetTrack(PLAYER_SENS_CEIL_START + (boolean)playerGetSpeak(_int), PLAYER_END_NUMBERS_FOLDER);
     playerSpeakNumber(_dec, OTHER_NUM);
     playerSetTrack(PLAYER_SENS_DEC_START + (boolean)playerGetSpeak(_dec), PLAYER_END_NUMBERS_FOLDER);
     playerSetTrack(PLAYER_SENS_TEMP_START + 1, PLAYER_END_NUMBERS_FOLDER);
   }
   else {
-    playerSpeakNumber(_ceil);
-    playerSetTrack(PLAYER_SENS_TEMP_START + playerGetSpeak(_ceil), PLAYER_END_NUMBERS_FOLDER);
+    playerSpeakNumber(_int);
+    playerSetTrack(PLAYER_SENS_TEMP_START + playerGetSpeak(_int), PLAYER_END_NUMBERS_FOLDER);
   }
 }
 //------------------------------Воспроизвести влажность---------------------------------------

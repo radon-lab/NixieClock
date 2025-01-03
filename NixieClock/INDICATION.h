@@ -181,7 +181,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   }
 #endif
 
-  REG_LATCH_ENABLE; //включили защелку
+  REG_LATCH_ENABLE; //открыли защелку
   SPDR = temp; //загрузили данные
 #if !INDI_DOT_TYPE
 #if NEON_DOT == 1
@@ -240,12 +240,12 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 
 #if INDI_PORT_TYPE
   while (!(SPSR & (0x01 << SPIF))); //ждем отправки
-  REG_LATCH_DISABLE; //выключили защелку
+  REG_LATCH_DISABLE; //закрыли защелку
 #endif
 }
 ISR(TIMER0_COMPB_vect) {
 #if INDI_PORT_TYPE
-  REG_LATCH_ENABLE; //включили защелку
+  REG_LATCH_ENABLE; //открыли защелку
   SPDR = 0x00; //загрузили данные
 #if (NEON_DOT == 1) && !INDI_DOT_TYPE
   if (!indiState) DOT_1_CLEAR; //выключили точки
@@ -301,7 +301,7 @@ ISR(TIMER0_COMPB_vect) {
 
 #if INDI_PORT_TYPE
   while (!(SPSR & (0x01 << SPIF))); //ждем отправки
-  REG_LATCH_DISABLE; //выключили защелку
+  REG_LATCH_DISABLE; //закрыли защелку
 #endif
 }
 //-----------------------------------Динамическая подсветка---------------------------------------
@@ -414,7 +414,6 @@ void indiPortInit(void) //инициализация портов индикат
 {
   PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
   DDRC |= 0x0F; //устанавливаем катоды как выходы
-
 #if (NEON_DOT != 3) && !INDI_DOT_TYPE
   DOT_1_INIT; //инициализация секундных точек
 #endif
@@ -440,8 +439,10 @@ void indiPortInit(void) //инициализация портов индикат
 #endif
 #else
   REG_LATCH_INIT; //инициализация защелки сдвигового регистра
-  REG_DATA_INIT; //инициализация линии ланных сдвигового регистра
+  REG_DATA_INIT; //инициализация линии данных сдвигового регистра
   REG_SCK_INIT; //инициализация линии тактирования сдвигового регистра
+  for (uint8_t i = 0; i < 16; i++) REG_SCK_INV; //очищаем сдвиговый регистр
+  REG_LATCH_DISABLE; //закрываем защелку
 #endif
 }
 //---------------------------------Инициализация индикации----------------------------------------
