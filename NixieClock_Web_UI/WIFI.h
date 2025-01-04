@@ -125,10 +125,10 @@ void wifiUpdate(void) {
 
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
-      Serial.println F("Wifi disconnecting...");
       ntpStop(); //остановили ntp
       weatherDisconnect(); //отключились от сервера погоды
       WiFi.disconnect(); //отключаемся от точки доступа
+      Serial.println F("Wifi disconnecting...");
       if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
     }
     wifi_status = WiFi.status();
@@ -158,14 +158,14 @@ void wifiUpdate(void) {
           if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал ожидания
           else wifi_interval = 5000; //устанавливаем интервал переподключения
           wifi_station_disconnect(); //отключаемся от точки доступа
-          Serial.println F("Wifi reconnect...");
+          Serial.println F("Wifi connect wait...");
         }
         else {
           wifi_interval = 0; //сбрасываем интервал переподключения
 #if STATUS_LED == 1
           digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
-          Serial.println F("Wifi connect error...");
+          Serial.println F("Wifi connect error");
         }
         ntpStop(); //остановили ntp
         weatherDisconnect(); //отключились от сервера погоды
