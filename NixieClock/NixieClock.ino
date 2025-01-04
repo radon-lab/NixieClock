@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 03.01.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 04.01.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -6548,25 +6548,52 @@ void backlEffect(void) //анимация подсветки
         case BACKL_WAVE_RAINBOW:
         case BACKL_WAVE_CONFETTI: { //волна
             _timer_ms[TMR_BACKL] = backl.mode_8_time; //установили таймер
-            if (backl.drive) {
-              if (incLedBright(backl.position, backl.mode_8_step, backl.maxBright)) { //прибавили шаг яркости
-                if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
-                else {
-                  backl.position = 0; //сбросили позицию
-                  backl.drive = 0; //перешли в затухание
+            switch (backl.steps) { //в зависимости от текущего шага анимации
+              case 0:
+              case 2:
+                if (incLedBright(backl.position, backl.mode_8_step, backl.maxBright)) { //прибавили шаг яркости
+                  backl.drive = 1; //установили флаг завершения анимации
                 }
+                break;
+              default:
+                if (decLedBright(backl.position, backl.mode_8_step, backl.minBright)) { //убавили шаг яркости
+                  backl.drive = 1; //установили флаг завершения анимации
+                }
+                break;
+            }
+            if (backl.drive) { //если анимация завершена
+              backl.drive = 0; //сбросили флаг завершения анимации
+              switch (backl.steps) {
+                case 0:
+                case 1:
+                  if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
+                  else { //иначе меняем режим анимации
+                    if (backl.steps < 1) { //если был режим разгорания
+                      backl.steps = 1; //перешли в затухание
+                      backl.position = 0; //сбросили позицию
+                    }
+                    else { //иначе режим затухания
+                      backl.steps = 2; //перешли в разгорание
+                      backl.position = (LAMP_NUM - 1); //сбросили позицию
+                    }
+                  }
+                  break;
+                default:
+                  if (backl.position > 0) backl.position--; //сменили позицию
+                  else { //иначе меняем режим анимации
+                    if (backl.steps < 3) { //если был режим разгорания
+                      backl.steps = 3; //перешли в затухание
+                      backl.position = (LAMP_NUM - 1); //сбросили позицию
+                    }
+                    else { //иначе режим затухания
+                      backl.steps = 0; //перешли в разгорание
+                      backl.position = 0; //сбросили позицию
+                    }
+                  }
+                  break;
               }
             }
-            else {
-              if (decLedBright(backl.position, backl.mode_8_step, backl.minBright)) { //иначе убавляем яркость
-                if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
-                else {
-                  backl.position = 0; //сбросили позицию
-                  backl.drive = 1; //перешли в разгорание
-                }
-              }
-            }
-            if (fastSettings.backlMode == BACKL_WAVE) {
+            if (fastSettings.backlMode == BACKL_WAVE) { //если режим статичного цвета
               backl.color = fastSettings.backlColor; //статичный цвет
               setLedHue(backl.color, WHITE_ON); //установили цвет
             }
