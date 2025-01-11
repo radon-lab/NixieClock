@@ -71,6 +71,7 @@
 #define PIN_REG(portx)  (*(&portx - 2))
 #define BIT_READ_INV(value, bit) (((value) ^ (0x01 << (bit))) & (0x01 << (bit)))
 #define BIT_READ(value, bit) ((value) & (0x01 << (bit)))
+#define BIT_INV(value, bit) ((value) ^= (0x01 << (bit)))
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
@@ -260,7 +261,7 @@
 #define BUZZ_PORT  DECODE_PORT(BUZZ_PIN)
 
 #define BUZZ_OFF   (BIT_CLEAR(BUZZ_PORT, BUZZ_BIT))
-#define BUZZ_INV   (BUZZ_PORT ^= (0x01 << BUZZ_BIT))
+#define BUZZ_INV   (BIT_INV(BUZZ_PORT, BUZZ_BIT))
 #define BUZZ_OUT   (BIT_SET(DDR_REG(BUZZ_PORT), BUZZ_BIT))
 #define BUZZ_INP   (BIT_CLEAR(DDR_REG(BUZZ_PORT), BUZZ_BIT))
 
@@ -310,7 +311,7 @@
 #define SD_SCK_BIT   DECODE_BIT(SD_SCK_PIN)
 #define SD_SCK_PORT  DECODE_PORT(SD_SCK_PIN)
 
-#define SD_SCK_INV   (SD_SCK_PORT ^= SD_SCK_BIT)
+#define SD_SCK_INV   (BIT_INV(SD_SCK_PORT, SD_SCK_BIT))
 #define SD_SCK_SET   (BIT_SET(SD_SCK_PORT, SD_SCK_BIT))
 #define SD_SCK_CLEAR (BIT_CLEAR(SD_SCK_PORT, SD_SCK_BIT))
 #define SD_SCK_OUT   (BIT_SET(DDR_REG(SD_SCK_PORT), SD_SCK_BIT))
@@ -389,7 +390,7 @@
 #define REG_SCK_BIT   DECODE_BIT(REG_SCK_PIN)
 #define REG_SCK_PORT  DECODE_PORT(REG_SCK_PIN)
 
-#define REG_SCK_INV   (REG_SCK_PORT ^= REG_SCK_BIT)
+#define REG_SCK_INV   (BIT_INV(REG_SCK_PORT, REG_SCK_BIT))
 #define REG_SCK_SET   (BIT_SET(REG_SCK_PORT, REG_SCK_BIT))
 #define REG_SCK_CLEAR (BIT_CLEAR(REG_SCK_PORT, REG_SCK_BIT))
 #define REG_SCK_OUT   (BIT_SET(DDR_REG(REG_SCK_PORT), REG_SCK_BIT))

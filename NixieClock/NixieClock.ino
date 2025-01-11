@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 04.01.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 11.01.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -4955,7 +4955,7 @@ uint8_t showDate(void) //показать дату
       setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
 #endif
 #else
-#if (LAMP_NUM > 4) && MENU_SHOW_NUMBER
+#if (LAMP_NUM > 4) && MENU_SHOW_NUMBER && !SHOW_DATE_WEEK
       indiPrintNum(mode + 1, 5); //режим
 #endif
       switch (mode) {
@@ -4967,8 +4967,14 @@ uint8_t showDate(void) //показать дату
           indiPrintNum(RTC.DD, 0, 2, 0); //вывод даты
           indiPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
+#if (LAMP_NUM > 4) && SHOW_DATE_WEEK
+          indiPrintNum(RTC.DW, 5); //день недели
+#endif
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
           setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
+#if SHOW_DATE_WEEK
+          setLedHue(5, SHOW_DATE_BACKL_DW, WHITE_ON);
+#endif
 #endif
           break;
         case 1:
@@ -5021,6 +5027,11 @@ uint8_t showDate(void) //показать дату
   animShow = ANIM_MAIN; //установили флаг анимации
   return MAIN_PROGRAM; //выходим
 }
+//------------------------------Анимация автоматического показа--------------------------------------
+uint8_t autoShowAnimMode(void) //анимация автоматического показа
+{
+  return (mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode;
+}
 //--------------------------------Меню автоматического показа----------------------------------------
 void autoShowMenu(void) //меню автоматического показа
 {
@@ -5070,7 +5081,7 @@ void autoShowMenu(void) //меню автоматического показа
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) animPrintNum(humidity, 4, 2); //вывод влажности
 #endif
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
         setDivDot(1); //установить точку температуры
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
@@ -5095,7 +5106,7 @@ void autoShowMenu(void) //меню автоматического показа
         if (!humidity) continue; //возвращаемся назад
         animPrintNum(humidity, 0, 4); //вывод влажности
 
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
@@ -5111,7 +5122,7 @@ void autoShowMenu(void) //меню автоматического показа
         if (!pressure) continue; //возвращаемся назад
         animPrintNum(pressure, 0, 4); //вывод давления
 
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
@@ -5126,7 +5137,10 @@ void autoShowMenu(void) //меню автоматического показа
         animPrintNum(RTC.DD, 0, 2, 0); //вывод даты
         animPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+#if SHOW_DATE_WEEK
+        animPrintNum(RTC.DW, 5); //день недели
+#endif
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
         indiSetDotR(1); //включаем разделительную точку
@@ -5141,12 +5155,15 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
         setBacklHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
+#if SHOW_DATE_WEEK
+        setLedHue(5, SHOW_DATE_BACKL_DW, WHITE_ON);
+#endif
 #endif
         break;
 
       case SHOW_YEAR: //режим отображения года
         animPrintNum(RTC.YY, 0); //вывод года
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
         setBacklHue(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
 #endif
@@ -5162,7 +5179,7 @@ void autoShowMenu(void) //меню автоматического показа
         animPrintNum(RTC.MM, 2, 2, 0); //вывод месяца
 #endif
         animPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
-        animIndi((mainSettings.autoShowFlip) ? mainSettings.autoShowFlip : fastSettings.flipMode, FLIP_NORMAL); //анимация цифр
+        animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if DOTS_PORT_ENABLE && (DOTS_NUM > 4)
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
         indiSetDotR(1); //включаем разделительную точку
