@@ -142,11 +142,12 @@ void wifiUpdate(void) {
     switch (wifi_status) {
       case WL_CONNECTED:
         timerWifi = millis(); //сбросили таймер
-        wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
+        
+        if (WiFi.getMode() != WIFI_AP_STA) wifi_interval = 0; //сбрасываем интервал переподключения
+        else wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
 
         ntpStart(); //запустить ntp
         weatherCheck(); //запросить прогноз погоды
-
         if (settings.groupFind) groupStart(); //запустить обнаружение устройств поблизости
 
 #if STATUS_LED == 1
@@ -159,7 +160,7 @@ void wifiUpdate(void) {
 #if STATUS_LED == 1
         digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
-        Serial.println F("Wifi idle status");
+        Serial.println F("Wifi disconnected");
         break;
       default:
         if ((wifi_status == WL_DISCONNECTED) || (wifi_status == WL_NO_SSID_AVAIL)) {
