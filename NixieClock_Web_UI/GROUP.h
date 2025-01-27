@@ -2,8 +2,8 @@
 #define GROUP_DATA_SIZE 20 //длинна информации в пакете данных(20)
 #define GROUP_LOCAL_PORT 8889 //локальный порт(8889)
 
-#define GROUP_WAIT_TIME 7000 //время обновления группы(1000..60000)(мс)
-#define GROUP_UPDATE_TIME 1000 //время обновления группы(100..2000)(мс)
+#define GROUP_WAIT_TIME 7000 //время ожидания обновления группы(1000..60000)(мс)
+#define GROUP_UPDATE_TIME 1000 //время между попытками обновления группы(100..2000)(мс)
 
 #define GROUP_SEND_CMD 0xAA //команда отправки ответа на запрос(0xCC)
 #define GROUP_UPDATE_CMD 0xCC //команда обновления списка устройств(0xCC)
@@ -70,7 +70,6 @@ boolean groupNextList(void) {
 
   group_list_ip = group_list.substring(group_list_pos, _start);
   group_list_name = group_list.substring(_start + 1, _end);
-  group_list_name.trim();
 
   group_list_pos = _end + 1;
 
@@ -216,7 +215,7 @@ void groupUpdate(void) {
 
         if (!group_check) group_time = 0;
         else group_time = GROUP_WAIT_TIME;
-        
+
         return;
       }
       else {

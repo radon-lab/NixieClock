@@ -1574,12 +1574,18 @@ void action() {
         String _name;
         _name.reserve(20);
         _name = ui.getString("extDeviceName");
+
+        _name.trim();
         _name.replace(",", "");
         _name.replace(":", "");
+
         strncpy(settings.name, _name.c_str(), 20); //копируем себе
         settings.name[19] = '\0'; //устанавливаем последний символ
 
-        if (groupGetSearchStatus()) groupReload(); //запустить поиск устройств поблизости
+        if (groupGetSearchStatus()) { //если сервис обнаружения устройств запущен
+          groupSearch(); //запустить поиск устройств поблизости
+          groupReload(); //обновить состояние для устройств поблизости
+        }
 
         memory.update(); //обновить данные в памяти
       }
