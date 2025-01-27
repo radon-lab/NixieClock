@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.6 релиз от 04.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.6 релиз от 27.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -40,6 +40,7 @@ struct settingsData {
   boolean nameMenu;
   boolean namePrefix;
   boolean namePostfix;
+  boolean groupFind;
   uint8_t wirelessId[6];
   uint8_t weatherCity;
   float weatherLat;
@@ -57,7 +58,6 @@ struct settingsData {
   char name[20];
   char ssid[64];
   char pass[64];
-  char multi[MAX_CLOCK * 2][20];
 } settings;
 
 #include <EEManager.h>
@@ -109,6 +109,7 @@ uint32_t secondsTimer = 0; //таймер счета секундных инте
 #include "CLOCKBUS.h"
 #include "WIRELESS.h"
 
+#include "GROUP.h"
 #include "WEATHER.h"
 
 #include "WIFI.h"
@@ -272,11 +273,11 @@ void build(void) {
     GP.UI_LINK("/network", "Сетевые настройки");
 
     //ссылки часов
-    if (settings.multi[0][0] != '\0') {
+    if (groupResetList()) {
       GP_HR(UI_MENU_LINE_COLOR, 6);
-      for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
-        if (settings.multi[i][0] != '\0') {
-          GP_UI_LINK(settings.multi[i], (settings.multi[i + 1][0] != '\0') ? settings.multi[i + 1] : settings.multi[i], UI_MENU_COLOR);
+      while (groupNextList()) {
+        if (groupGetIP()[0] != '\0') {
+          GP_UI_LINK(groupGetIP(), (groupGetName()[0] != '\0') ? groupGetName() : groupGetIP(), UI_MENU_COLOR);
         }
         else break;
       }
@@ -1056,26 +1057,7 @@ void build(void) {
 
       GP.BREAK();
       GP_HR_TEXT("Групповое управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
-        if (i) {
-          GP.HR(UI_MENU_LINE_COLOR);
-        }
-        if (settings.multi[i][0] != '\0') {
-          M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", settings.multi[i], "", 20, "", true); GP.TEXT("", "Название", (settings.multi[i + 1][0] != '\0') ? settings.multi[i + 1] : settings.multi[i], "", 20, "", true););
-            GP.BUTTON_MINI(String("extMultiDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
-          );
-        }
-        else {
-          M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("extMultiIp", "IP адрес", "", "", 15); GP.TEXT("extMultiName", "Название", "", "", 19););
-            GP.BUTTON_MINI("extMultiAdd", "Добавить", "", UI_BUTTON_COLOR, "115px!important", false, true);
-          );
-          buffMultiIp[0] = '\0';
-          buffMultiName[0] = '\0';
-          break;
-        }
-      }
+      M_BOX(GP.LABEL("Обнаружение", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceGroup", settings.groupFind, UI_SWITCH_COLOR););
 
       GP.BREAK();
       GP_HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1116,7 +1098,7 @@ void build(void) {
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix || (settings.multi[0][0] != '\0')) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceGroup,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //подключение к роутеру
       GP_PAGE_TITLE("Сетевые настройки");
@@ -1589,19 +1571,15 @@ void action() {
       }
 
       if (ui.click("extDeviceName")) {
-        strncpy(settings.name, ui.getString("extDeviceName").c_str(), 20); //копируем себе
+        String _name;
+        _name.reserve(20);
+        _name = ui.getString("extDeviceName");
+        _name.replace(",", "");
+        _name.replace(":", "");
+        strncpy(settings.name, _name.c_str(), 20); //копируем себе
         settings.name[19] = '\0'; //устанавливаем последний символ
 
-        for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
-          if (settings.multi[i][0] != '\0') {
-            if (WiFi.localIP().toString().equals(settings.multi[i])) {
-              strncpy(settings.multi[i + 1], settings.name, 20); //копируем себе
-              settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
-              break;
-            }
-          }
-          else break;
-        }
+        if (groupGetSearchStatus()) groupReload(); //запустить поиск устройств поблизости
 
         memory.update(); //обновить данные в памяти
       }
@@ -1618,61 +1596,13 @@ void action() {
         memory.update(); //обновить данные в памяти
       }
 
-      if (ui.clickSub("extMultiDel")) {
-        uint8_t multiNum = constrain(ui.clickNameSub(1).toInt(), 0, ((MAX_CLOCK - 1) * 2));
-        if (WiFi.localIP().toString().equals(settings.multi[multiNum])) {
-          for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.multi[i][0] = '\0';
-        }
-        else {
-          for (; multiNum < ((MAX_CLOCK - 1) * 2); multiNum++) {
-            strncpy(settings.multi[multiNum], settings.multi[multiNum + 2], 20); //копируем себе
-          }
-          settings.multi[((MAX_CLOCK - 1) * 2)][0] = '\0'; //устанавливаем последний символ
-          settings.multi[((MAX_CLOCK - 1) * 2) + 1][0] = '\0'; //устанавливаем последний символ
-
-          if (settings.multi[2][0] == '\0') {
-            settings.multi[0][0] = '\0'; //устанавливаем последний символ
-            settings.multi[1][0] = '\0'; //устанавливаем последний символ
-          }
+      if (ui.clickBool("extDeviceGroup", settings.groupFind)) {
+        if (wifiGetConnectStatus()) {
+          if (settings.groupFind) groupStart(); //запустили обнаружение устройств поблизости
+          else groupStop(); //остановить обнаружение устройств поблизости
         }
         memory.update(); //обновить данные в памяти
       }
-      if (ui.click("extMultiAdd")) {
-        if (buffMultiIp[0] != '\0') { //если строка не пустая
-          if (!WiFi.localIP().toString().equals(buffMultiIp)) { //если не собственный адрес
-            for (uint8_t i = 0; i < (MAX_CLOCK * 2); i += 2) {
-              if (settings.multi[i][0] == '\0') { //если ячейка не заполнена
-                if (!i) { //если список пуст
-                  strncpy(settings.multi[i], WiFi.localIP().toString().c_str(), 20); //копируем себе
-                  settings.multi[i][19] = '\0'; //устанавливаем последний символ
-                  strncpy(settings.multi[i + 1], settings.name, 20); //копируем себе
-                  settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
-                  i += 2; //сместили указатель
-                }
-                strncpy(settings.multi[i], buffMultiIp, 20); //копируем себе
-                settings.multi[i][19] = '\0'; //устанавливаем последний символ
-                strncpy(settings.multi[i + 1], buffMultiName, 20); //копируем себе
-                settings.multi[i + 1][19] = '\0'; //устанавливаем последний символ
-                memory.update(); //обновить данные в памяти
-                break;
-              }
-              else if (String(settings.multi[i]).equals(buffMultiIp)) {
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (ui.click("extMultiIp")) {
-        strncpy(buffMultiIp, ui.getString("extMultiIp").c_str(), 20); //копируем себе
-        buffMultiIp[19] = '\0'; //устанавливаем последний символ
-      }
-      if (ui.click("extMultiName")) {
-        strncpy(buffMultiName, ui.getString("extMultiName").c_str(), 20); //копируем себе
-        buffMultiName[19] = '\0'; //устанавливаем последний символ
-      }
-
       if (ui.click("extReset")) {
         if (ui.getBool("extReset")) {
           resetMainSettings(); //устанавливаем настройки по умолчанию
@@ -1972,7 +1902,7 @@ void action() {
         ui.answer(1);
       }
 
-      if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
+      if (ui.update("extReload") && (wirelessGetFoundSuccessState() || groupGetUpdateStatus())) { //если было обновление
         ui.answer(1);
       }
       if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
@@ -2183,6 +2113,8 @@ void initFileSystemData(void) {
 void resetMainSettings(void) {
   strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
   settings.host[19] = '\0'; //устанавливаем последний символ
+
+  settings.groupFind = DEFAULT_GROUP_FOUND; //обнаружение устройств поблизости
 
   settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
   settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
@@ -2430,9 +2362,6 @@ void setup() {
   //инициализация файловой системы
   initFileSystemData();
 
-  //сбрасываем настройки группового управления
-  for (uint8_t i = 0; i < (MAX_CLOCK * 2); i++) settings.multi[i][0] = '\0';
-
   //устанавливаем указатель будильниака
   alarm.now = 0;
 
@@ -2447,9 +2376,10 @@ void setup() {
 
   //читаем настройки из памяти
   EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xBF);
+  memory.begin(0, 0xCA);
 
   //инициализируем строки
+  groupInitStr();
   weatherInitStr();
   wifiScanInitStr();
 
@@ -2497,6 +2427,8 @@ void setup() {
 //--------------------------------------------------------------------
 void loop() {
   wifiUpdate(); //обработка состояния wifi
+
+  groupUpdate(); //обработка группового взаимодействия
 
   if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) { //если связь с часами установлена
     timeUpdate(); //обработка времени
