@@ -698,18 +698,13 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Индикаторы", UI_BLOCK_COLOR);
-      GP.LABEL("Яркость", "", UI_HINT_COLOR);
-      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtDay", "мин", "макс", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
-      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtNight", "мин", "макс", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
-      GP.BREAK();
-      GP_HR_TEXT("Эффекты", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Глюки", "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(false), fastSettings.flipMode););
       M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
-      GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
-      M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
+      GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtDay", "мин", "макс", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtNight", "мин", "макс", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
       GP.BREAK();
       GP_HR_TEXT("Время ночной яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint1", lightHint); //всплывающая подсказка
@@ -718,6 +713,10 @@ void build(void) {
       GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
       M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
+      GP.BREAK();
+      GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BLOCK_END();
       );
 
@@ -727,16 +726,16 @@ void build(void) {
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightDay", "мин", "макс", mainSettings.backlBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightNight", "откл", "макс", mainSettings.backlBrightNight, 0, 250, 10, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightDay", "мин", "макс", mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightNight", "откл", "макс", mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList(false), fastSettings.dotMode););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtDay", "мин", "макс", mainSettings.dotBrightDay, 10, 250, 10, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtNight", "откл", "макс", mainSettings.dotBrightNight, 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 250, (deviceInformation[NEON_DOT] == 3) ? 1 : 10, 0, UI_SLIDER_COLOR););
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtDay", "мин", "макс", mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtNight", "откл", (deviceInformation[NEON_DOT] == 3) ? "вкл" : "макс", mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
         GP.BLOCK_END();
       );
       GP.NAV_BLOCK_END();
@@ -1467,6 +1466,7 @@ void action() {
       if (ui.clickInt("mainIndiBrtNight", mainSettings.indiBrightNight)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_N);
       }
+      
       if (ui.clickInt("mainBurnFlip", mainSettings.burnMode)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_BURN_MODE);
       }
@@ -1517,17 +1517,22 @@ void action() {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_N);
       }
 
-      if (ui.clickInt("mainDotBrtDay", mainSettings.dotBrightDay)) {
+      if (ui.click("mainDotBrtDay")) {
+        mainSettings.dotBrightDay = constrain(ui.getInt("mainDotBrtDay"), 1, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_D);
       }
-      if (ui.clickInt("mainDotBrtNight", mainSettings.dotBrightNight)) {
+      if (ui.click("mainDotBrtNight")) {
+        mainSettings.dotBrightNight = constrain(ui.getInt("mainDotBrtNight"), 1, 25);
+        if (deviceInformation[NEON_DOT] != 3) mainSettings.dotBrightNight *= 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
 
-      if (ui.clickInt("mainBacklBrightDay", mainSettings.backlBrightDay)) {
+      if (ui.click("mainBacklBrightDay")) {
+        mainSettings.backlBrightDay = constrain(ui.getInt("mainBacklBrightDay"), 1, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_D);
       }
-      if (ui.clickInt("mainBacklBrightNight", mainSettings.backlBrightNight)) {
+      if (ui.click("mainBacklBrightNight")) {
+        mainSettings.backlBrightNight = constrain(ui.getInt("mainBacklBrightNight"), 0, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_N);
       }
 
