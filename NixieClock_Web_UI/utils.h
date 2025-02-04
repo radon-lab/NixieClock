@@ -47,6 +47,48 @@ void GP_SLIDER_MAX(const String& lable, const String& min_lable, const String& m
   *_GPP += F("</output>\n");
   GP.send();
 }
+void GP_SLIDER_MIN(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0) {
+  *_GPP += F("<input type='range' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += F("' value='");
+  *_GPP += value;
+  *_GPP += F("' min='");
+  *_GPP += min;
+  *_GPP += F("' max='");
+  *_GPP += max;
+  *_GPP += F("' step='");
+  *_GPP += step;
+  *_GPP += F("' style='background-image:linear-gradient(");
+  *_GPP += FPSTR(st);
+  *_GPP += ',';
+  *_GPP += FPSTR(st);
+  *_GPP += F(");background-size:0% 100%' onload='GP_change(this)' ");
+  if (oninp) *_GPP += F("oninput='GP_change(this);GP_click(this)'");
+  else *_GPP += F("onchange='GP_click(this)' oninput='GP_change(this)'");
+  *_GPP += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
+  if (dis) *_GPP += F("disabled");
+  *_GPP += ">\n";
+  *_GPP += F("<output align='center' id='");
+  *_GPP += name;
+  *_GPP += F("_val' name='");
+  *_GPP += min_lable;
+  *_GPP += ',';
+  *_GPP += max_lable;
+  *_GPP += F("' style='background:");
+  *_GPP += FPSTR(st);
+  *_GPP += F(";'");
+  if (dis) *_GPP += F(" class='dsbl'");
+  *_GPP += F(">");
+  GP_FLOAT_DEC(value, dec);
+  *_GPP += F("</output>\n");
+  GP.send();
+}
+
+void GP_SLIDER_MIN_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
+  GP_SLIDER_MIN(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1);
+}
 void GP_SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
   *_GPP += F("<input type='submit' value='");
   *_GPP += text;
@@ -123,7 +165,7 @@ void GP_SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, floa
   GP.SEND("<div style='margin-right:-10px;'>\n"); GP_SPINNER_MAIN(name, value, min, max, step, dec, st, w, dis); GP.SEND("</div>\n");
 }
 void GP_BUTTON_MINI_LINK(const String& url, const String& text, PGM_P color) {
-  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";line-height:100%;' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
+  GP.SEND(String("<button class='miniButton' style='background:") + FPSTR(color) + ";width:55px!important' onclick='location.href=\"" + url + "\";'>" + text + "</button>\n");
 }
 void GP_TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
   *_GPP += F("<style>a:link.");
@@ -402,6 +444,9 @@ void GP_NAV_BLOCK_BEGIN(const String& name, int pos, int disp) {
   if (pos == disp) *_GPP += F("style='display:block'");
   *_GPP += F(">\n");
   GP.send();
+}
+void GP_CENTER_BOX_BEGIN() {
+  GP.SEND(F("<div style='width:100%;justify-content:center;margin-top:8px;margin-bottom:-6px' class='inliner'>\n"));
 }
 void GP_BLOCK_SHADOW_BEGIN(void) {
   GP.SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));

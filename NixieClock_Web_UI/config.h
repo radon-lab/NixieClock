@@ -99,4 +99,4 @@
 #define MAX_ALARMS 7 //максимум будильников в веб интерфейсе(3..15)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.6" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.7" //версия прошивки модуля esp
