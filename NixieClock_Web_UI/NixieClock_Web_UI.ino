@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 04.05.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 04.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -331,7 +331,7 @@ void build(void) {
     GP.HR(UI_MENU_LINE_COLOR);
     GP_TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
     GP.BREAK();
-    GP_TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
+    GP_TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
     GP_FOOTER_END();
 
     GP.UI_BODY(); //начать основное окно
