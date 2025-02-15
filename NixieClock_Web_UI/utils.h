@@ -445,6 +445,9 @@ void GP_NAV_BLOCK_BEGIN(const String& name, int pos, int disp) {
   *_GPP += F(">\n");
   GP.send();
 }
+void GP_MIDDLE_BLOCK_BEGIN() {
+  GP.SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
+}
 void GP_CENTER_BOX_BEGIN() {
   GP.SEND(F("<div style='width:100%;justify-content:center;margin-top:8px;margin-bottom:-6px' class='inliner'>\n"));
 }

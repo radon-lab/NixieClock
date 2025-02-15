@@ -211,6 +211,8 @@ void build(void) {
 
   if (updaterState()) {
     GP_PAGE_TITLE("Обновление");
+
+    GP_MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
     if (!updaterFlash()) {
       GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
@@ -225,9 +227,12 @@ void build(void) {
     GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.BLOCK_END();
+    GP.BLOCK_END();
   }
   else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
     GP_PAGE_TITLE("Ошибка совместимости");
+
+    GP_MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Предупреждение", UI_BLOCK_COLOR);
     GP.SPAN("<big><b>Эта версия веб-интерфейса не может взаимодействовать с этим устройством!</b></big>", GP_CENTER, "", UI_INFO_COLOR);
     GP.BREAK();
@@ -241,10 +246,12 @@ void build(void) {
       GP.BOX_END();
     }
     GP.BLOCK_END();
+    GP.BLOCK_END();
   }
   else if (busRebootState()) {
-    GP.PAGE_TITLE("Перезагрузка");
+    GP_PAGE_TITLE("Перезагрузка");
 
+    GP_MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Перезагрузка устройства", UI_BLOCK_COLOR);
     GP.SPAN("<big><b>Выполняется перезагрузка, подождите...</b></big>", GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN("<small>Не выключайте устройство до завершения перезагрузки!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
@@ -253,6 +260,7 @@ void build(void) {
     GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.UPDATE("syncReboot,syncWarn");
+    GP.BLOCK_END();
     GP.BLOCK_END();
   }
   else {
@@ -1224,6 +1232,7 @@ void buildUpdater(bool UpdateEnd, const String & UpdateError) {
 
   GP.PAGE_TITLE("Обновление");
 
+  GP_MIDDLE_BLOCK_BEGIN();
   GP.BLOCK_BEGIN(GP_THIN, "", "Обновление веб интерфейса", UI_BLOCK_COLOR);
   if (!UpdateEnd) {
     if (otaUpdate) GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
@@ -1252,6 +1261,7 @@ void buildUpdater(bool UpdateEnd, const String & UpdateError) {
     GP.BOX_END();
     GP.UPDATE("syncUpdate,syncWarn");
   }
+  GP.BLOCK_END();
   GP.BLOCK_END();
 
   GP_BUILD_END();
@@ -1466,7 +1476,7 @@ void action() {
       if (ui.clickInt("mainIndiBrtNight", mainSettings.indiBrightNight)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_N);
       }
-      
+
       if (ui.clickInt("mainBurnFlip", mainSettings.burnMode)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_BURN_MODE);
       }
@@ -2430,7 +2440,7 @@ void setup() {
   }
   ui.downloadAuto(true);
   ui.uploadAuto(false);
-  
+
   //запутили обнаружение устройств поблизости
   if (settings.groupFind) groupStart();
 
