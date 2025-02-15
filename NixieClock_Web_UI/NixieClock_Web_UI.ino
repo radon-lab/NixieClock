@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 04.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 15.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2430,6 +2430,9 @@ void setup() {
   }
   ui.downloadAuto(true);
   ui.uploadAuto(false);
+  
+  //запутили обнаружение устройств поблизости
+  if (settings.groupFind) groupStart();
 
   //остановили ntp
   ntpStop();

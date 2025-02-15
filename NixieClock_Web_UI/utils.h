@@ -516,10 +516,11 @@ void GP_FIX_STYLES(void) {
             "input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}\n" //фикс слайдеров
             "output{min-width:50px;border-radius:5px;}\n" //фикс слайдеров
             "select:disabled{filter:brightness(0.6);}\n" //фикс выпадающего списка
-            "select{width:200px;cursor:pointer;}\n" //фикс выпадающего списка
+            "select{min-width:130px;width:200px;cursor:pointer;}\n" //фикс выпадающего списка
             "html{scrollbar-width:none;}\n" //фикс прокрутки страницы
             "#ubtn {min-width:34px;border-radius:25px;line-height:160%;}\n" //фикс кнопок загрузки
             "#grid .block{margin:15px 10px;}</style>\n" //фикс таблицы
+            "<style type='text/css'>:root{color-scheme:light dark;}@media screen and (max-width:1000px){.page{margin-top:43px;}}</style>\n" //фикс темы по умолчанию
             "<style type='text/css'>@media screen and (max-width:1100px){\n.grid{display:block;}\n#grid .block{margin:20px 10px;width:unset;}}</style>\n" //отключить таблицу при ширине экрана меньше 1050px
           )
          );

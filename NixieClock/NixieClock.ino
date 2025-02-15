@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.6 релиз от 11.01.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 11.02.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1836,7 +1836,7 @@ boolean check_pass(void) //проверка пароля
   uint8_t cur_indi = 0; //текущий индикатор
   uint8_t time_out = 0; //таймер авто выхода
   uint8_t attempts_pass = 0; //попытки ввода пароля
-  uint8_t entry_pass[] = {0, 0, 0 , 0}; //введеный пароль
+  uint8_t entry_pass[] = {0, 0, 0, 0}; //введеный пароль
 
   dotSetBright(0); //выключаем точки
   indiSetBright(30); //устанавливаем максимальную яркость индикаторов

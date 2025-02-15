@@ -11,6 +11,7 @@
 
 enum {
   GROUP_STOPPED, //сервис не запущен
+  GROUP_READY, //ожидание подключения к локальной сети
   GROUP_UPDATE_WAIT, //ожидание поиска часов в локальной сети
   GROUP_UPDATE_START, //начало поиска часов в локальной сети
   GROUP_UPDATE_END, //окончание поиска часов в локальной сети
@@ -33,6 +34,7 @@ String group_list_ip; //текущий адрес устройства
 String group_list_name; //текщее имя устройства
 
 IPAddress wifiGetBroadcastIP(void);
+boolean wifiGetConnectStatus(void);
 
 #include <WiFiUdp.h>
 WiFiUDP group;
@@ -141,10 +143,13 @@ uint8_t groupDecodePacket(void) {
   uint8_t _key_low = group_packet[0];
   uint8_t _key_high = group_packet[1];
   uint8_t _command = 0;
-  if (groupGetDecodeByte(_key_low, _key_high, group_packet[2]) == 0xFF) {
-    _command = groupGetDecodeByte(_key_low, _key_high, group_packet[3]);
-    for (uint8_t i = 0; i < GROUP_DATA_SIZE; i++) group_packet[i] = groupGetDecodeByte(_key_low, _key_high, group_packet[i + (GROUP_PACKET_SIZE - GROUP_DATA_SIZE)]);
-    for (uint8_t i = GROUP_DATA_SIZE; i < GROUP_PACKET_SIZE; i++) group_packet[i] = 0;
+
+  if (_key_low && (_key_high >= 32) && (_key_high < 192)) {
+    if (groupGetDecodeByte(_key_low, _key_high, group_packet[2]) == 0xFF) {
+      _command = groupGetDecodeByte(_key_low, _key_high, group_packet[3]);
+      for (uint8_t i = 0; i < GROUP_DATA_SIZE; i++) group_packet[i] = groupGetDecodeByte(_key_low, _key_high, group_packet[i + (GROUP_PACKET_SIZE - GROUP_DATA_SIZE)]);
+      for (uint8_t i = GROUP_DATA_SIZE; i < GROUP_PACKET_SIZE; i++) group_packet[i] = 0;
+    }
   }
   return _command;
 }
@@ -163,20 +168,26 @@ void groupReload(void) {
 }
 //--------------------------------------------------------------------
 void groupStart(void) {
-  if (group.begin(GROUP_LOCAL_PORT)) {
-    group_check = ui.online();
-    group_update = false;
-    group_list = "";
+  if (group_status != GROUP_STOPPED) {
     groupSearch();
     groupReload();
+  }
+  else if (group.begin(GROUP_LOCAL_PORT)) {
+    group_check = ui.online();
+    group_update = false;
+    group_time = 0;
+    group_list = "";
+    group_status = GROUP_READY;
   }
   else group_status = GROUP_STOPPED;
 }
 void groupStop(void) {
-  group.stop();
-  group_status = GROUP_STOPPED;
-  group_update = false;
-  group_list = "";
+  if (group_status != GROUP_STOPPED) {
+    group_status = GROUP_READY;
+    group_update = false;
+    group_time = 0;
+    group_list = "";
+  }
 }
 //--------------------------------------------------------------------
 void groupUpdate(void) {
