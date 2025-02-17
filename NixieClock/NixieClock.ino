@@ -6692,35 +6692,6 @@ void backlFlash(void) //мигание подсветки
   }
 }
 #endif
-#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
-//--------------------------------Мигание точек------------------------------------
-void dotFlash(void) //мигание точек
-{
-  static boolean state; //текущее состояние точек
-
-  if (mainTask == MAIN_PROGRAM) { //если основная программа
-    if (!dot.maxBright || (animShow >= ANIM_MAIN)) { //если яркость выключена или запущена сторонняя анимация
-      return; //выходим
-    }
-
-    if (dotGetMode() >= DOT_BLINK) {
-      switch (fastSettings.neonDotMode) { //режим точек
-        case DOT_EXT_OFF: dotSetBright(0); break; //точки выключены
-        case DOT_EXT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
-        case DOT_EXT_BLINK:
-          if (!state) dotSetBright(dot.maxBright); //включаем точки
-          else dotSetBright(0); //выключаем точки
-          break;
-        case DOT_EXT_TURN_BLINK:
-          neonDotSetBright(dot.maxBright); //установка яркости неоновых точек
-          if (!state) neonDotSet(DOT_LEFT); //установка неоновой точки
-          else neonDotSet(DOT_RIGHT); //установка неоновой точки
-          break;
-      }
-    }
-  }
-}
-#endif
 //-------------------------------Анимации точек------------------------------------
 void dotEffect(void) //анимации точек
 {
@@ -6931,6 +6902,37 @@ void dotEffect(void) //анимации точек
     }
   }
 }
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+//--------------------------------Мигание точек------------------------------------
+void dotFlash(void) //мигание точек
+{
+  static boolean state; //текущее состояние точек
+
+  if (mainTask == MAIN_PROGRAM) { //если основная программа
+    if (!dot.maxBright || (animShow >= ANIM_MAIN)) { //если яркость выключена или запущена сторонняя анимация
+      return; //выходим
+    }
+
+    if (dotGetMode() >= DOT_BLINK) {
+      switch (fastSettings.neonDotMode) { //режим точек
+        case DOT_EXT_OFF: dotSetBright(0); break; //точки выключены
+        case DOT_EXT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
+        case DOT_EXT_BLINK:
+          if (!state) dotSetBright(dot.maxBright); //включаем точки
+          else dotSetBright(0); //выключаем точки
+          state = !state; //сменили направление
+          break;
+        case DOT_EXT_TURN_BLINK:
+          neonDotSetBright(dot.maxBright); //установка яркости неоновых точек
+          if (!state) neonDotSet(DOT_LEFT); //установка неоновой точки
+          else neonDotSet(DOT_RIGHT); //установка неоновой точки
+          state = !state; //сменили направление
+          break;
+      }
+    }
+  }
+}
+#endif
 //---------------------------Получить анимацию точек-------------------------------
 uint8_t dotGetMode(void) //получить анимацию точек
 {
