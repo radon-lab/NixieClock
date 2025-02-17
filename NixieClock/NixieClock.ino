@@ -3223,7 +3223,7 @@ void systemTask(void) //системная задача
       light_update = 0; //сбрасываем флаг изменения яркости
       changeBright(); //установка текущей яркости
     }
-    
+
 #if (NEON_DOT != 3) && DOTS_PORT_ENABLE && (ESP_ENABLE || DEFAULT_DOT_EXT_MODE)
     dotFlash(); //мигание точек
 #endif
@@ -5225,9 +5225,13 @@ void autoShowMenu(void) //меню автоматического показа
     }
 #endif
 
+#if AUTO_SHOW_DATE_BLINK
+    boolean blink = 0; //флаг мигания индикаторами
+#endif
 #if ESP_ENABLE || SENS_PORT_ENABLE
     boolean dot = 0; //флаг мигания точками
     boolean sign = 0; //знак температуры
+
     switch (show_mode) {
       case SHOW_TEMP: //режим отображения температуры
 #if LAMP_NUM > 4
@@ -5262,6 +5266,16 @@ void autoShowMenu(void) //меню автоматического показа
           _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
           setDivDot(dot); //инвертировать точку температуры
           dot = !dot; //инвертировали точки
+        }
+      }
+#endif
+#if AUTO_SHOW_DATE_BLINK
+      if (show_mode <= SHOW_DATE_YEAR) { //если режим отображения даты или года
+        if (!_timer_ms[TMR_ANIM]) { //если пришло время
+          _timer_ms[TMR_ANIM] = AUTO_SHOW_DATE_TIME; //установили время
+          blink = !blink; //изменили состояние
+          if (!blink) indiClr(); //очистили индикаторы
+          else animPrintBuff(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
         }
       }
 #endif
