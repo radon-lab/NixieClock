@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 11.02.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 17.02.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -388,11 +388,11 @@ enum {
   DOT_MAIN_BLINK, //мигание раз в секунду
   DOT_MAIN_DOOBLE_BLINK, //мигание два раза в секунду
 #if NEON_DOT != 3
-  DOT_PULS, //плавно мигает
+  DOT_MAIN_PULS, //плавно мигает
 #endif
 #if NEON_DOT == 2
-  DOT_MAIN_TURN_BLINK, //мигание неоновых ламп раз в секунду
-  DOT_TURN_PULS, //мигание неоновых ламп плавно
+  DOT_MAIN_TURN_BLINK, //мигание неоновых ламп раз в секунду по очереди
+  DOT_MAIN_TURN_PULS, //мигание неоновых ламп плавно по очереди
 #endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
@@ -407,6 +407,14 @@ enum {
 #endif
 #endif
   DOT_EFFECT_NUM //количество эффектов точек
+};
+
+//перечисления режимов точек
+enum {
+  DOT_EXT_OFF, //выключена
+  DOT_EXT_STATIC, //статичная
+  DOT_EXT_BLINK, //мигание раз в секунду
+  DOT_EXT_TURN_BLINK //мигание неоновых ламп раз в секунду по очереди
 };
 
 //перечисления настроек будильника
@@ -512,6 +520,7 @@ struct Settings_4 { //расширенные настройки
   uint8_t tempCorrectSensor = SHOW_TEMP_CORRECT_MODE;
   uint8_t tempMainSensor = SHOW_TEMP_MAIN_SENS;
   uint8_t tempHourSensor = HOUR_SOUND_MAIN_SENS;
+  uint8_t neonDotMode = DEFAULT_DOT_EXT_MODE;
 } extendedSettings;
 
 const uint8_t deviceInformation[] = { //комплектация часов
@@ -3043,7 +3052,7 @@ void systemTask(void) //системная задача
   backlFlash(); //"дыхание" подсветки
 #endif
 
-  dotFlash(); //мигаем точками
+  dotEffect(); //анимации точек
 
 #if PLAYER_TYPE
   playerUpdate(); //обработка плеера
@@ -3214,6 +3223,10 @@ void systemTask(void) //системная задача
       light_update = 0; //сбрасываем флаг изменения яркости
       changeBright(); //установка текущей яркости
     }
+    
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE && (ESP_ENABLE || DEFAULT_DOT_EXT_MODE)
+    dotFlash(); //мигание точек
+#endif
 
     RESET_WDT; //сбрасываем таймер WDT
   }
@@ -6413,9 +6426,9 @@ void changeBright(void) //установка яркости от времени 
         case DOT_OFF: dotSetBright(0); break; //точки выключены
         case DOT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-        case DOT_PULS: //плавное мигание
+        case DOT_MAIN_PULS: //плавное мигание
 #if NEON_DOT == 2
-        case DOT_TURN_PULS:
+        case DOT_MAIN_TURN_PULS:
 #endif
           if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
 #if DOT_PULS_TIME || ((NEON_DOT == 2) && DOT_PULS_TURN_TIME)
@@ -6668,6 +6681,33 @@ void backlFlash(void) //мигание подсветки
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
 {
+  static boolean state; //текущее состояние точек
+
+  if (mainTask == MAIN_PROGRAM) { //если основная программа
+    if (!dot.maxBright || (animShow >= ANIM_MAIN)) { //если яркость выключена или запущена сторонняя анимация
+      return; //выходим
+    }
+
+    if (dotGetMode() >= DOT_BLINK) {
+      switch (extendedSettings.neonDotMode) { //режим точек
+        case DOT_EXT_OFF: dotSetBright(0); break; //точки выключены
+        case DOT_EXT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
+        case DOT_EXT_BLINK:
+          if (!state) dotSetBright(dot.maxBright); //включаем точки
+          else dotSetBright(0); //выключаем точки
+          break;
+        case DOT_EXT_TURN_BLINK:
+          neonDotSetBright(dot.maxBright); //установка яркости неоновых точек
+          if (!state) neonDotSet(DOT_LEFT); //установка неоновой точки
+          else neonDotSet(DOT_RIGHT); //установка неоновой точки
+          break;
+      }
+    }
+  }
+}
+//-------------------------------Анимации точек------------------------------------
+void dotEffect(void) //анимации точек
+{
   if (mainTask == MAIN_PROGRAM) { //если основная программа
     if (!dot.update && !_timer_ms[TMR_DOT]) { //если пришло время
       if (!dot.maxBright || (animShow >= ANIM_MAIN)) { //если яркость выключена или запущена сторонняя анимация
@@ -6677,10 +6717,10 @@ void dotFlash(void) //мигание точек
 
       switch (dotGetMode()) { //режим точек
         case DOT_MAIN_BLINK:
-          switch (dot.drive) {
-            case 0: dotSetBright(dot.maxBright); dot.drive = 1; dot.update = 1; break; //включаем точки
-            case 1: dotSetBright(0); dot.drive = 0; dot.update = 1; break; //выключаем точки
-          }
+          if (!dot.drive) dotSetBright(dot.maxBright); //включаем точки
+          else dotSetBright(0); //выключаем точки
+          dot.drive = !dot.drive; //сменили направление
+          dot.update = 1; //сбросили флаг обновления точек
           break;
         case DOT_MAIN_DOOBLE_BLINK:
           if (dot.count & 0x01) dotSetBright(0); //выключаем точки
@@ -6693,7 +6733,7 @@ void dotFlash(void) //мигание точек
           else _timer_ms[TMR_DOT] = DOT_MAIN_DOOBLE_TIME; //установили таймер
           break;
 #if NEON_DOT != 3
-        case DOT_PULS:
+        case DOT_MAIN_PULS:
           if (!dot.drive) {
             if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
           }
@@ -6715,7 +6755,7 @@ void dotFlash(void) //мигание точек
           dot.drive = !dot.drive; //сменили направление
           dot.update = 1; //сбросили флаг обновления точек
           break;
-        case DOT_TURN_PULS:
+        case DOT_MAIN_TURN_PULS:
           switch (dot.count) {
             case 0: if (dotIncBright(dot.brightTurnStep, dot.maxBright, DOT_LEFT)) dot.count = 1; break; //сменили направление
             case 1: if (dotDecBright(dot.brightTurnStep, 0, DOT_LEFT)) dot.count = 2; break; //сменили направление
