@@ -127,6 +127,7 @@ struct Settings_2 { //быстрые настройки
   uint8_t dotMode = DEFAULT_DOT_MODE; //режим точек
   uint8_t backlMode = DEFAULT_BACKL_MODE; //режим подсветки
   uint8_t backlColor = (DEFAULT_BACKL_COLOR > 25) ? (DEFAULT_BACKL_COLOR + 227) : (DEFAULT_BACKL_COLOR * 10); //цвет подсветки
+  uint8_t neonDotMode = DEFAULT_DOT_EXT_MODE; //режим неоновых точек
 } fastSettings;
 
 struct Settings_3 { //настройки радио
@@ -520,7 +521,6 @@ struct Settings_4 { //расширенные настройки
   uint8_t tempCorrectSensor = SHOW_TEMP_CORRECT_MODE;
   uint8_t tempMainSensor = SHOW_TEMP_MAIN_SENS;
   uint8_t tempHourSensor = HOUR_SOUND_MAIN_SENS;
-  uint8_t neonDotMode = DEFAULT_DOT_EXT_MODE;
 } extendedSettings;
 
 const uint8_t deviceInformation[] = { //комплектация часов
@@ -6678,6 +6678,7 @@ void backlFlash(void) //мигание подсветки
   }
 }
 #endif
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
 {
@@ -6689,7 +6690,7 @@ void dotFlash(void) //мигание точек
     }
 
     if (dotGetMode() >= DOT_BLINK) {
-      switch (extendedSettings.neonDotMode) { //режим точек
+      switch (fastSettings.neonDotMode) { //режим точек
         case DOT_EXT_OFF: dotSetBright(0); break; //точки выключены
         case DOT_EXT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
         case DOT_EXT_BLINK:
@@ -6705,6 +6706,7 @@ void dotFlash(void) //мигание точек
     }
   }
 }
+#endif
 //-------------------------------Анимации точек------------------------------------
 void dotEffect(void) //анимации точек
 {

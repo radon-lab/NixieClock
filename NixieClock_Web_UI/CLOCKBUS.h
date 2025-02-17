@@ -92,6 +92,7 @@ struct Settings_2 {
   uint8_t dotMode; //режим точек
   uint8_t backlMode; //режим подсветки
   uint8_t backlColor; //цвет подсветки
+  uint8_t neonDotMode; //режим неоновых точек
 } fastSettings;
 
 struct Settings_3 { //расширенные настройки
@@ -216,7 +217,8 @@ enum {
   FAST_SECS_MODE,
   FAST_DOT_MODE,
   FAST_BACKL_MODE,
-  FAST_BACKL_COLOR
+  FAST_BACKL_COLOR,
+  FAST_NEON_DOT_MODE
 };
 
 enum {
@@ -613,7 +615,8 @@ void busUpdate(void) {
             fastSettings.secsMode = twi_read_byte(TWI_ACK);
             fastSettings.dotMode = twi_read_byte(TWI_ACK);
             fastSettings.backlMode = twi_read_byte(TWI_ACK);
-            fastSettings.backlColor = twi_read_byte(TWI_NACK);
+            fastSettings.backlColor = twi_read_byte(TWI_ACK);
+            fastSettings.neonDotMode = twi_read_byte(TWI_NACK);
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
@@ -627,6 +630,7 @@ void busUpdate(void) {
               case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
               case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
               case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break; //отправляем дополнительные натройки
+              case FAST_NEON_DOT_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break; //отправляем дополнительные натройки
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд

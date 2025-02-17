@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 15.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 17.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -167,6 +167,25 @@ String dotModeList(boolean alm) { //список режимов основных
   }
   if (alm) {
     str += F(",Без реакции");
+  }
+  return str;
+}
+String neonDotModeList(void) { //список режимов неоновых разделительных точек
+  String str;
+  str.reserve(400);
+  if (deviceInformation[NEON_DOT] != 3) {
+    if (!deviceInformation[DOTS_PORT_ENABLE]) {
+      str = F("Основной режим");
+    }
+    else {
+      str = F("Выключены,Статичные,Мигают");
+      if (deviceInformation[NEON_DOT] == 2) {
+        str += F(",Маятник");
+      }
+    }
+  }
+  else {
+    str = F("Не используются");
   }
   return str;
 }
@@ -739,6 +758,7 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
+        M_BOX(GP.LABEL("Неонки", "", UI_LABEL_COLOR); GP.SELECT("fastNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] == 3) || !deviceInformation[DOTS_PORT_ENABLE])););
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList(false), fastSettings.dotMode););
         GP.BREAK();
         GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1432,6 +1452,9 @@ void action() {
     if (ui.clickSub("fast")) {
       if (ui.clickInt("fastDot", fastSettings.dotMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_DOT_MODE);
+      }
+      if (ui.clickInt("fastNeonDot", fastSettings.neonDotMode)) {
+        busSetCommand(WRITE_FAST_SET, FAST_NEON_DOT_MODE);
       }
       if (ui.clickInt("fastFlip", fastSettings.flipMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_FLIP_MODE);
