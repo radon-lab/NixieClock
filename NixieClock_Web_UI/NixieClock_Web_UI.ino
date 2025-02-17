@@ -1555,7 +1555,7 @@ void action() {
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_D);
       }
       if (ui.click("mainDotBrtNight")) {
-        mainSettings.dotBrightNight = constrain(ui.getInt("mainDotBrtNight"), 1, 25);
+        mainSettings.dotBrightNight = constrain(ui.getInt("mainDotBrtNight"), 0, 25);
         if (deviceInformation[NEON_DOT] != 3) mainSettings.dotBrightNight *= 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
