@@ -5,6 +5,7 @@ uint8_t wifi_status = WL_IDLE_STATUS; //статус соединения wifi
 uint32_t wifi_interval = 5000; //интервал переподключения к wifi
 
 String wifi_scan_list; //список найденых wifi сетей
+String wifi_host_name; //имя устройства
 
 //--------------------------------------------------------------------
 String wifiGetConnectState(void) {
@@ -59,14 +60,18 @@ void wifiResetScanCompleteStatus(void) {
 }
 //--------------------------------------------------------------------
 void wifiStartScanNetworks(void) {
-  wifi_scan_list = "Поиск...";
+  wifi_scan_list = F("Поиск...");
   wifi_scan_state = 127;
   wifi_scan_timer = millis();
 }
 //--------------------------------------------------------------------
 void wifiScanInitStr(void) {
   wifi_scan_list.reserve(500);
+  wifi_host_name.reserve(30);
   wifi_scan_list = F("Нет сетей");
+  wifi_host_name = String(ESP.getChipId(), HEX);
+  wifi_host_name.toUpperCase();
+  wifi_host_name = "NixieClock_" + wifi_host_name;
 }
 //--------------------------------------------------------------------
 void wifiScanResult(int networksFound) {
@@ -191,6 +196,7 @@ void wifiUpdate(void) {
       Serial.println F("Wifi access point disabled");
     }
     else { //иначе новое поключение
+      WiFi.hostname(wifi_host_name); //установили имя устройства
       wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
       if (wifi_status != WL_CONNECT_FAILED) {
         timerWifi = millis(); //сбросили таймер

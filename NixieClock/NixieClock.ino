@@ -5273,14 +5273,17 @@ void autoShowMenu(void) //меню автоматического показа
       if (show_mode <= SHOW_DATE_YEAR) { //если режим отображения даты или года
         if (!_timer_ms[TMR_ANIM]) { //если пришло время
           _timer_ms[TMR_ANIM] = AUTO_SHOW_DATE_TIME; //установили время
-          blink = !blink; //изменили состояние
-          if (!blink) indiClr(); //очистили индикаторы
+          if (blink) indiClr(); //очистили индикаторы
           else animPrintBuff(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
+          blink = !blink; //изменили состояние
         }
       }
 #endif
       if (buttonState()) return; //возврат если нажата кнопка
     }
+#if AUTO_SHOW_DATE_BLINK
+    if (blink) animPrintBuff(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
+#endif
   }
   animShow = (mainSettings.autoShowFlip) ? (ANIM_OTHER + mainSettings.autoShowFlip) : ANIM_MAIN; //установили флаг анимации
 }
