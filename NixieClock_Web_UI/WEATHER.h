@@ -38,13 +38,13 @@ enum {
 };
 
 enum {
-  WEATHER_NULL, //сервис не запущен
+  WEATHER_STOPPED, //сервис не запущен
   WEATHER_ERROR, //ошибка запроса
-  WEATHER_GOOD, //данные получены успешно
+  WEATHER_SYNCED, //данные получены успешно
   WEATHER_REQUEST, //выполняется запрос
   WEATHER_WAIT_ANSWER //ожидается ответ
 };
-uint8_t weather_state = WEATHER_NULL; //флаг состояние сервера погоды
+uint8_t weather_state = WEATHER_STOPPED; //флаг состояние сервера погоды
 uint8_t weather_attempts = 0; //текущее количество попыток подключение к серверу погоды
 
 boolean weather_update = false; //флаг обновления данных о погоде
@@ -70,7 +70,7 @@ uint8_t weatherGetStatus(void) {
   return weather_state;
 }
 boolean weatherGetRunStatus(void) {
-  return (weather_state != WEATHER_NULL);
+  return (weather_state != WEATHER_STOPPED);
 }
 boolean weatherGetGoodStatus(void) {
   return (weather_state > WEATHER_ERROR);
@@ -114,7 +114,7 @@ void weatherInitStr(void) {
   weather_answer = "";
 }
 void weatherSendRequest(void) {
-  if (weather_state <= WEATHER_GOOD) {
+  if (weather_state <= WEATHER_SYNCED) {
     if (client.connected()) client.stop();
     weather_state = WEATHER_REQUEST;
     weather_attempts = 0;
@@ -122,7 +122,7 @@ void weatherSendRequest(void) {
 }
 void weatherDisconnect(void) {
   if (client.connected()) client.stop();
-  weather_state = WEATHER_NULL;
+  weather_state = WEATHER_STOPPED;
 }
 //--------------------------------------------------------------------
 const char* weatherGetParseType(uint8_t mod) {
@@ -270,7 +270,7 @@ boolean weatherUpdate(void) {
           client.stop();
 
           if ((weather_answer.indexOf("charset=utf-8") >= 0) && (weather_answer.indexOf("\"time\":\"unixtime\"") >= 0)) {
-            weather_state = WEATHER_GOOD;
+            weather_state = WEATHER_SYNCED;
             weather_update = true;
             return true;
           }

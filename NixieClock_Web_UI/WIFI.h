@@ -8,21 +8,32 @@ String wifi_scan_list; //список найденых wifi сетей
 String wifi_host_name; //имя устройства
 
 //--------------------------------------------------------------------
+String wifiGetApSSID(void) {
+  String str;
+  str.reserve(70);
+  if (settings.ssid[0]) str = settings.ssid;
+  else str = F("unset");
+  return str;
+}
+//--------------------------------------------------------------------
+String wifiGetApIP(void) {
+  String str;
+  str.reserve(30);
+  if (wifi_status == WL_CONNECTED) str = WiFi.localIP().toString();
+  else str = F("0.0.0.0");
+  return str;
+}
+//--------------------------------------------------------------------
 String wifiGetConnectState(void) {
   String str;
-  str.reserve(200);
-  str = F("<big><big>");
+  str.reserve(100);
 
-  if (!settings.ssid[0]) str += F("Некорректное имя сети!");
-  else {
-    if (wifi_status == WL_CONNECTED) str += F("Подключено к \"");
-    else if (!wifi_interval) str += F("Не удалось подключиться к \"");
-    else str += F("Подключение к \"");
-    str += settings.ssid;
-    if ((wifi_status == WL_CONNECTED) || !wifi_interval) str += F("\"");
-    else str += F("\"...");
+  if (settings.ssid[0]) {
+    if (wifi_status == WL_CONNECTED) str = F("Подключение установлено");
+    else if (!wifi_interval) str = F("Не удалось подключиться");
+    else str = F("Подключение к сети...");
   }
-  str += F("</big></big>");
+  else str = F("Некорректное имя сети");
   return str;
 }
 //--------------------------------------------------------------------
@@ -147,7 +158,7 @@ void wifiUpdate(void) {
     switch (wifi_status) {
       case WL_CONNECTED:
         timerWifi = millis(); //сбросили таймер
-        
+
         if (WiFi.getMode() != WIFI_AP_STA) wifi_interval = 0; //сбрасываем интервал переподключения
         else wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
 

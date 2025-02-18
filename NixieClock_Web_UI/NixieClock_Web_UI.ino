@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 17.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 18.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -303,7 +303,10 @@ void build(void) {
     if (deviceInformation[RADIO_ENABLE]) GP.UI_LINK("/radio", "Радио");
     if (fsUpdate || otaUpdate || clockUpdate) GP.UI_LINK("/update", "Обновление");
     GP.UI_LINK("/information", "Об устройстве");
-    GP.UI_LINK("/network", "Сетевые настройки");
+    if (ui.uri("/connection")) GP.UI_LINK("/connection", "Сетевые настройки");
+    else if (ui.uri("/manual")) GP.UI_LINK("/manual", "Сетевые настройки");
+    else GP.UI_LINK("/network", "Сетевые настройки");
+
 
     //ссылки часов
     if (groupResetList()) {
@@ -1136,40 +1139,33 @@ void build(void) {
       GP.UPDATE_CLICK("extReboot", "rebootButton");
       GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceGroup,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
-    else { //подключение к роутеру
+    else { //сетевые настройки
       GP_PAGE_TITLE("Сетевые настройки");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
-      if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) {
-        GP.FORM_BEGIN("/network");
-        if (wifiGetConnectStatus()) {
-          GP.TEXT("", "", settings.ssid, "", 0, "", true);
-          GP.BREAK();
-          GP.TEXT("", "", WiFi.localIP().toString(), "", 0, "", true);
-          GP.SPAN("Подключение установлено", GP_CENTER, "", UI_INFO_COLOR); //описание
-        }
-        else {
-          GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
-          updateList += F(",syncNetwork");
+      if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) { //подключение к сети
+        if (!wifiGetConnectStatus()) {
+          updateList += F(",syncConnect,syncNetwork");
+          GP.RELOAD("syncConnect");
         }
 
+        GP.FORM_BEGIN("/network");
+        GP.TEXT("", "", wifiGetApSSID(), "", 0, "", true);
+        GP.BREAK();
+        GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
+        GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        if (ui.uri("/connection")) {
-          GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0");
-        }
-        else {
-          GP_SUBMIT("Отключиться", UI_BUTTON_COLOR);
-        }
+        GP_SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
         GP.FORM_END();
       }
-      else {
+      else { //выбор сети
         if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
         updateList += F(",syncReload");
         GP.RELOAD("syncReload");
 
         GP.FORM_BEGIN("/connection");
-        if (ui.uri("/manual")) {
+        if (ui.uri("/manual")) { //ручной режим ввода сети
           GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
           GP.BREAK();
           GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
@@ -1181,7 +1177,7 @@ void build(void) {
           GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
           GP.SEND("</div>\n");
         }
-        else {
+        else { //выбор сети из списка
           GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
           GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
@@ -1198,34 +1194,32 @@ void build(void) {
       }
       GP.BLOCK_END();
 
-      if (ui.uri("/network")) { //сетевые настройки
-        updateList += F(",syncStatus,syncWeather");
+      updateList += F(",syncStatus,syncWeather");
 
-        GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
-        GP.TEXT("syncHost", "Хост", settings.host, "", 19);
-        GP.BREAK();
-        GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
-        GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
-        GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus()));
-        GP.BLOCK_END();
+      GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
+      GP.TEXT("syncHost", "Хост", settings.host, "", 19);
+      GP.BREAK();
+      GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
+      GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
+      GP.HR(UI_LINE_COLOR);
+      GP.BUTTON("syncCheck", "Синхронизировать сейчас", "", (!ntpGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus() || !wifiGetConnectStatus()));
+      GP.BLOCK_END();
 
-        GP.UPDATE_CLICK("syncStatus", "syncCheck");
+      GP.UPDATE_CLICK("syncStatus", "syncCheck");
 
-        GP.BLOCK_BEGIN(GP_THIN, "", "Регион погоды", UI_BLOCK_COLOR);
-        GP.SELECT("weatherCity", String(weatherCityList) + ",- По координатам -", settings.weatherCity, 0, false, true);
-        GP.BREAK();
-        M_BOX(GP_CENTER, "209px",
-              GP.NUMBER_F("weatherLat", "Широта", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
-              GP.NUMBER_F("weatherLon", "Долгота", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
-             );
-        GP.SPAN(getWeatherState(), GP_CENTER, "syncWeather", UI_INFO_COLOR); //описание
-        GP.HR(UI_LINE_COLOR);
-        GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!weatherGetRunStatus()));
-        GP.BLOCK_END();
+      GP.BLOCK_BEGIN(GP_THIN, "", "Регион погоды", UI_BLOCK_COLOR);
+      GP.SELECT("weatherCity", String(weatherCityList) + ",- По координатам -", settings.weatherCity, 0, false, true);
+      GP.BREAK();
+      M_BOX(GP_CENTER, "209px",
+            GP.NUMBER_F("weatherLat", "Широта", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
+            GP.NUMBER_F("weatherLon", "Долгота", (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
+           );
+      GP.SPAN(getWeatherState(), GP_CENTER, "syncWeather", UI_INFO_COLOR); //описание
+      GP.HR(UI_LINE_COLOR);
+      GP.BUTTON("weatherUpdate", "Обновить погоду", "", (!weatherGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!weatherGetRunStatus() || !wifiGetConnectStatus()));
+      GP.BLOCK_END();
 
-        GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
-      }
+      GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
     }
 
     if (!(device.failure & 0x8000) && device.failure && failureWarn) {
@@ -1893,6 +1887,9 @@ void action() {
 
       if (ui.update("syncNetwork")) { //если было обновление
         ui.answer(wifiGetConnectState());
+      }
+      if (ui.update("syncConnect") && wifiGetConnectStatus()) { //если было обновление
+        ui.answer(1);
       }
       if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
         ui.answer(1);
