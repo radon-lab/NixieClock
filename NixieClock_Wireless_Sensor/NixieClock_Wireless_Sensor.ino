@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.6 релиз от 22.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 22.12.24
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -112,7 +112,7 @@ ADC_MODE(ADC_VCC);
 
 void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
+  GP_FIX_SCRIPTS(); //фикс скриптов страницы
   GP_FIX_STYLES(); //фикс стилей страницы
 
   //обновления блоков
@@ -124,7 +124,9 @@ void build(void) {
   //ссылки меню
   GP.UI_LINK("/", "Об устройстве");
   if (otaUpdate) GP.UI_LINK("/update", "Обновление ПО");
-  GP.UI_LINK("/network", "Сетевые настройки");
+  if (ui.uri("/connection")) GP.UI_LINK("/connection", "Сетевые настройки");
+  else if (ui.uri("/manual")) GP.UI_LINK("/manual", "Сетевые настройки");
+  else GP.UI_LINK("/network", "Сетевые настройки");
 
   GP_HR(UI_MENU_LINE_COLOR, 6);
 
@@ -250,65 +252,58 @@ void build(void) {
     GP.PAGE_TITLE("Сетевые настройки");
 
     GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
-    if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) {
-      GP.FORM_BEGIN("/network");
-      if (wifiGetConnectStatus()) {
-        GP.TEXT("", "", settings.ssid, "", 0, "", true);
-        GP.BREAK();
-        GP.TEXT("", "", WiFi.localIP().toString(), "", 0, "", true);
-        GP.SPAN("Подключение установлено", GP_CENTER, "", UI_INFO_COLOR); //описание
-      }
-      else {
-        GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
-        updateList += ",syncNetwork";
+    if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) { //подключение к сети
+      if (!wifiGetConnectStatus()) {
+        updateList += F(",syncConnect,syncNetwork");
+        GP.RELOAD("syncConnect");
       }
 
+      GP.FORM_BEGIN("/network");
+      GP.TEXT("", "", wifiGetApSSID(), "", 0, "", true);
+      GP.BREAK();
+      GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
+      GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
-      if (ui.uri("/connection")) {
-        GP.BUTTON_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
-      }
-      else {
-        GP.SUBMIT("Отключиться", UI_BUTTON_COLOR);
-      }
+      GP_SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
       GP.FORM_END();
     }
-    else {
+    else { //выбор сети
       if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
-      updateList += ",syncReload";
+      updateList += F(",syncReload");
       GP.RELOAD("syncReload");
 
       GP.FORM_BEGIN("/connection");
-      if (ui.uri("/manual")) {
+      if (ui.uri("/manual")) { //ручной режим ввода сети
         GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
         GP.BREAK();
-        GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+        GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
         GP.BREAK();
         GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+        GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+        GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
         GP.SEND("</div>\n");
       }
-      else {
+      else { //выбор сети из списка
         GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
         GP.BREAK();
-        GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+        GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
         GP.BREAK();
         GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "", true);
-        else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
+        if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%;margin-top:10px;margin-bottom:0", true);
+        else GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+        GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", false, true);
         GP.SEND("</div>\n");
       }
       GP.FORM_END();
     }
     GP.BLOCK_END();
 
-    if (ui.uri("/network") && wifiGetConnectStatus()) { //сетевые настройки
+    if (wifiGetConnectStatus()) { //сетевые настройки
       GP.BLOCK_BEGIN(GP_THIN, "", "Отправка данных", UI_BLOCK_COLOR);
 
       IPAddress addrSend;
@@ -343,32 +338,39 @@ void build(void) {
   GP_BUILD_END();
 }
 
-void buildUpdater(bool UpdateEnd, const String & UpdateError) {
+void buildUpdate(bool UpdateEnd, const String & UpdateError) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
+  GP_FIX_SCRIPTS(); //фикс скриптов страницы
   GP_FIX_STYLES(); //фикс стилей страницы
 
   GP.PAGE_TITLE("Обновление");
 
+  GP_MIDDLE_BLOCK_BEGIN();
+
   GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
   if (!UpdateEnd) {
-    GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
-    GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
+    GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
+    GP.BREAK();
+    GP.SPAN("Поддерживаемые форматы файлов: bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
+    GP.BREAK();
+    GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
   }
   else if (UpdateError.length()) {
     GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
-    GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP_BUTTON_MINI_LINK("/ota_update", "⠀<big><big>↻</big></big>⠀", UI_BUTTON_COLOR); GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
   }
   else {
     GP.SPAN("<big><b>Выполняется обновление прошивки...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
     GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
-    GP.HR(UI_LINE_COLOR);
-    M_BOX(GP_CENTER, GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR););
     GP.UPDATE("syncUpdate,syncWarn");
     setUpdateCompleted();
   }
+  GP.HR(UI_LINE_COLOR);
+  GP_CENTER_BOX_BEGIN();
+  GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
+  GP.BOX_END();
+  GP.BLOCK_END();
+
   GP.BLOCK_END();
 
   GP_BUILD_END();
@@ -458,6 +460,9 @@ void action() {
     if (ui.updateSub("sync")) {
       if (ui.update("syncNetwork")) { //если было обновление
         ui.answer(wifiGetConnectState());
+      }
+      if (ui.update("syncConnect") && wifiGetConnectStatus()) { //если было обновление
+        ui.answer(1);
       }
       if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
         ui.answer(1);
@@ -1014,7 +1019,7 @@ void setup() {
     //настраиваем обновление без пароля
     if (otaUpdate) {
       ui.enableOTA();
-      ui.OTA.attachUpdateBuild(buildUpdater);
+      ui.OTA.attachUpdateBuild(buildUpdate);
     }
     ui.downloadAuto(true);
     ui.uploadAuto(false);

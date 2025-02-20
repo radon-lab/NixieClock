@@ -7,25 +7,39 @@ uint32_t wifi_interval = 0; //интервал переподключения к
 String wifi_scan_list = "Нет сетей"; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
+String wifiGetApSSID(void) {
+  String str;
+  str.reserve(70);
+  if (settings.ssid[0]) str = settings.ssid;
+  else str = F("unset");
+  return str;
+}
+//--------------------------------------------------------------------
+String wifiGetApIP(void) {
+  String str;
+  str.reserve(30);
+  if (wifi_status == WL_CONNECTED) str = WiFi.localIP().toString();
+  else str = F("0.0.0.0");
+  return str;
+}
+//--------------------------------------------------------------------
+String wifiGetConnectState(void) {
+  String str;
+  str.reserve(100);
+
+  if (settings.ssid[0]) {
+    if (wifi_status == WL_CONNECTED) str = F("Подключение установлено");
+    else if (!wifi_interval && (wifi_status != 254)) str = F("Не удалось подключиться");
+    else str = F("Подключение к сети...");
+  }
+  else str = F("Некорректное имя сети");
+  return str;
+}
+//--------------------------------------------------------------------
 IPAddress wifiGetBroadcastIP(void) {
   struct ip_info data;
   wifi_get_ip_info(STATION_IF, &data);
   return IPAddress(data.ip.addr | ~(data.netmask.addr));
-}
-//--------------------------------------------------------------------
-String wifiGetConnectState(void) {
-  String data = "<big><big>";
-  if (!settings.ssid[0]) data += "Некорректное имя сети!";
-  else {
-    if (wifi_status == WL_CONNECTED) data += "Подключено к \"";
-    else if (!wifi_interval && (wifi_status != 254)) data += "Не удалось подключиться к \"";
-    else data += "Подключение к \"";
-    data += String(settings.ssid);
-    if ((wifi_status == WL_CONNECTED) || !wifi_interval) data += "\"";
-    else data += "\"...";
-  }
-  data += "</big></big>";
-  return data;
 }
 //--------------------------------------------------------------------
 boolean wifiGetConnectStatus(void) {
