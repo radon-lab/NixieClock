@@ -1289,7 +1289,7 @@ void webShowUpdateUI(void) {
 void webShowUpdateAuth(void) {
   GP_HR_TEXT("Авторизация", "", UI_LINE_COLOR, UI_HINT_COLOR);
   if (!passGetWriteTimeout()) {
-    M_BOX(GP_CENTER, GP_PASS_EYE("otaPass", "Пароль", "", 8); GP.BUTTON_MINI("otaCheck", "Войти", "", UI_BUTTON_COLOR, "200px!important", false, true););
+    M_BOX(GP_CENTER, GP_PASS_EYE("otaPass", "Пароль", passEnterData, 8); GP.BUTTON_MINI("otaCheck", "Войти", "", UI_BUTTON_COLOR, "200px!important", false, true););
     if (passGetCheckError()) GP.SPAN("Неверный пароль!", GP_CENTER, "", GP_RED); //описание
     else GP.SPAN("Для доступа к режиму обновления необходимо авторизоваться!", GP_CENTER, "", GP_YELLOW); //описание
   }
@@ -2181,6 +2181,7 @@ void passCheckAttempt(void) {
 
   if (((millis() - passTimer) >= OTA_PASS_TIMEOUT) || (attempt < OTA_PASS_ATTEMPT)) {
     if (strncmp(passEnterData, OTA_PASS, sizeof(passEnterData))) {
+      memset(passEnterData, '\0', sizeof(passEnterData));
       if (attempt++ >= OTA_PASS_ATTEMPT) attempt = 0;
       else if (attempt == OTA_PASS_ATTEMPT) passState = 0x03;
       else passState = 0x01;
