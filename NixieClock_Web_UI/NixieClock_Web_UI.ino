@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 18.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 20.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -68,8 +68,9 @@ GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
 GPtime alarmTime; //время будильника
 
-char buffMultiIp[20]; //буфер ip адреса
-char buffMultiName[20]; //буфер имени
+char passEnterData[8]; //буфер ввода пароля
+uint8_t passState = 0; //флаг состояния ввода пароля
+uint32_t passTimer = 0; //таймер ожидания пароля
 
 boolean clockUpdate = false; //флаг запрета обновления часов
 boolean otaUpdate = false; //флаг запрета обновления есп
@@ -132,6 +133,7 @@ const char *failureDataList[] = {
   "Сбой чтения EEPROM", "Софт перезагрузка", "Сбой преобразователя", "Сбой PWM преобразователя", "Переполнение стека", "Переполнение тиков времени", "Сбой динамической индикации"
 };
 
+//--------------------------------------------------------------------
 String backlModeList(void) { //список режимов подсветки
   String str;
   str.reserve(500);
@@ -222,10 +224,10 @@ String playerVoiceList(void) { //список голосов для озвучк
   }
   return str;
 }
-
+//--------------------------------------------------------------------
 void build(void) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
+  GP_FIX_SCRIPTS(); //фикс скриптов страницы
   GP_FIX_STYLES(); //фикс стилей страницы
 
   if (updaterState()) {
@@ -266,6 +268,8 @@ void build(void) {
     }
     GP.BLOCK_END();
     GP.BLOCK_END();
+
+    passSetOtaState();
   }
   else if (busRebootState()) {
     GP_PAGE_TITLE("Перезагрузка");
@@ -985,33 +989,9 @@ void build(void) {
       GP_PAGE_TITLE("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
-      GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
-      GP.BREAK();
-      if (fsUpdate) {
-        GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
-        GP.BREAK();
-      }
-      String formatText;
-      formatText.reserve(100);
-      formatText = F("Поддерживаемые форматы файлов: ");
-      if (clockUpdate) formatText += F("hex");
-      if (fsUpdate || otaUpdate) {
-        if (clockUpdate) formatText += F(", ");
-        formatText += F("bin и bin.gz.");
-      }
-      else formatText += '.';
-      GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
-      GP.BREAK();
-      GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      if (clockUpdate) {
-        M_BOX(GP.LABEL("Прошивка часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
-      }
-      if (otaUpdate) {
-        M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
-      }
-      if (fsUpdate) {
-        M_BOX(GP.LABEL("Файловая система ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
-      }
+      webShowUpdateInfo();
+      if (passGetOtaState()) webShowUpdateUI();
+      else webShowUpdateAuth();
       GP.BLOCK_END();
     }
     else if (ui.uri("/information")) { //информация о системе
@@ -1168,7 +1148,7 @@ void build(void) {
         if (ui.uri("/manual")) { //ручной режим ввода сети
           GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
           GP.BREAK();
-          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+          GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
           GP.BREAK();
           GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
@@ -1180,7 +1160,7 @@ void build(void) {
         else { //выбор сети из списка
           GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
-          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, "100%", 64);
+          GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
           GP.BREAK();
           GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
@@ -1238,49 +1218,87 @@ void build(void) {
   }
   GP_BUILD_END();
 }
-
-void buildUpdater(bool UpdateEnd, const String & UpdateError) {
+//--------------------------------------------------------------------
+void buildUpdate(bool UpdateEnd, const String & UpdateError) {
   GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скрипта проверки онлайна
+  GP_FIX_SCRIPTS(); //фикс скриптов страницы
   GP_FIX_STYLES(); //фикс стилей страницы
 
   GP.PAGE_TITLE("Обновление");
 
   GP_MIDDLE_BLOCK_BEGIN();
-  GP.BLOCK_BEGIN(GP_THIN, "", "Обновление веб интерфейса", UI_BLOCK_COLOR);
+
   if (!UpdateEnd) {
-    if (otaUpdate) GP.SPAN("<b>Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
-    else GP.SPAN("<b>Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.</b><br>Поддерживаемые форматы файлов bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
-    GP.HR(UI_LINE_COLOR);
-    GP_CENTER_BOX_BEGIN();
-    if (otaUpdate) GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true);
-    else GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true);
-    GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
-    GP.BOX_END();
-  }
-  else if (UpdateError.length()) {
-    GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
-    GP.HR(UI_LINE_COLOR);
-    GP_CENTER_BOX_BEGIN();
-    GP_BUTTON_MINI_LINK("/", "<big>🏠︎</big>", UI_BUTTON_COLOR);
-    GP.BUTTON_MINI_LINK("/ota_update", "Вернуться к загрузке", UI_BUTTON_COLOR);
-    GP.BOX_END();
+    GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
+    webShowUpdateInfo();
+    webShowUpdateUI();
   }
   else {
-    GP.SPAN("<big><b>Выполняется обновление...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
-    GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
-    GP.HR(UI_LINE_COLOR);
-    GP_CENTER_BOX_BEGIN();
-    GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
-    GP.BOX_END();
-    GP.UPDATE("syncUpdate,syncWarn");
+    GP.BLOCK_BEGIN(GP_THIN, "", "Обновление веб интерфейса", UI_BLOCK_COLOR);
+    if (UpdateError.length()) {
+      GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+    }
+    else {
+      GP.SPAN("<big><b>Выполняется обновление...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
+      GP.UPDATE("syncUpdate,syncWarn");
+    }
   }
+  GP.HR(UI_LINE_COLOR);
+  GP_CENTER_BOX_BEGIN();
+  GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
+  GP.BOX_END();
   GP.BLOCK_END();
+  
   GP.BLOCK_END();
 
   GP_BUILD_END();
 }
-
+//--------------------------------------------------------------------
+void webShowUpdateInfo(void) {
+  GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
+  GP.BREAK();
+  if (fsUpdate) {
+    GP.SPAN("Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути.", GP_CENTER, "", UI_INFO_COLOR); //описание
+    GP.BREAK();
+  }
+  String formatText;
+  formatText.reserve(100);
+  formatText = F("Поддерживаемые форматы файлов: ");
+  if (clockUpdate) formatText += F("hex");
+  if (fsUpdate || otaUpdate) {
+    if (clockUpdate) formatText += F(", ");
+    formatText += F("bin и bin.gz.");
+  }
+  else formatText += '.';
+  GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
+  GP.BREAK();
+}
+void webShowUpdateUI(void) {
+  GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
+  if (clockUpdate) {
+    M_BOX(GP.LABEL("Прошивка часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
+  }
+  if (otaUpdate) {
+    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+  }
+  if (fsUpdate) {
+    M_BOX(GP.LABEL("Файловая система ESP", "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("", UI_BUTTON_COLOR, true););
+  }
+}
+void webShowUpdateAuth(void) {
+  GP_HR_TEXT("Авторизация", "", UI_LINE_COLOR, UI_HINT_COLOR);
+  if (!passGetWriteTimeout()) {
+    M_BOX(GP_CENTER, GP_PASS_EYE("otaPass", "Пароль", "", 8); GP.BUTTON_MINI("otaCheck", "Войти", "", UI_BUTTON_COLOR, "200px!important", false, true););
+    if (passGetCheckError()) GP.SPAN("Неверный пароль!", GP_CENTER, "", GP_RED); //описание
+    else GP.SPAN("Для доступа к режиму обновления необходимо авторизоваться!", GP_CENTER, "", GP_YELLOW); //описание
+  }
+  else {
+    M_BOX(GP_CENTER, GP.TEXT("", "", "Пароль", "", 0, "", true); GP.BUTTON_MINI("", "Войти", "", GP_GRAY, "200px!important", true););
+    GP.SPAN(String((passGetCheckError()) ? "Неверный пароль! " : "") + "Попробуйте позже...", GP_CENTER, "", GP_RED); //описание
+  }
+}
+//--------------------------------------------------------------------
 void action() {
   if (ui.click()) {
     if (ui.clickSub("sync")) {
@@ -1690,6 +1708,15 @@ void action() {
       }
       if (ui.click("extScan")) {
         if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.clickSub("ota")) {
+      if (ui.click("otaPass")) {
+        ui.copyStr(passEnterData, sizeof(passEnterData));
+      }
+      if (ui.click("otaCheck")) {
+        passCheckAttempt();
       }
     }
     //--------------------------------------------------------------------
@@ -2114,6 +2141,55 @@ String StrLengthConstrain(String str, uint8_t size) {
   return str;
 }
 //--------------------------------------------------------------------
+boolean passGetCheckError(void) {
+  if (passState == 0x01) {
+    passState = 0x00;
+    return true;
+  }
+  else if (passState == 0x03) {
+    passState = 0x02;
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean passGetWriteTimeout(void) {
+  return ((passState & 0x02) && ((millis() - passTimer) < OTA_PASS_TIMEOUT));
+}
+//--------------------------------------------------------------------
+boolean passGetOtaState(void) {
+  if (OTA_PASS[0] == '\0') passSetOtaState();
+  return (passState >= 0xFC);
+}
+//--------------------------------------------------------------------
+void passSetOtaState(void) {
+  static boolean auth = false;
+
+  if (!auth) {
+    auth = true;
+    ui.uploadMode(true);
+    ui.uploadAuto(false);
+    ui.enableOTA();
+    ui.OTA.attachUpdateBuild(buildUpdate);
+  }
+
+  passState = 0xFC;
+}
+//--------------------------------------------------------------------
+void passCheckAttempt(void) {
+  static uint8_t attempt = 0;
+
+  if (((millis() - passTimer) >= OTA_PASS_TIMEOUT) || (attempt < OTA_PASS_ATTEMPT)) {
+    if (strncmp(passEnterData, OTA_PASS, sizeof(passEnterData))) {
+      if (attempt++ >= OTA_PASS_ATTEMPT) attempt = 0;
+      else if (attempt == OTA_PASS_ATTEMPT) passState = 0x03;
+      else passState = 0x01;
+    }
+    else passSetOtaState();
+    passTimer = millis();
+  }
+}
+//--------------------------------------------------------------------
 boolean checkFsData(const char** data, int8_t size) {
   File file;
   while (size > 0) {
@@ -2168,6 +2244,11 @@ void initFileSystemData(void) {
     Serial.println F("OTA update enable");
   }
   else Serial.println F("OTA update disable, running out of memory");
+
+  if (OTA_PASS[0] != '\0') {
+    Serial.print F("Update is locked, pass: ");
+    Serial.println(OTA_PASS);
+  }
 }
 //--------------------------------------------------------------------
 void resetMainSettings(void) {
@@ -2453,13 +2534,9 @@ void setup() {
   ui.attach(action);
   ui.start();
 
-  //настраиваем обновление без пароля
-  if (otaUpdate || fsUpdate) {
-    ui.enableOTA();
-    ui.OTA.attachUpdateBuild(buildUpdater);
-  }
+  //настраиваем работу с файлами
   ui.downloadAuto(true);
-  ui.uploadAuto(false);
+  ui.uploadMode(false);
 
   //запутили обнаружение устройств поблизости
   if (settings.groupFind) groupStart();

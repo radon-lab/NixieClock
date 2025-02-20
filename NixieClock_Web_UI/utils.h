@@ -85,9 +85,39 @@ void GP_SLIDER_MIN(const String& name, const String& min_lable, const String& ma
   *_GPP += F("</output>\n");
   GP.send();
 }
-
 void GP_SLIDER_MIN_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
   GP_SLIDER_MIN(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1);
+}
+void GP_PASS_EYE(const String& name, const String& place = "", const String& value = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+  *_GPP += F("<div class='inlBlock'><input type='password' name='");
+  *_GPP += name;
+  *_GPP += F("' id='");
+  *_GPP += name;
+  *_GPP += F("' value='");
+  *_GPP += value;
+  *_GPP += F("' style='width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;' placeholder='");
+  *_GPP += place;
+  *_GPP += F("' onchange='GP_click(this)'");
+  if (dis) *_GPP += F(" disabled");
+  if (maxlength) {
+    *_GPP += F(" maxlength=");
+    *_GPP += maxlength;
+  }
+  if (pattern.length()) {
+    *_GPP += F(" pattern=");
+    *_GPP += pattern;
+  }
+  *_GPP += ">\n";
+  *_GPP += F("<span class='eyepass' style='margin-top:13px;' onclick='GP_eye(this)'>"
+             "<svg viewBox='0 0 20 20' style='width:25px;height:25px;fill:currentcolor;'>"
+             "<path fill-rule='evenodd' d='M0 20V0zM20 0v20zm-7.204 6.143C11.889 5.734 10.953 5.5 10 5.5c-2.632 0-5.165 1.59-7.204 4.5.924 1.319 1.953 2.35 3.044 "
+             "3.1l1.583-1.584A2.993 2.993 0 0 1 10 7c.526 0 1.048.148 1.516.423zm4.381-2.259-4.6 4.6A2.993 2.993 0 0 1 10 13a3 3 0 0 1-1.516-.423l-4.6 4.6a.5.5 0 0 "
+             "1-.707 0l-.354-.354a.5.5 0 0 1 0-.707l1.943-1.942c-1.221-.882-2.373-2.082-3.405-3.616a1.01 1.01 0 0 1-.001-1.116C3.796 5.814 6.898 4 10 4c1.327 0 "
+             "2.651.346 3.924 1.016l2.192-2.193a.5.5 0 0 1 .707 0l.354.354a.5.5 0 0 1 0 .707m-6.116 5.055A1.5 1.5 0 0 0 10 8.5a1.502 1.502 0 0 0-1.061 2.561zM10 16a8.2 8.2 0 0 "
+             "1-2.44-.378l1.244-1.245c.396.074.794.123 1.196.123 2.632 0 5.165-1.59 7.204-4.5a13.6 13.6 0 0 0-1.867-2.155l1.053-1.053a15.5 15.5 0 0 1 2.251 2.653c.223.331.222.78 0 "
+             "1.111C16.205 14.185 13.103 16 10 16'></path></svg></span>");
+  *_GPP += F("</div>\n");
+  GP.send();
 }
 void GP_SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
   *_GPP += F("<input type='submit' value='");
