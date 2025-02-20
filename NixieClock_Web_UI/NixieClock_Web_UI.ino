@@ -293,11 +293,8 @@ void build(void) {
     updateList = F("barTime");
 
     //начать меню
-    GP.UI_MENU("Nixie clock", UI_MENU_COLOR);
-    if (settings.nameMenu && settings.name[0]) {
-      GP.LABEL(settings.name, "", UI_MENU_NAME_COLOR);
-      GP_HR(UI_MENU_LINE_COLOR, 6);
-    }
+    GP_UI_MENU("Nixie clock", (settings.nameMenu) ? settings.name : "", UI_MENU_COLOR, UI_MENU_NAME_COLOR);
+    GP_HR(UI_MENU_LINE_COLOR, 6);
 
     //ссылки меню
     GP.UI_LINK("/", "Главная");

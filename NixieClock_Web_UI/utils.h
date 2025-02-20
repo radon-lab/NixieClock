@@ -1,6 +1,25 @@
 void GP_PAGE_TITLE(const String& name) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
 }
+void GP_UI_MENU(const String& title, const String& name, PGM_P st_1 = GP_GREEN, PGM_P st_2 = GP_GRAY) {
+  GP._ui_style = st_1;
+  *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");
+  *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
+  if (name.length()) *_GPP += name;
+  else *_GPP += title;
+  *_GPP += F("</div></div>\n<nav class='sidebar' id='dashSdb'><div class='sblock'><div class='header'>");
+  *_GPP += title;
+  *_GPP += F("</div><div class='header header_s' style='padding:0'>");
+  if (name.length()) {
+    *_GPP += F("<label style='color:");
+    *_GPP += FPSTR(st_2);
+    *_GPP += F("'>");
+    *_GPP += name;
+    *_GPP += F("</label>");
+  }
+  *_GPP += F("</div>\n");
+  GP.send();
+}
 void GP_LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
   GP.TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
 }
