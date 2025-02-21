@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 17.02.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 21.02.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1306,9 +1306,9 @@ void updateTempSens(void) //обновление установленных да
 #if ESP_ENABLE
   if (sens.init && !(device.status & (0x01 << STATUS_UPDATE_SENS_DATA))) device.status |= (0x01 << STATUS_UPDATE_SENS_DATA); //если первичная инициализация пройдена и есп получила последние данные
   else { //иначе копируем внутренние данные
-    mainSens.temp = sens.temp; //устанавливаем температуру
-    mainSens.press = sens.press; //устанавливаем давление
-    mainSens.hum = sens.hum; //устанавливаем влажность
+    mainSens.temp = 0x7FFF; //сбрасываем температуру
+    mainSens.hum = 0; //сбрасываем влажность
+    mainSens.press = 0; //сбрасываем давление
     sens.init = 1; //установили флаг инициализации сенсора
   }
 #endif
