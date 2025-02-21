@@ -36,10 +36,7 @@
 #define TWI_SDA_PIN 4 //пин SDA шины I2C
 #define TWI_SCL_PIN 5 //пин SCL шины I2C
 
-//Настройки цветовой схемы
-#define UI_MAIN_THEME GP_DARK //тема веб интерфейса(GP_LIGHT - светлая тема | GP_DARK - темная тема)
-
-//доступные цвета по умолчанию(GP_RED, GP_RED_B, GP_PINK, GP_PINK_B, GP_VIOL, GP_VIOL_B, GP_BLUE, GP_BLUE_B, GP_CYAN, GP_CYAN_B, GP_GREEN, GP_GREEN_B, GP_YELLOW, GP_YELLOW_B, GP_ORANGE, GP_ORANGE_B, GP_GRAY, GP_GRAY_B, GP_BLACK, GP_WHITE) или цвет в формате PSTR("#rrggbb")
+//Настройки цветовой схемы, доступные цвета по умолчанию(GP_RED, GP_RED_B, GP_PINK, GP_PINK_B, GP_VIOL, GP_VIOL_B, GP_BLUE, GP_BLUE_B, GP_CYAN, GP_CYAN_B, GP_GREEN, GP_GREEN_B, GP_YELLOW, GP_YELLOW_B, GP_ORANGE, GP_ORANGE_B, GP_GRAY, GP_GRAY_B, GP_BLACK, GP_WHITE) или цвет в формате PSTR("#rrggbb")
 #define UI_SPINNER_COLOR "#e67b09" //цвет спинеров веб интерфейса
 #define UI_BUTTON_COLOR "#e67b09" //цвет кнопок веб интерфейса
 #define UI_SWITCH_COLOR "#e67b09" //цвет переключателей веб интерфейса

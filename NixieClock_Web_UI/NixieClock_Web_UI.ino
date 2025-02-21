@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 20.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 21.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -10,7 +10,6 @@
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
   В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить указанные версии библиотек:
-  GyverPortal 3.6.6
   EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
@@ -32,8 +31,8 @@
 #define GP_NO_MDNS
 
 #include <LittleFS.h>
-#include <GyverPortal.h>
-GyverPortal ui(&LittleFS);
+#include "web/src/GyverPortalMod.h"
+GyverPortalMod ui(&LittleFS);
 
 struct settingsData {
   boolean nameAp;
@@ -114,7 +113,6 @@ uint32_t secondsTimer = 0; //таймер счета секундных инте
 #include "WEATHER.h"
 
 #include "WIFI.h"
-#include "utils.h"
 
 const char *climateNamesMain[] = {"Температура", "Влажность"};
 const char *climateNamesExt[] = {"Давление"};
@@ -225,15 +223,17 @@ String playerVoiceList(void) { //список голосов для озвучк
   return str;
 }
 //--------------------------------------------------------------------
+void PAGE_TITLE_NAME(const String& name) {
+  GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
+}
+//--------------------------------------------------------------------
 void build(void) {
-  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скриптов страницы
-  GP_FIX_STYLES(); //фикс стилей страницы
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   if (updaterState()) {
-    GP_PAGE_TITLE("Обновление");
+    PAGE_TITLE_NAME("Обновление");
 
-    GP_MIDDLE_BLOCK_BEGIN();
+    GP.MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки часов", UI_BLOCK_COLOR);
     if (!updaterFlash()) {
       GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
@@ -244,16 +244,16 @@ void build(void) {
       GP.UPDATE("syncUpdate,syncWarn", 300);
     }
     GP.HR(UI_LINE_COLOR);
-    GP_CENTER_BOX_BEGIN();
+    GP.CENTER_BOX_BEGIN();
     GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.BLOCK_END();
     GP.BLOCK_END();
   }
   else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
-    GP_PAGE_TITLE("Ошибка совместимости");
+    PAGE_TITLE_NAME("Ошибка совместимости");
 
-    GP_MIDDLE_BLOCK_BEGIN();
+    GP.MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Предупреждение", UI_BLOCK_COLOR);
     GP.SPAN("<big><b>Эта версия веб-интерфейса не может взаимодействовать с этим устройством!</b></big>", GP_CENTER, "", UI_INFO_COLOR);
     GP.BREAK();
@@ -262,7 +262,7 @@ void build(void) {
     GP.LABEL("WebUI HW: 0x" + String(HW_VERSION, HEX));
     if (otaUpdate) {
       GP.HR(UI_LINE_COLOR);
-      GP_CENTER_BOX_BEGIN();
+      GP.CENTER_BOX_BEGIN();
       GP.BUTTON_MINI_LINK("/ota_update", "Обновить прошивку", UI_BUTTON_COLOR);
       GP.BOX_END();
     }
@@ -272,14 +272,14 @@ void build(void) {
     passSetOtaState();
   }
   else if (busRebootState()) {
-    GP_PAGE_TITLE("Перезагрузка");
+    PAGE_TITLE_NAME("Перезагрузка");
 
-    GP_MIDDLE_BLOCK_BEGIN();
+    GP.MIDDLE_BLOCK_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", "Перезагрузка устройства", UI_BLOCK_COLOR);
     GP.SPAN("<big><b>Выполняется перезагрузка, подождите...</b></big>", GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN("<small>Не выключайте устройство до завершения перезагрузки!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
     GP.HR(UI_LINE_COLOR);
-    GP_CENTER_BOX_BEGIN();
+    GP.CENTER_BOX_BEGIN();
     GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.UPDATE("syncReboot,syncWarn");
@@ -293,8 +293,8 @@ void build(void) {
     updateList = F("barTime");
 
     //начать меню
-    GP_UI_MENU("Nixie clock", (settings.nameMenu) ? settings.name : "", UI_MENU_COLOR, UI_MENU_NAME_COLOR);
-    GP_HR(UI_MENU_LINE_COLOR, 6);
+    GP.UI_MENU("Nixie clock", (settings.nameMenu) ? settings.name : "", UI_MENU_COLOR, UI_MENU_NAME_COLOR);
+    GP.HR(UI_MENU_LINE_COLOR, 6);
 
     //ссылки меню
     GP.UI_LINK("/", "Главная");
@@ -311,59 +311,59 @@ void build(void) {
 
     //ссылки часов
     if (groupResetList()) {
-      GP_HR(UI_MENU_LINE_COLOR, 6);
+      GP.HR(UI_MENU_LINE_COLOR, 6);
       while (groupNextList()) {
         if (groupGetIP()[0] != '\0') {
-          GP_UI_LINK(groupGetIP(), (groupGetName()[0] != '\0') ? groupGetName() : groupGetIP(), UI_MENU_COLOR);
+          GP.UI_LINK(groupGetIP(), (groupGetName()[0] != '\0') ? groupGetName() : groupGetIP(), UI_MENU_COLOR);
         }
         else break;
       }
     }
 
-    GP_HR(UI_MENU_LINE_COLOR, 6);
+    GP.HR(UI_MENU_LINE_COLOR, 6);
 
     //состояние соединения
     updateList += F(",barLink");
-    GP_BLOCK_SHADOW_BEGIN();
+    GP.BLOCK_SHADOW_BEGIN();
     GP.LABEL("Статус часов", "", UI_MENU_TEXT_COLOR, 15);
-    GP_LINE_LED("barLink", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
-    GP_BLOCK_SHADOW_END();
+    GP.LINE_LED("barLink", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+    GP.BLOCK_SHADOW_END();
 
     if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
       updateList += F(",barRtc");
-      GP_BLOCK_SHADOW_BEGIN();
+      GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус RTC", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
-      GP_BLOCK_SHADOW_END();
+      GP.LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.BLOCK_SHADOW_END();
     }
     if (wirelessGetSensorStastus()) {
       updateList += F(",barSens");
-      GP_BLOCK_SHADOW_BEGIN();
+      GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус датчика", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
-      GP_BLOCK_SHADOW_END();
+      GP.LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.BLOCK_SHADOW_END();
     }
     if (ntpGetRunStatus()) {
       updateList += F(",barNtp");
-      GP_BLOCK_SHADOW_BEGIN();
+      GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL("Статус NTP", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_LED("barNtp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
-      GP_BLOCK_SHADOW_END();
+      GP.LINE_LED("barNtp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.BLOCK_SHADOW_END();
     }
     if (wifiGetConnectStatus()) {
       updateList += F(",bar_wifi");
-      GP_BLOCK_SHADOW_BEGIN();
+      GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL("Сигнал WiFi", "", UI_MENU_TEXT_COLOR, 15);
-      GP_LINE_BAR("bar_wifi", constrain(2 * (WiFi.RSSI() + 100), 0, 100), 0, 100, 1, UI_MENU_WIFI_COLOR);
-      GP_BLOCK_SHADOW_END();
+      GP.LINE_BAR("bar_wifi", constrain(2 * (WiFi.RSSI() + 100), 0, 100), 0, 100, 1, UI_MENU_WIFI_COLOR);
+      GP.BLOCK_SHADOW_END();
     }
 
-    GP_FOOTER_BEGIN();
-    GP.HR(UI_MENU_LINE_COLOR);
-    GP_TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
+    GP.FOOTER_BEGIN();
+    GP.HR(UI_MENU_LINE_COLOR, 0);
+    GP.TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
     GP.BREAK();
-    GP_TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
-    GP_FOOTER_END();
+    GP.TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
+    GP.FOOTER_END();
 
     GP.UI_BODY(); //начать основное окно
 
@@ -395,7 +395,7 @@ void build(void) {
 
     if (ui.uri("/")) { //основная страница
       if (!alarm.set || !deviceInformation[ALARM_TYPE]) { //если не режим настройки будильника
-        GP_PAGE_TITLE("Главная");
+        PAGE_TITLE_NAME("Главная");
         M_GRID(
           GP.BLOCK_BEGIN(GP_THIN, "", "Настройка времени", UI_BLOCK_COLOR);
           M_BOX(GP.LABEL("Время", "", UI_LABEL_COLOR); GP.TIME("mainTime"););
@@ -416,10 +416,10 @@ void build(void) {
           M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL("Подсветка", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-          M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP_SLIDER_MIN_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);););
+          M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP_SLIDER_MIN("mainSoundVol", "мин", "макс", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
+          M_BOX(GP.LABEL("Громкость", "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", "мин", "макс", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
           GP.BLOCK_END();
         );
       }
@@ -431,7 +431,7 @@ void build(void) {
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Будильник", UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
-          GP_PAGE_TITLE("Настройка будильника");
+          PAGE_TITLE_NAME("Настройка будильника");
 
           String alarmSoundList;
           alarmSoundList.reserve(200);
@@ -460,25 +460,25 @@ void build(void) {
           M_BOX(GP_CENTER, GP.TIME("alarmTime", alarmTime); GP.SELECT("alarmMode", "Выключен,Однократно,Ежедневно,По будням,Выбрать дни", alarm_data[alarm.now][ALARM_DATA_MODE]););
           GP.BREAK();
 
-          GP_HR_TEXT("Дни недели", "", UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.HR_TEXT("Дни недели", "", UI_LINE_COLOR, UI_HINT_COLOR);
           GP.BLOCK_BEGIN(GP_DIV_RAW, "430px;margin:10px 0px");
           GP.TABLE_BORDER(false);
           GP.TABLE_BEGIN("50px,50px,50px,50px,50px,50px,50px");
           GP.TR(GP_CENTER);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("ПН", "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK_W("ПН", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("ВТ", "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK_W("ВТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("СР", "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK_W("СР", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("ЧТ", "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK_W("ЧТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("ПТ", "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK_W("ПТ", "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("СБ", "", UI_ALARM_WEEK_2_COLOR, 0);
+          GP.LABEL_BLOCK_W("СБ", "", UI_ALARM_WEEK_2_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP_LABEL_BLOCK_W("ВС", "", UI_ALARM_WEEK_2_COLOR, 0);
+          GP.LABEL_BLOCK_W("ВС", "", UI_ALARM_WEEK_2_COLOR, 0);
 
           uint8_t alarmDays = alarm_data[alarm.now][ALARM_DATA_DAYS];
           GP.TR(GP_CENTER);
@@ -495,13 +495,13 @@ void build(void) {
           GP.TABLE_END();
           GP.BLOCK_END();
 
-          GP_HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.HR_TEXT("Настройка звука", "", UI_LINE_COLOR, UI_HINT_COLOR);
           M_BOX(GP_CENTER, GP.SELECT("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? "Мелодия,Радиостанция" : "Мелодия", (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE], true););
           M_BOX(GP_CENTER,
                 GP.SELECT("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0, (boolean)(deviceInformation[RADIO_ENABLE] && alarm_data[alarm.now][ALARM_DATA_RADIO]));
                 GP.SELECT("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)(!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]));
                );
-          M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "авто", "макс", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
+          M_BOX(GP_CENTER, GP.SLIDER_MAX("Громкость", "авто", "макс", "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP_CENTER,
@@ -674,7 +674,7 @@ void build(void) {
       }
     }
     else if (ui.uri("/settings")) { //настройки
-      GP_PAGE_TITLE("Настройки");
+      PAGE_TITLE_NAME("Настройки");
 
       String showModeList; //список режимов автопоказа
       showModeList.reserve(350);
@@ -699,9 +699,9 @@ void build(void) {
       if (deviceInformation[LIGHT_SENS_ENABLE]) lightHint += F(" или активировать датчик освещения");
       else if (weatherGetValidStatus()) lightHint += F(" или активировать автоматическую смену яркости");
 
-      GP_NAV_TABS_M("fastMainTab", "Основные,Дополнительно", navMainTab);
+      GP.NAV_TABS_M("fastMainTab", "Основные,Дополнительно", navMainTab);
 
-      GP_NAV_BLOCK_BEGIN("fastMainTab", 0, navMainTab);
+      GP.NAV_BLOCK_BEGIN("fastMainTab", 0, navMainTab);
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Метеостанция", UI_BLOCK_COLOR);
         M_BOX(
@@ -713,17 +713,17 @@ void build(void) {
           GP.SELECT("climateHourSens", (deviceInformation[PLAYER_TYPE]) ? climateGetSendDataList() : "Не используется", extendedSettings.tempHourSensor, 0, (boolean)(sensorGetDisabledStatus() || !deviceInformation[PLAYER_TYPE]));
         );
         GP.BREAK();
-        GP_HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Автопоказ", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Включить", "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL("Эффект", "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
         GP.BREAK();
-        GP_HR_TEXT("Отображение", "hint4", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Отображение", "hint4", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint4", "Источник и время в секундах"); //всплывающая подсказка
       for (uint8_t i = 0; i < 5; i++) {
       M_BOX(
         M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
-        GP_SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
+        GP.SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
       );
       }
       GP.BLOCK_END();
@@ -733,71 +733,71 @@ void build(void) {
       M_BOX(GP.LABEL("Минуты", "", UI_LABEL_COLOR); GP.SELECT("fastFlip", flipModeList(false), fastSettings.flipMode););
       M_BOX(GP.LABEL("Секунды", "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
-      GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtDay", "мин", "макс", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
-      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainIndiBrtNight", "мин", "макс", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      GP.HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtDay", "мин", "макс", mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainIndiBrtNight", "мин", "макс", mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
       GP.BREAK();
-      GP_HR_TEXT("Время ночной яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Время ночной яркости", "hint1", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint1", lightHint); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+      M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
       GP.BREAK();
-      GP_HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Режим сна", "hint2", UI_LINE_COLOR, UI_HINT_COLOR);
       GP.HINT("hint2", "0 - отключить режим сна для выбранного промежутка времени"); //всплывающая подсказка
-      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
+      M_BOX(GP_CENTER, GP.LABEL("День", "", UI_LABEL_COLOR); GP.SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR); GP.SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL("Ночь", "", UI_LABEL_COLOR););
       GP.BREAK();
-      GP_HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
+      GP.HR_TEXT("Антиотравление", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      M_BOX(GP.LABEL("Период, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
       M_BOX(GP.LABEL("Метод", "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени", mainSettings.burnMode););
       GP.BLOCK_END();
       );
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Подсветка", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL("Цвет", "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
-        GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightDay", "мин", "макс", mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainBacklBrightNight", "откл", "макс", mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        GP.HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightDay", "мин", "макс", mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainBacklBrightNight", "откл", "макс", mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Точки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("Неонки", "", UI_LABEL_COLOR); GP.SELECT("fastNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] == 3) || !deviceInformation[DOTS_PORT_ENABLE])););
         M_BOX(GP.LABEL("Режим", "", UI_LABEL_COLOR); GP.SELECT("fastDot", dotModeList(false), fastSettings.dotMode););
         GP.BREAK();
-        GP_HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtDay", "мин", "макс", mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
-        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP_SLIDER_MIN_C("mainDotBrtNight", "откл", (deviceInformation[NEON_DOT] == 3) ? "вкл" : "макс", mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
+        GP.HR_TEXT("Яркость", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL("День", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtDay", "мин", "макс", mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
+        M_BOX(GP.LABEL("Ночь", "", UI_LABEL_COLOR); GP.SLIDER_C("mainDotBrtNight", "откл", (deviceInformation[NEON_DOT] == 3) ? "вкл" : "макс", mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
         GP.BLOCK_END();
       );
       GP.NAV_BLOCK_END();
 
-      GP_NAV_BLOCK_BEGIN("fastMainTab", 1, navMainTab);
+      GP.NAV_BLOCK_BEGIN("fastMainTab", 1, navMainTab);
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Звуки", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? "Озвучивать действия" : "Звук кнопок", "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
         M_BOX(GP.LABEL("Голос озвучки", "", UI_LABEL_COLOR); GP.SELECT("mainVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
-        M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP_SLIDER_MIN("mainSoundVol", "мин", "макс", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP_JUSTIFY, GP.LABEL("Громкость", "", UI_LABEL_COLOR); GP.SLIDER("mainSoundVol", "мин", "макс", mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BREAK();
-        GP_HR_TEXT("Звук смены часа", "hint3", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Звук смены часа", "hint3", UI_LINE_COLOR, UI_HINT_COLOR);
         GP.HINT("hint3", "Одниаковое время - отключить звук смены часа"); //всплывающая подсказка
-        M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP_SPINNER_LEFT("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP_SPINNER_RIGHT("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
+        M_BOX(GP_CENTER, GP.LABEL(" С", "", UI_LABEL_COLOR); GP.SPINNER_LEFT("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.SPINNER_RIGHT("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL("До", "", UI_LABEL_COLOR););
         GP.BREAK();
-        GP_HR_TEXT("Озвучка смены часа", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Озвучка смены часа", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Температура", "", UI_LABEL_COLOR); GP.SWITCH("mainHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)!(deviceInformation[PLAYER_TYPE] && sensorAvaibleData())););
         M_BOX(GP.LABEL("Новый час", "", UI_LABEL_COLOR); GP.SELECT("mainHourSound", "Автоматически,Только мелодия,Только озвучка,Мелодия и озвучка", mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", "Будильник", UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL("Автоотключение, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL("Автоотключение, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
-        GP_HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("Повтор сигнала, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
-        M_BOX(GP.LABEL("Отключить звук, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        GP.HR_TEXT("Дополнительно", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL("Повтор сигнала, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL("Отключить звук, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
-        GP_HR_TEXT("Индикация", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Индикация", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Активный", "", UI_LABEL_COLOR); GP.SELECT("extAlarmDotOn", dotModeList(true), extendedSettings.alarmDotOn, 0, (boolean)!deviceInformation[ALARM_TYPE]););
         M_BOX(GP.LABEL("Ожидание", "", UI_LABEL_COLOR); GP.SELECT("extAlarmDotWait", dotModeList(true), extendedSettings.alarmDotWait, 0, (boolean)!deviceInformation[ALARM_TYPE]););
         GP.BLOCK_END();
@@ -806,9 +806,9 @@ void build(void) {
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", "Микроклимат", UI_BLOCK_COLOR);
         M_BOX(GP.LABEL("Усреднение", "", UI_LABEL_COLOR); GP.SWITCH("climateAvg", settings.climateAvg, UI_SWITCH_COLOR, (boolean)(settings.climateChart == SENS_WIRELESS)););
-        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP_SPINNER_MID("climateTime", (settings.climateChart == SENS_WIRELESS) ? wirelessGetInterval() : settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR, "", (boolean)(settings.climateChart == SENS_WIRELESS)););
+        M_BOX(GP.LABEL("Интервал, мин", "", UI_LABEL_COLOR); GP.SPINNER_MID("climateTime", (settings.climateChart == SENS_WIRELESS) ? wirelessGetInterval() : settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR, "", (boolean)(settings.climateChart == SENS_WIRELESS)););
         GP.BREAK();
-        GP_HR_TEXT("Отображение", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Отображение", "", UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL("Бар", "", UI_LABEL_COLOR); GP.SELECT("climateBar", climateGetMainDataList(SENS_CLOCK, SENS_MAX_DATA), settings.climateBar, 0, false, true););
         M_BOX(GP.LABEL("График", "", UI_LABEL_COLOR); GP.SELECT("climateChart", climateGetMainDataList(SENS_CLOCK, SENS_WEATHER), settings.climateChart, 0););
         GP.BLOCK_END();
@@ -817,8 +817,8 @@ void build(void) {
         M_BOX(GP.LABEL("Датчик 1", "", UI_LABEL_COLOR); GP.SELECT("climateSend/0", (deviceInformation[SENS_TEMP]) ? "Датчик в часах" : climateGetMainDataList(SENS_MAIN, SENS_MAX_DATA), settings.climateSend[0] - 1, 0, (boolean)(deviceInformation[SENS_TEMP]), true););
         M_BOX(GP.LABEL("Датчик 2", "", UI_LABEL_COLOR); GP.SELECT("climateSend/1", climateGetMainDataList(SENS_MAIN, SENS_MAX_DATA), settings.climateSend[1] - 1, 0, false, true););
         GP.BREAK();
-        GP_HR_TEXT("Коррекция", "", UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL("Температура, °C", "", UI_LABEL_COLOR); GP_SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
+        GP.HR_TEXT("Коррекция", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL("Температура, °C", "", UI_LABEL_COLOR); GP.SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL("Корректировать", "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", "Ничего," + climateGetSendDataList(), extendedSettings.tempCorrectSensor););
         GP.BLOCK_END();
       );
@@ -831,23 +831,23 @@ void build(void) {
       GP.UPDATE_CLICK("climateWarn", "climateChart");
     }
     else if (ui.uri("/climate")) { //микроклимат
-      GP_PAGE_TITLE("Микроклимат");
+      PAGE_TITLE_NAME("Микроклимат");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Микроклимат", UI_BLOCK_COLOR);
       if (climateDates[CLIMATE_BUFFER - 1] != 0) {
         uint16_t heightSize = 500;
         if (climateGetChartPress()) heightSize = 300;
 
-        GP_PLOT_STOCK_BEGIN(climateLocal);
+        GP.PLOT_STOCK_BEGIN(climateLocal);
 
         if (climateGetChartHum()) {
-          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+          GP.PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
         else {
-          GP_PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+          GP.PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
         if (climateGetChartPress()) {
-          GP_PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 2, 0, heightSize, UI_BAR_PRESS_COLOR);
+          GP.PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 2, 0, heightSize, UI_BAR_PRESS_COLOR);
         }
       }
       else {
@@ -857,7 +857,7 @@ void build(void) {
       }
 
       GP.BREAK();
-      GP_HR_TEXT("Датчик в часах", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Датчик в часах", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_CLOCK] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_CLOCK], sens.press[SENS_CLOCK], sens.hum[SENS_CLOCK]), "", 0, "", true););
         M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.TEXT("", "", (sens.type < 6) ? climateTempSensList[sens.type] : climateGetSensList(sens.type, false), "", 0, "", true););
@@ -867,7 +867,7 @@ void build(void) {
       }
 
       GP.BREAK();
-      GP_HR_TEXT("Датчик в есп", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Датчик в есп", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (sens.temp[SENS_MAIN] != 0x7FFF) {
         M_BOX(GP.LABEL("Данные", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_MAIN], sens.press[SENS_MAIN], sens.hum[SENS_MAIN]), "", 0, "", true););
         M_BOX(GP.LABEL("Тип датчика", "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensList(sens.search, true), "", 0, "", true););
@@ -877,7 +877,7 @@ void build(void) {
       }
 
       GP.BREAK();
-      GP_HR_TEXT("Беспроводной датчик", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Беспроводной датчик", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (!wirelessGetOnlineStastus()) {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
       }
@@ -890,13 +890,13 @@ void build(void) {
       GP.BLOCK_END();
     }
     else if (ui.uri("/weather")) { //погода
-      GP_PAGE_TITLE("Погода");
+      PAGE_TITLE_NAME("Погода");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Погода на сутки", UI_BLOCK_COLOR);
       if (weatherGetValidStatus()) {
-        GP_PLOT_STOCK_BEGIN(climateLocal);
-        GP_PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 1, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
-        GP_PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 2, 10, 300, UI_BAR_PRESS_COLOR);
+        GP.PLOT_STOCK_BEGIN(climateLocal);
+        GP.PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 1, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        GP.PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 2, 10, 300, UI_BAR_PRESS_COLOR);
         GP.BREAK();
         GP.BLOCK_END();
 
@@ -905,7 +905,7 @@ void build(void) {
         GP.BLOCK_BEGIN(GP_THIN, "", "Погода по часам", UI_BLOCK_COLOR);
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
           if (i) {
-            GP.HR(UI_MENU_LINE_COLOR);
+            GP.HR(UI_MENU_LINE_COLOR, 0);
             GP.BREAK();
           }
           M_BOX(
@@ -926,7 +926,7 @@ void build(void) {
       GP.BLOCK_END();
     }
     else if (ui.uri("/radio")) { //радиоприемник
-      GP_PAGE_TITLE("Радио");
+      PAGE_TITLE_NAME("Радио");
 
       updateList += F(",radioVol,radioFreq,radioPower");
 
@@ -938,8 +938,8 @@ void build(void) {
               M_BOX(GP_RIGHT, GP.LABEL("Питание", "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_2_COLOR););
              );
       }
-      M_BOX(GP_CENTER, GP_SLIDER_MAX("Громкость", "мин", "макс", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR, false, true););
-      M_BOX(GP_CENTER, GP_SLIDER_MAX("Частота", "", "", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR, false, true););
+      M_BOX(GP_CENTER, GP.SLIDER_MAX_C("Громкость", "мин", "макс", "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR););
+      M_BOX(GP_CENTER, GP.SLIDER_MAX_C("Частота", "", "", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR););
       GP.BLOCK_END();
 
       if (radioSvgImage) {
@@ -953,7 +953,7 @@ void build(void) {
               GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR);
               GP.ICON_FILE_BUTTON("radioFreqUp", radioFsData[2], 30, UI_RADIO_FREQ_2_COLOR);
               GP.ICON_FILE_BUTTON("radioSeekUp", radioFsData[3], 30, UI_RADIO_FREQ_2_COLOR);
-              GP_CHECK_ICON("radioPower", radioFsData[5], radioSettings.powerState, 50, UI_RADIO_POWER_1_COLOR, UI_RADIO_POWER_2_COLOR);
+              GP.ICON_CHECK("radioPower", radioFsData[5], radioSettings.powerState, 50, UI_RADIO_POWER_1_COLOR, UI_RADIO_POWER_2_COLOR);
              );
       }
       else {
@@ -983,7 +983,7 @@ void build(void) {
                       "radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioCh/0,radioCh/1,radioCh/2,radioCh/3,radioCh/4,radioCh/5,radioCh/6,radioCh/7,radioCh/8,radioCh/9,");
     }
     else if (ui.uri("/update") && (fsUpdate || otaUpdate || clockUpdate)) { //обновление ESP
-      GP_PAGE_TITLE("Обновление");
+      PAGE_TITLE_NAME("Обновление");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
       webShowUpdateInfo();
@@ -992,11 +992,11 @@ void build(void) {
       GP.BLOCK_END();
     }
     else if (ui.uri("/information")) { //информация о системе
-      GP_PAGE_TITLE("Об устройстве");
+      PAGE_TITLE_NAME("Об устройстве");
 
-      GP_NAV_TABS_M("fastInfoTab", "Информация,Управление", navInfoTab);
+      GP.NAV_TABS_M("fastInfoTab", "Информация,Управление", navInfoTab);
 
-      GP_NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
+      GP.NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
@@ -1004,7 +1004,7 @@ void build(void) {
       M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
 
       GP.BREAK();
-      GP_HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
       M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
@@ -1014,7 +1014,7 @@ void build(void) {
       M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
 
       GP.BREAK();
-      GP_HR_TEXT("Локальная сеть", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Локальная сеть", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
       M_BOX(GP.LABEL("Уровень сигнала", "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(constrain(2 * (WiFi.RSSI() + 100), 0, 100)) + '%', "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
@@ -1032,7 +1032,7 @@ void build(void) {
       }
 
       GP.BREAK();
-      GP_HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
       M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("CORE", "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
@@ -1045,7 +1045,7 @@ void build(void) {
 
       if (!(device.failure & 0x8000)) {
         GP.BREAK();
-        GP_HR_TEXT("Состояние", "", UI_LINE_COLOR, UI_HINT_COLOR);
+        GP.HR_TEXT("Состояние", "", UI_LINE_COLOR, UI_HINT_COLOR);
         if (!device.failure) {
           M_BOX(GP.LABEL("Связь с часами", "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? "Работает нормально..." : "Отсутствует...", "", UI_INFO_COLOR, 0, false, true););
         }
@@ -1061,22 +1061,22 @@ void build(void) {
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
-      GP_NAV_BLOCK_BEGIN("fastInfoTab", 1, navInfoTab);
+      GP.NAV_BLOCK_BEGIN("fastInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", "Устройство", UI_BLOCK_COLOR);
       M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.name, "", 19););
       GP.BREAK();
-      GP_HR_TEXT("Отображение", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Отображение", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Меню", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Префикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePrefix", settings.namePrefix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Постфикс", "", UI_LABEL_COLOR); GP.SWITCH("extDevicePostfix", settings.namePostfix, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL("Точка доступа", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceAp", settings.nameAp, UI_SWITCH_COLOR););
 
       GP.BREAK();
-      GP_HR_TEXT("Групповое управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Групповое управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Обнаружение", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceGroup", settings.groupFind, UI_SWITCH_COLOR););
 
       GP.BREAK();
-      GP_HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("WiFi датчик температуры", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (!wirelessGetOnlineStastus()) {
         M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
       }
@@ -1090,7 +1090,7 @@ void build(void) {
       rtcStatus.reserve(50);
       rtcStatus = F("Не обнаружен...");
       GP.BREAK();
-      GP_HR_TEXT("Модуль RTC", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Модуль RTC", "", UI_LINE_COLOR, UI_HINT_COLOR);
       if (deviceInformation[DS3231_ENABLE] && !(device.failure & 0x8000)) {
         if (!(device.failure & 0x03)) rtcStatus = F("Подключен к часам");
         else if (device.failure & 0x02) rtcStatus = F("Батарея разряжена");
@@ -1104,7 +1104,7 @@ void build(void) {
       M_BOX(GP.LABEL("Состояние", "", UI_LABEL_COLOR); GP.NUMBER("", rtcStatus, INT32_MAX, "", true););
 
       GP.BREAK();
-      GP_HR_TEXT("Управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
+      GP.HR_TEXT("Управление", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.BUTTON("resetButton", "Сброс настроек", "", UI_BUTTON_COLOR, "90%;margin-top:5px"); GP.BUTTON("rebootButton", "Перезагрузка", "", UI_BUTTON_COLOR, "90%;margin-top:5px"););
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
@@ -1117,7 +1117,7 @@ void build(void) {
       GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceGroup,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
-      GP_PAGE_TITLE("Сетевые настройки");
+      PAGE_TITLE_NAME("Сетевые настройки");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
       if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) { //подключение к сети
@@ -1132,7 +1132,7 @@ void build(void) {
         GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
         GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
-        GP_SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
+        GP.SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
         GP.FORM_END();
       }
       else { //выбор сети
@@ -1145,25 +1145,25 @@ void build(void) {
         if (ui.uri("/manual")) { //ручной режим ввода сети
           GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
           GP.BREAK();
-          GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
           GP.BREAK();
-          GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
+          GP.TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-          GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
           GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
           GP.SEND("</div>\n");
         }
         else { //выбор сети из списка
           GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
-          GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
           GP.BREAK();
-          GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
+          GP.TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
           if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%;margin-top:10px;margin-bottom:0", true);
-          else GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+          else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
           GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", false, true);
           GP.SEND("</div>\n");
         }
@@ -1213,17 +1213,15 @@ void build(void) {
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
   }
-  GP_BUILD_END();
+  GP.BUILD_END();
 }
 //--------------------------------------------------------------------
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
-  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скриптов страницы
-  GP_FIX_STYLES(); //фикс стилей страницы
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   GP.PAGE_TITLE("Обновление");
 
-  GP_MIDDLE_BLOCK_BEGIN();
+  GP.MIDDLE_BLOCK_BEGIN();
 
   if (!UpdateEnd) {
     GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
@@ -1242,14 +1240,14 @@ void buildUpdate(bool UpdateEnd, const String & UpdateError) {
     }
   }
   GP.HR(UI_LINE_COLOR);
-  GP_CENTER_BOX_BEGIN();
+  GP.CENTER_BOX_BEGIN();
   GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
   GP.BOX_END();
   GP.BLOCK_END();
   
   GP.BLOCK_END();
 
-  GP_BUILD_END();
+  GP.BUILD_END();
 }
 //--------------------------------------------------------------------
 void webShowUpdateInfo(void) {
@@ -1272,7 +1270,7 @@ void webShowUpdateInfo(void) {
   GP.BREAK();
 }
 void webShowUpdateUI(void) {
-  GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
+  GP.HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
   if (clockUpdate) {
     M_BOX(GP.LABEL("Прошивка часов", "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "", ".hex", UI_BUTTON_COLOR););
   }
@@ -1284,9 +1282,9 @@ void webShowUpdateUI(void) {
   }
 }
 void webShowUpdateAuth(void) {
-  GP_HR_TEXT("Авторизация", "", UI_LINE_COLOR, UI_HINT_COLOR);
+  GP.HR_TEXT("Авторизация", "", UI_LINE_COLOR, UI_HINT_COLOR);
   if (!passGetWriteTimeout()) {
-    M_BOX(GP_CENTER, GP_PASS_EYE("otaPass", "Пароль", passEnterData, 8); GP.BUTTON_MINI("otaCheck", "Войти", "", UI_BUTTON_COLOR, "200px!important", false, true););
+    M_BOX(GP_CENTER, GP.PASS_EYE("otaPass", "Пароль", passEnterData, 8); GP.BUTTON_MINI("otaCheck", "Войти", "", UI_BUTTON_COLOR, "200px!important", false, true););
     if (passGetCheckError()) GP.SPAN("Неверный пароль!", GP_CENTER, "", GP_RED); //описание
     else GP.SPAN("Для доступа к режиму обновления необходимо авторизоваться!", GP_CENTER, "", GP_YELLOW); //описание
   }

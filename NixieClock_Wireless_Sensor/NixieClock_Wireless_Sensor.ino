@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 22.12.24
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 21.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -10,7 +10,6 @@
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
   В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить указанные версии библиотек:
-  GyverPortal 3.6.6
   EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
@@ -24,8 +23,8 @@
 #define GP_NO_DNS
 #define GP_NO_MDNS
 
-#include <GyverPortal.h>
-GyverPortal ui;
+#include "web/src/GyverPortalMod.h"
+GyverPortalMod ui;
 
 struct settingsData {
   uint8_t sensor;
@@ -106,14 +105,11 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 
 #include "WIFI.h"
 #include "PING.h"
-#include "utils.h"
 
 ADC_MODE(ADC_VCC);
 
 void build(void) {
-  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скриптов страницы
-  GP_FIX_STYLES(); //фикс стилей страницы
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   //обновления блоков
   String updateList = "barBat";
@@ -128,23 +124,23 @@ void build(void) {
   else if (ui.uri("/manual")) GP.UI_LINK("/manual", "Сетевые настройки");
   else GP.UI_LINK("/network", "Сетевые настройки");
 
-  GP_HR(UI_MENU_LINE_COLOR, 6);
+  GP.HR(UI_MENU_LINE_COLOR, 6);
 
   //состояние соединения
   if (wifiGetConnectStatus()) {
     updateList += ",bar_wifi";
-    GP_BLOCK_SHADOW_BEGIN();
+    GP.BLOCK_SHADOW_BEGIN();
     GP.LABEL("Сигнал WiFi", "", UI_MENU_TEXT_COLOR, 15);
-    GP_LINE_BAR("bar_wifi", getWiFiSignal(), 0, 100, 1, UI_MENU_WIFI_COLOR);
-    GP_BLOCK_SHADOW_END();
+    GP.LINE_BAR("bar_wifi", getWiFiSignal(), 0, 100, 1, UI_MENU_WIFI_COLOR);
+    GP.BLOCK_SHADOW_END();
   }
 
-  GP_FOOTER_BEGIN();
-  GP.HR(UI_MENU_LINE_COLOR);
-  GP_TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
+  GP.FOOTER_BEGIN();
+  GP.HR(UI_MENU_LINE_COLOR, 0);
+  GP.TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
   GP.BREAK();
-  GP_TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
-  GP_FOOTER_END();
+  GP.TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
+  GP.FOOTER_END();
 
   GP.UI_BODY(); //начать основное окно
 
@@ -194,7 +190,7 @@ void build(void) {
     }
 
     GP.BREAK();
-    GP_HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    GP.HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
     M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
@@ -204,7 +200,7 @@ void build(void) {
     M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
 
     GP.BREAK();
-    GP_HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    GP.HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
     M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(getBatteryVoltage(), 2) + " V", "", UI_INFO_COLOR););
@@ -213,7 +209,7 @@ void build(void) {
     M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
 
     GP.BREAK();
-    GP_HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    GP.HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
 
     M_BOX(GP.LABEL("UID", "", UI_LABEL_COLOR); GP.LABEL(getSensorId(), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
@@ -244,7 +240,7 @@ void build(void) {
     GP.BREAK();
     GP.SPAN("Поддерживаемые форматы файлов: bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.BREAK();
-    GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    GP.HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
     M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
     GP.BLOCK_END();
   }
@@ -264,7 +260,7 @@ void build(void) {
       GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
       GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
-      GP_SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
+      GP.SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
       GP.FORM_END();
     }
     else { //выбор сети
@@ -277,25 +273,25 @@ void build(void) {
       if (ui.uri("/manual")) { //ручной режим ввода сети
         GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
         GP.BREAK();
-        GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+        GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
         GP.BREAK();
-        GP_TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
+        GP.TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+        GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
         GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
         GP.SEND("</div>\n");
       }
       else { //выбор сети из списка
         GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
         GP.BREAK();
-        GP_PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+        GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
         GP.BREAK();
-        GP_TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
+        GP.TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
         GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
         if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%;margin-top:10px;margin-bottom:0", true);
-        else GP_SUBMIT("Подключиться", UI_BUTTON_COLOR);
+        else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
         GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", false, true);
         GP.SEND("</div>\n");
       }
@@ -335,17 +331,15 @@ void build(void) {
   GP.UPDATE(updateList);
   GP.UI_END(); //завершить окно панели управления
 
-  GP_BUILD_END();
+  GP.BUILD_END();
 }
 
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
-  GP.BUILD_BEGIN(UI_MAIN_THEME, 500);
-  GP_FIX_SCRIPTS(); //фикс скриптов страницы
-  GP_FIX_STYLES(); //фикс стилей страницы
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   GP.PAGE_TITLE("Обновление");
 
-  GP_MIDDLE_BLOCK_BEGIN();
+  GP.MIDDLE_BLOCK_BEGIN();
 
   GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
   if (!UpdateEnd) {
@@ -353,7 +347,7 @@ void buildUpdate(bool UpdateEnd, const String & UpdateError) {
     GP.BREAK();
     GP.SPAN("Поддерживаемые форматы файлов: bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.BREAK();
-    GP_HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
+    GP.HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
     M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
   }
   else if (UpdateError.length()) {
@@ -366,14 +360,14 @@ void buildUpdate(bool UpdateEnd, const String & UpdateError) {
     setUpdateCompleted();
   }
   GP.HR(UI_LINE_COLOR);
-  GP_CENTER_BOX_BEGIN();
+  GP.CENTER_BOX_BEGIN();
   GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
   GP.BOX_END();
   GP.BLOCK_END();
 
   GP.BLOCK_END();
 
-  GP_BUILD_END();
+  GP.BUILD_END();
 }
 
 void action() {
