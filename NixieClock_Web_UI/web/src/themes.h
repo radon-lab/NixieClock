@@ -35,7 +35,7 @@ input[type=color]{width:80px;height:40px;}
 input[type=range]:disabled{filter:brightness(0.6);}
 input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
-input[type=time],input[type=date]{height:34px;border:none!important;}
+input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],select,textarea{text-align:center;appearance:none;}
 input[type=number],input[type=text],input[type=password],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
 textarea{width:auto;max-width:100%}
@@ -94,6 +94,7 @@ input[type=button]:disabled,input[type=checkbox]:disabled+.slider:before,input[t
 :root{color-scheme:light dark;}
 html{scrollbar-width:none;}
 body{-webkit-tap-highlight-color:transparent;}
+form{margin:0;}
 input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=date]:focus,input[type=time]:focus{border:2px solid #666}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlBlock{display:inline-block;position:relative}

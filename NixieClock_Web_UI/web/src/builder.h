@@ -52,6 +52,19 @@ struct Builder {
     JS_BOTTOM();
     PAGE_END();
   }
+  
+  void PAGE_ZOOM(const String& zoom, const String& width = "") {
+	*_GPP += F("<style type='text/css'>");
+    if (width.length()) {
+      *_GPP += F("@media (max-width:");
+	  *_GPP += width;
+	  *_GPP += F("){");
+	}
+    *_GPP += F(":root{zoom:");
+    *_GPP += zoom;
+    if (width.length()) *_GPP += "}";
+	*_GPP += F("}</style>\n");
+  }
 
   void PAGE_TITLE(const String& text = "", const String& name = "") {
     if (name.length()) HIDDEN(name, F("_title"), text);
