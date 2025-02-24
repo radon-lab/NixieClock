@@ -121,7 +121,7 @@ boolean ntpUpdate(void) {
         ntp_buffer[14] = 49;
         ntp_buffer[15] = 52;
 
-        if (!udp.beginPacket(settings.host, NTP_SERVER_PORT) || (udp.write(ntp_buffer, NTP_PACKET_SIZE) != NTP_PACKET_SIZE) || !udp.endPacket()) ntpChangeAttempt();
+        if (!udp.beginPacket(settings.ntpHost, NTP_SERVER_PORT) || (udp.write(ntp_buffer, NTP_PACKET_SIZE) != NTP_PACKET_SIZE) || !udp.endPacket()) ntpChangeAttempt();
         else {
           ntp_status = NTP_WAIT_ANSWER;
           ntp_timer = millis();

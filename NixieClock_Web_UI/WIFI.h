@@ -11,7 +11,7 @@ String wifi_host_name; //имя устройства
 String wifiGetApSSID(void) {
   String str;
   str.reserve(70);
-  if (settings.ssid[0]) str = settings.ssid;
+  if (settings.wifiSSID[0]) str = settings.wifiSSID;
   else str = F("unset");
   return str;
 }
@@ -28,7 +28,7 @@ String wifiGetConnectState(void) {
   String str;
   str.reserve(100);
 
-  if (settings.ssid[0]) {
+  if (settings.wifiSSID[0]) {
     if (wifi_status == WL_CONNECTED) str = F("Подключение установлено");
     else if (!wifi_interval) str = F("Не удалось подключиться");
     else str = F("Подключение к сети...");
@@ -106,6 +106,13 @@ void wifiSetConnectMode(void) {
   if (WiFi.getAutoReconnect() != true) WiFi.setAutoReconnect(true);
 }
 //--------------------------------------------------------------------
+void wifiReadSettings(void) {
+  strncpy(settings.wifiSSID, WiFi.SSID().c_str(), 64);
+  settings.wifiSSID[63] = '\0';
+  strncpy(settings.wifiPASS, WiFi.psk().c_str(), 64);
+  settings.wifiPASS[63] = '\0';
+}
+//--------------------------------------------------------------------
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
@@ -119,10 +126,10 @@ void wifiStartAP(void) {
   WiFi.softAPConfig(local, local, subnet);
 
   //запускаем точку доступа
-  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
+  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
   else {
     Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID);
+    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID);
     if (AP_PASS[0] != '\0') {
       Serial.print F(" ][ pass: ");
       Serial.print(AP_PASS);
@@ -208,12 +215,12 @@ void wifiUpdate(void) {
     }
     else { //иначе новое поключение
       WiFi.hostname(wifi_host_name); //установили имя устройства
-      wifi_status = WiFi.begin(settings.ssid, settings.pass); //подключаемся к wifi
+      wifi_status = WiFi.begin(settings.wifiSSID, settings.wifiPASS); //подключаемся к wifi
       if (wifi_status != WL_CONNECT_FAILED) {
         timerWifi = millis(); //сбросили таймер
         wifi_interval = 30000; //устанавливаем интервал ожидания
         Serial.print F("Wifi connecting to \"");
-        Serial.print(settings.ssid);
+        Serial.print(settings.wifiSSID);
         Serial.println F("\"...");
       }
       else {

@@ -32,13 +32,6 @@ const char *wirelessStatusList[] = {"Ошибка...", "Не обнаружен.
 WiFiUDP wireless;
 
 //--------------------------------------------------------------------
-void checkCRC(uint8_t* crc, uint8_t data) {
-  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
-    data >>= 0x01; //сдвигаем буфер
-  }
-}
-//--------------------------------------------------------------------
 void wirelessStart(void) {
   if (wireless.begin(WIRELESS_LOCAL_PORT)) {
     wireless_timeout = 0;

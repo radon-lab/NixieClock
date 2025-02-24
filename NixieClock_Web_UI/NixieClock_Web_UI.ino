@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 23.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 24.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -8,9 +8,6 @@
 
   Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
-
-  В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить указанные версии библиотек:
-  EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
   1МБ - FS:none OTA:~502KB(только обновление esp по OTA).
@@ -34,33 +31,7 @@
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui(&LittleFS);
 
-struct settingsData {
-  boolean nameAp;
-  boolean nameMenu;
-  boolean namePrefix;
-  boolean namePostfix;
-  boolean groupFind;
-  uint8_t wirelessId[6];
-  uint8_t weatherCity;
-  float weatherLat;
-  float weatherLon;
-  uint8_t climateSend[2];
-  uint8_t climateChart;
-  uint8_t climateBar;
-  uint8_t climateTime;
-  boolean climateAvg;
-  boolean ntpSync;
-  boolean ntpDst;
-  uint8_t ntpTime;
-  int8_t ntpGMT;
-  char host[20];
-  char name[20];
-  char ssid[64];
-  char pass[64];
-} settings;
-
-#include <EEManager.h>
-EEManager memory(settings, 3000);
+#include "MEMORY.h"
 
 //переменные
 GPdate mainDate; //основная дата
@@ -223,8 +194,8 @@ String playerVoiceList(void) { //список голосов для озвучк
   return str;
 }
 //--------------------------------------------------------------------
-void PAGE_TITLE_NAME(const String& name) {
-  GP.PAGE_TITLE(((settings.namePrefix) ? (settings.name + String(" - ")) : "") + name + ((settings.namePostfix) ? (String(" - ") + settings.name) : ""));
+void PAGE_TITLE_NAME(const String& title) {
+  GP.PAGE_TITLE(((settings.namePrefix) ? (settings.nameDevice + String(" - ")) : "") + title + ((settings.namePostfix) ? (String(" - ") + settings.nameDevice) : ""));
 }
 //--------------------------------------------------------------------
 void build(void) {
@@ -294,7 +265,7 @@ void build(void) {
     updateList = F("barTime");
 
     //начать меню
-    GP.UI_MENU("Nixie clock", (settings.nameMenu) ? settings.name : "", UI_MENU_COLOR, UI_MENU_NAME_COLOR);
+    GP.UI_MENU("Nixie clock", (settings.nameMenu) ? settings.nameDevice : "", UI_MENU_COLOR, UI_MENU_NAME_COLOR);
     GP.HR(UI_MENU_LINE_COLOR, 6);
 
     //ссылки меню
@@ -1028,7 +999,7 @@ void build(void) {
         M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
       }
       if (WiFi.getMode() != WIFI_STA) {
-        M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.name) : AP_SSID, 12), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(StrLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
       }
 
@@ -1064,7 +1035,7 @@ void build(void) {
 
       GP.NAV_BLOCK_BEGIN("fastInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", "Устройство", UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.name, "", 19););
+      M_BOX(GP.LABEL("Имя", "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", "Без названия", settings.nameDevice, "", 19););
       GP.BREAK();
       GP.HR_TEXT("Отображение", "", UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL("Меню", "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
@@ -1144,21 +1115,21 @@ void build(void) {
 
         GP.FORM_BEGIN("/connection");
         if (ui.uri("/manual")) { //ручной режим ввода сети
-          GP.TEXT("wifiSsid", "SSID", settings.ssid, "", 64);
+          GP.TEXT("wifiSsid", "SSID", settings.wifiSSID, "", 64);
           GP.BREAK();
-          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+          GP.PASS_EYE("wifiPass", "Пароль", settings.wifiPASS, 64);
           GP.BREAK();
           GP.TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
           GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-          GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+          GP.BUTTON("extClear", "✕", "", (!settings.wifiSSID[0] && !settings.wifiPASS[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.wifiSSID[0] && !settings.wifiPASS[0]), true);
           GP.SEND("</div>\n");
         }
         else { //выбор сети из списка
           GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
-          GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
+          GP.PASS_EYE("wifiPass", "Пароль", settings.wifiPASS, 64);
           GP.BREAK();
           GP.TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
@@ -1175,7 +1146,7 @@ void build(void) {
       updateList += F(",syncStatus,syncWeather");
 
       GP.BLOCK_BEGIN(GP_THIN, "", "Сервер NTP", UI_BLOCK_COLOR);
-      GP.TEXT("syncHost", "Хост", settings.host, "", 19);
+      GP.TEXT("syncHost", "Хост", settings.ntpHost, "", 19);
       GP.BREAK();
       GP.SELECT("syncPer", String("Каждые 15 мин,Каждые 30 мин,Каждый 1 час") + ((settings.ntpDst) ? "" : ",Каждые 2 часа,Каждые 3 часа"), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
       GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
@@ -1246,7 +1217,7 @@ void buildUpdate(bool UpdateEnd, const String & UpdateError) {
   GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
   GP.BOX_END();
   GP.BLOCK_END();
-  
+
   GP.BLOCK_END();
 
   GP.BUILD_END();
@@ -1305,21 +1276,21 @@ void action() {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("syncAuto", settings.ntpSync)) {
         if (settings.ntpSync && (ntpGetSyncStatus())) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("syncDst", settings.ntpDst)) {
         if (settings.ntpSync && (ntpGetSyncStatus())) {
           ntpRequest(); //запросить текущее время
           syncState = 0; //сбросили флаг синхронизации
         }
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("syncTime")) {
         if (ntpGetSyncStatus()) {
@@ -1335,15 +1306,15 @@ void action() {
       }
 
       if (ui.click("syncHost")) {
-        if (ui.getString("syncHost").length() > 0) strncpy(settings.host, ui.getString("syncHost").c_str(), 20); //копируем себе
-        else strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
-        settings.host[19] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
+        if (ui.getString("syncHost").length() > 0) strncpy(settings.ntpHost, ui.getString("syncHost").c_str(), 20); //копируем себе
+        else strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+        settings.ntpHost[19] = '\0'; //устанавливаем последний символ
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("syncPer")) {
         settings.ntpTime = ui.getInt("syncPer");
         if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("syncCheck")) {
         ntpRequest(); //запросить текущее время
@@ -1361,15 +1332,15 @@ void action() {
     if (ui.clickSub("weather")) {
       if (ui.click("weatherCity")) {
         settings.weatherCity = ui.getInt("weatherCity");
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("weatherLat")) {
         settings.weatherLat = (ui.getString("weatherLat").length()) ? ui.getFloat("weatherLat") : NAN;
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("weatherLon")) {
         settings.weatherLon = (ui.getString("weatherLon").length()) ? ui.getFloat("weatherLon") : NAN;
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
 
       if (ui.click("weatherUpdate")) {
@@ -1645,27 +1616,27 @@ void action() {
         _name.replace(",", "");
         _name.replace(":", "");
 
-        strncpy(settings.name, _name.c_str(), 20); //копируем себе
-        settings.name[19] = '\0'; //устанавливаем последний символ
+        strncpy(settings.nameDevice, _name.c_str(), 20); //копируем себе
+        settings.nameDevice[19] = '\0'; //устанавливаем последний символ
 
         if (groupGetSearchStatus()) { //если сервис обнаружения устройств запущен
           groupSearch(); //запустить поиск устройств поблизости
           groupReload(); //обновить состояние для устройств поблизости
         }
 
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("extDeviceAp", settings.nameAp)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("extDeviceMenu", settings.nameMenu)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("extDevicePrefix", settings.namePrefix)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("extDevicePostfix", settings.namePostfix)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
 
       if (ui.clickBool("extDeviceGroup", settings.groupFind)) {
@@ -1673,18 +1644,18 @@ void action() {
           if (settings.groupFind) groupStart(); //запустили обнаружение устройств поблизости
           else groupStop(); //остановить обнаружение устройств поблизости
         }
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("extReset")) {
         if (ui.getBool("extReset")) {
           resetMainSettings(); //устанавливаем настройки по умолчанию
-          memory.updateNow(); //обновить данные в памяти
+          memoryWriteSettings(); //записать данные в память
           busRebootDevice(DEVICE_RESET);
         }
       }
       if (ui.click("extReboot")) {
         if (ui.getBool("extReboot")) {
-          memory.updateNow(); //обновить данные в памяти
+          memoryWriteSettings(); //записать данные в память
           busRebootDevice(DEVICE_REBOOT);
         }
       }
@@ -1693,15 +1664,15 @@ void action() {
         if (ui.getBool("extFound")) {
           wirelessSetNewId();
           wirelessSetData(wireless_found_buffer);
-          memory.update(); //обновить данные в памяти
+          memorySaveSettings(); //обновить данные в памяти
         }
         else wirelessResetFoundState();
       }
 
       if (ui.click("extClear")) {
-        settings.ssid[0] = '\0'; //устанавливаем последний символ
-        settings.pass[0] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
+        settings.wifiSSID[0] = '\0'; //устанавливаем последний символ
+        settings.wifiPASS[0] = '\0'; //устанавливаем последний символ
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("extScan")) {
         if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
@@ -1782,7 +1753,7 @@ void action() {
       }
 
       if (ui.clickInt("climateBar", settings.climateBar)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("climateChart")) {
         sensorChart = ui.getInt("climateChart");
@@ -1791,21 +1762,21 @@ void action() {
         int num = ui.clickNameSub(1).toInt();
         settings.climateSend[constrain(num, 0, 1)] = ui.getInt(String("climateSend/") + num) + 1;
         sensorSendData(settings.climateSend[constrain(num, 0, 1)]); //отправить данные
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
 
       if (ui.clickInt("climateTime", settings.climateTime)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.clickBool("climateAvg", settings.climateAvg)) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
 
       if (ui.click("climateWarn")) {
         if (ui.getBool("climateWarn")) {
           settings.climateChart = sensorChart;
           climateUpdate(CLIMATE_RESET);
-          memory.update(); //обновить данные в памяти
+          memorySaveSettings(); //обновить данные в памяти
         }
         sensorChart = SENS_MAX_DATA;
       }
@@ -1871,22 +1842,22 @@ void action() {
     if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
         wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
-        if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
+        if (!ui.copyStr("wifiSsid", settings.wifiSSID, 64)) { //копируем из строки
           int network = 0; //номер сети из списка
-          if (ui.copyInt("wifiNetwork", network)) strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
+          if (ui.copyInt("wifiNetwork", network)) strncpy(settings.wifiSSID, WiFi.SSID(network).c_str(), 64); //копируем из списка
           else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
         }
-        settings.ssid[63] = '\0'; //устанавливаем последний символ
-        ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
-        settings.pass[63] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
+        settings.wifiSSID[63] = '\0'; //устанавливаем последний символ
+        ui.copyStr("wifiPass", settings.wifiPASS, 64); //копируем пароль сети
+        settings.wifiPASS[63] = '\0'; //устанавливаем последний символ
+        memorySaveSettings(); //обновить данные в памяти
       }
     }
     else if (ui.form("/network")) {
       wifiResetConnectStatus(); //отключаемся от точки доступа
-      settings.ssid[0] = '\0'; //устанавливаем последний символ
-      settings.pass[0] = '\0'; //устанавливаем последний символ
-      memory.update(); //обновить данные в памяти
+      settings.wifiSSID[0] = '\0'; //устанавливаем последний символ
+      settings.wifiPASS[0] = '\0'; //устанавливаем последний символ
+      memorySaveSettings(); //обновить данные в памяти
     }
   }
   /**************************************************************************/
@@ -2250,8 +2221,8 @@ void initFileSystemData(void) {
 }
 //--------------------------------------------------------------------
 void resetMainSettings(void) {
-  strncpy(settings.host, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
-  settings.host[19] = '\0'; //устанавливаем последний символ
+  strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+  settings.ntpHost[19] = '\0'; //устанавливаем последний символ
 
   settings.groupFind = DEFAULT_GROUP_FOUND; //обнаружение устройств поблизости
 
@@ -2260,8 +2231,8 @@ void resetMainSettings(void) {
   settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
   settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
 
-  strncpy(settings.name, DEFAULT_NAME, 20); //установить имя по умолчанию
-  settings.name[19] = '\0'; //устанавливаем последний символ
+  strncpy(settings.nameDevice, DEFAULT_NAME, 20); //установить имя по умолчанию
+  settings.nameDevice[19] = '\0'; //устанавливаем последний символ
 
   settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
   settings.weatherLat = NAN; //установить широту по умолчанию
@@ -2498,24 +2469,20 @@ void setup() {
   Serial.print F(ESP_FIRMWARE_VERSION);
   Serial.println F("...");
 
-  //инициализация файловой системы
-  initFileSystemData();
-
   //устанавливаем указатель будильниака
   alarm.now = 0;
 
   //восстанавливаем настройки сети
-  strncpy(settings.ssid, WiFi.SSID().c_str(), 64);
-  settings.ssid[63] = '\0';
-  strncpy(settings.pass, WiFi.psk().c_str(), 64);
-  settings.pass[63] = '\0';
+  wifiReadSettings();
 
   //устанавливаем настройки по умолчанию
   resetMainSettings();
 
   //читаем настройки из памяти
-  EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xCA);
+  memoryReadSettings();
+
+  //инициализация файловой системы
+  initFileSystemData();
 
   //инициализируем строки
   groupInitStr();
@@ -2578,6 +2545,7 @@ void loop() {
   if (!updaterFlash()) busUpdate(); //обработка шины
   else if (updaterRun()) busRebootDevice(SYSTEM_REBOOT); //загрузчик прошивки
 
+  memoryUpdate(); //обработка памяти настроек
+
   ui.tick(); //обработка веб интерфейса
-  memory.tick(); //обработка еепром
 }

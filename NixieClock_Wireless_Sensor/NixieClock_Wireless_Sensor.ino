@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 21.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 24.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -8,9 +8,6 @@
 
   Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
-
-  В "Инструменты -> Управлять библиотеками..." необходимо предварительно установить указанные версии библиотек:
-  EEManager 2.0.1
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
   1МБ - FS:64KB OTA:~470KB(обновление esp по OTA).
@@ -26,17 +23,7 @@
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui;
 
-struct settingsData {
-  uint8_t sensor;
-  uint8_t period;
-  char ssid[64];
-  char pass[64];
-  uint8_t attempt[MAX_CLOCK];
-  IPAddress send[MAX_CLOCK];
-} settings;
-
-#include <EEManager.h>
-EEManager memory(settings, 3000);
+#include "MEMORY.h"
 
 #include <WiFiUdp.h>
 WiFiUDP udp;
@@ -380,7 +367,7 @@ void action() {
         }
         settings.send[MAX_CLOCK - 1] = IPAddress(0, 0, 0, 0); //сбрасываем адрес отправки
         settings.attempt[MAX_CLOCK - 1] = 1; //устанавливаем попытки по умолчанию
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("extSendAdd")) {
         if (buffSendIp[0] != '\0') { //если строка не пустая
@@ -392,7 +379,7 @@ void action() {
                   sendHostNum = i; //установили текущий хост
                   settings.send[i] = _send_ip; //копируем адрес
                   settings.attempt[i] = constrain(buffSendAttempt, 1, 5); //копируем количество попыток
-                  memory.update(); //обновить данные в памяти
+                  memorySaveSettings(); //обновить данные в памяти
                   break;
                 }
                 else if (settings.send[i] == _send_ip) break;
@@ -413,7 +400,7 @@ void action() {
       if (ui.click("extClear")) {
         settings.ssid[0] = '\0'; //устанавливаем последний символ
         settings.pass[0] = '\0'; //устанавливаем последний символ
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
       if (ui.click("extScan")) {
         if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
@@ -421,7 +408,7 @@ void action() {
 
       if (ui.click("extPeriod")) {
         settings.period = ui.getInt("extPeriod");
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
     }
   }
@@ -439,14 +426,14 @@ void action() {
         ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
         settings.pass[63] = '\0'; //устанавливаем последний символ
         wifiSetConnectStatus(); //подключиться к сети
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
       }
     }
     else if (ui.form("/network")) {
       wifiResetConnectStatus(); //отключаемся от точки доступа
       settings.ssid[0] = '\0'; //устанавливаем последний символ
       settings.pass[0] = '\0'; //устанавливаем последний символ
-      memory.update(); //обновить данные в памяти
+      memorySaveSettings(); //обновить данные в памяти
     }
   }
   /**************************************************************************/
@@ -573,13 +560,6 @@ void efuseGetDefaultMacAddress(uint8_t* mac) {
   mac[3] = _efuse_mid >> 8;
   mac[4] = _efuse_mid;
   mac[5] = _efuse_low >> 24;
-}
-//--------------------------------------------------------------------
-void checkCRC(uint8_t* crc, uint8_t data) { //сверка контрольной суммы
-  for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
-    data >>= 0x01; //сдвигаем буфер
-  }
 }
 //--------------------------------------------------------------------
 void checkSettingsButton(void) {
@@ -740,7 +720,7 @@ void checkSensors(void) {
       }
     }
     if (settings.sensor) {
-      memory.updateNow(); //обновить данные в памяти
+      memoryWriteSettings(); //записать данные в память
 #if DEBUG_MODE
       Serial.println F("Sensor found, update memory...");
 #endif
@@ -750,7 +730,7 @@ void checkSensors(void) {
       Serial.print F("Sensor not found");
 #endif
       if (settingsMode == true) {
-        memory.update(); //обновить данные в памяти
+        memorySaveSettings(); //обновить данные в памяти
 #if DEBUG_MODE
         Serial.println F(", update memory...");
 #endif
@@ -998,8 +978,7 @@ void setup() {
   settings.pass[0] = '\0';
 
   //читаем настройки из памяти
-  EEPROM.begin(memory.blockSize());
-  memory.begin(0, 0xAD);
+  memoryReadSettings();
 
   //проверяем настройки сети
   if (settingsMode == false) checkSettings();
@@ -1037,7 +1016,7 @@ void loop() {
   sendUpdate(); //обработка канала связи
 
   if (settingsMode == true) {
+    memoryUpdate(); //обработка памяти настроек
     ui.tick(); //обработка веб интерфейса
-    memory.tick(); //обработка еепром
   }
 }

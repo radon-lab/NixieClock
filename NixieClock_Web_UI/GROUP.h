@@ -133,7 +133,7 @@ void groupEncodePacket(IPAddress ip, uint8_t cmd) {
   group.write(_key_high);
   group.write(groupGetEncodeByte(_key_low, _key_high, 0xFF));
   group.write(groupGetEncodeByte(_key_low, _key_high, cmd));
-  for (uint8_t i = 0; i < GROUP_DATA_SIZE; i++) group.write(groupGetEncodeByte(_key_low, _key_high, settings.name[i]));
+  for (uint8_t i = 0; i < GROUP_DATA_SIZE; i++) group.write(groupGetEncodeByte(_key_low, _key_high, settings.nameDevice[i]));
   group.endPacket();
 }
 uint8_t groupGetDecodeByte(uint8_t low, uint8_t high, uint8_t data) {
@@ -215,7 +215,7 @@ void groupUpdate(void) {
       if (group_status > GROUP_UPDATE_END) {
         group_status = GROUP_UPDATE_WAIT;
         if (group_buffer[0] != '\0') {
-          groupAddBuffer(WiFi.localIP(), settings.name);
+          groupAddBuffer(WiFi.localIP(), settings.nameDevice);
           groupSortBuffer();
         }
         if (!group_list.equals(group_buffer)) {
