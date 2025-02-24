@@ -45,6 +45,7 @@ void memorySaveSettings(void) {
 }
 //--------------------------------------------------------------------
 void memoryWriteSettings(void) {
+  memory_update = false;
   if (memory_state) {
     uint8_t _crc = 0;
     uint8_t _buff = 0;
@@ -56,7 +57,6 @@ void memoryWriteSettings(void) {
     EEPROM.write(sizeof(settings) + 1, _crc ^ MEM_MASK_CRC);
     EEPROM.commit();
     memory_timer = millis();
-    memory_update = false;
   }
 }
 //--------------------------------------------------------------------
