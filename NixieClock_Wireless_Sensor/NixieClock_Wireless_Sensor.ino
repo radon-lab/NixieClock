@@ -96,6 +96,7 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 ADC_MODE(ADC_VCC);
 
 void build(void) {
+  GP.PAGE_ZOOM("90%", "370px");
   GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   //обновления блоков
@@ -322,6 +323,7 @@ void build(void) {
 }
 
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
+  GP.PAGE_ZOOM("90%", "370px");
   GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
 
   GP.PAGE_TITLE("Обновление");

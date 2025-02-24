@@ -41,7 +41,10 @@ void checkCRC(uint8_t* crc, uint8_t data) {
 }
 //--------------------------------------------------------------------
 void memorySaveSettings(void) {
-  if (memory_state) memory_update = true;
+  if (memory_state) {
+    memory_update = true;
+    memory_timer = millis();
+  }
 }
 //--------------------------------------------------------------------
 void memoryWriteSettings(void) {
@@ -56,7 +59,6 @@ void memoryWriteSettings(void) {
     }
     EEPROM.write(sizeof(settings) + 1, _crc ^ MEM_MASK_CRC);
     EEPROM.commit();
-    memory_timer = millis();
   }
 }
 //--------------------------------------------------------------------
