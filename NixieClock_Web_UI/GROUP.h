@@ -52,7 +52,11 @@ void groupInitStr(void) {
 }
 //--------------------------------------------------------------------
 boolean groupGetUpdateStatus(void) {
-  return group_update;
+  if (group_update) {
+    group_update = false;
+    return true;
+  }
+  return false;
 }
 boolean groupGetSearchStatus(void) {
   return (group_status != GROUP_STOPPED);
@@ -82,6 +86,9 @@ String groupGetName(void) {
 }
 String groupGetIP(void) {
   return group_list_ip;
+}
+String groupGetList(void) {
+  return group_list;
 }
 //--------------------------------------------------------------------
 void groupSortBuffer(void) {
@@ -174,7 +181,7 @@ void groupStart(void) {
   }
   else if (group.begin(GROUP_LOCAL_PORT)) {
     group_check = ui.online();
-    group_update = false;
+    group_update = true;
     group_time = 0;
     group_list = "";
     group_status = GROUP_READY;
@@ -184,7 +191,7 @@ void groupStart(void) {
 void groupStop(void) {
   if (group_status != GROUP_STOPPED) {
     group_status = GROUP_READY;
-    group_update = false;
+    group_update = true;
     group_time = 0;
     group_list = "";
   }

@@ -52,18 +52,18 @@ struct Builder {
     JS_BOTTOM();
     PAGE_END();
   }
-  
+
   void PAGE_ZOOM(const String& zoom, const String& width = "") {
-	*_GPP += F("<style type='text/css'>");
+    *_GPP += F("<style type='text/css'>");
     if (width.length()) {
       *_GPP += F("@media (max-width:");
-	  *_GPP += width;
-	  *_GPP += F("){");
-	}
+      *_GPP += width;
+      *_GPP += F("){");
+    }
     *_GPP += F(":root{zoom:");
     *_GPP += zoom;
     if (width.length()) *_GPP += "}";
-	*_GPP += F("}</style>\n");
+    *_GPP += F("}</style>\n");
   }
 
   void PAGE_TITLE(const String& text = "", const String& name = "") {
@@ -166,18 +166,34 @@ struct Builder {
     *_GPP += F("</a>\n");
   }
 
-  void UI_LINK(const String& url, const String& name, PGM_P color) {
-    *_GPP += F("<a href='http://");
-    *_GPP += url;
-    *_GPP += "'";
-    if (WiFi.localIP().toString().equals(url)) {
-      *_GPP += F(" class='sbsel' style='background:");
-      *_GPP += FPSTR(color);
-      *_GPP += F(" !important;'");
+  void UI_LINKS_BEGIN(const String& host) {
+    *_GPP += F(
+               "<script>function linkUpdate(val){val=val.split(',');var block='';var data='';"
+               "for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');"
+               "if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';"
+               "block+=data[0];block+='\"';if(data[0]=='"
+             );
+    *_GPP += host;
+    *_GPP += F(
+               "')block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';"
+               "block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}"
+               "getEl('_link').innerHTML=block;"
+               "getEl('_link_block').style.display=block.length?'block':'none';}</script>"
+             );
+    *_GPP += F("<div id='_link_block' style='display:none'>");
+    send();
+  }
+  void UI_LINKS_BLOCK(void) {
+    *_GPP += F("<div id='_link' class='sblock' style='padding:0'></div>");
+    send();
+  }
+  void UI_LINKS_END(const String& links = "") {
+    *_GPP += F("</div>");
+    if (links.length()) {
+      *_GPP += F("<script>linkUpdate('");
+      *_GPP += links;
+      *_GPP += F("')</script>");
     }
-    *_GPP += ">";
-    *_GPP += name;
-    *_GPP += F("</a>\n");
     send();
   }
 
@@ -297,51 +313,6 @@ struct Builder {
                "xhttp.onreadystatechange=function(){onlShow(!this.status)}}},");
     *_GPP += prd;
     *_GPP += F(");\n");
-    JS_END();
-  }
-
-  // ================== CANVAS ==================
-  // обновить CANVAS с именем name при клике на компонент из списка list
-  void REDRAW_CLICK(const String& name, const String& list) {
-    JS_BEGIN();
-    *_GPP += F("_clkRedrList['");
-    *_GPP += name;
-    *_GPP += F("']='");
-    *_GPP += list;
-    *_GPP += F("';");
-    JS_END();
-    send();
-  }
-  void CANVAS(const String& name, int w, int h) {
-    *_GPP += F("<canvas class='_canvas' id='");
-    *_GPP += name;
-    *_GPP += F("' width='");
-    *_GPP += w;
-    *_GPP += F("' height='");
-    *_GPP += h;
-    *_GPP += F("'></canvas>\n");
-    send();
-  }
-
-  void CANVAS_SUPPORT() {
-    *_GPP += F("<script src='/GP_CANVAS.js?=");
-    *_GPP += _gp_seed;
-    *_GPP += F("'></script>\n");
-  }
-
-  void CANVAS_SUPPORT_FILE() {
-    SEND(F("<script src='/gp_data/canvas.js?=" GP_VERSION "'></script>\n"));
-  }
-
-  void CANVAS_BEGIN(const String& name, int w, int h) {
-    CANVAS(name, w, h);
-    JS_BEGIN();
-    *_GPP += F("var cv=getEl('");
-    *_GPP += name;
-    *_GPP += F("');\n var cx=cv.getContext('2d');eval(GP_canvas(\"");
-  }
-  void CANVAS_END() {
-    *_GPP += F("\"))");
     JS_END();
   }
 
@@ -1238,23 +1209,6 @@ struct Builder {
       *_GPP += h;
     }
     *_GPP += F(";'>\n");
-    send();
-  }
-
-  void CAM_STREAM(int width = 500, int port = 90) {
-    *_GPP += F("<img id='_stream' style='max-height:100%;width:");
-    *_GPP += width;
-    *_GPP += F("px'>\n<script>window.onload=document.getElementById('_stream').src=window.location.href.slice(0,-1)+':");
-    *_GPP += port;
-    *_GPP += F("/';</script>\n");
-    send();
-  }
-  void CAM_STREAM(const String& width, int port = 90) {
-    *_GPP += F("<img id='_stream' style='max-height:100%;width:");
-    *_GPP += width;
-    *_GPP += F("'>\n<script>window.onload=document.getElementById('_stream').src=window.location.href.slice(0,-1)+':");
-    *_GPP += port;
-    *_GPP += F("/';</script>\n");
     send();
   }
 

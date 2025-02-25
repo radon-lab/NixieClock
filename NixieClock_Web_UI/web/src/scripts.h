@@ -38,7 +38,7 @@ getEl(tab).style.display='block';
 x=document.getElementsByClassName(btn.className);
 for(var i=0;i<x.length;i++)x[i].style.background='';
 btn.style.background='#2a2d35';}
-function GP_spinc(arg){if (arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
+function GP_spinc(arg){if(arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
 function GP_spinw(arg){if(arg.className=='spin_inp')arg.style.width=((arg.value.length+2)*12)+'px';}
 function GP_spin(arg){var num=getEl(arg.name);num.value=(Number(num.value)+Number(arg.min)).toFixed(Number(arg.max));
 var e=new Event('change');num.dispatchEvent(e);}
@@ -59,8 +59,8 @@ case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
-case undefined:{if(item.className=='_canvas'){var begin='var cv=getEl(\"'+item.id+'\");var cx=cv.getContext(\"2d\");';eval(begin+GP_canvas(resp));}else item.innerHTML=resp;}break;
-default:if(item.name.startsWith('_gplog')){item.innerHTML+=resp;if(item.name=='_gplog')item.scrollTop=item.scrollHeight;}else item.value=resp;break;}
+case undefined:item.innerHTML=resp;break;
+default:item.value=resp;break;}
 switch(item.type){
 case'range':GP_change(item);break;
 case'number':GP_spinw(item);break;}}}
@@ -78,17 +78,4 @@ function getEl(id){return document.getElementById(id);}
 function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';
 getEl('dashSdb').style.left=flag?'-250px':'0';}
 function onlShow(s){getEl('onlBlock').style.right=s?'0px':'-50px';}
-function logClear(id){getEl(id).innerHTML=''}
-function logToggle(id){log=getEl(id);log.name=(log.name=='_gplog')?'_gplog_ns':'_gplog';}
-)";
-
-
-const char GP_JS_CANVAS[] PROGMEM = R"(
-function GP_canvas(str){var cmd='';
-var arr=['fillStyle','strokeStyle','shadowColor','shadowBlur','shadowOffsetX','shadowOffsetY','lineCap','lineJoin','lineWidth','miterLimit','font','textAlign','textBaseline','globalAlpha','globalCompositeOperation','rect','fillRect','strokeRect','clearRect','fill','stroke','beginPath','moveTo','closePath','lineTo','clip','quadraticCurveTo','bezierCurveTo','arc','arcTo','scale','rotate','translate','fillText','strokeText','drawImage','save','restore']
-str.split(';').forEach((st)=>{
-if(st.includes('::')){
-st=st.split('::');var cnum=Number(st[0]);
-cmd+='cx.'+arr[cnum]+((cnum>=15)?'(':'=')+st[1]+((cnum>=15)?');':';');
-}else cmd+=st+';';});return cmd;}
 )";

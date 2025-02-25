@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 24.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 25.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -282,15 +282,10 @@ void build(void) {
 
 
     //ссылки часов
-    if (groupResetList()) {
-      GP.HR(UI_MENU_LINE_COLOR, 6);
-      while (groupNextList()) {
-        if (groupGetIP()[0] != '\0') {
-          GP.UI_LINK(groupGetIP(), (groupGetName()[0] != '\0') ? groupGetName() : groupGetIP(), UI_MENU_COLOR);
-        }
-        else break;
-      }
-    }
+    GP.UI_LINKS_BEGIN(WiFi.localIP().toString());
+    GP.HR(UI_MENU_LINE_COLOR, 6);
+    GP.UI_LINKS_BLOCK();
+    GP.UI_LINKS_END(groupGetList());
 
     GP.HR(UI_MENU_LINE_COLOR, 6);
 
@@ -1086,7 +1081,7 @@ void build(void) {
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceGroup,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
       PAGE_TITLE_NAME("Сетевые настройки");
@@ -1178,7 +1173,8 @@ void build(void) {
 
     wirelessResetFoundState();
 
-    updateList += F(",extReload,extFound");
+    updateList += F(",extGroup,extReload,extFound");
+    GP.EVAL("extGroup");
     GP.RELOAD("extReload");
     GP.CONFIRM("extFound");
 
@@ -1957,7 +1953,10 @@ void action() {
         ui.answer(1);
       }
 
-      if (ui.update("extReload") && (wirelessGetFoundSuccessState() || groupGetUpdateStatus())) { //если было обновление
+      if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
+        ui.answer("linkUpdate('" + groupGetList() + "')");
+      }
+      if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
         ui.answer(1);
       }
       if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление

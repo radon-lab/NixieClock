@@ -123,8 +123,7 @@ input[type='number']{-moz-appearance:textfield;}
 .overlay{display:none!important;}
 .headbar{display:none!important;}
 .sidebar{left:0!important;}
-.header_s{display:block;}
-}
+.header_s{display:block;}}
 .i_mask{width:35px;height:35px;vertical-align:middle;display:inline-block;background-color:#fff;margin:5px 7px;}
 .i_btn{width:fit-content;cursor:pointer}
 .i_btn:hover{filter:brightness(0.8);}
