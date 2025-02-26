@@ -275,14 +275,14 @@
 #define LANG_PAGE_SETTINGS_GUI_DAY "День"
 #define LANG_PAGE_SETTINGS_GUI_NIGHT "Ночь"
 
-#define LANG_PAGE_SETTINGS_GUI_FROM " С"
-#define LANG_PAGE_SETTINGS_GUI_TO "До"
+#define LANG_PAGE_SETTINGS_GUI_START "С"
+#define LANG_PAGE_SETTINGS_GUI_END "До"
 
 #define LANG_PAGE_SETTINGS_GUI_MIN "мин"
 #define LANG_PAGE_SETTINGS_GUI_MAX "макс"
 
-#define LANG_PAGE_SETTINGS_GUI_EN "вкл"
-#define LANG_PAGE_SETTINGS_GUI_DIS "откл"
+#define LANG_PAGE_SETTINGS_GUI_ENABLE "вкл"
+#define LANG_PAGE_SETTINGS_GUI_DISABLE "откл"
 
 #define LANG_PAGE_SETTINGS_GUI_AUTO_DIS_MINS "Автоотключение, мин"
 #define LANG_PAGE_SETTINGS_GUI_REPEAT_MINS "Повтор сигнала, мин"
@@ -497,3 +497,6 @@
 #define LANG_FAIL_DATA_11 "Переполнение стека"
 #define LANG_FAIL_DATA_12 "Переполнение тиков времени"
 #define LANG_FAIL_DATA_13 "Сбой динамической индикации"
+
+//-------------------------------------------------------//
+#define LANG_DEVICE_OFFLINE "Нет соединения"
