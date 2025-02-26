@@ -257,10 +257,10 @@
 #define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_3 "Давление"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_4 "Температура и влажность"
 
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1 "(часы)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 "(есп)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 "(датчик)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 "(погода)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1 " (часы)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 " (есп)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 " (датчик)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 " (погода)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL "(недоступно)"
 
 #define LANG_PAGE_SETTINGS_GUI_SENS_CLOCK "Датчик в часах"
@@ -608,10 +608,10 @@
 //-------------------------------------------------------//
 #define LANG_FLIP_MODE_1 "Main effect,"
 #define LANG_FLIP_MODE_2 "Without animation,"
-#define LANG_FLIP_MODE_3 "Random change of effects,Smooth fade in and out,Rewind by digit,Rewind by cathode in tube,Train,Rubber band,Gate,Wave,Glare,Evaporation,Slot machine"
+#define LANG_FLIP_MODE_3 "Random change of effects,Smooth fade in and out,Rewind by digit,Rewind by cathodes in tubes,Train,Rubber band,Gate,Wave,Glare,Evaporation,Slot machine"
 
 //-------------------------------------------------------//
-#define LANG_SECS_MODE_1 "Without animation,Smooth fade in and fade out,Rewind by digit,Rewind by cathode in tube"
+#define LANG_SECS_MODE_1 "Without animation,Smooth fade in and fade out,Rewind by digit,Rewind by cathodes in tubes"
 #define LANG_SECS_DISABLE "Not used"
 
 //-------------------------------------------------------//
@@ -681,7 +681,7 @@
 #define LANG_PAGE_HOME_GUI_SYNC "Auto-sync"
 #define LANG_PAGE_HOME_GUI_SUMMER "DST"
 #define LANG_PAGE_HOME_GUI_TIME_DEVICE "Time from device"
-#define LANG_PAGE_HOME_GUI_TIME_SERVER "Synchronization with server"
+#define LANG_PAGE_HOME_GUI_TIME_SERVER "Sync with server"
 
 //-------------------------------------------------------//
 #define LANG_PAGE_ALARM_TITLE "Alarm settings"
@@ -762,14 +762,14 @@
 #define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_3 "Pressure"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_4 "Temperature and humidity"
 
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1 "(clock)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 "(ESP)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 "(sensor)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 "(weather)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1 " (clock)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 " (esp)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 " (sensor)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 " (weather)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL "(unavailable)"
 
 #define LANG_PAGE_SETTINGS_GUI_SENS_CLOCK "Sensor in clock"
-#define LANG_PAGE_SETTINGS_GUI_SENS_ESP "Sensor in ESP"
+#define LANG_PAGE_SETTINGS_GUI_SENS_ESP "Sensor in esp"
 #define LANG_PAGE_SETTINGS_GUI_SENS_WIRELESS "Wireless sensor"
 #define LANG_PAGE_SETTINGS_GUI_SENS_WEATHER "Weather data"
 #define LANG_PAGE_SETTINGS_GUI_SENS_DISABLE "Not used"
@@ -907,7 +907,7 @@
 
 #define LANG_PAGE_INFO_HR_MEMORY "Device memory"
 #define LANG_PAGE_INFO_HR_NETWORK "Network"
-#define LANG_PAGE_INFO_HR_VERSION "Firmvare version"
+#define LANG_PAGE_INFO_HR_VERSION "Firmware version"
 #define LANG_PAGE_INFO_HR_STATE "State"
 #define LANG_PAGE_INFO_HR_SHOW "Display"
 #define LANG_PAGE_INFO_HR_GROUP "Group management"

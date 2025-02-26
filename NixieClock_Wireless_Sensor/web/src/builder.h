@@ -2082,10 +2082,11 @@ struct Builder {
   }
 
   // ======================= ГРАФИКИ =======================
-  void PLOT_STOCK_BEGIN(boolean local = 0) {
+  void PLOT_STOCK_BEGIN(boolean local = 0, boolean lang = 0) {
     if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
     else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
     *_GPP += F("<script src='https://code.highcharts.com/modules/exporting.js'></script>\n");
+    if (lang) *_GPP += F("<script>Highcharts.setOptions({lang:{contextButtonTitle:'Меню',viewFullscreen:'Во весь экран',exitFullscreen:'Свернуть',printChart:'Печать...',resetZoom:'Сбросить',resetZoomTitle:'Сбросить маштаб'}});</script>\n");
     send();
   }
 
@@ -2107,8 +2108,6 @@ struct Builder {
     *_GPP += F("'></div>");
 
     *_GPP += F("<script>Highcharts.setOptions({"
-               "lang:{contextButtonTitle:'Меню',viewFullscreen:'Во весь экран',exitFullscreen:'Свернуть',"
-               "printChart:'Печать...',resetZoom:'Сбросить',resetZoomTitle:'Сбросить маштаб'},\n"
                "global:{buttonTheme:{height:12,fill:'#505053',stroke:'#505053',style:{color:'#DDDDDD'},"
                "states:{hover:{fill:'#737373'},select:{fill:'#505053'}}}},\ncolors:['"
               );

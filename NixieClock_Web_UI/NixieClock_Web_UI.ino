@@ -5,7 +5,7 @@
 
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab & Psyx86.
-  
+
   Перевод веб интерфейса на Английский язык от AlexPunk
 
   Если не установлено ядро ESP8266, "Файл -> Настройки -> Дополнительные ссылки для Менеджера плат", в окно ввода вставляете ссылку - https://arduino.esp8266.com/stable/package_esp8266com_index.json
@@ -836,7 +836,11 @@ void build(void) {
         uint16_t heightSize = 500;
         if (climateGetChartPress()) heightSize = 300;
 
+#ifdef RUSSIAN
+        GP.PLOT_STOCK_BEGIN(climateLocal, true);
+#else
         GP.PLOT_STOCK_BEGIN(climateLocal);
+#endif
 
         if (climateGetChartHum()) {
           GP.PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
@@ -892,7 +896,11 @@ void build(void) {
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_CHART, UI_BLOCK_COLOR);
       if (weatherGetValidStatus()) {
+#ifdef RUSSIAN
+        GP.PLOT_STOCK_BEGIN(climateLocal, true);
+#else
         GP.PLOT_STOCK_BEGIN(climateLocal);
+#endif
         GP.PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 1, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         GP.PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 2, 10, 300, UI_BAR_PRESS_COLOR);
         GP.BREAK();
