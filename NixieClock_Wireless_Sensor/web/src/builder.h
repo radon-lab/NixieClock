@@ -47,8 +47,8 @@ struct Builder {
     PAGE_BLOCK_BEGIN(width);
   }
 
-  void BUILD_END() {
-    PAGE_BLOCK_END();
+  void BUILD_END(const String& offline = "Offline") {
+    PAGE_BLOCK_END(offline);
     JS_BOTTOM();
     PAGE_END();
   }
@@ -258,8 +258,10 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void PAGE_BLOCK_END() {
-    SEND(F("</div>\n<div id='onlBlock' class='onlBlock'>Нет соединения</div>\n"));
+  void PAGE_BLOCK_END(const String& offline) {
+    *_GPP += F("</div>\n<div id='onlBlock' class='onlBlock'>");
+    *_GPP += offline;
+    *_GPP += F("</div>\n");
   }
   void PAGE_END() {
     SEND(F("</body></html>"));
@@ -691,7 +693,7 @@ struct Builder {
   }
 
   // ======================= ТЕКСТ =======================
-  void TAG_RAW(const String& tag, const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0, PGM_P back = GP_DEFAULT) {
+  void TAG_RAW(const String& tag, const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0, PGM_P back = GP_DEFAULT, int width = 0, int align = GP_CENTER) {
     *_GPP += F("<");
     *_GPP += tag;
     if (name.length()) {
@@ -710,18 +712,28 @@ struct Builder {
       *_GPP += FPSTR(back);
       *_GPP += ';';
     }
+    if (align != GP_CENTER) {
+      *_GPP += F("text-align:");
+      *_GPP += (align == GP_RIGHT) ? F("right") : F("left");
+      *_GPP += ';';
+    }
     if (size) {
       *_GPP += F("font-size:");
       *_GPP += size;
-      *_GPP += "px;";
+      *_GPP += F("px;");
     }
     if (bold) *_GPP += F("font-weight:bold;");
     if (wrap) *_GPP += F("white-space:normal;");
+    if (width) {
+      *_GPP += F("min-width:");
+      *_GPP += width;
+      *_GPP += F("px;");
+    }
     *_GPP += F("'>");
     *_GPP += val;
     *_GPP += F("</");
     *_GPP += tag;
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
 
@@ -731,6 +743,9 @@ struct Builder {
   void LABEL(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0) {
     TAG_RAW(F("label"), val, name, st, size, bold, wrap);
   }
+  void LABEL_W(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int width = 0, int align = GP_CENTER, int size = 0, bool bold = 0, bool wrap = 0) {
+    TAG_RAW(F("label"), val, name, st, size, bold, wrap, GP_DEFAULT, width, align);
+  }
   void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
     TAG_RAW(F("label class='display'"), val, name, GP_DEFAULT, size, bold, 0, st);
   }
@@ -738,7 +753,6 @@ struct Builder {
     TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
   }
 
-  // устарело
   void SPAN(const String& text, GPalign al = GP_CENTER, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
     if (al != GP_CENTER) {
       *_GPP += F("<div style='text-align:");
@@ -751,13 +765,10 @@ struct Builder {
   }
   void PLAIN(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
     TAG_RAW(F("p"), text, name, st);
-    send();
   }
   void BOLD(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
     TAG_RAW(F("strong"), text, name, st);
-    send();
   }
-  // устарело
 
   // ======================= ЛЕДЫ =======================
   void LED(const String& name, bool state = 0) {
