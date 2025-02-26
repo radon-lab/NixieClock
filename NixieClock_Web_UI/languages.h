@@ -1,0 +1,499 @@
+//-------------------------------------------------------//
+#define LANG_WIFI_STATUS_1 "Подключение установлено"
+#define LANG_WIFI_STATUS_2 "Не удалось подключиться"
+#define LANG_WIFI_STATUS_3 "Подключение к сети..."
+#define LANG_WIFI_STATUS_4 "Некорректное имя сети"
+
+//-------------------------------------------------------//
+#define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
+#define LANG_NTP_STATUS_2 "Подключение к серверу..."
+#define LANG_NTP_STATUS_3 "Ожидание ответа..."
+#define LANG_NTP_STATUS_4 "Синхронизировано"
+#define LANG_NTP_STATUS_5 "Рассинхронизация"
+#define LANG_NTP_STATUS_6 "Сервер не отвечает"
+
+//-------------------------------------------------------//
+#define LANG_RTC_STATUS_1 "Не обнаружен..."
+#define LANG_RTC_STATUS_2 "Батарея разряжена"
+#define LANG_RTC_STATUS_3 "Подключен к часам"
+#define LANG_RTC_STATUS_4 "Работает исправно"
+
+//-------------------------------------------------------//
+#define LANG_WIRELESS_STATUS_1 "Ошибка..."
+#define LANG_WIRELESS_STATUS_2 "Не обнаружен..."
+#define LANG_WIRELESS_STATUS_3 "Подключен"
+#define LANG_WIRELESS_STATUS_4 "Потеряна связь..."
+#define LANG_WIRELESS_STATUS_5 "Нет сенсора..."
+
+#define LANG_WIRELESS_FOUND "Обнаружен беспроводной датчик температуры, подключить?\nUID: "
+
+//-------------------------------------------------------//
+#define LANG_WEATHER_STATUS_1 "Отсутствует подключение к сети"
+#define LANG_WEATHER_STATUS_2 "Ошибка при запросе данных"
+#define LANG_WEATHER_STATUS_3 "Данные успешно получены"
+#define LANG_WEATHER_STATUS_4 "Идёт запрос на сервер..."
+#define LANG_WEATHER_STATUS_5 "Ожидание ответа..."
+
+//-------------------------------------------------------//
+#define LANG_UPDATE_FW_STATUS_1 "Обновление завершено!"
+#define LANG_UPDATE_FW_STATUS_2 "Сбой при загрузке прошивки!"
+#define LANG_UPDATE_FW_STATUS_3 "Время ожидания истекло!"
+#define LANG_UPDATE_FW_STATUS_4 "Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"
+#define LANG_UPDATE_FW_STATUS_5 "Ошибка!<br><small>Расширение файла не поддерживается!</small>"
+#define LANG_UPDATE_FW_STATUS_6 "Ошибка!<br><small>Загрузка файла прервана!</small>"
+#define LANG_UPDATE_FW_STATUS_7 "Загрузка прошивки..."
+#define LANG_UPDATE_FW_STATUS_8 "Подключение..."
+
+//-------------------------------------------------------//
+#define LANG_ALARM_MODE_1 "Отключен"
+#define LANG_ALARM_MODE_2 "Однократно"
+#define LANG_ALARM_MODE_3 "Ежедневно"
+#define LANG_ALARM_MODE_4 "По будням"
+
+#define LANG_ALARM_DAYS_1 "Пн"
+#define LANG_ALARM_DAYS_2 "Вт"
+#define LANG_ALARM_DAYS_3 "Ср"
+#define LANG_ALARM_DAYS_4 "Чт"
+#define LANG_ALARM_DAYS_5 "Пт"
+#define LANG_ALARM_DAYS_6 "Сб"
+#define LANG_ALARM_DAYS_7 "Вс"
+
+#define LANG_ALARM_AFTER " | Через "
+#define LANG_ALARM_DAY "д "
+#define LANG_ALARM_HOUR "ч "
+#define LANG_ALARM_MINS "мин"
+
+//-------------------------------------------------------//
+#define LANG_TIMER_BLOCK "Таймер/Секундомер"
+
+#define LANG_TIMER_OFF "Отключен"
+#define LANG_TIMER_MODE_1 "Секундомер"
+#define LANG_TIMER_MODE_2 "Таймер"
+#define LANG_TIMER_ERROR "Ошибка"
+
+#define LANG_TIMER_STATUS_ALARM " - тревога"
+#define LANG_TIMER_STATUS_PAUSE " - пауза"
+
+//-------------------------------------------------------//
+#define LANG_CLIMATE_TEMP "Температура"
+#define LANG_CLIMATE_HUM "Влажность"
+#define LANG_CLIMATE_PRESS "Давление"
+
+//-------------------------------------------------------//
+#define LANG_BACKL_MODE_1 "Выключена,Статичная,Дыхание"
+#define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти"
+#define LANG_BACKL_DISABLE "Не используется"
+
+//-------------------------------------------------------//
+#define LANG_DOTS_MODE_1 "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"
+#define LANG_DOTS_MODE_2 ",Динамичные(плавно мигают)"
+#define LANG_DOTS_MODE_3 ",Неонки маятник(мигают раз в секунду),Неонки маятник(плавно мигают)"
+#define LANG_DOTS_MODE_4 ",Мигающие,Бегущие,Змейка,Резинка"
+#define LANG_DOTS_MODE_5 ",Одинарный маятник"
+#define LANG_DOTS_MODE_6 ",Двойной маятник"
+#define LANG_DOTS_MODE_7 ",Без реакции"
+
+//-------------------------------------------------------//
+#define LANG_INDI_DOTS_MODE_1 "Основной режим"
+#define LANG_INDI_DOTS_MODE_2 "Выключены,Статичные,Мигают"
+#define LANG_INDI_DOTS_MODE_3 ",Маятник"
+#define LANG_INDI_DOTS_DISABLE "Не используются"
+
+//-------------------------------------------------------//
+#define LANG_FLIP_MODE_1 "Основной эффект,"
+#define LANG_FLIP_MODE_2 "Без анимации,"
+#define LANG_FLIP_MODE_3 "Случайная смена эффектов,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе,Поезд,Резинка,Ворота,Волна,Блики,Испарение,Игровой автомат"
+
+//-------------------------------------------------------//
+#define LANG_SECS_MODE_1 "Без анимации,Плавное угасание и появление,Перемотка по порядку числа,Перемотка по порядку катодов в лампе"
+#define LANG_SECS_DISABLE "Не используются"
+
+//-------------------------------------------------------//
+#define LANG_PLAYER_VOICE_MAIN "Алёна,Филипп"
+#define LANG_PLAYER_VOICE_OTHER ",Голос_"
+#define LANG_PLAYER_DISABLE "Не используется"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_UPDATE_CLOCK_TITLE "Обновление"
+
+#define LANG_PAGE_UPDATE_CLOCK_BLOCK "Обновление прошивки часов"
+#define LANG_PAGE_UPDATE_CLOCK_CONNECT "<big><b>Подключение...</b></big>"
+#define LANG_PAGE_UPDATE_CLOCK_WARN "<small>Не выключайте устройство до завершения обновления!</small>"
+#define LANG_PAGE_UPDATE_CLOCK_HINT "<br><small>Для входа в режим прошивки кратковременно нажмите ресет на микроконтроллере часов.</small>"
+#define LANG_PAGE_UPDATE_CLOCK_HOME "Вернуться на главную"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_COMPATIBILITY_TITLE "Ошибка совместимости"
+
+#define LANG_PAGE_COMPATIBILITY_BLOCK "Предупреждение"
+#define LANG_PAGE_COMPATIBILITY_WARN "<big><b>Эта версия веб-интерфейса не может взаимодействовать с этим устройством!</b></big>"
+#define LANG_PAGE_COMPATIBILITY_HW_C "Clock HW: 0x"
+#define LANG_PAGE_COMPATIBILITY_HW_W "WebUI HW: 0x"
+#define LANG_PAGE_COMPATIBILITY_UPDATE "Обновить прошивку"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_RELOAD_TITLE "Перезагрузка"
+
+#define LANG_PAGE_RELOAD_BLOCK "Перезагрузка устройства"
+#define LANG_PAGE_RELOAD_END "<big><b>Перезагрузка завершена!</b></big>"
+#define LANG_PAGE_RELOAD_ERR "<big><b>Ошибка перезагрузки!</b></big>"
+#define LANG_PAGE_RELOAD_WAIT "<big><b>Выполняется перезагрузка, подождите...</b></big>"
+#define LANG_PAGE_RELOAD_HINT "<small>Не выключайте устройство до завершения перезагрузки!</small>"
+#define LANG_PAGE_RELOAD_HOME "Вернуться на главную"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_MENU_LINK_HOME "Главная"
+#define LANG_PAGE_MENU_LINK_SETTINGS "Настройки"
+#define LANG_PAGE_MENU_LINK_CLIMATE "Микроклимат"
+#define LANG_PAGE_MENU_LINK_WEATHER "Погода"
+#define LANG_PAGE_MENU_LINK_RADIO "Радио"
+#define LANG_PAGE_MENU_LINK_UPDATE "Обновление"
+#define LANG_PAGE_MENU_LINK_INFO "Об устройстве"
+#define LANG_PAGE_MENU_LINK_NETWORK "Сетевые настройки"
+
+#define LANG_PAGE_MENU_STATE_CLOCK "Статус часов"
+#define LANG_PAGE_MENU_STATE_RTC "Статус RTC"
+#define LANG_PAGE_MENU_STATE_SENS "Статус датчика"
+#define LANG_PAGE_MENU_STATE_NTP "Статус NTP"
+#define LANG_PAGE_MENU_STATE_WIFI "Сигнал WiFi"
+
+#define LANG_PAGE_MENU_FOOTER_FORUM "Обсуждение на форуме"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_HOME_TITLE "Главная"
+
+#define LANG_PAGE_HOME_BLOCK_TIME "Настройка времени"
+#define LANG_PAGE_HOME_BLOCK_EFFECTS "Эффекты"
+
+#define LANG_PAGE_HOME_GUI_TIME "Время"
+#define LANG_PAGE_HOME_GUI_DATE "Дата"
+#define LANG_PAGE_HOME_GUI_FORMAT "Формат"
+#define LANG_PAGE_HOME_GUI_FORMAT_1 "24ч"
+#define LANG_PAGE_HOME_GUI_FORMAT_2 "12ч"
+#define LANG_PAGE_HOME_GUI_ZONE "Часовой пояс"
+#define LANG_PAGE_HOME_GUI_GMT "GMT-12,GMT-11,GMT-10,GMT-9,GMT-8,GMT-7,GMT-6,GMT-5,GMT-4,GMT-3,GMT-2,GMT-1,GMT+0,GMT+1,GMT+2,GMT+3,GMT+4,GMT+5,GMT+6,GMT+7,GMT+8,GMT+9,GMT+10,GMT+11,GMT+12"
+#define LANG_PAGE_HOME_GUI_SYNC "Автосинхронизация"
+#define LANG_PAGE_HOME_GUI_SUMMER "Учитывать летнее время"
+#define LANG_PAGE_HOME_GUI_TIME_DEVICE "Время с устройства"
+#define LANG_PAGE_HOME_GUI_TIME_SERVER "Синхронизация с сервером"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_ALARM_TITLE "Настройка будильника"
+
+#define LANG_PAGE_ALARM_BLOCK "Будильник"
+#define LANG_PAGE_ALARM_GUI_SOUND "Звук №"
+#define LANG_PAGE_ALARM_GUI_CHANNEL "CH"
+#define LANG_PAGE_ALARM_GUI_CHANNEL_NULL "Пусто"
+#define LANG_PAGE_ALARM_GUI_MODE "Выключен,Однократно,Ежедневно,По будням,Выбрать дни"
+
+#define LANG_PAGE_ALARM_GUI_DAYS "Дни недели"
+#define LANG_PAGE_ALARM_GUI_DAYS_1 "ПН"
+#define LANG_PAGE_ALARM_GUI_DAYS_2 "ВТ"
+#define LANG_PAGE_ALARM_GUI_DAYS_3 "СР"
+#define LANG_PAGE_ALARM_GUI_DAYS_4 "ЧТ"
+#define LANG_PAGE_ALARM_GUI_DAYS_5 "ПТ"
+#define LANG_PAGE_ALARM_GUI_DAYS_6 "СБ"
+#define LANG_PAGE_ALARM_GUI_DAYS_7 "ВС"
+
+#define LANG_PAGE_ALARM_GUI_HR_SOUND "Настройка звука"
+#define LANG_PAGE_ALARM_GUI_SOUND_TYPE_1 "Мелодия"
+#define LANG_PAGE_ALARM_GUI_SOUND_TYPE_2 "Мелодия,Радиостанция"
+#define LANG_PAGE_ALARM_GUI_SOUND_VOLUME "Громкость"
+#define LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO "авто"
+#define LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX "макс"
+
+#define LANG_PAGE_ALARM_GUI_BACK "Назад"
+#define LANG_PAGE_ALARM_GUI_ADD "Добавить"
+#define LANG_PAGE_ALARM_GUI_DELETE "Удалить"
+#define LANG_PAGE_ALARM_GUI_CANCEL "Отмена"
+#define LANG_PAGE_ALARM_GUI_DISABLE "Отключить"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_SETTINGS_TITLE "Настройки"
+#define LANG_PAGE_SETTINGS_MENU "Основные,Дополнительно"
+
+#define LANG_PAGE_SETTINGS_BLOCK_WEATHER "Метеостанция"
+#define LANG_PAGE_SETTINGS_BLOCK_INDI "Индикаторы"
+#define LANG_PAGE_SETTINGS_BLOCK_BRIGHT "Подсветка"
+#define LANG_PAGE_SETTINGS_BLOCK_DOTS "Точки"
+#define LANG_PAGE_SETTINGS_BLOCK_SOUND "Звуки"
+#define LANG_PAGE_SETTINGS_BLOCK_ALARM "Будильник"
+#define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Микроклимат"
+#define LANG_PAGE_SETTINGS_BLOCK_SENS "Датчики"
+
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Одинаковое время - отключить смену яркости"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 " или активировать датчик освещения"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 " или активировать автоматическую смену яркости"
+
+#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник и время в секундах"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - отключить режим сна для выбранного промежутка времени"
+#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
+
+#define LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE "Статистика микроклимата будет сброшена, продолжить?"
+
+#define LANG_PAGE_SETTINGS_GUI_HR_SHOW "Автопоказ"
+#define LANG_PAGE_SETTINGS_GUI_HR_DISPLAY "Отображение"
+#define LANG_PAGE_SETTINGS_GUI_HR_BRIGHT "Яркость"
+#define LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT "Время ночной яркости"
+#define LANG_PAGE_SETTINGS_GUI_HR_SLEEP "Режим сна"
+#define LANG_PAGE_SETTINGS_GUI_HR_BURN "Антиотравление"
+#define LANG_PAGE_SETTINGS_GUI_HR_HOUR "Звук смены часа"
+#define LANG_PAGE_SETTINGS_GUI_HR_SOUND "Озвучка смены часа"
+#define LANG_PAGE_SETTINGS_GUI_HR_ADD "Дополнительно"
+#define LANG_PAGE_SETTINGS_GUI_HR_INDI "Индикация"
+#define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Коррекция"
+
+#define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени"
+#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Автоматически,Только мелодия,Только озвучка,Мелодия и озвучка"
+
+#define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Включить"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Эффект"
+
+#define LANG_PAGE_SETTINGS_GUI_SHOW_D_MODE "Пусто,Дата,Год,Дата и год"
+
+#define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_1 "Температура"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_2 "Влажность"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_3 "Давление"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_4 "Температура и влажность"
+
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1 "(часы)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 "(есп)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 "(датчик)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 "(погода)"
+#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL "(недоступно)"
+
+#define LANG_PAGE_SETTINGS_GUI_SENS_CLOCK "Датчик в часах"
+#define LANG_PAGE_SETTINGS_GUI_SENS_ESP "Датчик в есп"
+#define LANG_PAGE_SETTINGS_GUI_SENS_WIRELESS "Беспроводной датчик"
+#define LANG_PAGE_SETTINGS_GUI_SENS_WEATHER "Данные о погоде"
+#define LANG_PAGE_SETTINGS_GUI_SENS_DISABLE "Не используется"
+#define LANG_PAGE_SETTINGS_GUI_SENS_NULL "Ничего,"
+
+#define LANG_PAGE_SETTINGS_GUI_ON_BUTTON "По кнопке"
+#define LANG_PAGE_SETTINGS_GUI_ONCE_HOUR "Раз в час"
+
+#define LANG_PAGE_SETTINGS_GUI_DAY "День"
+#define LANG_PAGE_SETTINGS_GUI_NIGHT "Ночь"
+
+#define LANG_PAGE_SETTINGS_GUI_FROM " С"
+#define LANG_PAGE_SETTINGS_GUI_TO "До"
+
+#define LANG_PAGE_SETTINGS_GUI_MIN "мин"
+#define LANG_PAGE_SETTINGS_GUI_MAX "макс"
+
+#define LANG_PAGE_SETTINGS_GUI_EN "вкл"
+#define LANG_PAGE_SETTINGS_GUI_DIS "откл"
+
+#define LANG_PAGE_SETTINGS_GUI_AUTO_DIS_MINS "Автоотключение, мин"
+#define LANG_PAGE_SETTINGS_GUI_REPEAT_MINS "Повтор сигнала, мин"
+#define LANG_PAGE_SETTINGS_GUI_SOUND_DIS_MINS "Отключить звук, мин"
+#define LANG_PAGE_SETTINGS_GUI_TIME_MINS "Интервал, мин"
+
+#define LANG_PAGE_SETTINGS_GUI_TEMP_C "Температура, °C"
+
+#define LANG_PAGE_SETTINGS_GUI_CORRECT "Корректировать"
+
+#define LANG_PAGE_SETTINGS_GUI_ACTIVE "Активный"
+#define LANG_PAGE_SETTINGS_GUI_WAIT "Ожидание"
+
+#define LANG_PAGE_SETTINGS_GUI_METHOD "Метод"
+#define LANG_PAGE_SETTINGS_GUI_MODE "Режим"
+#define LANG_PAGE_SETTINGS_GUI_NEON "Неонки"
+
+#define LANG_PAGE_SETTINGS_GUI_TEMP "Температура"
+#define LANG_PAGE_SETTINGS_GUI_HOUR "Новый час"
+
+#define LANG_PAGE_SETTINGS_GUI_AVG "Усреднение"
+#define LANG_PAGE_SETTINGS_GUI_BAR "Бар"
+#define LANG_PAGE_SETTINGS_GUI_CHART "График"
+
+#define LANG_PAGE_SETTINGS_GUI_SENS_1 "Датчик 1"
+#define LANG_PAGE_SETTINGS_GUI_SENS_2 "Датчик 2"
+
+#define LANG_PAGE_SETTINGS_GUI_GLITCH "Глюки"
+#define LANG_PAGE_SETTINGS_GUI_DOTS "Точки"
+#define LANG_PAGE_SETTINGS_GUI_FLIP "Минуты"
+#define LANG_PAGE_SETTINGS_GUI_SECS "Секунды"
+#define LANG_PAGE_SETTINGS_GUI_BACKL "Подсветка"
+#define LANG_PAGE_SETTINGS_GUI_COLOR "Цвет"
+#define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучивать действия"
+#define LANG_PAGE_SETTINGS_GUI_VOICE "Голос озвучки"
+#define LANG_PAGE_SETTINGS_GUI_KNOCK "Звук кнопок"
+#define LANG_PAGE_SETTINGS_GUI_VOLUME "Громкость"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_CLIMATE_TITLE "Микроклимат"
+
+#define LANG_PAGE_CLIMATE_BLOCK "Микроклимат"
+#define LANG_PAGE_CLIMATE_NULL "Нет актуальных данных..."
+
+#define LANG_PAGE_CLIMATE_GUI_HR_CLOCK "Датчик в часах"
+#define LANG_PAGE_CLIMATE_GUI_HR_ESP "Датчик в есп"
+#define LANG_PAGE_CLIMATE_GUI_HR_WIRELESS "Беспроводной датчик"
+
+#define LANG_PAGE_CLIMATE_GUI_SENS_STATE "Состояние"
+#define LANG_PAGE_CLIMATE_GUI_SENS_DATA "Данные"
+#define LANG_PAGE_CLIMATE_GUI_SENS_TYPE "Тип датчика"
+#define LANG_PAGE_CLIMATE_GUI_SENS_NULL "Не обнаружен..."
+#define LANG_PAGE_CLIMATE_GUI_SENS_TIME "Интервал"
+#define LANG_PAGE_CLIMATE_GUI_SENS_MINS " мин"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_WEATHER_TITLE "Погода"
+
+#define LANG_PAGE_WEATHER_BLOCK_CHART "Погода на сутки"
+#define LANG_PAGE_WEATHER_BLOCK_HOURS "Погода по часам"
+#define LANG_PAGE_WEATHER_NULL "Нет актуальных данных..."
+
+//-------------------------------------------------------//
+#define LANG_PAGE_RADIO_TITLE "Радио"
+
+#define LANG_PAGE_RADIO_BLOCK_SETTINGS "Радиоприёмник"
+#define LANG_PAGE_RADIO_BLOCK_CHANNEL "Станции"
+
+#define LANG_PAGE_RADIO_GUI_CHANNEL "CH"
+#define LANG_PAGE_RADIO_GUI_CHANNEL_NULL "Пусто"
+
+#define LANG_PAGE_RADIO_GUI_MODE "Часы ⇋ Радио"
+#define LANG_PAGE_RADIO_GUI_POWER "Питание"
+#define LANG_PAGE_RADIO_GUI_VOLUME "Громкость"
+#define LANG_PAGE_RADIO_GUI_FREQ "Частота"
+
+#define LANG_PAGE_RADIO_GUI_MIN "мин"
+#define LANG_PAGE_RADIO_GUI_MAX "макс"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_UPDATE_TITLE "Обновление"
+
+#define LANG_PAGE_UPDATE_BLOCK_UPL "Обновление прошивки"
+#define LANG_PAGE_UPDATE_BLOCK_WEB "Обновление веб интерфейса"
+
+#define LANG_PAGE_UPDATE_HR_FILE "Загрузить файлы"
+#define LANG_PAGE_UPDATE_HR_AUTH "Авторизация"
+
+#define LANG_PAGE_UPDATE_INFO_FW "Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой)."
+#define LANG_PAGE_UPDATE_INFO_FS "Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути."
+#define LANG_PAGE_UPDATE_INFO_FORMAT "Поддерживаемые форматы файлов: "
+#define LANG_PAGE_UPDATE_INFO_HEX "hex"
+#define LANG_PAGE_UPDATE_INFO_BIN "bin и bin.gz."
+#define LANG_PAGE_UPDATE_INFO_AUTH "Для доступа к режиму обновления необходимо авторизоваться!"
+
+#define LANG_PAGE_UPDATE_WAIT "<big><b>Выполняется обновление...</b></big>"
+#define LANG_PAGE_UPDATE_WARN_ERR "<big><b>Произошла ошибка при обновлении...</b></big><br>"
+#define LANG_PAGE_UPDATE_WARN_PWR "<small>Не выключайте устройство до завершения обновления!</small>"
+#define LANG_PAGE_UPDATE_WARN_PASS "Неверный пароль!"
+#define LANG_PAGE_UPDATE_WARN_TIME " Попробуйте позже..."
+
+#define LANG_PAGE_UPDATE_GUI_FW_CLOCK "Прошивка часов"
+#define LANG_PAGE_UPDATE_GUI_FW_ESP "Прошивка ESP"
+#define LANG_PAGE_UPDATE_GUI_FS_ESP "Файловая система ESP"
+#define LANG_PAGE_UPDATE_GUI_PASS "Пароль"
+#define LANG_PAGE_UPDATE_GUI_LOGIN "Войти"
+#define LANG_PAGE_UPDATE_GUI_HOME "Вернуться на главную"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_INFO_TITLE "Об устройстве"
+
+#define LANG_PAGE_INFO_MENU "Информация,Управление"
+
+#define LANG_PAGE_INFO_BLOCK_SYSTEM "Системная информация"
+#define LANG_PAGE_INFO_BLOCK_DEVICE "Устройство"
+
+#define LANG_PAGE_INFO_HR_MEMORY "Память устройства"
+#define LANG_PAGE_INFO_HR_NETWORK "Локальная сеть"
+#define LANG_PAGE_INFO_HR_VERSION "Версия ПО"
+#define LANG_PAGE_INFO_HR_STATE "Состояние"
+#define LANG_PAGE_INFO_HR_SHOW "Отображение"
+#define LANG_PAGE_INFO_HR_GROUP "Групповое управление"
+#define LANG_PAGE_INFO_HR_WIRELESS "WiFi датчик температуры"
+#define LANG_PAGE_INFO_HR_RTC "Модуль RTC"
+#define LANG_PAGE_INFO_HR_CONTROL "Управление"
+
+#define LANG_PAGE_INFO_WARN_RESET "Сбросить все настройки устройства?"
+#define LANG_PAGE_INFO_WARN_REBOOT "Перезагрузить устройство?"
+
+#define LANG_PAGE_INFO_GUI_ID "ID чипа"
+#define LANG_PAGE_INFO_GUI_CPU "Частота процессора"
+#define LANG_PAGE_INFO_GUI_CYCLE "Циклов в секунду"
+#define LANG_PAGE_INFO_GUI_UPTIME "Время работы"
+#define LANG_PAGE_INFO_GUI_HEAP_FRAG "Фрагментировано(Heap)"
+#define LANG_PAGE_INFO_GUI_HEAP_FREE "Свободно(Heap)"
+#define LANG_PAGE_INFO_GUI_FLASH_ALL "Всего(Flash)"
+#define LANG_PAGE_INFO_GUI_FLASH_FULL "Занято(Flash)"
+#define LANG_PAGE_INFO_GUI_FLASH_FREE "Свободно(Flash)"
+#define LANG_PAGE_INFO_GUI_STRENGTH "Уровень сигнала"
+#define LANG_PAGE_INFO_GUI_MODE "Режим модема"
+#define LANG_PAGE_INFO_GUI_MAC "MAC адрес"
+#define LANG_PAGE_INFO_GUI_SUBNET "Маска подсети"
+#define LANG_PAGE_INFO_GUI_GATEWAY "Шлюз"
+#define LANG_PAGE_INFO_GUI_NET_SSID "SSID сети"
+#define LANG_PAGE_INFO_GUI_NET_IP "IP сети"
+#define LANG_PAGE_INFO_GUI_AP_SSID "SSID точки доступа"
+#define LANG_PAGE_INFO_GUI_AP_IP "IP точки доступа"
+#define LANG_PAGE_INFO_GUI_SDK "SDK"
+#define LANG_PAGE_INFO_GUI_CORE "CORE"
+#define LANG_PAGE_INFO_GUI_GP "GyverPortal"
+#define LANG_PAGE_INFO_GUI_ESP "Прошивка ESP"
+#define LANG_PAGE_INFO_GUI_CLOCK "Прошивка часов"
+
+#define LANG_PAGE_INFO_GUI_CONNECT "Связь с часами"
+#define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально..."
+#define LANG_PAGE_INFO_GUI_STATE_DIS "Отсутствует..."
+#define LANG_PAGE_INFO_GUI_STATE_ERR "Ошибка 00"
+
+#define LANG_PAGE_INFO_GUI_UID "UID"
+#define LANG_PAGE_INFO_GUI_SIGNAL "Сигнал"
+#define LANG_PAGE_INFO_GUI_BATTERY "Батарея"
+
+#define LANG_PAGE_INFO_GUI_NAME "Имя"
+#define LANG_PAGE_INFO_GUI_NONE "Без названия"
+#define LANG_PAGE_INFO_GUI_MENU "Меню"
+#define LANG_PAGE_INFO_GUI_PREFIX "Префикс"
+#define LANG_PAGE_INFO_GUI_POSTFIX "Постфикс"
+#define LANG_PAGE_INFO_GUI_AP_NAME "Точка доступа"
+#define LANG_PAGE_INFO_GUI_DETECT "Обнаружение"
+#define LANG_PAGE_INFO_GUI_STATE "Состояние"
+#define LANG_PAGE_INFO_GUI_CORRECT "Коррекция"
+#define LANG_PAGE_INFO_GUI_RESET "Сброс настроек"
+#define LANG_PAGE_INFO_GUI_REBOOT "Перезагрузка"
+
+//-------------------------------------------------------//
+#define LANG_PAGE_NETWORK_TITLE "Сетевые настройки"
+
+#define LANG_PAGE_NETWORK_BLOCK_WIFI "Локальная сеть WIFI"
+#define LANG_PAGE_NETWORK_BLOCK_NTP "Сервер NTP"
+#define LANG_PAGE_NETWORK_BLOCK_WEATHER "Регион погоды"
+
+#define LANG_PAGE_NETWORK_TIME_MODE_1 "Каждые 15 мин,Каждые 30 мин,Каждый 1 час"
+#define LANG_PAGE_NETWORK_TIME_MODE_2 ",Каждые 2 часа,Каждые 3 часа"
+#define LANG_PAGE_NETWORK_WEATHER_MODE ",- По координатам -"
+
+#define LANG_PAGE_NETWORK_GUI_SYNC "Синхронизировать сейчас"
+#define LANG_PAGE_NETWORK_GUI_UPDATE "Обновить погоду"
+#define LANG_PAGE_NETWORK_GUI_CANCEL "Отмена"
+#define LANG_PAGE_NETWORK_GUI_CONNECT "Подключиться"
+#define LANG_PAGE_NETWORK_GUI_DISCONNECT "Отключиться"
+#define LANG_PAGE_NETWORK_GUI_MANUAL "Ручной режим"
+#define LANG_PAGE_NETWORK_GUI_LIST "Список сетей"
+#define LANG_PAGE_NETWORK_GUI_SSID "SSID"
+#define LANG_PAGE_NETWORK_GUI_PASS "Пароль"
+#define LANG_PAGE_NETWORK_GUI_HOST "Хост"
+#define LANG_PAGE_NETWORK_GUI_LAT "Широта"
+#define LANG_PAGE_NETWORK_GUI_LON "Долгота"
+
+//-------------------------------------------------------//
+#define LANG_FAIL_WARN "Внимание! Обнаружен сбой при запуске устройства!\nПодробнее во вкладке - Об устройстве."
+
+#define LANG_FAIL_DATA_1 "Нет связи с RTC"
+#define LANG_FAIL_DATA_2 "Батарея RTC разряжена"
+#define LANG_FAIL_DATA_3 "Короткий сигнал SQW"
+#define LANG_FAIL_DATA_4 "Длинный сигнал SQW"
+#define LANG_FAIL_DATA_5 "Датчик температуры недоступен"
+#define LANG_FAIL_DATA_6 "Напряжение питания вне диапазона"
+#define LANG_FAIL_DATA_7 "Сбой чтения EEPROM"
+#define LANG_FAIL_DATA_8 "Софт перезагрузка"
+#define LANG_FAIL_DATA_9 "Сбой преобразователя"
+#define LANG_FAIL_DATA_10 "Сбой PWM преобразователя"
+#define LANG_FAIL_DATA_11 "Переполнение стека"
+#define LANG_FAIL_DATA_12 "Переполнение тиков времени"
+#define LANG_FAIL_DATA_13 "Сбой динамической индикации"

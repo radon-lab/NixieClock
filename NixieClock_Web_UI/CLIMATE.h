@@ -37,9 +37,9 @@ enum {
 #define SENS_SHT 0x04
 #define SENS_BME 0x08
 
-const char *climateMainList[] = {"Датчик в часах", "Датчик в есп", "Беспроводной датчик", "Данные о погоде"};
-const char *climateDataList[] = {"(часы)", "(есп)", "(датчик)", "(погода)", "(недоступно)"};
-const char *climateShowList[] = {"Температура", "Влажность", "Давление", "Температура и влажность"};
+const char *climateMainList[] = {LANG_PAGE_SETTINGS_GUI_SENS_CLOCK, LANG_PAGE_SETTINGS_GUI_SENS_ESP, LANG_PAGE_SETTINGS_GUI_SENS_WIRELESS, LANG_PAGE_SETTINGS_GUI_SENS_WEATHER};
+const char *climateDataList[] = {LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL};
+const char *climateShowList[] = {LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_1, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_2, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_3, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_4};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
 
 //--------------------------------------------------------------------

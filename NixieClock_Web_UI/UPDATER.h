@@ -158,19 +158,19 @@ String getUpdaterState(void) { //получить состояние загру�
   str = F("<big><b>");
 
   switch (updaterStatus()) {
-    case UPDATER_IDLE: str += F("Обновление завершено!"); break;
-    case UPDATER_ERROR: str += F("Сбой при загрузке прошивки!"); break;
-    case UPDATER_TIMEOUT: str += F("Время ожидания истекло!"); break;
-    case UPDATER_NO_FILE: str += F("Ошибка!<br><small>Файл повреждён или имеет неверный формат!</small>"); break;
-    case UPDATER_NOT_HEX: str += F("Ошибка!<br><small>Расширение файла не поддерживается!</small>"); break;
-    case UPDATER_UPL_ABORT: str += F("Ошибка!<br><small>Загрузка файла прервана!</small>"); break;
+    case UPDATER_IDLE: str += F(LANG_UPDATE_FW_STATUS_1); break;
+    case UPDATER_ERROR: str += F(LANG_UPDATE_FW_STATUS_2); break;
+    case UPDATER_TIMEOUT: str += F(LANG_UPDATE_FW_STATUS_3); break;
+    case UPDATER_NO_FILE: str += F(LANG_UPDATE_FW_STATUS_4); break;
+    case UPDATER_NOT_HEX: str += F(LANG_UPDATE_FW_STATUS_5); break;
+    case UPDATER_UPL_ABORT: str += F(LANG_UPDATE_FW_STATUS_6); break;
     default:
       if (updaterProgress()) {
-        str += F("Загрузка прошивки...");
+        str += F(LANG_UPDATE_FW_STATUS_7);
         str += constrain(map(updaterProgress(), 0, 252, 0, 100), 0, 100);
         str += '%';
       }
-      else str += F("Подключение...");
+      else str += F(LANG_UPDATE_FW_STATUS_8);
       break;
   }
   str += F("</b></big>");

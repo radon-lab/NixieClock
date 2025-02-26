@@ -26,7 +26,7 @@ uint8_t wireless_signal = 0; //уровень сигнала беспровод�
 uint8_t wireless_battery = 0; //заряд батареи беспроводного датчика
 uint8_t wireless_interval = 0; //интервал передачи беспроводного датчика
 
-const char *wirelessStatusList[] = {"Ошибка...", "Не обнаружен...", "Подключен", "Потеряна связь...", "Нет сенсора..."};
+const char *wirelessStatusList[] = {LANG_WIRELESS_STATUS_1, LANG_WIRELESS_STATUS_2, LANG_WIRELESS_STATUS_3, LANG_WIRELESS_STATUS_4, LANG_WIRELESS_STATUS_5};
 
 #include <WiFiUdp.h>
 WiFiUDP wireless;

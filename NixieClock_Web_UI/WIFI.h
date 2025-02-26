@@ -29,11 +29,11 @@ String wifiGetConnectState(void) {
   str.reserve(100);
 
   if (settings.wifiSSID[0]) {
-    if (wifi_status == WL_CONNECTED) str = F("Подключение установлено");
-    else if (!wifi_interval) str = F("Не удалось подключиться");
-    else str = F("Подключение к сети...");
+    if (wifi_status == WL_CONNECTED) str = F(LANG_WIFI_STATUS_1);
+    else if (!wifi_interval) str = F(LANG_WIFI_STATUS_2);
+    else str = F(LANG_WIFI_STATUS_3);
   }
-  else str = F("Некорректное имя сети");
+  else str = F(LANG_WIFI_STATUS_4);
   return str;
 }
 //--------------------------------------------------------------------

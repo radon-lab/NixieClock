@@ -60,7 +60,7 @@ uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времен�
 
 String weather_answer; //ответ от сервера погоды
 
-const char *weatherStatusList[] = {"Отсутствует подключение к сети", "Ошибка при запросе данных", "Данные успешно получены", "Идёт запрос на сервер...", "Ожидание ответа..."};
+const char *weatherStatusList[] = {LANG_WEATHER_STATUS_1, LANG_WEATHER_STATUS_2, LANG_WEATHER_STATUS_3, LANG_WEATHER_STATUS_4, LANG_WEATHER_STATUS_5};
 
 #include <ESP8266WiFi.h>
 WiFiClient client;
