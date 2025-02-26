@@ -30,7 +30,6 @@ select{min-width:130px;width:200px;cursor:pointer;}
 .inliner{display:flex;flex-direction:row;align-content:center;flex-wrap:nowrap;align-items:center;}
 input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],select,textarea{
 width:90%;max-width:200px;border-radius:8px;padding:3px 10px;color:#bbb;border:none;background-color:#2a2d35;vertical-align:middle;position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
-input[type=date],input[type=time]{width:180px;}
 input[type=color]{width:80px;height:40px;}
 input[type=range]:disabled{filter:brightness(0.6);}
 input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}
