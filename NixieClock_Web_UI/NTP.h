@@ -82,7 +82,8 @@ String getNtpState(void) {
   
   if (!ntpGetAttempts()) str = ntpStatusList[ntpGetStatus()];
   else {
-    str = F("Попытка подключения[");
+    str = F(LANG_NTP_ATTEMPT);
+    str += '[';
     str += ntpGetAttempts();
     str += F("]...");
   }

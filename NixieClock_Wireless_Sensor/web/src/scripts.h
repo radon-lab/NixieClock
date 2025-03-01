@@ -78,4 +78,6 @@ function getEl(id){return document.getElementById(id);}
 function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';
 getEl('dashSdb').style.left=flag?'-250px':'0';}
 function onlShow(s){getEl('onlBlock').style.right=s?'0px':'-50px';}
+function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){GP_click(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
+function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data<min)data=min;else if(data>max)data=max;arg.value=data;}
 )";

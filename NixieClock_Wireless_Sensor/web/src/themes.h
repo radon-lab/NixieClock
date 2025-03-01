@@ -35,6 +35,7 @@ input[type=range]:disabled{filter:brightness(0.6);}
 input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
+input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}
 input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],select,textarea{text-align:center;appearance:none;}
 input[type=number],input[type=text],input[type=password],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
 textarea{width:auto;max-width:100%}
@@ -98,7 +99,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlBlock{display:inline-block;position:relative}
 table{border-collapse:collapse;}
-input[type='number']{-moz-appearance:textfield;}
+input[type=number]{-moz-appearance:textfield;}
 .header{font-size:25px;color:#fff;}
 .header_s{display:none;padding-bottom:5px;}
 .headbar{height:40px;z-index:3;background-color:#2a2d35;position:fixed;top:0;left:0;width:100%;display:flex;justify-content:flex-start;align-items:center;}

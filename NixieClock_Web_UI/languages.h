@@ -6,6 +6,8 @@
 #define LANG_WIFI_STATUS_4 "Некорректное имя сети"
 
 //-------------------------------------------------------//
+#define LANG_NTP_ATTEMPT "Попытка подключения"
+
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
 #define LANG_NTP_STATUS_3 "Ожидание ответа..."
@@ -165,6 +167,13 @@
 
 #define LANG_PAGE_HOME_BLOCK_TIME "Настройка времени"
 #define LANG_PAGE_HOME_BLOCK_EFFECTS "Эффекты"
+
+#define LANG_PAGE_HOME_GUI_HOUR "ЧЧ"
+#define LANG_PAGE_HOME_GUI_MIN "ММ"
+#define LANG_PAGE_HOME_GUI_SEC "СС"
+#define LANG_PAGE_HOME_GUI_DAY "ДД"
+#define LANG_PAGE_HOME_GUI_MOUN "ММ"
+#define LANG_PAGE_HOME_GUI_YEAR "ГГ"
 
 #define LANG_PAGE_HOME_GUI_TIME "Время"
 #define LANG_PAGE_HOME_GUI_DATE "Дата"
@@ -511,6 +520,8 @@
 #define LANG_WIFI_STATUS_4 "Incorrect network name"
 
 //-------------------------------------------------------//
+#define LANG_NTP_ATTEMPT "Attempting to connect"
+
 #define LANG_NTP_STATUS_1 "No network connection"
 #define LANG_NTP_STATUS_2 "Connecting to server..."
 #define LANG_NTP_STATUS_3 "Waiting for response..."
@@ -670,6 +681,13 @@
 
 #define LANG_PAGE_HOME_BLOCK_TIME "Setting time"
 #define LANG_PAGE_HOME_BLOCK_EFFECTS "Effects"
+
+#define LANG_PAGE_HOME_GUI_HOUR "HH"
+#define LANG_PAGE_HOME_GUI_MIN "MM"
+#define LANG_PAGE_HOME_GUI_SEC "SS"
+#define LANG_PAGE_HOME_GUI_DAY "DD"
+#define LANG_PAGE_HOME_GUI_MOUN "MM"
+#define LANG_PAGE_HOME_GUI_YEAR "YY"
 
 #define LANG_PAGE_HOME_GUI_TIME "Time"
 #define LANG_PAGE_HOME_GUI_DATE "Date"

@@ -644,6 +644,9 @@ struct Builder {
     *_GPP += F("' class='inliner'>\n");
     send();
   }
+  void VOID_BOX_BEGIN() {
+    SEND(F("<div>\n"));
+  }
   void CENTER_BOX_BEGIN() {
     SEND(F("<div style='width:100%;justify-content:center;margin-top:8px;margin-bottom:-6px' class='inliner'>\n"));
   }
@@ -745,6 +748,15 @@ struct Builder {
   }
   void LABEL_W(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int width = 0, int align = GP_CENTER, int size = 0, bool bold = 0, bool wrap = 0) {
     TAG_RAW(F("label"), val, name, st, size, bold, wrap, GP_DEFAULT, width, align);
+  }
+  void LABEL_M(const String& val, int mr, int w) {
+    *_GPP += F("<label style='margin:");
+    *_GPP += mr;
+    *_GPP += F("px;width:");
+    *_GPP += w;
+    *_GPP += F("px'>");
+    *_GPP += val;
+    *_GPP += F("</label>");
   }
   void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
     TAG_RAW(F("label class='display'"), val, name, GP_DEFAULT, size, bold, 0, st);
@@ -1636,6 +1648,34 @@ struct Builder {
     *_GPP += F("' placeholder='");
     *_GPP += place;
     *_GPP += F("' onchange='GP_click(this)'");
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += ">\n";
+    send();
+  }
+  void NUMBER_C(const String& name, const String& place = "", int8_t value = -1, uint8_t min = 0, uint8_t max = 99, const String& width = "", const String& next = "", bool dis = 0) {
+    *_GPP += F("<input type='number' step='any' name='");
+    *_GPP += name;
+    *_GPP += F("' id='");
+    *_GPP += name;
+    if (width.length()) {
+      *_GPP += F("' style='min-width:56px;max-width:");
+      *_GPP += width;
+    }
+    *_GPP += F("' placeholder='");
+    if (value >= 0) {
+      if (value < 10) *_GPP += '0';
+      *_GPP += value;
+    }
+    else *_GPP += place;
+    *_GPP += F("' onchange='numNext(this,\"");
+    *_GPP += next;
+    *_GPP += F("\",1)' oninput='numConst(this,");
+    *_GPP += min;
+    *_GPP += ',';
+    *_GPP += (max <= 99) ? max : 99;
+    *_GPP += F(");numNext(this,\"");
+    *_GPP += next;
+    *_GPP += F("\",0)'");
     if (dis) *_GPP += F(" disabled");
     *_GPP += ">\n";
     send();

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 26.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 01.03.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -39,7 +39,6 @@ GyverPortalMod ui(&LittleFS);
 //переменные
 GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
-GPtime alarmTime; //время будильника
 
 char passEnterData[8]; //буфер ввода пароля
 uint8_t passState = 0; //флаг состояния ввода пароля
@@ -368,8 +367,24 @@ void build(void) {
         PAGE_TITLE_NAME(LANG_PAGE_HOME_TITLE);
         M_GRID(
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_HOME_BLOCK_TIME, UI_BLOCK_COLOR);
-          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_TIME, "", UI_LABEL_COLOR); GP.TIME("mainTime"););
-          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_DATE, "", UI_LABEL_COLOR); GP.DATE("mainDate"););
+          M_BOX(
+            GP.LABEL(LANG_PAGE_HOME_GUI_TIME, "", UI_LABEL_COLOR);
+            M_BOX(GP_RIGHT,
+                  GP.NUMBER_C("mainTimeH", LANG_PAGE_HOME_GUI_HOUR, -1, 0, 23, "56px", "mainTimeM");
+                  GP.LABEL_M(":", -1, 9);
+                  GP.NUMBER_C("mainTimeM", LANG_PAGE_HOME_GUI_MIN, -1, 0, 59, "56px", "mainTimeS");
+                  GP.LABEL_M(":", -1, 9);
+                  GP.NUMBER_C("mainTimeS", LANG_PAGE_HOME_GUI_SEC, -1, 0, 59, "56px"););
+          );
+          M_BOX(
+            GP.LABEL(LANG_PAGE_HOME_GUI_DATE, "", UI_LABEL_COLOR);
+            M_BOX(GP_RIGHT,
+                  GP.NUMBER_C("mainDateD", LANG_PAGE_HOME_GUI_DAY, -1, 1, 31, "56px", "mainDateM");
+                  GP.LABEL_M(".", 0, 7);
+                  GP.NUMBER_C("mainDateM", LANG_PAGE_HOME_GUI_MOUN, -1, 1, 12, "56px", "mainDateY");
+                  GP.LABEL_M(".", 0, 7);
+                  GP.NUMBER_C("mainDateY", LANG_PAGE_HOME_GUI_YEAR, -1, 0, 99, "56px"););
+          );
           M_BOX(
             GP.LABEL(LANG_PAGE_HOME_GUI_FORMAT, "", UI_LABEL_COLOR);
             M_BOX(GP_RIGHT,
@@ -431,10 +446,16 @@ void build(void) {
           }
           else alarmRadioList += F(LANG_PAGE_ALARM_GUI_CHANNEL_NULL);
 
-          alarmTime.hour = alarm_data[alarm.now][ALARM_DATA_HOUR];
-          alarmTime.minute = alarm_data[alarm.now][ALARM_DATA_MINS];
+          GP.SEND(F("<style>#alarmMode{width:100%}</style>\n"));
 
-          M_BOX(GP_CENTER, GP.TIME("alarmTime", alarmTime); GP.SELECT("alarmMode", LANG_PAGE_ALARM_GUI_MODE, alarm_data[alarm.now][ALARM_DATA_MODE]););
+          M_BOX(GP_CENTER,
+                M_BOX(GP_RIGHT,
+                      GP.NUMBER_C("alarmTimeH", LANG_PAGE_HOME_GUI_HOUR, alarm_data[alarm.now][ALARM_DATA_HOUR], 0, 23, "92px", "alarmTimeM");
+                      GP.LABEL_M(":", -1, 9);
+                      GP.NUMBER_C("alarmTimeM", LANG_PAGE_HOME_GUI_MIN, alarm_data[alarm.now][ALARM_DATA_MINS], 0, 59, "92px");
+                     );
+                M_BOX(GP_LEFT, GP.SELECT("alarmMode", LANG_PAGE_ALARM_GUI_MODE, alarm_data[alarm.now][ALARM_DATA_MODE]););
+               );
           GP.BREAK();
 
           GP.HR_TEXT(LANG_PAGE_ALARM_GUI_DAYS, "", UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1413,9 +1434,12 @@ void action() {
             busSetCommand(WRITE_SELECT_ALARM, ALARM_SOUND);
           }
         }
-        if (ui.clickTime("alarmTime", alarmTime)) {
-          alarm_data[alarm.now][ALARM_DATA_HOUR] = alarmTime.hour;
-          alarm_data[alarm.now][ALARM_DATA_MINS] = alarmTime.minute;
+        if (ui.click("alarmTimeH")) {
+          alarm_data[alarm.now][ALARM_DATA_HOUR] = constrain(ui.getInt("alarmTimeH"), 0, 23);
+          busSetCommand(WRITE_SELECT_ALARM, ALARM_TIME);
+        }
+        if (ui.click("alarmTimeM")) {
+          alarm_data[alarm.now][ALARM_DATA_MINS] = constrain(ui.getInt("alarmTimeM"), 0, 59);
           busSetCommand(WRITE_SELECT_ALARM, ALARM_TIME);
         }
         if (ui.click("alarmMode")) {
@@ -1495,10 +1519,30 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("main")) {
-      if (ui.clickDate("mainDate", mainDate)) {
+      if (ui.click("mainDateD")) {
+        mainDate.day = constrain(ui.getInt("mainDateD"), 1, maxDays(mainDate.year, mainDate.month));
         busSetCommand(WRITE_DATE);
       }
-      if (ui.clickTime("mainTime", mainTime)) {
+      if (ui.click("mainDateM")) {
+        mainDate.month = constrain(ui.getInt("mainDateM"), 1, 12);
+        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
+        busSetCommand(WRITE_DATE);
+      }
+      if (ui.click("mainDateY")) {
+        mainDate.year = constrain(ui.getInt("mainDateY"), 1, 12);
+        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
+        busSetCommand(WRITE_DATE);
+      }
+      if (ui.click("mainTimeH")) {
+        mainTime.hour = constrain(ui.getInt("mainTimeH"), 0, 23);
+        busSetCommand(WRITE_TIME);
+      }
+      if (ui.click("mainTimeM")) {
+        mainTime.minute = constrain(ui.getInt("mainTimeM"), 0, 59);
+        busSetCommand(WRITE_TIME);
+      }
+      if (ui.click("mainTimeS")) {
+        mainTime.second = constrain(ui.getInt("mainTimeS"), 0, 59);
         busSetCommand(WRITE_TIME);
       }
       if (ui.clickBool("mainTimeFormat", mainSettings.timeFormat)) {
