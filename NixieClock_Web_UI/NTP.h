@@ -76,7 +76,7 @@ uint8_t ntpGetAttempts(void) {
   return ntp_attempts;
 }
 //--------------------------------------------------------------------
-String getNtpState(void) {
+String ntpGetState(void) {
   String str = "";
   str.reserve(70);
   

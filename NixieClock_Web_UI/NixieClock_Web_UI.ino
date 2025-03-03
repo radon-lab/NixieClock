@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 01.03.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 03.03.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1204,7 +1204,7 @@ void build(void) {
       GP.TEXT("syncHost", LANG_PAGE_NETWORK_GUI_HOST, settings.ntpHost, "", 19);
       GP.BREAK();
       GP.SELECT("syncPer", String(LANG_PAGE_NETWORK_TIME_MODE_1) + ((settings.ntpDst) ? "" : LANG_PAGE_NETWORK_TIME_MODE_2), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
-      GP.SPAN(getNtpState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
+      GP.SPAN(ntpGetState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.BUTTON("syncCheck", LANG_PAGE_NETWORK_GUI_SYNC, "", (!ntpGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%;margin-top:14px;margin-bottom:0", (boolean)(!ntpGetRunStatus() || !wifiGetConnectStatus()));
       GP.BLOCK_END();
@@ -1943,7 +1943,7 @@ void action() {
   if (ui.update()) {
     if (ui.updateSub("sync")) {
       if (ui.update("syncStatus")) { //если было обновление
-        ui.answer(getNtpState());
+        ui.answer(ntpGetState());
       }
       if (ui.update("syncWeather")) { //если было обновление
         ui.answer(getWeatherState());
@@ -2321,7 +2321,8 @@ void resetMainSettings(void) {
   settings.weatherLon = NAN; //установить долготу по умолчанию
 
   for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
-  for (uint8_t i = 0; i < sizeof(settings.climateSend); i++) settings.climateSend[i] = SENS_MAIN; //сбрасываем типы датчиков
+  settings.climateSend[0] = SENS_MAIN; //сбрасываем тип датчика
+  settings.climateSend[1] = SENS_WEATHER; //сбрасываем тип датчика
   settings.climateBar = SENS_MAIN; //установить режим по умолчанию
   settings.climateChart = SENS_MAIN; //установить режим по умолчанию
   settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
@@ -2349,6 +2350,7 @@ void sensorInitData(void) {
   static boolean first_start = false;
   if (!first_start) {
     if (deviceInformation[SENS_TEMP]) settings.climateSend[0] = SENS_CLOCK; //установить сенсор в часах
+    else if (settings.climateSend[0] == SENS_CLOCK) settings.climateSend[0] = SENS_MAIN; //иначе сенсор в есп
     sens.search = sens.status; //установить показания датчиков
   }
   else sens.search |= 0x80;

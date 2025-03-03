@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 21.02.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 03.03.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -274,7 +274,7 @@ enum {
   SET_INDI_BRIGHT, //яркость индикаторов
   SET_BACKL_BRIGHT, //яркость подсветки
   SET_DOT_BRIGHT, //яркость точек
-  SET_TEMP_SENS, //настройка датчика температуры
+  SET_CORRECT_SENS, //настройка датчика температуры
   SET_AUTO_SHOW, //автопоказ данных
   SET_BURN_MODE, //анимация антиотравления индикаторов
   SET_SLEEP_TIME, //время до ухода в сон
@@ -4258,7 +4258,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-            case SET_TEMP_SENS: {
+            case SET_CORRECT_SENS: {
                 if (!blink_data) {
 #if ESP_ENABLE
                   uint16_t temperature = getTemperature((extendedSettings.tempCorrectSensor == 2) ? SHOW_TEMP_ESP : SHOW_TEMP); //буфер температуры
@@ -4300,7 +4300,9 @@ uint8_t settings_main(void) //настроки основные
 #if ((NEON_DOT == 3) && DOTS_PORT_ENABLE) || !PLAYER_TYPE
               setBacklHue(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
-            case SET_TEMP_SENS: setBacklHue(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
+            case SET_CORRECT_SENS: setBacklHue(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+#endif
             case SET_BURN_MODE: setBacklHue((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
             default: setBacklHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
           }
@@ -4407,7 +4409,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
                 break;
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-              case SET_TEMP_SENS: //настройка коррекции температуры
+              case SET_CORRECT_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect > -127) mainSettings.tempCorrect--; else mainSettings.tempCorrect = 127;
                 break;
 #endif
@@ -4539,7 +4541,7 @@ uint8_t settings_main(void) //настроки основные
 #endif
                 break;
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-              case SET_TEMP_SENS: //настройка коррекции температуры
+              case SET_CORRECT_SENS: //настройка коррекции температуры
                 if (mainSettings.tempCorrect < 127) mainSettings.tempCorrect++; else mainSettings.tempCorrect = -127;
                 break;
 #endif
@@ -4595,26 +4597,23 @@ uint8_t settings_main(void) //настроки основные
 #endif
               break;
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
-            case SET_TEMP_SENS: //настройка коррекции температуры
-#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
-              indiSetDotR(1); //включаем разделительную точку
-#else
-              indiSetDotL(2); //включаем разделительную точку
-#endif
+#if ((NEON_DOT != 3) && DOTS_PORT_ENABLE) || ESP_ENABLE
+            case SET_CORRECT_SENS: //настройка коррекции температуры
 #if ESP_ENABLE
               if (!extendedSettings.tempCorrectSensor) set = 0; //заблокировали пункт меню
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+              else
 #endif
-              break;
-#elif ESP_ENABLE
-            case SET_TEMP_SENS: //настройка коррекции температуры
-              if (!extendedSettings.tempCorrectSensor) set = 0; //заблокировали пункт меню
-              break;
 #endif
+#if (NEON_DOT != 3) && DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+                indiSetDotR(1); //включаем разделительную точку
 #else
-            case SET_TEMP_SENS: //настройка коррекции температуры
-              set = 0; //заблокировали пункт меню
+                indiSetDotL(2); //включаем разделительную точку
+#endif
+#endif
               break;
+#endif
 #endif
           }
           if (set) {
@@ -4656,7 +4655,7 @@ uint8_t settings_main(void) //настроки основные
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_NIGHT]); break; //установка ночной яркости точек
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-            case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
+            case SET_CORRECT_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
 #endif
           }
 #if PLAYER_TYPE
@@ -4683,7 +4682,7 @@ uint8_t settings_main(void) //настроки основные
               break;
             case SET_DOT_BRIGHT: dotSetBright(mainSettings.dotBright[TIME_DAY]); break; //установка дневной яркости точек
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-            case SET_TEMP_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
+            case SET_CORRECT_SENS: mainSettings.tempCorrect = 0; break; //сброс коррекции температуры
 #endif
           }
 #if PLAYER_TYPE
