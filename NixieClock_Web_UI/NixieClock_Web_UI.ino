@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 03.03.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 17.03.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2037,7 +2037,7 @@ void action() {
       }
 
       if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
-        ui.answer("linkUpdate('" + groupGetList() + "')");
+        ui.answer(getUiLinksUpdate(groupGetList()));
       }
       if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
         ui.answer(1);

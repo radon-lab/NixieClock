@@ -190,9 +190,9 @@ struct Builder {
   void UI_LINKS_END(const String& links = "") {
     *_GPP += F("</div>");
     if (links.length()) {
-      *_GPP += F("<script>linkUpdate('");
-      *_GPP += links;
-      *_GPP += F("')</script>");
+      *_GPP += F("<script>");
+      *_GPP += getUiLinksUpdate(links);
+      *_GPP += F("</script>");
     }
     send();
   }
