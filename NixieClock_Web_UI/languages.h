@@ -6,14 +6,14 @@
 #define LANG_WIFI_STATUS_4 "Некорректное имя сети"
 
 //-------------------------------------------------------//
-#define LANG_NTP_ATTEMPT "Попытка подключения"
-
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
 #define LANG_NTP_STATUS_3 "Ожидание ответа..."
 #define LANG_NTP_STATUS_4 "Синхронизировано"
 #define LANG_NTP_STATUS_5 "Рассинхронизация"
 #define LANG_NTP_STATUS_6 "Сервер не отвечает"
+
+#define LANG_NTP_ATTEMPT "Попытка подключения"
 
 //-------------------------------------------------------//
 #define LANG_RTC_STATUS_1 "Не обнаружен..."
@@ -36,6 +36,8 @@
 #define LANG_WEATHER_STATUS_3 "Данные успешно получены"
 #define LANG_WEATHER_STATUS_4 "Идёт запрос на сервер..."
 #define LANG_WEATHER_STATUS_5 "Ожидание ответа..."
+
+#define LANG_WEATHER_ATTEMPT "Попытка подключения"
 
 //-------------------------------------------------------//
 #define LANG_UPDATE_FW_STATUS_1 "Обновление завершено!"
@@ -520,14 +522,14 @@
 #define LANG_WIFI_STATUS_4 "Incorrect network name"
 
 //-------------------------------------------------------//
-#define LANG_NTP_ATTEMPT "Attempting to connect"
-
 #define LANG_NTP_STATUS_1 "No network connection"
 #define LANG_NTP_STATUS_2 "Connecting to server..."
 #define LANG_NTP_STATUS_3 "Waiting for response..."
 #define LANG_NTP_STATUS_4 "Synchronized"
 #define LANG_NTP_STATUS_5 "Desync"
 #define LANG_NTP_STATUS_6 "Server is not responding"
+
+#define LANG_NTP_ATTEMPT "Attempting to connect"
 
 //-------------------------------------------------------//
 #define LANG_RTC_STATUS_1 "Not found..."
@@ -550,6 +552,8 @@
 #define LANG_WEATHER_STATUS_3 "Data received successfully"
 #define LANG_WEATHER_STATUS_4 "Request to server in progress..."
 #define LANG_WEATHER_STATUS_5 "Waiting for response..."
+
+#define LANG_WEATHER_ATTEMPT "Attempting to connect"
 
 //-------------------------------------------------------//
 #define LANG_UPDATE_FW_STATUS_1 "Update complete!"

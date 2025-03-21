@@ -92,7 +92,8 @@ String getWeatherState(void) {
   
   if (!weatherGetAttempts()) str = weatherStatusList[weatherGetStatus()];
   else {
-    str = F("Попытка запроса[");
+    str = F(LANG_WEATHER_ATTEMPT);
+    str += '[';
     str += weatherGetAttempts();
     str += F("]...");
   }
