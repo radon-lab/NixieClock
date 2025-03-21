@@ -82,7 +82,7 @@ void weatherResetValidStatus(void) {
   weather_update = false;
 }
 uint8_t weatherGetAttempts(void) {
-  if ((weather_state != WEATHER_ERROR) || (weather_attempts < WEATHER_ATTEMPTS_ALL)) return 0;
+  if ((weather_state != WEATHER_ERROR) || (weather_attempts >= WEATHER_ATTEMPTS_ALL)) return 0;
   return weather_attempts + 1;
 }
 //--------------------------------------------------------------------
