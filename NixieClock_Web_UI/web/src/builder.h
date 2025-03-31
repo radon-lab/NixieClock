@@ -611,8 +611,12 @@ struct Builder {
   void BLOCK_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_TAB, width);
   }
-  void MIDDLE_BLOCK_BEGIN() {
+  
+  void BLOCK_MIDDLE_BEGIN() {
     SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
+  }
+  void BLOCK_HIDE_BEGIN() {
+    SEND(F("<div style='overflow:hidden'>\n"));
   }
 
   void BLOCK_TAB_BEGIN(const String& label, const String& width = "", PGM_P st = GP_DEFAULT) {

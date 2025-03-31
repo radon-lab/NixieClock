@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 24.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 31.02.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -162,6 +162,7 @@ void build(void) {
     GP.PAGE_TITLE("Об устройстве");
 
     GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
+    GP.BLOCK_HIDE_BEGIN();
     M_BOX(GP.LABEL("Уровень сигнала", "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(getWiFiSignal()) + '%', "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
     M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
@@ -205,6 +206,7 @@ void build(void) {
     M_BOX(GP.LABEL("GyverPortal", "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
 
     M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VERSION, "", UI_INFO_COLOR););
+    GP.BLOCK_END();
     GP.BLOCK_END();
 
     String sensorsList = "";
@@ -328,7 +330,7 @@ void buildUpdate(bool UpdateEnd, const String & UpdateError) {
 
   GP.PAGE_TITLE("Обновление");
 
-  GP.MIDDLE_BLOCK_BEGIN();
+  GP.BLOCK_MIDDLE_BEGIN();
 
   GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
   if (!UpdateEnd) {

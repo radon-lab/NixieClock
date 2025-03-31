@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 21.03.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 31.03.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -207,7 +207,7 @@ void build(void) {
   if (updaterState()) {
     PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
 
-    GP.MIDDLE_BLOCK_BEGIN();
+    GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
     if (!updaterFlash()) {
       GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
@@ -227,7 +227,7 @@ void build(void) {
   else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
     PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
 
-    GP.MIDDLE_BLOCK_BEGIN();
+    GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
     GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
     GP.BREAK();
@@ -248,7 +248,7 @@ void build(void) {
   else if (busRebootState()) {
     PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
 
-    GP.MIDDLE_BLOCK_BEGIN();
+    GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
     GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "syncWarn", GP_RED); //описание
@@ -1025,6 +1025,7 @@ void build(void) {
 
       GP.NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_SYSTEM, UI_BLOCK_COLOR);
+      GP.BLOCK_HIDE_BEGIN();
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ID, "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CPU, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CYCLE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
@@ -1085,6 +1086,7 @@ void build(void) {
         }
       }
       GP.BREAK();
+      GP.BLOCK_END();
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
@@ -1250,7 +1252,7 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
 
   GP.PAGE_TITLE(LANG_PAGE_UPDATE_TITLE);
 
-  GP.MIDDLE_BLOCK_BEGIN();
+  GP.BLOCK_MIDDLE_BEGIN();
 
   if (!UpdateEnd) {
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_UPL, UI_BLOCK_COLOR);
