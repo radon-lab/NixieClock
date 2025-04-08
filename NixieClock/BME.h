@@ -6,7 +6,7 @@
 #define BMP180_READ_TEMP 0x2E //запрос температуры
 #define BMP180_READ_PRESS 0x34 //запрос давления
 
-#define BMP180_OVERSAMP 0x03  //разрешение датчика давления
+#define BMP180_OVERSAMP 0x03 //разрешение датчика давления
 
 #define BME280_ADDR 0x76 //адрес датчика
 

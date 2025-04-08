@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.7 релиз от 03.03.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 08.04.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -72,7 +72,7 @@ enum {
   SENS_AHT, //датчики AHT
   SENS_SHT, //датчики SHT
   SENS_BME, //датчики BME/BMP
-  SENS_DS18B20, //датчики DS18B20
+  SENS_DS18, //датчики DS18B20
   SENS_DHT, //датчики DHT
   SENS_ALL //датчиков всего
 };
@@ -153,7 +153,7 @@ struct timerData {
   uint16_t time = TIMER_TIME; //время таймера сек
 } timer;
 
-//alarmRead/Write - час | минута | режим(0 - выкл, 1 - одиночный, 2 - вкл, 3 - по будням, 4 - по дням недели) | день недели(вс,сб,пт,чт,ср,вт,пн,null) | мелодия будильника | громкость мелодии | радиобудильник
+//переменные будильника
 struct alarmData {
   uint8_t num; //текущее количество будильников
   uint8_t now; //флаг активоного будильника
@@ -751,6 +751,9 @@ int main(void) //главный цикл программ
     changeBrightEnable(); //разрешить смену яркости
     changeBright(); //установка яркости от времени суток
     secsReset(); //сброс анимации секунд
+#if INDI_SYMB_TYPE
+    indiClrSymb(); //очистка индикатора символов
+#endif
 
     switch (mainTask) {
       default: RESET_SYSTEM; break; //перезагрузка
@@ -1259,23 +1262,24 @@ void readTempSens(void) //чтение установленных датчико
           case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
 #endif
 #if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
-          case SENS_DS18B20: readTempDS(); break; //чтение температуры с датчика DS18x20
+          case SENS_DS18: readTempDS(); break; //чтение температуры с датчика DS18x20
 #endif
 #if (SENS_PORT_ENABLE == 2) || (SENS_PORT_ENABLE == 3)
           case SENS_DHT: readTempDHT(); break; //чтение температуры/влажности с датчика DHT/MW/AM
 #endif
         }
         if (!sens.update) sens.type &= ~pos; //сбросили флаг сенсора
-        else if (sensor >= SENS_DS18B20) { //если тип датчика DHT/DS18
+        else if (sensor >= SENS_DS18) { //если тип датчика DHT/DS18
           sens.type = pos | (0x01 << SENS_ALL); //установили тип датчика
-          return; //выходим
+          break; //выходим
         }
       }
       pos >>= 1; //сместили тип датчика
     }
 #if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-    if ((uint16_t)sens.temp > 850) sens.temp = 0; //если вышли за предел
-    if (sens.hum > 99) sens.hum = 99; //если вышли за предел
+    if (sens.temp > 850) sens.temp = 850; //ограничили температуру
+    if (sens.temp < -850) sens.temp = -850; //ограничили температуру
+    if (sens.hum > 99) sens.hum = 99; //ограничили влажность
 #endif
   }
 }
@@ -1323,7 +1327,7 @@ void updateTempSens(void) //обновление установленных да
 void checkTempSens(void) //проверка установленного датчика температуры
 {
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
-  sens.type = (0x01 << SENS_AHT) | (0x01 << SENS_SHT) | (0x01 << SENS_BME) | (0x01 << SENS_DS18B20) | (0x01 << SENS_DHT) | (0x01 << SENS_ALL);
+  sens.type = (0x01 << SENS_AHT) | (0x01 << SENS_SHT) | (0x01 << SENS_BME) | (0x01 << SENS_DS18) | (0x01 << SENS_DHT) | (0x01 << SENS_ALL);
 #elif DS3231_ENABLE == 2
   sens.type = (0x01 << SENS_ALL);
 #endif
@@ -2435,11 +2439,7 @@ uint8_t alarmWarn(void) //тревога будильника
       setFreqRDA(radioSettings.stationsSave[alarms.sound]); //устанавливаем частоту
     }
     else { //иначе переходим в режим мелодии
-#if PLAYER_TYPE
-      if (alarms.sound >= PLAYER_ALARM_MAX) alarms.sound = 0; //ограничили номер трека
-#else
-      if (alarms.sound >= SOUND_MAX(alarm_sound)) alarms.sound = 0; //ограничили номер мелодии
-#endif
+      alarms.sound = 0; //установили номер мелодии
       alarms.radio = 0; //отключили режим радио
     }
   }
@@ -3261,6 +3261,10 @@ uint8_t settings_time(void) //настройки времени
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
+#endif
+
   while (1) {
     dataUpdate(); //обработка данных
 
@@ -3394,6 +3398,10 @@ uint8_t settings_singleAlarm(void) //настройка будильника
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
+#endif
+
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
 #endif
 
   while (1) {
@@ -3756,6 +3764,10 @@ uint8_t settings_multiAlarm(void) //настройка будильников
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
+#endif
+
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
 #endif
 
   while (1) {
@@ -4169,6 +4181,10 @@ uint8_t settings_main(void) //настроки основные
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_MAIN_MENU_START, PLAYER_MENU_FOLDER); //воспроизводим название меню
+#endif
+
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
 #endif
 
   while (1) {
@@ -4789,10 +4805,10 @@ uint8_t showTemp(void) //показать температуру
 
   setDivDot(1); //установить точку температуры
 
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
   boolean dot = 0; //флаг мигания точками
   boolean sign = getTemperatureSign(); //знак температуры
-  _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+  _timer_ms[TMR_ANIM] = SHOW_TEMP_SIGN_TIME; //устанавливаем таймер
 #endif
 
 #if PLAYER_TYPE
@@ -4802,10 +4818,10 @@ uint8_t showTemp(void) //показать температуру
   for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {
     dataUpdate(); //обработка данных
 
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
     if (!mode && sign) { //если температура отрицательная
       if (!_timer_ms[TMR_ANIM]) { //если пришло время
-        _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+        _timer_ms[TMR_ANIM] = SHOW_TEMP_SIGN_TIME; //устанавливаем таймер
         setDivDot(dot); //инвертировать точку температуры
         dot = !dot; //инвертировали точки
       }
@@ -4819,21 +4835,29 @@ uint8_t showTemp(void) //показать температуру
       indiPrintNum(mode + 1, 5); //режим
 #endif
       switch (mode) {
-        case 0: {
-            indiPrintNum(temperature, 1, 2, 0);
-#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-            setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+        case 0:
+          indiPrintNum(temperature, 1, 2, 0);
+#if INDI_SYMB_TYPE
+          indiSetSymb(getTemperatureSign() ? SYMB_NEGATIVE : SYMB_POSITIVE); //установка индикатора символов
 #endif
-          }
+#if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
+          setLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+#endif
           break;
         case 1:
           indiPrintNum(humidity, 0, 4);
+#if INDI_SYMB_TYPE
+          indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
+#endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
           break;
         case 2:
           indiPrintNum(pressure, 0, 4);
+#if INDI_SYMB_TYPE
+          indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
+#endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
           setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
@@ -4855,9 +4879,9 @@ uint8_t showTemp(void) //показать температуру
         }
         if (!mode) { //если режим отображения температуры
           setDivDot(1); //установить точку температуры
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
           dot = 0; //установили флаг мигания точками
-          _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+          _timer_ms[TMR_ANIM] = SHOW_TEMP_SIGN_TIME; //устанавливаем таймер
 #endif
         }
         else { //иначе давление или влажность
@@ -5065,6 +5089,9 @@ void autoShowMenu(void) //меню автоматического показа
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем секундные точки
 #endif
+#if INDI_SYMB_TYPE
+    indiClrSymb(); //очистка индикатора символов
+#endif
     animClearBuff(); //очистка буфера анимации
     show_mode = extendedSettings.autoShowModes[mode];
     switch (show_mode) {
@@ -5095,6 +5122,13 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
         animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
         setDivDot(1); //установить точку температуры
+#if INDI_SYMB_TYPE
+#if ESP_ENABLE
+        indiSetSymb(getTemperatureSign(show_mode) ? SYMB_NEGATIVE : SYMB_POSITIVE); //установка индикатора символов
+#else
+        indiSetSymb(getTemperatureSign() ? SYMB_NEGATIVE : SYMB_POSITIVE); //установка индикатора символов
+#endif
+#endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
@@ -5119,6 +5153,9 @@ void autoShowMenu(void) //меню автоматического показа
         animPrintNum(humidity, 0, 4); //вывод влажности
 
         animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
+#if INDI_SYMB_TYPE
+        indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
+#endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
 #endif
@@ -5135,6 +5172,9 @@ void autoShowMenu(void) //меню автоматического показа
         animPrintNum(pressure, 0, 4); //вывод давления
 
         animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
+#if INDI_SYMB_TYPE
+        indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
+#endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
         setLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
 #endif
@@ -5227,7 +5267,7 @@ void autoShowMenu(void) //меню автоматического показа
 #if AUTO_SHOW_DATE_BLINK
     boolean blink = 0; //флаг мигания индикаторами
 #endif
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
     boolean dot = 0; //флаг мигания точками
     boolean sign = 0; //знак температуры
 
@@ -5247,7 +5287,7 @@ void autoShowMenu(void) //меню автоматического показа
 #else
         if (getTemperatureSign()) sign = 1;
 #endif
-        _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+        _timer_ms[TMR_ANIM] = SHOW_TEMP_SIGN_TIME; //устанавливаем таймер
         break;
     }
 #endif
@@ -5259,10 +5299,10 @@ void autoShowMenu(void) //меню автоматического показа
       if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
 #endif
 
-#if ESP_ENABLE || SENS_PORT_ENABLE
+#if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
       if (sign) { //если температура отрицательная
         if (!_timer_ms[TMR_ANIM]) { //если пришло время
-          _timer_ms[TMR_ANIM] = AUTO_SHOW_SIGN_TIME; //устанавливаем таймер
+          _timer_ms[TMR_ANIM] = SHOW_TEMP_SIGN_TIME; //устанавливаем таймер
           setDivDot(dot); //инвертировать точку температуры
           dot = !dot; //инвертировали точки
         }
@@ -5526,6 +5566,18 @@ void radioPowerOff(void) //выключить питание радиоприе�
     setPowerRDA(RDA_OFF); //выключаем радио
   }
 }
+//-----------------------------Включить радиоприемник-----------------------------------
+void radioStartup(void) //включить радиоприемник
+{
+  radio.powerState = RDA_ON; //установили флаг питания радио
+  radioPowerOn(); //включить питание радиоприемника
+}
+//-----------------------------Выключить радиоприемник----------------------------------
+void radioShutdown(void) //выключить радиоприемник
+{
+  radio.powerState = RDA_OFF; //сбросили флаг питания радио
+  radioPowerOff(); //выключить питание радиоприемника
+}
 //--------------------------Вернуть питание радиоприемника------------------------------
 void radioPowerRet(void) //вернуть питание радиоприемника
 {
@@ -5538,14 +5590,8 @@ void radioPowerRet(void) //вернуть питание радиоприемн�
 void radioPowerSwitch(void) //переключить питание радиоприемника
 {
   if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
-    if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
-      radioPowerOn(); //включить питание радиоприемника
-      radio.powerState = RDA_ON; //установили флаг питания радио
-    }
-    else {
-      setPowerRDA(RDA_OFF); //выключаем радио
-      radio.powerState = RDA_OFF; //сбросили флаг питания радио
-    }
+    if (getPowerStatusRDA() == RDA_OFF) radioStartup(); //включить радиоприемник
+    else radioShutdown(); //выключить радиоприемник
   }
 }
 //--------------------------Поиск радиостанции в памяти---------------------------------
@@ -5679,6 +5725,10 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
       indiClrDots(); //очистка разделителных точек
 #endif
 
+#if INDI_SYMB_TYPE
+      indiSetSymb(SYMB_MENU); //установка индикатора символов
+#endif
+
       buttonState(); //сбросили состояние кнопки
       radioSeekStop(); //остановка автопоиска радиостанции
 
@@ -5802,6 +5852,10 @@ boolean radioMenuSettings(void) //меню настроек радио
   indiClrDots(); //очистка разделителных точек
 #endif
 
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
+#endif
+
   while (1) {
     dataUpdate(); //обработка данных
 
@@ -5871,8 +5925,7 @@ uint8_t radioMenu(void) //радиоприемник
       playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
       radio.powerState = RDA_OFF; //сбросили флаг питания радио
 #else
-      radioPowerOn(); //включить питание радиоприемника
-      radio.powerState = RDA_ON; //установили флаг питания радио
+      radioStartup(); //включить радиоприемник
 #endif
     }
 
@@ -5916,7 +5969,7 @@ uint8_t radioMenu(void) //радиоприемник
         _timer_ms[TMR_MS] = RADIO_UPDATE_TIME; //устанавливаем таймер
 
         if (!radio.seekRun) { //если не идет поиск
-#if RADIO_STATUS_DOT_TYPE
+#if (RADIO_STATUS_DOT_TYPE != 3)
 #if ((RADIO_STATUS_DOT_TYPE == 1) && (NEON_DOT < 3)) || !DOTS_PORT_ENABLE
 #if NEON_DOT == 2
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
@@ -5926,12 +5979,15 @@ uint8_t radioMenu(void) //радиоприемник
           dotSetBright((getStationStatusRDA()) ? dot.menuBright : 0); //управление точками в зависимости от устойчивости сигнала
 #endif
 #else
-          boolean status_sta = getStationStatusRDA();
           indiClrDots(); //очистка разделителных точек
 #if DOTS_TYPE == 1
-          if (status_sta) indiSetDotR(3); //установка разделительной точки
+          if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
 #else
-          if (status_sta) indiSetDotL(radioSettings.stationsFreq < 1000); //установка разделительной точки
+#if DOTS_SHIFT
+          if (getStationStatusRDA()) indiSetDotL(3); //установка разделительной точки
+#else
+          if (getStationStatusRDA()) indiSetDotL(radioSettings.stationsFreq < 1000); //установка разделительной точки
+#endif
 #endif
 #endif
 #endif
@@ -5971,6 +6027,11 @@ uint8_t radioMenu(void) //радиоприемник
 #endif
 #endif
 
+#if INDI_SYMB_TYPE && (RADIO_STATUS_DOT_TYPE == 3)
+        if (getStationStatusRDA()) indiSetSymb(SYMB_RADIO); //установка индикатора символов
+        else indiClrSymb(); //очистка индикатора символов
+#endif
+
         indiClr(); //очистка индикаторов
         indiPrintNum(radioSettings.stationsFreq, 0, 4); //текущаяя частота
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
@@ -5994,8 +6055,7 @@ uint8_t radioMenu(void) //радиоприемник
 #if PLAYER_TYPE
       if (!radio.powerState) { //если питание выключено
         if (!playerPlaybackStatus()) { //если все команды отправлены
-          radio.powerState = RDA_ON; //установили флаг питания радио
-          radioPowerOn(); //включить питание радиоприемника
+          radioStartup(); //включить радиоприемник
         }
       }
 #endif
@@ -6054,9 +6114,8 @@ uint8_t radioMenu(void) //радиоприемник
           break;
 
         case SET_KEY_HOLD: //удержание средней кнопк
-          radio.powerState = RDA_OFF; //сбросили флаг питания радио
           radioSeekStop(); //остановка автопоиска радиостанции
-          setPowerRDA(RDA_OFF); //выключаем радио
+          radioShutdown(); //выключить радиоприемник
           return MAIN_PROGRAM; //выходим
       }
     }
@@ -6141,6 +6200,10 @@ void timerSettings(void) //настройки таймера
 
 #if PLAYER_TYPE
   if (mainSettings.knockSound) playerSetTrackNow(PLAYER_TIMER_SET_SOUND, PLAYER_GENERAL_FOLDER);
+#endif
+
+#if INDI_SYMB_TYPE
+  indiSetSymb(SYMB_MENU); //установка индикатора символов
 #endif
 
   dotSetBright(0); //выключаем точки
@@ -6257,6 +6320,9 @@ uint8_t timerStopwatch(void) //таймер-секундомер
       uint8_t secs = timer.count % 60; //секунды
 
       indiClr(); //очистка индикаторов
+#if INDI_SYMB_TYPE
+      indiClrSymb(); //очистка индикатора символов
+#endif
 #if LAMP_NUM > 4
       if (timer.mode) {
         if (timer.mode < 3) millis_cnt = 0; //сбрасываем счетчик миллисекунд
@@ -6524,8 +6590,8 @@ void changeBright(void) //установка яркости от времени 
 #if BACKL_TYPE == 3
         backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
         if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
-        backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LAMP_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
 #endif
       }
     }
@@ -6534,6 +6600,9 @@ void changeBright(void) //установка яркости от времени 
     if (changeBrightState != CHANGE_INDI_BLOCK) indiSetBright(indi.maxBright); //установка общей яркости индикаторов
 #else
     indiSetBright(indi.maxBright); //установка общей яркости индикаторов
+#endif
+#if INDI_SYMB_TYPE
+    indiSetSymbBright(indi.maxBright); //установка яркости индикатора символов
 #endif
   }
 }
@@ -6568,7 +6637,7 @@ void backlEffect(void) //анимация подсветки
         case BACKL_RUNNING_FIRE_COLOR:
         case BACKL_RUNNING_FIRE_RAINBOW:
         case BACKL_RUNNING_FIRE_CONFETTI: { //бегущий огонь
-            _timer_ms[TMR_BACKL] = BACKL_MODE_4_TIME / LAMP_NUM / BACKL_MODE_4_FADING; //установили таймер
+            _timer_ms[TMR_BACKL] = BACKL_MODE_4_TIME / LEDS_NUM / BACKL_MODE_4_FADING; //установили таймер
             if (backl.steps) { //если есть шаги затухания
               decLedsBright(backl.position - 1, backl.mode_4_step); //уменьшаем яркость
               backl.steps--; //уменьшаем шаги затухания
@@ -6578,7 +6647,7 @@ void backlEffect(void) //анимация подсветки
                 if (backl.position > 0) backl.position--; else backl.drive = 0; //едем влево
               }
               else { //иначе напрвление влево
-                if (backl.position < (LAMP_NUM + 1)) backl.position++; else backl.drive = 1; //едем вправо
+                if (backl.position < (LEDS_NUM + 1)) backl.position++; else backl.drive = 1; //едем вправо
               }
               setLedBright(backl.position - 1, backl.maxBright); //установили яркость
               backl.steps = BACKL_MODE_4_FADING; //установили шаги затухания
@@ -6612,7 +6681,7 @@ void backlEffect(void) //анимация подсветки
               switch (backl.steps) {
                 case 0:
                 case 1:
-                  if (backl.position < (LAMP_NUM - 1)) backl.position++; //сменили позицию
+                  if (backl.position < (LEDS_NUM - 1)) backl.position++; //сменили позицию
                   else { //иначе меняем режим анимации
                     if (backl.steps < 1) { //если был режим разгорания
                       backl.steps = 1; //перешли в затухание
@@ -6620,7 +6689,7 @@ void backlEffect(void) //анимация подсветки
                     }
                     else { //иначе режим затухания
                       backl.steps = 2; //перешли в разгорание
-                      backl.position = (LAMP_NUM - 1); //сбросили позицию
+                      backl.position = (LEDS_NUM - 1); //сбросили позицию
                     }
                   }
                   break;
@@ -6629,7 +6698,7 @@ void backlEffect(void) //анимация подсветки
                   else { //иначе меняем режим анимации
                     if (backl.steps < 3) { //если был режим разгорания
                       backl.steps = 3; //перешли в затухание
-                      backl.position = (LAMP_NUM - 1); //сбросили позицию
+                      backl.position = (LEDS_NUM - 1); //сбросили позицию
                     }
                     else { //иначе режим затухания
                       backl.steps = 0; //перешли в разгорание
@@ -6654,14 +6723,14 @@ void backlEffect(void) //анимация подсветки
         case BACKL_RAINBOW: { //радуга
             _timer_ms[TMR_COLOR] = BACKL_MODE_13_TIME; //установили таймер
             backl.color += BACKL_MODE_13_STEP; //прибавили шаг
-            for (uint8_t f = 0; f < LAMP_NUM; f++) setLedHue(f, backl.color + (f * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
+            for (uint8_t f = 0; f < LEDS_NUM; f++) setLedHue(f, backl.color + (f * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
           }
           break;
         case BACKL_RUNNING_FIRE_CONFETTI:
         case BACKL_WAVE_CONFETTI:
         case BACKL_CONFETTI: { //рандомный цвет
             _timer_ms[TMR_COLOR] = BACKL_MODE_14_TIME; //установили таймер
-            setLedHue(random(0, LAMP_NUM), random(0, 256), WHITE_ON); //установили цвет
+            setLedHue(random(0, LEDS_NUM), random(0, 256), WHITE_ON); //установили цвет
           }
           break;
         case BACKL_RUNNING_FIRE_COLOR:
@@ -6995,11 +7064,11 @@ uint8_t sleepIndi(void) //режим сна индикаторов
 #elif BACKL_TYPE
   backlSetBright(0); //выключили светодиоды
 #endif
-#if (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)) && !RADIO_SLEEP_ENABLE
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
 #if RADIO_SLEEP_ENABLE == 1
-  if (indi.sleepMode != SLEEP_DAY) radioPowerOff(); //выключить питание радиоприемника
-#else
-  radioPowerOff(); //выключить питание радиоприемника
+  if (indi.sleepMode != SLEEP_DAY) radioShutdown(); //выключить радиоприемник
+#elif !RADIO_SLEEP_ENABLE
+  radioShutdown(); //выключить радиоприемник
 #endif
 #endif
   while (!buttonState()) { //если не нажата кнопка
@@ -7539,6 +7608,10 @@ uint8_t mainScreen(void) //главный экран
 
     if (!indi.update) { //если пришло время обновить индикаторы
 #if ALARM_TYPE
+#if INDI_SYMB_TYPE
+      if (alarms.now != ALARM_DISABLE) indiSetSymb(SYMB_ALARM); //установка индикатора символов
+      else indiClrSymb(); //очистка индикатора символов
+#endif
       if (alarms.now == ALARM_WARN) return ALARM_PROGRAM; //тревога будильника
 #endif
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)

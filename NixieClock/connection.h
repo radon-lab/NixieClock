@@ -7,6 +7,8 @@
 #define DECODER_4 2 //пин дешифратора X8(D)(0..3)(pin A)
 
 //Аноды ламп
+#define ANODE_0_PIN 2 //пин анода 0(СИМВ)(0..13)(pin D)
+
 #define ANODE_1_PIN 3 //пин анода 1(ЧЧ)(0..13)(pin D)
 #define ANODE_2_PIN 4 //пин анода 2(ЧЧ)(0..13)(pin D)
 #define ANODE_3_PIN 5 //пин анода 3(ММ)(0..13)(pin D)

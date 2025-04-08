@@ -161,7 +161,7 @@ boolean playerPlayStatus(void)
 #if PLAYER_TYPE == 1
   return (DF_BUSY_CHK && (_timer_ms[TMR_PLAYER] <= PLAYER_BUSY_ERROR));
 #elif PLAYER_TYPE == 2
-  return (reader.playerState == READER_IDLE);
+  return (readerGetState() == READER_IDLE);
 #else
   return 0;
 #endif
@@ -425,13 +425,11 @@ void playerUpdate(void)
 
           switch (cmd) {
             case _MUTE_REG:
-              if (player.playbackMute) BUZZ_INP;
-              else BUZZ_OUT;
+              readerSetMute(player.playbackMute);
               break;
             case _VOL_REG:
             case _VOL_RET_REG:
-              buffer.dacVolume = 9 - player.playbackVol;
-              if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+              readerSetVolume(player.playbackVol);
               break;
           }
         }
@@ -441,8 +439,8 @@ void playerUpdate(void)
   }
 
   if (playerPlaybackStatus()) {
-    if (reader.playerState != READER_IDLE) {
-      if (player.playbackNow && (reader.playerState == READER_SOUND_WAIT)) {
+    if (readerGetState() != READER_IDLE) {
+      if (player.playbackNow && (readerGetState() == READER_SOUND_WAIT)) {
         switch (player.playbackBuff[player.playbackStart]) {
           case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
           case PLAYER_CMD_STOP:
@@ -456,24 +454,22 @@ void playerUpdate(void)
 
     switch (player.playbackBuff[player.playbackStart++]) {
       case PLAYER_CMD_PLAY_TRACK_IN_FOLDER:
-        if (!player.playbackMute) {
-          reader.playerState = READER_INIT;
-          reader.playerTrack = player.playbackBuff[player.playbackStart++];
-          reader.playerFolder = player.playbackBuff[player.playbackStart++];
+        if (player.playbackMute) player.playbackStart += 2;
+        else {
+          readerSetTrack(player.playbackBuff[player.playbackStart++]);
+          readerSetFolder(player.playbackBuff[player.playbackStart++]);
+          readerStart();
         }
-        else player.playbackStart += 2;
         break;
       case PLAYER_CMD_MUTE:
         player.playbackMute = player.playbackBuff[player.playbackStart++];
         player.playbackStart++;
-        if (player.playbackMute) BUZZ_INP;
-        else BUZZ_OUT;
+        readerSetMute(player.playbackMute);
         break;
       case PLAYER_CMD_SET_VOL:
         player.playbackVol = player.playbackBuff[player.playbackStart++];
         player.playbackStart++;
-        buffer.dacVolume = 9 - player.playbackVol;
-        if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+        readerSetVolume(player.playbackVol);
         break;
 #if AMP_PORT_ENABLE
       case PLAYER_CMD_STOP:

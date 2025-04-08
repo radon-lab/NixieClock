@@ -1,18 +1,19 @@
-#define SKIP_ROM 0xCC //пропуск адресации
-#define READ_ROM 0x33 //чтение адреса
-#define CONVERT_T 0x44 //запрос на преобразование температуры
-#define WRITE_STRATCHPAD 0x4E //запись в память
-#define READ_STRATCHPAD 0xBE //чтенеие памяти
-
 #define DS18S20_ADDR 0x10 //идентификатор датчика DS18S20/DS1820
 #define DS18B20_ADDR 0x28 //идентификатор датчика DS18B20
 
-#define DS_CONVERT_TIME 120   //время ожидания нового замера(95..150)(мс)
-#define DS_RESET_TIME 520     //длительность сигнала сброса(480..700)(мкс)
+#define DS_SKIP_ROM 0xCC //пропуск адресации
+#define DS_READ_ROM 0x33 //чтение адреса
+#define DS_CONVERT_TEMP 0x44 //запрос на преобразование температуры
+#define DS_WRITE_STRATCHPAD 0x4E //запись в память
+#define DS_READ_STRATCHPAD 0xBE //чтенеие памяти
+
+#define DS_RESET_TIME 520 //длительность сигнала сброса(480..700)(мкс)
 #define DS_RESET_WAIT_TIME 80 //длительность ожидания сигнала присутствия(50..150)(мкс)
-#define DS_PRESENCE_TIME 250  //длительность сигнала присутствия(200..300)(мкс)
-#define DS_SLOT_MAX_TIME 60   //максимальное время слота(60..120)(мкс)
-#define DS_SLOT_MIN_TIME 5    //минимальное время слота(1..15)(мкс)
+#define DS_PRESENCE_TIME 250 //длительность сигнала присутствия(200..300)(мкс)
+#define DS_SLOT_MAX_TIME 60 //максимальное время слота(60..120)(мкс)
+#define DS_SLOT_MIN_TIME 5 //минимальное время слота(1..15)(мкс)
+
+#define DS_CONVERT_TIME 120 //время ожидания нового замера(95..150)(мс)
 
 //-----------------------------------Сигнал сброса шины--------------------------------------------
 boolean oneWireReset(void)
@@ -71,24 +72,24 @@ uint8_t oneWireRead(void)
 boolean requestTemp(void)
 {
   if (oneWireReset()) return 1; //выходим
-  oneWireWrite(SKIP_ROM); //пропуск адресации
-  oneWireWrite(CONVERT_T); //запрос на преобразование температуры
+  oneWireWrite(DS_SKIP_ROM); //пропуск адресации
+  oneWireWrite(DS_CONVERT_TEMP); //запрос на преобразование температуры
   return 0; //выходим
 }
 //---------------------------------------Чтение температуры-----------------------------------------
 boolean readTemp(void)
 {
   if (oneWireReset()) return 1; //выходим
-  oneWireWrite(SKIP_ROM); //пропуск адресации
-  oneWireWrite(READ_STRATCHPAD); //чтение памяти
+  oneWireWrite(DS_SKIP_ROM); //пропуск адресации
+  oneWireWrite(DS_READ_STRATCHPAD); //чтение памяти
   return 0; //выходим
 }
 //-----------------------------------Установка разрешения датчика-----------------------------------
 boolean setResolution(void)
 {
   if (oneWireReset()) return 1; //выходим
-  oneWireWrite(SKIP_ROM); //пропуск адресации
-  oneWireWrite(WRITE_STRATCHPAD); //запись в память
+  oneWireWrite(DS_SKIP_ROM); //пропуск адресации
+  oneWireWrite(DS_WRITE_STRATCHPAD); //запись в память
   oneWireWrite(0xFF); //устанавливаем разрешение
   oneWireWrite(0x00);
   oneWireWrite(0x1F);
@@ -98,7 +99,7 @@ boolean setResolution(void)
 uint8_t readSensCode(void)
 {
   if (oneWireReset()) return 0; //выходим
-  oneWireWrite(READ_ROM); //пропуск адресации
+  oneWireWrite(DS_READ_ROM); //пропуск адресации
   return oneWireRead(); //возвращаем тип датчика
 }
 //--------------------------------------Чтение температуры------------------------------------------
@@ -125,7 +126,7 @@ void readTempDS(void)
     case DS18S20_ADDR: sens.temp = raw * 5; break; //переводим в температуру для DS18S20
     case DS18B20_ADDR: sens.temp = (raw * 10) / 16; break; //переводим в температуру для DS18B20
   }
-  if (sens.temp > 850) sens.temp = 850;
+  
   sens.press = 0; //сбросили давление
   sens.hum = 0; //сбросили влажность
   sens.update = 1; //установили флаг обновления сенсора

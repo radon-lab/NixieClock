@@ -99,7 +99,7 @@ uint32_t get_cluster(uint8_t* _file)
   return _cluster; //возвращаем кластер
 }
 //-----------------------Получить название файла--------------------------
-void getFileName(uint8_t* _buff, uint8_t _file, uint8_t _size)
+void get_file_name(uint8_t* _buff, uint8_t _file, uint8_t _size)
 {
   while (_size) { //заполняем буфер
     _buff[--_size] = (_file % 10) + 48; //забираем младший разряд в буфер
@@ -107,7 +107,7 @@ void getFileName(uint8_t* _buff, uint8_t _file, uint8_t _size)
   }
 }
 //-------------------------Поиск названия файла--------------------------
-uint8_t searchFileName(uint8_t* _buff, uint8_t* _data, uint8_t _size)
+uint8_t search_file_name(uint8_t* _buff, uint8_t* _data, uint8_t _size)
 {
   uint8_t i = 0;
   uint8_t c = 0;
@@ -123,7 +123,7 @@ uint8_t searchFileName(uint8_t* _buff, uint8_t* _data, uint8_t _size)
   return 255;
 }
 //----------------------Поиск информации о файле--------------------------
-uint8_t searchFileData(uint8_t* _buff)
+uint8_t search_file_data(uint8_t* _buff)
 {
   uint16_t contain = 12;
 
@@ -171,6 +171,91 @@ boolean get_root(void)
   else return get_fat();
   return 0;
 }
+//-----------------------Проверка файловой системы--------------------------
+uint8_t check_fs(uint32_t _sector)
+{
+  if (waitReadBlock(_sector, FATFS_BOOT_RECORD, 2)) return 3; //чтение загрузочной записи
+  if (get_uint16_t(buffer.readData) != 0xAA55) return 2; //чтение подписи
+
+  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_16, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT16
+  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_32, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT32
+
+  return 1; //возвращаем ошибку
+}
+//---------------------Инициализация файловой системы-----------------------
+uint8_t cardMount(void)
+{
+  uint32_t fat_size = 0;
+  uint32_t base_sector = 0;
+  uint32_t total_sectors = 0;
+
+  if (!cardInit()) return RES_NOT_READY; //инициализация карты
+
+  uint8_t format = check_fs(base_sector); //поиск файловой системы FAT
+  if (format == 1) { //если файловая система FAT не обнаружена
+    if (waitReadBlock(base_sector, FATFS_MBR_TABLE, 16)) return RES_DISK_ERROR; //ищем в первой файловой записи
+    else if (buffer.readData[4]) { //если запись обнаружена
+      base_sector = get_uint32_t(buffer.readData + 8); //устанавливаем новый сектор
+      format = check_fs(base_sector); //поиск файловой системы FAT
+    }
+  }
+  if (format) return RES_NO_FILESYSTEM; //если файловая система FAT не обнаружена
+
+  if (waitReadBlock(base_sector, 13, 36)) return RES_DISK_ERROR; //инициализация файловой системы
+
+  fat_size = get_uint16_t(buffer.readData + FATFS_TABLE_16); //находим количество секторов таблицы
+  if (!fat_size) fat_size = get_uint32_t(buffer.readData + FATFS_TABLE_32);
+
+  fat_size *= buffer.readData[FATFS_NUM_TABLES]; //находим количество секторов в таблице
+  fs.fatBase = base_sector + get_uint16_t(buffer.readData + FATFS_RSVD_SECT_CNT); //устанавливаем первый сектор таблицы
+  fs.clusterSize = buffer.readData[FATFS_SECT_PER_CLUST]; //устанавливаем количество секторов в кластере
+  fs.rootSize = get_uint16_t(buffer.readData + FATFS_ROOT_ENT_CNT) / 16; //устанавливаем количество записей в корневом каталоге
+  total_sectors = get_uint16_t(buffer.readData + FATFS_TOTAL_SECT_16); //находим общее количество секторов
+  if (!total_sectors) total_sectors = get_uint32_t(buffer.readData + FATFS_TOTAL_SECT_32);
+  fs.fatSize = (total_sectors - get_uint16_t(buffer.readData + FATFS_RSVD_SECT_CNT) - fat_size - fs.rootSize) / fs.clusterSize + 2; //устанавливаем количество секторов в таблице
+
+  if (fs.fatSize >= 0xFF8 && fs.fatSize < 0xFFF7) fs.fatType = FS_FAT16; //если файловая система FAT16
+  else if (fs.fatSize >= 0xFFF7) fs.fatType = FS_FAT32; //если файловая система FAT32
+  else return RES_NO_FILESYSTEM; //иначе не подходящая файловая система
+
+  fs.dataBase = fs.fatBase + fat_size + fs.rootSize; //устанавливаем первый сектор данных
+  if (fs.fatType == FS_FAT32) fs.rootBase = get_uint32_t(buffer.readData + FATFS_ROOT_CLUST); //устанавливаем первый сектор корневого каталога FAT32
+  else fs.rootBase = fs.fatBase + fat_size; //устанавливаем первый сектор корневого каталога
+
+  return RES_DISK_READY; //возвращаем успешную инициализацию
+}
+//--------------------------Получить состояние------------------------------
+inline uint8_t readerGetState(void)
+{
+  return reader.playerState;
+}
+//-------------------------Установка приглушения----------------------------
+void readerSetMute(uint8_t _mute)
+{
+  if (_mute) BUZZ_INP;
+  else BUZZ_OUT;
+}
+//--------------------------Установка громкости-----------------------------
+void readerSetVolume(uint8_t _volume)
+{
+  buffer.dacVolume = 9 - _volume;
+  if (buffer.dacVolume > 9) buffer.dacVolume = 0;
+}
+//----------------------------Установка папки-------------------------------
+void readerSetFolder(uint8_t _folder)
+{
+  reader.playerFolder = _folder;
+}
+//----------------------------Установка трека-------------------------------
+void readerSetTrack(uint8_t _track)
+{
+  reader.playerTrack = _track;
+}
+//------------------------Запуск звукового файла----------------------------
+void readerStart(void)
+{
+  reader.playerState = READER_INIT;
+}
 //-----------------------Остановка звукового файла--------------------------
 void readerStop(void)
 {
@@ -197,26 +282,26 @@ void readerUpdate(void)
           if (fs.fatType == FS_FAT32) reader.dataSector = get_sector(reader.dataCluster);
           else reader.dataSector = reader.dataCluster;
           setReadSector(reader.dataSector);
-          getFileName(lableBuff, reader.playerFolder, 2);
+          get_file_name(lableBuff, reader.playerFolder, 2);
         }
         else reader.playerState = READER_IDLE;
         break;
 
       case READER_FOLDER_WAIT:
-        fileBuff = searchFileName(buffer.readData, lableBuff, 2);
+        fileBuff = search_file_name(buffer.readData, lableBuff, 2);
         if (fileBuff != 255) {
           reader.currentSector = 0;
           reader.dataCluster = get_cluster(buffer.readData + fileBuff);
           reader.dataSector = get_sector(reader.dataCluster);
           reader.playerState = READER_TRACK_WAIT;
           setReadSector(reader.dataSector);
-          getFileName(lableBuff, reader.playerTrack, 3);
+          get_file_name(lableBuff, reader.playerTrack, 3);
         }
         else if (get_root()) setReadSector(++reader.dataSector);
         break;
 
       case READER_TRACK_WAIT:
-        fileBuff = searchFileName(buffer.readData, lableBuff, 3);
+        fileBuff = search_file_name(buffer.readData, lableBuff, 3);
         if (fileBuff != 255) {
           buffer.readSize = 512;
           buffer.dacStart = buffer.dacEnd = 0;
@@ -233,7 +318,7 @@ void readerUpdate(void)
         if (fileBuff >= DAC_BUFF_SIZE) fileBuff = 0;
         if (fileBuff == buffer.dacStart) {
           if (!buffer.dacStart) {
-            fileBuff = searchFileData(buffer.readData + 1);
+            fileBuff = search_file_data(buffer.readData + 1);
             if (fileBuff != 255) {
               buffer.dacSampl = (uint8_t)(1000000UL / get_uint32_t(buffer.readData + 25)) * 2;
               buffer.dacStart = fileBuff + 8;
@@ -296,57 +381,4 @@ void readerUpdate(void)
         break;
     }
   }
-}
-//-----------------------Проверка файловой системы--------------------------
-uint8_t check_fs(uint32_t _sector)
-{
-  if (waitReadBlock(_sector, FATFS_BOOT_RECORD, 2)) return 3; //чтение загрузочной записи
-  if (get_uint16_t(buffer.readData) != 0xAA55) return 2; //чтение подписи
-
-  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_16, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT16
-  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_32, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT32
-
-  return 1; //возвращаем ошибку
-}
-//---------------------Инициализация файловой системы-----------------------
-uint8_t cardMount(void)
-{
-  uint32_t fat_size = 0;
-  uint32_t base_sector = 0;
-  uint32_t total_sectors = 0;
-
-  if (!cardInit()) return RES_NOT_READY; //инициализация карты
-
-  uint8_t format = check_fs(base_sector); //поиск файловой системы FAT
-  if (format == 1) { //если файловая система FAT не обнаружена
-    if (waitReadBlock(base_sector, FATFS_MBR_TABLE, 16)) return RES_DISK_ERROR; //ищем в первой файловой записи
-    else if (buffer.readData[4]) { //если запись обнаружена
-      base_sector = get_uint32_t(buffer.readData + 8); //устанавливаем новый сектор
-      format = check_fs(base_sector); //поиск файловой системы FAT
-    }
-  }
-  if (format) return RES_NO_FILESYSTEM; //если файловая система FAT не обнаружена
-
-  if (waitReadBlock(base_sector, 13, 36)) return RES_DISK_ERROR; //инициализация файловой системы
-
-  fat_size = get_uint16_t(buffer.readData + FATFS_TABLE_16); //находим количество секторов таблицы
-  if (!fat_size) fat_size = get_uint32_t(buffer.readData + FATFS_TABLE_32);
-
-  fat_size *= buffer.readData[FATFS_NUM_TABLES]; //находим количество секторов в таблице
-  fs.fatBase = base_sector + get_uint16_t(buffer.readData + FATFS_RSVD_SECT_CNT); //устанавливаем первый сектор таблицы
-  fs.clusterSize = buffer.readData[FATFS_SECT_PER_CLUST]; //устанавливаем количество секторов в кластере
-  fs.rootSize = get_uint16_t(buffer.readData + FATFS_ROOT_ENT_CNT) / 16; //устанавливаем количество записей в корневом каталоге
-  total_sectors = get_uint16_t(buffer.readData + FATFS_TOTAL_SECT_16); //находим общее количество секторов
-  if (!total_sectors) total_sectors = get_uint32_t(buffer.readData + FATFS_TOTAL_SECT_32);
-  fs.fatSize = (total_sectors - get_uint16_t(buffer.readData + FATFS_RSVD_SECT_CNT) - fat_size - fs.rootSize) / fs.clusterSize + 2; //устанавливаем количество секторов в таблице
-
-  if (fs.fatSize >= 0xFF8 && fs.fatSize < 0xFFF7) fs.fatType = FS_FAT16; //если файловая система FAT16
-  else if (fs.fatSize >= 0xFFF7) fs.fatType = FS_FAT32; //если файловая система FAT32
-  else return RES_NO_FILESYSTEM; //иначе не подходящая файловая система
-
-  fs.dataBase = fs.fatBase + fat_size + fs.rootSize; //устанавливаем первый сектор данных
-  if (fs.fatType == FS_FAT32) fs.rootBase = get_uint32_t(buffer.readData + FATFS_ROOT_CLUST); //устанавливаем первый сектор корневого каталога FAT32
-  else fs.rootBase = fs.fatBase + fat_size; //устанавливаем первый сектор корневого каталога
-
-  return RES_DISK_READY; //возвращаем успешную инициализацию
 }

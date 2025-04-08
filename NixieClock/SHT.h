@@ -69,7 +69,7 @@ void readTempSHT(void) //чтение температуры/влажности
         }
         temp_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
         wireReadEndByte(); //пропускаем контрольную сумму
-        
+
         temp_raw = (uint16_t)(temp_raw * 0.0268) - 468; //рассчитываем температуру
 
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
@@ -83,7 +83,7 @@ void readTempSHT(void) //чтение температуры/влажности
         }
         hum_raw = ((uint16_t)wireRead() << 8) | (wireRead() & 0xFC);
         wireReadEndByte(); //пропускаем контрольную сумму
-        
+
         hum_raw = (uint16_t)(hum_raw * 0.0019) - 6; //рассчитываем влажность
       }
       break;
@@ -104,7 +104,7 @@ void readTempSHT(void) //чтение температуры/влажности
         wireRead(); //пропускаем контрольную сумму
         hum_raw = ((uint16_t)wireRead() << 8) | wireRead();
         wireReadEndByte(); //пропускаем контрольную сумму
-        
+
         temp_raw = (uint16_t)(temp_raw * 0.0267) - 450;  //рассчитываем температуру
         hum_raw = hum_raw * 0.00152; //рассчитываем влажность
       }
@@ -121,9 +121,9 @@ void readTempSHT(void) //чтение температуры/влажности
     else sens.hum = hum_raw; //иначе копируем влажность
     return; //выходим
   }
-  sens.press = 0; //сбрасываем давление
 #endif
 
   sens.temp = temp_raw; //копируем температуру
   sens.hum = hum_raw; //копируем влажность
+  sens.press = 0; //сбрасываем давление
 }

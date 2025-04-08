@@ -88,7 +88,7 @@ uint8_t cardSendCmd(uint8_t _command, uint32_t _data)
   return answer; //возвращаем ответ
 }
 //-------------------------Запись в буфер ЦАП-------------------------
-boolean writeBufferDAC(void)
+boolean bufferWriteData(void)
 {
   uint8_t buff = buffer.dacEnd + 1;
   if (buff >= DAC_BUFF_SIZE) buff = 0;
@@ -171,7 +171,7 @@ void bufferUpdate(void)
       for (uint8_t i = 0; i < DAC_READ_DEPTH; i++) {
         if (readByte < 512) {
           if (readByte < buffer.readSize) {
-            if (writeBufferDAC()) readByte++; //читаем данные в буфер
+            if (bufferWriteData()) readByte++; //читаем данные в буфер
             else break;
           }
           else {

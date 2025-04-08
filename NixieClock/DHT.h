@@ -69,8 +69,8 @@ void readTempDHT(void)
     sens.temp = ((uint16_t)(data[2] & 0x7F) << 8) | data[3]; //установили температуру
     sens.hum = (((uint16_t)data[0] << 8) | data[1]) / 10; //установили влажность
   }
-  if (sens.hum > 99) sens.hum = 99; //если вышли за предел
   if (sens.temp & 0x8000) sens.temp = -(sens.temp & 0x7FFF); //если температура отрицательная
+  
   sens.press = 0; //сбросили давление
   sens.update = 1; //установили флаг обновления сенсора
 }

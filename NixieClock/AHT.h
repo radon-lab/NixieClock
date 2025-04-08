@@ -70,9 +70,9 @@ void readTempAHT(void) //чтение температуры/влажности
     else sens.hum = hum_raw; //иначе копируем влажность
     return; //выходим
   }
-  sens.press = 0; //сбрасываем давление
 #endif
 
   sens.temp = temp_raw; //копируем температуру
   sens.hum = hum_raw; //копируем влажность
+  sens.press = 0; //сбрасываем давление
 }
