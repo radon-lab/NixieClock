@@ -61,6 +61,8 @@
 #define UI_MENU_NTP_2_COLOR GP_GREEN //цвет блока меню ntp "Синхронизирован" веб интерфейса
 #define UI_MENU_RTC_1_COLOR GP_YELLOW //цвет блока меню rtc "Батарея разряжена" веб интерфейса
 #define UI_MENU_RTC_2_COLOR GP_GREEN //цвет блока меню rtc "Синхронизирован" веб интерфейса
+#define UI_MENU_SENS_1_COLOR GP_RED //цвет блока меню беспроводной датчик "Отключен" веб интерфейса
+#define UI_MENU_SENS_2_COLOR GP_GREEN //цвет блока меню беспроводной датчик "Подключен" веб интерфейса
 #define UI_MENU_CLOCK_1_COLOR GP_RED //цвет блока меню часы "Отключены" веб интерфейса
 #define UI_MENU_CLOCK_2_COLOR GP_GREEN //цвет блока меню часы "Подключены" веб интерфейса
 

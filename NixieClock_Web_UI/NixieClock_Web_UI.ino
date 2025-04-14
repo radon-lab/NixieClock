@@ -302,21 +302,21 @@ void build(void) {
       updateList += F(",barRtc");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_RTC, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_RTC_1_COLOR, UI_MENU_RTC_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
     if (wirelessGetSensorStastus()) {
       updateList += F(",barSens");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_SENS, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_SENS_1_COLOR, UI_MENU_SENS_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
     if (ntpGetRunStatus()) {
       updateList += F(",barNtp");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_NTP, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_LED("barNtp", (ntpGetSyncStatus()), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
+      GP.LINE_LED("barNtp", (ntpGetSyncStatus()), UI_MENU_NTP_1_COLOR, UI_MENU_NTP_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
     if (wifiGetConnectStatus()) {
