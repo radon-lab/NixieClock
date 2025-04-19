@@ -5,6 +5,9 @@
 #define LANG_WIFI_STATUS_3 "Подключение к сети..."
 #define LANG_WIFI_STATUS_4 "Некорректное имя сети"
 
+#define LANG_WIFI_SCAN_NULL "Нет сетей"
+#define LANG_WIFI_SCAN_BEGIN "Поиск..."
+
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
@@ -520,6 +523,9 @@
 #define LANG_WIFI_STATUS_2 "Connection failed"
 #define LANG_WIFI_STATUS_3 "Connecting..."
 #define LANG_WIFI_STATUS_4 "Incorrect network name"
+
+#define LANG_WIFI_SCAN_NULL "No networks"
+#define LANG_WIFI_SCAN_BEGIN "Search..."
 
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "No network connection"

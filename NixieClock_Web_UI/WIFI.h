@@ -71,7 +71,7 @@ void wifiResetScanCompleteStatus(void) {
 }
 //--------------------------------------------------------------------
 void wifiStartScanNetworks(void) {
-  wifi_scan_list = F("Поиск...");
+  wifi_scan_list = F(LANG_WIFI_SCAN_BEGIN);
   wifi_scan_state = 127;
   wifi_scan_timer = millis();
 }
@@ -79,7 +79,7 @@ void wifiStartScanNetworks(void) {
 void wifiScanInitStr(void) {
   wifi_scan_list.reserve(500);
   wifi_host_name.reserve(30);
-  wifi_scan_list = F("Нет сетей");
+  wifi_scan_list = F(LANG_WIFI_SCAN_NULL);
   wifi_host_name = String(ESP.getChipId(), HEX);
   wifi_host_name.toUpperCase();
   wifi_host_name = "NixieClock_" + wifi_host_name;
@@ -97,7 +97,7 @@ void wifiScanResult(int networksFound) {
   }
   else {
     wifi_scan_state = -2;
-    wifi_scan_list = F("Нет сетей");
+    wifi_scan_list = F(LANG_WIFI_SCAN_NULL);
   }
 }
 //--------------------------------------------------------------------
