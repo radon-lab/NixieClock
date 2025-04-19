@@ -15,8 +15,6 @@ hr{width:95%;margin:5px 0;border:none;border-top:2px solid #394048;}
 h2{margin:8px 0;}
 span{font-size:16px;}
 label{white-space:nowrap;font-size:20px;margin:0 5px;}
-select:disabled{filter:brightness(0.6);}
-select{min-width:130px;width:200px;cursor:pointer;}
 .chartBlock{border-radius:10px;margin:3px;width:90%;}
 .grid{display:flex;justify-content:space-between;}
 #grid .block{width:100%;margin:15px 10px;}
@@ -38,6 +36,8 @@ input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}
 input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],select,textarea{text-align:center;appearance:none;}
 input[type=number],input[type=text],input[type=password],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
+select{min-width:130px;width:200px;cursor:pointer;}
+select:disabled{filter:brightness(0.6);cursor:auto;}
 textarea{width:auto;max-width:100%}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:white;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
