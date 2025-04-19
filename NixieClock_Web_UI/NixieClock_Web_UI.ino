@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.7 релиз от 31.03.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.8 релиз от 19.04.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -395,8 +395,8 @@ void build(void) {
           );
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_ZONE, "", UI_LABEL_COLOR); GP.SELECT("syncGmt", LANG_PAGE_HOME_GUI_GMT, settings.ntpGMT + 12, 0););
-          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SYNC, "", UI_LABEL_COLOR); GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
-          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SUMMER, "", UI_LABEL_COLOR); GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, (boolean)(ntpGetStatus() != NTP_SYNCED)););
+          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SYNC, "", UI_LABEL_COLOR); GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, !ntpGetRunStatus()););
+          M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SUMMER, "", UI_LABEL_COLOR); GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, !ntpGetRunStatus()););
           GP.HR(UI_LINE_COLOR);
           GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? LANG_PAGE_HOME_GUI_TIME_DEVICE : LANG_PAGE_HOME_GUI_TIME_SERVER, "", UI_BUTTON_COLOR, "90%;margin-top:20px;margin-bottom:5px");
           GP.BLOCK_END();

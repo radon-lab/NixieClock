@@ -118,6 +118,10 @@ void wifiStartAP(void) {
   WiFi.mode(WIFI_AP_STA);
   Serial.println F("");
 
+#if WIFI_OUTPUT_POWER
+  WiFi.setOutputPower(WIFI_OUTPUT_POWER);
+#endif
+
   //настраиваем точку доступа
   IPAddress local(AP_IP);
   IPAddress subnet(255, 255, 255, 0);
