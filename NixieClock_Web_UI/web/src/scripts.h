@@ -80,4 +80,5 @@ getEl('dashSdb').style.left=flag?'-250px':'0';}
 function onlShow(s){getEl('onlBlock').style.right=s?'0px':'-50px';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){GP_click(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data<min)data=min;else if(data>max)data=max;arg.value=data;}
+function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
 )";
