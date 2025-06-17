@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.8 релиз от 19.04.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.8 релиз от 17.06.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -408,7 +408,7 @@ void build(void) {
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_BACKL, "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]);););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? LANG_PAGE_SETTINGS_GUI_ACTION : LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, GP.SLIDER("mainSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
@@ -757,7 +757,7 @@ void build(void) {
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_BRIGHT, UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, "", UI_LINE_COLOR, UI_HINT_COLOR);

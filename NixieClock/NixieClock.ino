@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 08.04.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 17.06.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -448,6 +448,7 @@ enum {
 
 //перечисления системных звуков
 enum {
+  SOUND_TEST_SPEAKER, //звук ошибки ввода пароля
   SOUND_PASS_ERROR, //звук ошибки ввода пароля
   SOUND_RESET_SETTINGS, //звук сброса настроек
   SOUND_ALARM_DISABLE, //звук отключения будильника
@@ -1801,8 +1802,11 @@ void test_system(void) //проверка системы
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
 #endif
   for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
+
 #if PLAYER_TYPE
-  playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER);
+  playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER); //звук тестирования динамика
+#else
+  melodyPlay(SOUND_TEST_SPEAKER, SOUND_LINK(general_sound), REPLAY_ONCE); //сигнал тестирования динамика
 #endif
 
 #if (BACKL_TYPE != 3) && BACKL_TYPE
@@ -1812,15 +1816,31 @@ void test_system(void) //проверка системы
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
   dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
 #endif
+
+#if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 2
+  indiSetDots(0, DOTS_NUM * 2); //установка разделительных точек
+#else
+  indiSetDots(0, DOTS_NUM); //установка разделительных точек
+#endif
+#endif
+
   while (1) {
+#if INDI_SYMB_TYPE
+    indiClr(); //очистка индикаторов
+    for (uint8_t symb = 0; symb < 10; symb++) {
+      indiSetSymb(ID(symb)); //установка индикатора символов
+      for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+        dataUpdate(); //обработка данных
+        if (buttonState()) return; //выходим если нажата кнопка
+      }
+    }
+    indiClrSymb(); //очистка индикатора символов
+#endif
     for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
-#if DOTS_PORT_ENABLE
-      indiClrDots(); //выключаем разделительные точки
-      indiSetDotL(indi); //включаем разделительную точку
-      indiSetDotR(indi); //включаем разделительную точку
-#endif
 #if BACKL_TYPE == 3
+      setLedBright(0); //выключаем светодиоды
       setLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
 #endif
       for (uint8_t digit = 0; digit < 10; digit++) {
@@ -1828,17 +1848,11 @@ void test_system(void) //проверка системы
 #if BACKL_TYPE == 3
         setLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
 #endif
-#if !PLAYER_TYPE
-        buzz_pulse(TEST_FREQ_STEP + (digit * TEST_FREQ_STEP), TEST_LAMP_TIME); //перебор частот
-#endif
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
           dataUpdate(); //обработка данных
           if (buttonState()) return; //выходим если нажата кнопка
         }
       }
-#if BACKL_TYPE == 3
-      setLedBright(0); //выключаем светодиоды
-#endif
     }
   }
 }

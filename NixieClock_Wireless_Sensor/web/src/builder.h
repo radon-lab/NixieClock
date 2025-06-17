@@ -611,7 +611,7 @@ struct Builder {
   void BLOCK_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_TAB, width);
   }
-  
+
   void BLOCK_MIDDLE_BEGIN() {
     SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
   }
@@ -816,6 +816,21 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("'>\n");
     send();
+  }
+
+  void LED_COLOR(const String& name, PGM_P st = GP_RED) {
+    *_GPP += F("<div name='led_");
+    *_GPP += name;
+    *_GPP += F("' id='led_");
+    *_GPP += name;
+    *_GPP += F("' class='ledc'></div>\n");
+    JS_BEGIN();
+    *_GPP += F("ledColor('");
+    *_GPP += name;
+    *_GPP += F("','");
+    *_GPP += FPSTR(st);
+    *_GPP += F("')");
+    JS_END();
   }
 
   // устарело

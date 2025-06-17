@@ -37,7 +37,7 @@ input[type=number],input[type=text],input[type=password]{padding-top:5px!importa
 input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],select,textarea{text-align:center;appearance:none;}
 input[type=number],input[type=text],input[type=password],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
 select{min-width:130px;width:200px;cursor:pointer;}
-select:disabled{filter:brightness(0.6);cursor:auto;}
+select:disabled{filter:brightness(0.6);cursor:default;}
 textarea{width:auto;max-width:100%}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:white;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
@@ -52,6 +52,7 @@ input:focus,select,textarea:focus{outline:none;}
 .ledn{margin:9px 10px;}
 .ledn:after{width:20px;height:20px;border-radius:10px;top:-4px;left:-3px;position:relative;content:'';display:inline-block;background-color:#d00;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #f00;}
 .ledn:checked:after{background-color: #3c0;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #4d0;}
+.ledc{width:20px;height:20px;border-radius:10px;display:inline-block;margin-bottom:-3px;background-color:#333;box-shadow:inset 0px 0px 5px 2px #0000005c;}
 .miniButton{padding:1px 7px;min-height:40px;height:auto!important;font-size:20px!important;width:auto!important;}
 .switch{margin:10px 2px 5px 2px;position:relative;display:inline-block;width:60px;height:34px}
 .switch input{opacity:0;width:0;height:0}
@@ -89,13 +90,13 @@ textarea::-webkit-scrollbar-thumb{background-color:#556;border-radius:3px;}
 body::-webkit-scrollbar{width:8px;}
 body::-webkit-scrollbar-track{background-color:#0000;}
 body::-webkit-scrollbar-thumb{background-color:#556;border-radius:4px;}
-input[type=button]:disabled,input[type=checkbox]:disabled+.slider:before,input[type=text]:disabled,input[type=number]:disabled,input[type=password]:disabled,input[type=date]:disabled,input[type=time]:disabled,input[type=color]:disabled {filter:brightness(0.6);}
 .dsbl{filter:brightness(0.6);}
 :root{color-scheme:light dark;}
 html{scrollbar-width:none;}
 body{-webkit-tap-highlight-color:transparent;}
 form{margin:0;}
 input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=date]:focus,input[type=time]:focus{border:2px solid #666}
+input[type=checkbox]:disabled+.slider:before,input[type=text]:disabled,input[type=number]:disabled,input[type=password]:disabled,input[type=date]:disabled,input[type=time]:disabled,input[type=color]:disabled,input[type=button]:disabled,button:disabled{filter:brightness(0.6);cursor:default;}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlBlock{display:inline-block;position:relative}
 table{border-collapse:collapse;}

@@ -50,6 +50,9 @@ const uint16_t alarm_sound[][2] PROGMEM = {
 
 
 //Основные звуки
+const uint16_t _test_speaker[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
+  {500, 1000, 1000}, {1500, 1000, 1000}, {3000, 1000, 1000}, {5000, 1000, 1000}
+};
 const uint16_t _pass_error[][3] PROGMEM = { //массив семплов || {семпл - частота(10..10000)(Hz), | длительность звука(4..10000)(ms), | длительность семпла(4..10000)(ms)}
   {500, 500, 600}, {500, 500, 600}
 };
@@ -71,6 +74,7 @@ const uint16_t _timer_warn[][3] PROGMEM = { //массив семплов || {с
 
 //Массив основных мелодий
 const uint16_t general_sound[][2] PROGMEM = {
+  SOUND_PATTERN(_test_speaker),
   SOUND_PATTERN(_pass_error),
   SOUND_PATTERN(_reset_settings),
   SOUND_PATTERN(_alarm_disable),

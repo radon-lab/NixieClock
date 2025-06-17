@@ -165,10 +165,12 @@ void decLedsBright(uint8_t _led, uint8_t _step)
 boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
-  if (((int16_t)ledBright[_led] - _step) > _min) ledBright[_led] -= _step;
-  else {
-    ledBright[_led] = _min;
-    return 1;
+  if (_led < LEDS_NUM) {
+    if (((int16_t)ledBright[_led] - _step) > _min) ledBright[_led] -= _step;
+    else {
+      ledBright[_led] = _min;
+      return 1;
+    }
   }
   return 0;
 }
@@ -176,10 +178,12 @@ boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
 boolean incLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
-  if (((uint16_t)ledBright[_led] + _step) < _max) ledBright[_led] += _step;
-  else {
-    ledBright[_led] = _max;
-    return 1;
+  if (_led < LEDS_NUM) {
+    if (((uint16_t)ledBright[_led] + _step) < _max) ledBright[_led] += _step;
+    else {
+      ledBright[_led] = _max;
+      return 1;
+    }
   }
   return 0;
 }
