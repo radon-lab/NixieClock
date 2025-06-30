@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 17.06.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 30.06.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -5998,7 +5998,10 @@ uint8_t radioMenu(void) //радиоприемник
           if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
 #else
 #if DOTS_SHIFT
-          if (getStationStatusRDA()) indiSetDotL(3); //установка разделительной точки
+          if (getStationStatusRDA()) indiSetDotL(4); //установка разделительной точки
+#if DOTS_TYPE == 2
+          if (getStationStatusRDA()) indiSetDotR(3); //установка разделительной точки
+#endif
 #else
           if (getStationStatusRDA()) indiSetDotL(radioSettings.stationsFreq < 1000); //установка разделительной точки
 #endif
