@@ -20,7 +20,8 @@ enum {
   PWM_OVF_ERROR,       //0010 - переполнение заполнения шим преобразователя
   STACK_OVF_ERROR,     //0011 - переполнение стека
   TICK_OVF_ERROR,      //0012 - переполнение тиков времени
-  INDI_ERROR           //0013 - сбой работы динамической индикации
+  INDI_ERROR,          //0013 - сбой работы динамической индикации
+  PCF8591_ERROR        //0014 - ошибка сбоя работы PCF8591
 };
 void systemTask(void); //процедура системной задачи
 void SET_ERROR(uint8_t err); //процедура установка ошибки
@@ -36,6 +37,7 @@ enum {
   TMR_COLOR,    //таймер смены цвета подсветки
   TMR_DOT,      //таймер точек
   TMR_ANIM,     //таймер анимаций
+  TMR_PCF8591,   //таймер PCF8591
   TIMERS_MS_NUM //количество таймеров
 };
 uint16_t _timer_ms[TIMERS_MS_NUM]; //таймер отсчета миллисекунд
@@ -99,6 +101,7 @@ enum {
 #include "IR.h"
 #include "WS.h"
 #include "INDICATION.h"
+#include "PCF8591.h"
 
 //-----------------Настройки----------------
 struct Settings_1 {
@@ -1033,6 +1036,11 @@ void INIT_SYSTEM(void) //инициализация
 #if ESP_ENABLE
   wireSetAddress(WIRE_SLAVE_ADDR); //установка slave адреса шины
 #endif
+
+#if PCF8591_ENABLE
+  checkPCF8591(); //проверка PCF8591
+#endif
+
   mainTask = MAIN_PROGRAM; //установили основную программу
 }
 //-----------------------------Прерывание от RTC--------------------------------
@@ -1473,7 +1481,7 @@ void analogUpdate(void) //обработка аналоговых входов
         ADMUX = 0; //сбросли признак чтения АЦП
         break;
 #endif
-#if LIGHT_SENS_ENABLE
+#if LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 1
       case ANALOG_LIGHT_PIN:
 #if !LIGHT_SENS_PULL
         light_adc = ADCH; //записываем результат опроса
@@ -1484,7 +1492,7 @@ void analogUpdate(void) //обработка аналоговых входов
         break;
 #endif
       default:
-#if LIGHT_SENS_ENABLE
+#if LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 1
         if (analogState & 0x01) { //сенсор яркости
           analogState &= ~0x01; //сбросили флаг обновления АЦП сенсора яркости
           ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_LIGHT_PIN; //настройка мультиплексатора АЦП
@@ -1539,7 +1547,7 @@ void checkVCC(void) //чтение напряжения питания
   ADMUX = (0x01 << REFS0) | ANALOG_DET_PIN; //настройка мультиплексатора АЦП
 #endif
 
-#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || LIGHT_SENS_ENABLE
+#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || (LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 1)
   ADCSRA = (0x01 << ADEN) | (0x01 << ADPS0) | (0x01 << ADPS2); //настройка АЦП пределитель 32
   ADCSRA |= (0x01 << ADSC); //запускаем преобразование
 #endif
@@ -2214,6 +2222,17 @@ void debug_menu(void) //отладка
         break;
     }
   }
+}
+//--------------------------------Проверка PCF8591 ----------------------------------------------------
+void checkPCF8591() // проверка PCF8591
+{
+  if (!isConnectedPCF()) {
+    SET_ERROR(PCF8591_ERROR);
+  }
+
+  if (!readAnalogInputChannelsPCF()) {
+    SET_ERROR(PCF8591_ERROR);
+  };
 }
 //--------------------------------Генерация частот бузера----------------------------------------------
 void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
@@ -3080,7 +3099,7 @@ void systemTask(void) //системная задача
   melodyUpdate(); //обработка мелодий
 #endif
 
-#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || LIGHT_SENS_ENABLE
+#if (GEN_ENABLE && (GEN_FEEDBACK == 1)) || BTN_TYPE || (LIGHT_SENS_ENABLEE && LIGHT_SENS_TYPE == 1)
   analogUpdate(); //обработка аналоговых входов
 #endif
 
@@ -3103,7 +3122,20 @@ void systemTask(void) //системная задача
   }
 #endif
 
-#if LIGHT_SENS_ENABLE
+#if PCF8591_ENABLE
+    if (!_timer_ms[TMR_PCF8591]) { //если таймаут нового запроса вышел
+      if (!readAnalogInputChannelsPCF()) {
+        SET_ERROR(PCF8591_ERROR);
+      }
+      _timer_ms[TMR_PCF8591] = PCF8591_UPDATE_TIME; //установили таймаут
+    }
+#endif
+
+#if PCF8591_ENABLE && LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 2
+  adc_light = LIGTH_VALUE; //записываем результат опроса
+#endif
+
+#if LIGHT_SENS_ENABLE && LIGHT_SENS_TYPE == 1
   lightSensCheck(); //проверка сенсора яркости освещения
 #endif
 
