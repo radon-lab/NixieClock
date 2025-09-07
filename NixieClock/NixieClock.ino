@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.8 релиз от 30.06.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_001 бета от 07.09.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -974,6 +974,7 @@ void INIT_SYSTEM(void) //инициализация
 #if DS3231_ENABLE || ESP_ENABLE || RADIO_ENABLE || SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE
   wireInit(); //инициализация шины wire
 #endif
+  coreInit(); //инициализация периферии ядра
   indiInit(); //инициализация индикации
 
   backlAnimDisable(); //запретили эффекты подсветки
@@ -7328,8 +7329,8 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     case FLIP_ORDER_OF_CATHODES:
     case FLIP_SLOT_MACHINE:
       for (uint8_t i = 0; i < LAMP_NUM; i++) {
-        anim.flipBuffer[i] = animDecodeNum(anim.flipBuffer[i]);
-        changeBuffer[i] = animDecodeNum(anim.flipBuffer[i + 6]);
+        anim.flipBuffer[i] = indiDecodeNum(anim.flipBuffer[i]);
+        changeBuffer[i] = indiDecodeNum(anim.flipBuffer[i + 6]);
         if (type == FLIP_DEMO) anim.flipBuffer[i]--;
         else if ((anim.flipBuffer[i] != changeBuffer[i]) || (mode == FLIP_SLOT_MACHINE)) {
           if (changeBuffer[i] == 10) changeBuffer[i] = (anim.flipBuffer[i]) ? (anim.flipBuffer[i] - 1) : 9;
@@ -7377,7 +7378,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
             break;
           case FLIP_SLOT_MACHINE:
             animPrintBuff(0, 6, changeNum); //вывод часов
-            for (uint8_t f = changeNum; f < LAMP_NUM; f++) changeBuffer[f] = animDecodeNum(anim.flipBuffer[f + 6]);
+            for (uint8_t f = changeNum; f < LAMP_NUM; f++) changeBuffer[f] = indiDecodeNum(anim.flipBuffer[f + 6]);
             break;
         }
       }

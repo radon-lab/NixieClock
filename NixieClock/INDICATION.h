@@ -1,59 +1,17 @@
-#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + (boolean)((NEON_DOT == 1) || (NEON_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
-
-#define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
-#define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
-#define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
-
-#define MS_PERIOD (uint8_t)(US_PERIOD / 1000) //период тика таймера в целых мс
-
-#define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
-#define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN(((uint16_t)LIGHT_MAX - 2) + (LIGHT_MAX >> 5), 100, 255)) //расчет максимального шага яркости для точек
-#define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
-
-#define R_COEF(low, high) (((float)(low) + (float)(high)) / (float)(low)) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
-#define GET_VCC(ref, adc) (float)(((ref) * 1023.0) / (float)(adc)) //расчет напряжения питания
-
-#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
-#define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
-#define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
-
-#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
-#if WIRE_PULL && !ESP_ENABLE
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4) | 0x30)
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4) | 0x30) //пустой символ(отключеный индикатор)
-#else
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
-#endif
-
 #if DOTS_TYPE == 2
 #define DOTS_ALL (DOTS_NUM * 2) //всего разделительных точек
 #else
 #define DOTS_ALL (DOTS_NUM) //всего разделительных точек
 #endif
 
-//Типы плат часов
-#if (BOARD_TYPE == 0) //IN-12 (индикаторы стоят правильно)
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(7), ID(3), ID(6), ID(4), ID(1), ID(9), ID(8), ID(0), ID(5), ID(2), ID(10)}; //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
-#elif (BOARD_TYPE == 1) //IN-12 turned (индикаторы перевёрнуты)
-enum {INDI_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(2), ID(8), ID(1), ID(9), ID(6), ID(4), ID(3), ID(5), ID(0), ID(7), ID(10)}; //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
-#elif (BOARD_TYPE == 2) //IN-14 (обычная и neon dot)
-enum {INDI_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(9), ID(8), ID(0), ID(5), ID(4), ID(7), ID(3), ID(6), ID(2), ID(1), ID(10)}; //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6}; //порядок катодов in14
-#else
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-#if INDI_PORT_TYPE
-const uint8_t regMask[] = {((NEON_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << DOT_1_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
-#endif
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
-const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
-#endif
+uint8_t indi_dot_l; //буфер левых точек индикаторов
+uint8_t indi_dot_r; //буфер правых точек индикаторов
+volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
+
+uint8_t dot_dimm; //яркость секундной точки
+uint8_t indi_buf[7]; //буфер индикаторов
+uint8_t indi_dimm[7]; //яркость индикаторов
+volatile uint8_t indiState; //текущей номер отрисовки индикатора
 
 //переменные работы с анимациями
 struct animData {
@@ -74,66 +32,7 @@ enum {
   DOT_ALL //две неоновые лампы
 };
 
-//перечисления кнопок
-enum {
-  KEY_NULL, //кнопка не нажата
-  LEFT_KEY_PRESS, //клик левой кнопкой
-  LEFT_KEY_HOLD, //удержание левой кнопки
-  RIGHT_KEY_PRESS, //клик правой кнопкой
-  RIGHT_KEY_HOLD, //удержание правой кнопки
-  SET_KEY_PRESS, //клик средней кнопкой
-  SET_KEY_HOLD, //удержание средней кнопки
-  ADD_KEY_PRESS, //клик дополнительной кнопкой
-  ADD_KEY_HOLD, //удержание дополнительной кнопки
-#if IR_EXT_BTN_ENABLE
-#if IR_PORT_ENABLE && RADIO_ENABLE
-  PWR_KEY_PRESS, //клик кнопки питания
-  VOL_UP_KEY_PRESS, //клик кнопки громкости вверх
-  VOL_DOWN_KEY_PRESS, //клик кнопки громкости вниз
-  STATION_UP_KEY_PRESS, //клик кнопки станции вверх
-  STATION_DOWN_KEY_PRESS, //клик кнопки станции вниз
-#if IR_EXT_BTN_ENABLE == 2
-  STATION_CELL_0_PRESS, //клик кнопки станции 0
-  STATION_CELL_1_PRESS, //клик кнопки станции 1
-  STATION_CELL_2_PRESS, //клик кнопки станции 2
-  STATION_CELL_3_PRESS, //клик кнопки станции 3
-  STATION_CELL_4_PRESS, //клик кнопки станции 4
-  STATION_CELL_5_PRESS, //клик кнопки станции 5
-  STATION_CELL_6_PRESS, //клик кнопки станции 6
-  STATION_CELL_7_PRESS, //клик кнопки станции 7
-  STATION_CELL_8_PRESS, //клик кнопки станции 8
-  STATION_CELL_9_PRESS, //клик кнопки станции 9
-#endif
-#endif
-#endif
-  KEY_MAX_ITEMS //максимум кнопок
-};
-
-struct Settings_5 {
-  uint16_t irButtons[KEY_MAX_ITEMS - 1]; //коды кнопок пульта
-  uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-  uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
-  uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
-  uint8_t light_zone[2][3]; //зоны яркости датчика освещения
-  int8_t hvCorrect; //коррекция напряжения
-  int8_t aging; //коррекция регистра старения
-} debugSettings;
-
-uint8_t pwm_coef; //коэффициент линейного регулирования
-uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
-
-uint8_t light_adc; //значение АЦП сенсора яркости освещения
-uint8_t light_state = 2; //состояние сенсора яркости освещения
-boolean light_update = 0; //флаг обновления яркости
-
-uint8_t indi_dot_l; //буфер левых точек индикаторов
-uint8_t indi_dot_r; //буфер правых точек индикаторов
-volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
-
-uint8_t dot_dimm; //яркость секундной точки
-uint8_t indi_buf[7]; //буфер индикаторов
-uint8_t indi_dimm[7]; //яркость индикаторов
-volatile uint8_t indiState; //текущей номер отрисовки индикатора
+#include "DYNAMIC.h"
 
 void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //установка общей яркости
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
@@ -143,170 +42,6 @@ boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //у
 boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //увеличение яркости точек
 #endif
 
-//---------------------------Первичный запуск WDT-------------------------------
-inline void startEnableWDT(void) //первичный запуск WDT
-{
-  cli(); //запрещаем прерывания
-  RESET_WDT; //сбрасываем таймер WDT
-  MCUSR &= ~(0x01 << WDRF); //сбросли флаг перезагрузки WDT
-  WDTCSR = (0x01 << WDCE) | (0x01 << WDE); //разрешаем изменения WDT
-  WDTCSR = (0x01 << WDE) | (0x01 << WDP3) | (0x01 << WDP0); //устанавливаем таймер WDT на 8сек
-}
-//---------------------------Основной запуск WDT--------------------------------
-inline void mainEnableWDT(void) //основной запуск WDT
-{
-  RESET_WDT; //сбрасываем таймер WDT
-  WDTCSR = (0x01 << WDCE) | (0x01 << WDE); //разрешаем изменения WDT
-  WDTCSR = (0x01 << WDE) | (0x01 << WDP2) | (0x01 << WDP1) | (0x01 << WDP0); //устанавливаем таймер WDT на 2сек
-}
-//----------------------------------Динамическая индикация---------------------------------------
-ISR(TIMER0_COMPA_vect) //динамическая индикация
-{
-#if INDI_PORT_TYPE
-  uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
-#if DOTS_PORT_ENABLE == 2
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  if (indi_dot_r & indi_dot_pos) temp |= (0x01 << DOTR_PIN); //включаем правые точки
-#endif
-#if DOTS_TYPE != 1
-  if (indi_dot_l & indi_dot_pos) temp |= (0x01 << DOTL_PIN); //включаем левые точки
-#endif
-#endif
-
-#if (NEON_DOT == 2) && INDI_DOT_TYPE
-  if (!indiState) {
-    if (indi_buf[indiState] & 0x80) temp |= (0x01 << DOT_1_PIN); //включили точки
-    if (indi_buf[indiState] & 0x40) temp |= (0x01 << DOT_2_PIN); //включили точки
-  }
-#endif
-
-  REG_LATCH_ENABLE; //открыли защелку
-  SPDR = temp; //загрузили данные
-#endif
-
-  OCR0B = indi_dimm[indiState]; //устанавливаем яркость индикатора
-  PORTC = indi_buf[indiState]; //отправляем в дешефратор буфер индикатора
-
-#if INDI_PORT_TYPE || (INDI_SYMB_TYPE == 1) || (!INDI_DOT_TYPE && !INDI_SYMB_TYPE)
-  if (indi_buf[indiState] != INDI_NULL) {
-    switch (indiState) {
-#if (INDI_SYMB_TYPE == 1)
-      case INDI_POS: ANODE_SET(ANODE_0_PIN); break;
-#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
-#if NEON_DOT == 1
-      case INDI_POS: DOT_1_SET; break;
-#elif NEON_DOT == 2
-      case INDI_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
-#endif
-#endif
-#if !INDI_PORT_TYPE
-      case ANODE_1_POS: ANODE_SET(ANODE_1_PIN); break;
-      case ANODE_2_POS: ANODE_SET(ANODE_2_PIN); break;
-      case ANODE_3_POS: ANODE_SET(ANODE_3_PIN); break;
-      case ANODE_4_POS: ANODE_SET(ANODE_4_PIN); break;
-#if LAMP_NUM > 4
-      case ANODE_5_POS: ANODE_SET(ANODE_5_PIN); break;
-      case ANODE_6_POS: ANODE_SET(ANODE_6_PIN); break;
-#endif
-#endif
-    }
-  }
-#endif
-
-#if DOTS_PORT_ENABLE == 1
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
-#endif
-#if DOTS_TYPE != 1
-  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
-#endif
-#endif
-
-  if (!++tick_ms) { //если превышено количество тиков
-    SET_ERROR(TICK_OVF_ERROR); //устанавливаем ошибку переполнения тиков времени
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
-    RESET_SYSTEM; //перезагрузка
-  }
-  if (!(SPH & 0xFC)) { //если стек переполнен
-    SET_ERROR(STACK_OVF_ERROR); //устанавливаем ошибку переполнения стека
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
-    RESET_SYSTEM; //перезагрузка
-  }
-
-#if INDI_PORT_TYPE
-  while (!(SPSR & (0x01 << SPIF))); //ждем отправки
-  REG_LATCH_DISABLE; //закрыли защелку
-#endif
-}
-ISR(TIMER0_COMPB_vect) {
-#if INDI_PORT_TYPE
-  REG_LATCH_ENABLE; //открыли защелку
-  SPDR = 0x00; //загрузили данные
-#if (INDI_SYMB_TYPE == 1)
-  if (!indiState) ANODE_CLEAR(ANODE_0_PIN); //выключили символ
-#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
-#if (NEON_DOT == 1)
-  if (!indiState) DOT_1_CLEAR; //выключили точки
-#elif (NEON_DOT == 2)
-  if (!indiState) {
-    DOT_1_CLEAR; //выключили точки
-    DOT_2_CLEAR; //выключили точки
-  }
-#endif
-#endif
-#else
-  switch (indiState) {
-#if (INDI_SYMB_TYPE == 1)
-    case INDI_POS: ANODE_CLEAR(ANODE_0_PIN); break;
-#elif !INDI_SYMB_TYPE
-#if NEON_DOT == 1
-    case INDI_POS: DOT_1_CLEAR; break;
-#elif NEON_DOT == 2
-    case INDI_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
-#endif
-#endif
-    case ANODE_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
-    case ANODE_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
-    case ANODE_3_POS: ANODE_CLEAR(ANODE_3_PIN); break;
-    case ANODE_4_POS: ANODE_CLEAR(ANODE_4_PIN); break;
-#if LAMP_NUM > 4
-    case ANODE_5_POS: ANODE_CLEAR(ANODE_5_PIN); break;
-    case ANODE_6_POS: ANODE_CLEAR(ANODE_6_PIN); break;
-#endif
-  }
-#endif
-
-#if DOTS_PORT_ENABLE
-#if DOTS_PORT_ENABLE == 1
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_OFF; //выключаем правые точки
-#endif
-#if DOTS_TYPE != 1
-  INDI_DOTL_OFF; //выключаем левые точки
-#endif
-#endif
-  indi_dot_pos <<= 1; //сместили текущей номер точек индикаторов
-#endif
-
-  if (++indiState > LAMP_NUM) { //переходим к следующему индикатору
-#if (NEON_DOT == 1) || (NEON_DOT == 2) || INDI_SYMB_TYPE
-#if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x01; //сбросили текущей номер точек индикаторов
-#endif
-    indiState = 0; //сбросили позицию индикатора
-#else
-#if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x02; //сбросили текущей номер точек индикаторов
-#endif
-    indiState = 1; //сбросили позицию индикатора
-#endif
-  }
-
-#if INDI_PORT_TYPE
-  while (!(SPSR & (0x01 << SPIF))); //ждем отправки
-  REG_LATCH_DISABLE; //закрыли защелку
-#endif
-}
 //-----------------------------------Динамическая подсветка---------------------------------------
 #if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
@@ -330,71 +65,6 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
   );
 }
 #endif
-
-//------------------------Проверка состояния динамической индикации-------------------------------
-void indiStateCheck(void) //проверка состояния динамической индикации
-{
-  if (TIMSK0 != ((0x01 << OCIE0B) | (0x01 << OCIE0A))) { //если настройка изменилась
-    TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-  if (OCR0B > LIGHT_MAX) { //если вышли за предел
-    OCR0B = LIGHT_MAX; //установили максимум
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-}
-//------------------------Проверка состояния динамической индикации-------------------------------
-void indiCheck(void) //проверка состояния динамической индикации
-{
-  if (TCCR0A != (0x01 << WGM01)) { //если настройка изменилась
-    TCCR0A = (0x01 << WGM01); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-  if (TCCR0B != (0x01 << CS02)) { //если настройка изменилась
-    TCCR0B = (0x01 << CS02); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-  if (OCR0A != FREQ_TICK) { //если вышли за предел
-    OCR0A = FREQ_TICK; //установили максимум
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-}
-//----------------------------Проверка состояния преобразователя----------------------------------
-void converterCheck(void) //проверка состояния преобразователя
-{
-#if GEN_FEEDBACK
-  if (((TCCR1A & 0x4F) != (0x01 << WGM10)) ||
-#else
-#if CONV_PIN == 9
-  if (((TCCR1A & 0xCF) != ((0x01 << WGM10) | (0x01 << COM1A1))) ||
-#elif CONV_PIN == 10
-  if (((TCCR1A & 0x3F) != ((0x01 << WGM10) | (0x01 << COM1B1))) ||
-#endif
-#endif
-#if GEN_SPEED_X2
-      (TCCR1B != ((0x01 << CS10) | (0x01 << WGM12))))
-#else
-      (TCCR1B != (0x01 << CS10)))
-#endif
-  {
-    TCCR1A = TCCR1B = 0; //выключаем шим
-    CONV_DISABLE; //выключаем преобразователь
-    SET_ERROR(CONVERTER_ERROR); //устанавливаем ошибку сбоя работы преобразователя
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
-    RESET_SYSTEM; //перезагрузка
-  }
-#if CONV_PIN == 9
-  if (OCR1A > 200) { //если вышли за предел
-    OCR1A = 200; //установили максимум
-    SET_ERROR(PWM_OVF_ERROR); //устанавливаем ошибку переполнения заполнения шим преобразователя
-  }
-#elif CONV_PIN == 10
-  if (OCR1B > 200) { //если вышли за предел
-    OCR1B = 200; //установили максимум
-    SET_ERROR(PWM_OVF_ERROR); //устанавливаем ошибку переполнения заполнения шим преобразователя
-  }
-#endif
-}
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
@@ -411,138 +81,6 @@ void indiChangePwm(void) //установка нового значения ши
 #elif CONV_PIN == 10
   OCR1B = CONSTRAIN(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
 #endif
-}
-//----------------------------Инициализация портов индикаторов------------------------------------
-void indiPortInit(void) //инициализация портов индикаторов
-{
-  PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
-  DDRC |= 0x0F; //устанавливаем катоды как выходы
-#if (NEON_DOT != 3) && !INDI_DOT_TYPE
-  DOT_1_INIT; //инициализация секундных точек
-#endif
-#if (NEON_DOT == 2) && !INDI_DOT_TYPE
-  DOT_2_INIT; //инициализация секундных точек
-#endif
-#if DOTS_PORT_ENABLE == 1
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
-#endif
-#if DOTS_TYPE != 1
-  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
-#endif
-#endif
-#if (INDI_SYMB_TYPE == 1)
-  ANODE_INIT(ANODE_0_PIN); //инициализация анода 0
-#endif
-#if !INDI_PORT_TYPE
-  ANODE_INIT(ANODE_1_PIN); //инициализация анода 1
-  ANODE_INIT(ANODE_2_PIN); //инициализация анода 2
-  ANODE_INIT(ANODE_3_PIN); //инициализация анода 3
-  ANODE_INIT(ANODE_4_PIN); //инициализация анода 4
-#if LAMP_NUM > 4
-  ANODE_INIT(ANODE_5_PIN); //инициализация анода 5
-  ANODE_INIT(ANODE_6_PIN); //инициализация анода 6
-#endif
-#else
-  REG_LATCH_INIT; //инициализация защелки сдвигового регистра
-  REG_DATA_INIT; //инициализация линии данных сдвигового регистра
-  REG_SCK_INIT; //инициализация линии тактирования сдвигового регистра
-  for (uint8_t i = 0; i < 16; i++) REG_SCK_INV; //очищаем сдвиговый регистр
-  REG_LATCH_DISABLE; //закрываем защелку
-#endif
-}
-//---------------------------------Инициализация индикации----------------------------------------
-void indiInit(void) //инициализация индикации
-{
-#if INDI_PORT_TYPE
-  DDRB |= 0x04; //установили D10 как выход
-
-  SPSR = (0x01 << SPI2X); //включили удвоение скорости
-  SPCR = (0x01 << SPE) | (0x01 << MSTR); //запустили SPI в режиме ведущего
-#endif
-
-  EIMSK = 0; //запретили прерывания INT0/INT1
-
-#if !IR_PORT_ENABLE
-  PCICR = 0; //запретили прерывания PCINT0/PCINT1/PCINT2
-#endif
-
-  for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем буферы
-    indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
-    indi_dimm[i] = (LIGHT_MAX - 1); //устанавливаем максимальную яркость
-  }
-
-  OCR0A = FREQ_TICK; //максимальная частота
-  OCR0B = (LIGHT_MAX - 1); //максимальная яркость
-
-  TIMSK0 = 0; //отключаем прерывания
-  TCCR0A = (0x01 << WGM01); //режим CTC
-  TCCR0B = (0x01 << CS02); //пределитель 256
-
-#if PLAYER_TYPE == 2
-#if BUZZ_PIN == 9
-  OCR1A = 128; //выключаем dac
-#elif BUZZ_PIN == 10
-  OCR1B = 128; //выключаем dac
-#endif
-#endif
-#if !NEON_DOT
-#if DOT_1_PIN == 9
-  OCR1A = 0; //выключаем точки
-#elif DOT_1_PIN == 10
-  OCR1B = 0; //выключаем точки
-#endif
-#endif
-
-  TIMSK1 = 0; //отключаем прерывания
-  TCCR1A = (0x01 << WGM10); //режим коррекции фазы шим
-#if GEN_SPEED_X2
-  TCCR1B = (0x01 << CS10) | (0x01 << WGM12);  //задаем частоту 62 кГц
-#else
-  TCCR1B = (0x01 << CS10);  //задаем частоту 31 кГц
-#endif
-
-#if PLAYER_TYPE == 2
-#if BUZZ_PIN == 9
-  TCCR1A |= (0x01 << COM1A1); //подключаем D9
-#elif BUZZ_PIN == 10
-  TCCR1A |= (0x01 << COM1B1); //подключаем D10
-#endif
-#endif
-#if !NEON_DOT
-#if DOT_1_PIN == 9
-  TCCR1A |= (0x01 << COM1A1); //подключаем D9
-#elif DOT_1_PIN == 10
-  TCCR1A |= (0x01 << COM1B1); //подключаем D10
-#endif
-#endif
-
-#if GEN_ENABLE
-#if CONV_PIN == 9
-  OCR1A = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
-  TCCR1A |= (0x01 << COM1A1); //подключаем D9
-#elif CONV_PIN == 10
-  OCR1B = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
-  TCCR1A |= (0x01 << COM1B1); //подключаем D10
-#endif
-#endif
-
-  OCR2A = 0; //выключаем подсветку
-  OCR2B = 0; //сбравсывем бузер
-
-  TIMSK2 = 0; //отключаем прерывания
-#if (BACKL_TYPE != 1)
-  TCCR2A = 0; //отключаем OCR2A и OCR2B
-#else
-  TCCR2A = (0x01 << COM2A1 | 0x01 << WGM20 | 0x01 << WGM21); //подключаем D11
-#endif
-  TCCR2B = (0x01 << CS21); //пределитель 8
-
-  TCNT0 = FREQ_TICK; //установили счетчик в начало
-  TIFR0 |= (0x01 << OCF0B) | (0x01 << OCF0A); //сбрасываем флаги прерывания
-  TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //разрешаем прерывания
-
-  sei(); //разрешаем прерывания глобально
 }
 //--------------------------------Очистка индикаторов--------------------------------------------
 void indiClr(void) //очистка индикаторов
@@ -734,36 +272,6 @@ boolean indiGetDots(void) //состояние разделительных то
 {
   return indi_dot_l | indi_dot_r;
 }
-//------------------------------------Печать чисел-------------------------------------------------
-void printNum(uint16_t _num, uint8_t* _out, int8_t _indi, uint8_t _length, uint8_t _filler) //печать чисел
-{
-  uint8_t buff[6]; //временный буфер
-  uint8_t count = 0; //счетчик символов
-
-  if (_filler > 9) _filler = 10;
-
-  if (!_num) { //если ноль
-    buff[0] = digitMask[0]; //устанавливаем ноль
-    count = 1; //прибавляем счетчик
-  }
-  else { //иначе заполняем буфер числами
-    while (_num && (count < 6)) { //если есть число
-      buff[count++] = digitMask[_num % 10]; //забираем младший разряд в буфер
-      _num /= 10; //отнимаем младший разряд от числа
-    }
-  }
-
-  while ((_length > count) && (count < 6)) buff[count++] = digitMask[_filler]; //заполняем символами заполнителями
-
-  if (_length && (_length < count)) _indi -= count - _length; //смещаем буфер если число длиннее
-
-  while (count) { //расшивровка символов
-    count--; //убавили счетчик символов
-    if ((uint8_t)_indi++ < LAMP_NUM) { //если число в поле индикатора
-      _out[_indi] = buff[count]; //устанавливаем новое число
-    }
-  }
-}
 //-------------------------------------Вывод чисел-----------------------------------------------
 void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //вывод чисел
 {
@@ -777,12 +285,6 @@ void indiPrintMenuData(boolean blink, boolean state, uint8_t arg1, uint8_t pos1,
 {
   if (!blink || state) indiPrintNum(arg1, pos1, (pos1 & 0x01) ? 1 : 2, 0); //вывод первого аргумента
   if (!blink || !state) indiPrintNum(arg2, pos2, (pos2 & 0x01) ? 1 : 2, 0); //вывод второго аргумента
-}
-//-----------------------------Декодирование чисел индикации--------------------------------------
-uint8_t animDecodeNum(uint8_t _num) //декодирование чисел индикации
-{
-  for (uint8_t mask = 0; mask < 11; mask++) if (_num == digitMask[mask]) return mask;
-  return 10;
 }
 //-----------------------------Запись чисел в буфер анимации----------------------------------------
 void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //запись чисел в буфер анимации
@@ -820,49 +322,6 @@ void animBright(uint8_t pwm) //анимация смены яркости циф
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
-}
-//-------------------------------Получить яркости подсветки---------------------------------------
-inline uint8_t backGetBright(void) //получить яркости подсветки
-{
-  return OCR2A;
-}
-//------------------------------Установка яркости подсветки---------------------------------------
-void backlSetBright(uint8_t pwm) //установка яркости подсветки
-{
-  OCR2A = pwm; //устанавливаем яркость точек
-#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
-  if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
-  else {
-    TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер
-    BACKL_CLEAR; //выключили подсветку
-  }
-#elif BACKL_TYPE == 1
-  if (pwm) TCCR2A |= (0x01 << COM2A1); //подключаем D11
-  else {
-    TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
-    BACKL_CLEAR; //выключили подсветку
-  }
-#endif
-}
-//-----------------------------------Уменьшение яркости------------------------------------------
-boolean backlDecBright(uint8_t _step, uint8_t _min)
-{
-  if (((int16_t)backGetBright() - _step) > _min) backlSetBright(backGetBright() - _step);
-  else {
-    backlSetBright(_min);
-    return 1;
-  }
-  return 0;
-}
-//-----------------------------------Увеличение яркости------------------------------------------
-boolean backlIncBright(uint8_t _step, uint8_t _max)
-{
-  if (((uint16_t)backGetBright() + _step) < _max) backlSetBright(backGetBright() + _step);
-  else {
-    backlSetBright(_max);
-    return 1;
-  }
-  return 0;
 }
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
@@ -980,3 +439,46 @@ boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode)
   return 0;
 }
 #endif
+//-------------------------------Получить яркости подсветки---------------------------------------
+inline uint8_t backGetBright(void) //получить яркости подсветки
+{
+  return OCR2A;
+}
+//------------------------------Установка яркости подсветки---------------------------------------
+void backlSetBright(uint8_t pwm) //установка яркости подсветки
+{
+  OCR2A = pwm; //устанавливаем яркость точек
+#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
+  if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
+  else {
+    TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер
+    BACKL_CLEAR; //выключили подсветку
+  }
+#elif BACKL_TYPE == 1
+  if (pwm) TCCR2A |= (0x01 << COM2A1); //подключаем D11
+  else {
+    TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
+    BACKL_CLEAR; //выключили подсветку
+  }
+#endif
+}
+//-----------------------------------Уменьшение яркости------------------------------------------
+boolean backlDecBright(uint8_t _step, uint8_t _min)
+{
+  if (((int16_t)backGetBright() - _step) > _min) backlSetBright(backGetBright() - _step);
+  else {
+    backlSetBright(_min);
+    return 1;
+  }
+  return 0;
+}
+//-----------------------------------Увеличение яркости------------------------------------------
+boolean backlIncBright(uint8_t _step, uint8_t _max)
+{
+  if (((uint16_t)backGetBright() + _step) < _max) backlSetBright(backGetBright() + _step);
+  else {
+    backlSetBright(_max);
+    return 1;
+  }
+  return 0;
+}
