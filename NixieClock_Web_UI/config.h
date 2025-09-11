@@ -48,7 +48,7 @@
 #define UI_SLIDER_COLOR "#e67b09" //цвет слайдеров веб интерфейса
 #define UI_BLOCK_COLOR "#e67b09" //цвет блока веб интерфейса
 #define UI_CHECK_COLOR "#e67b09" //цвет чекбоксов веб интерфейса
-#define UI_LABEL_COLOR "#e67b09" //цвет надписей веб интерфейса
+#define UI_LABEL_COLOR "#e9c46a" //цвет надписей веб интерфейса
 #define UI_LINE_COLOR "#e67b09" //цвет горизонтальных линий веб интерфейса
 #define UI_HINT_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 #define UI_INFO_COLOR "#07b379" //цвет информационных подсказок веб интерфейса
@@ -107,4 +107,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.8" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9_004" //версия прошивки модуля esp

@@ -31,7 +31,7 @@
 #define _GyverPortalMod_h
 #include <Arduino.h>
 
-#define GP_VERSION "3.7.0"
+#define GP_VERSION "3.7.1"
 #define GP_CACHE_PRD "max-age=86400"        // таймаут кеширования (умолч. 86400 - сутки)
 
 #ifndef GP_NO_DNS
