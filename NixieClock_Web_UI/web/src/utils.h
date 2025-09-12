@@ -88,12 +88,6 @@ struct GP_parser {
   const String* strp;
 };
 
-//получить скрипт ссылками для обновления
-String getUiLinksUpdate(String list) {
-  list.replace("\"", "\\\"");
-  return "linkUpdate(\"" + list + "\")";
-}
-
 // получить номер, под которым name входит в list вида "val1,val2,val3"
 int GPinList(const String& s, const String& list);
 

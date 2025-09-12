@@ -167,37 +167,31 @@ struct Builder {
     *_GPP += ">";
     *_GPP += name;
     *_GPP += F("</a>\n");
+    send();
   }
 
-  void UI_LINKS_BEGIN(const String& host) {
-    *_GPP += F(
-               "<script>function linkUpdate(val){val=val.split(',');var block='';var data='';"
-               "for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');"
-               "if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';"
-               "block+=data[0];block+='\"';if(data[0]=='"
-             );
-    *_GPP += host;
-    *_GPP += F(
-               "')block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';"
-               "block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}"
-               "getEl('_link').innerHTML=block;"
-               "getEl('_link_block').style.display=block.length?'block':'none';}</script>"
-             );
-    *_GPP += F("<div id='_link_block' style='display:none'>");
+  void UI_LINKS_BEGIN(const String& id) {
+    *_GPP += F("<div title='_link' id='");
+    *_GPP += id;
+    *_GPP += F("' style='display:none'>");
     send();
   }
-  void UI_LINKS_BLOCK(void) {
-    *_GPP += F("<div id='_link' class='sblock' style='padding:0'></div>");
-    send();
+  void UI_LINKS_BLOCK() {
+    SEND(F("<div id='_link_block' class='sblock' style='padding:0'></div>"));
   }
-  void UI_LINKS_END(const String& links = "") {
-    *_GPP += F("</div>");
-    if (links.length()) {
-      *_GPP += F("<script>");
-      *_GPP += getUiLinksUpdate(links);
-      *_GPP += F("</script>");
+  void UI_LINKS_END() {
+    SEND(F("</div>"));
+  }
+  void UI_LINKS_SEND(const String& id, String list = "") {
+    if (list.length()) {
+      list.replace("\"", "\\\"");
+      *_GPP += F("<script>linkUpdate('");
+      *_GPP += id;
+      *_GPP += F("',\"");
+      *_GPP += list;
+      *_GPP += F("\");</script>");
+      send();
     }
-    send();
   }
 
   // ======================= СТРАНИЦА =======================
@@ -330,9 +324,9 @@ struct Builder {
 
   // список имён компонентов, изменение (клик) которых приведёт к перезагрузке страницы
   void RELOAD_CLICK(const String& list) {
-    *_GPP += F("<script>_clkRelList='");
+    *_GPP += F("<script>_clkRelList=_clkRelList.concat('");
     *_GPP += list;
-    *_GPP += F("'.split(',');</script>\n");
+    *_GPP += F("'.split(','));</script>\n");
     send();
   }
 
@@ -441,32 +435,33 @@ struct Builder {
   }
 
   void POPUP_BEGIN(const String& id, const String& width = "") {
-    *_GPP += F("<input type='hidden' name='_popup' id='");
+    *_GPP += F("<div title='_popup' id='");
     *_GPP += id;
-    *_GPP += F("' value=\"<div class='popupBlock'");
+    *_GPP += F("' style='display:none'>\n<div class='popupBlock'");
     if (width.length()) {
       *_GPP += F(" style='width:");
       *_GPP += width;
       *_GPP += '\'';
     }
     *_GPP += '>';
+    send();
   }
   void POPUP_END() {
-    SEND(F("</div>\n\">\n"));
+    SEND(F("</div>\n</div>\n"));
   }
 
   // список имён компонентов, изменение (клик) которых приведёт к закрытию popup
   void POPUP_CLOSE(const String& list) {
-    *_GPP += F("<script>_clkCloseList='");
+    *_GPP += F("<script>_clkCloseList=_clkCloseList.concat('");
     *_GPP += list;
-    *_GPP += F("'.split(',');</script>\n");
+    *_GPP += F("'.split(','));</script>\n");
     send();
   }
 
   void POPUP_OPEN(const String& id) {
     *_GPP += F("<script>popupOpen(getEl('");
     *_GPP += id;
-    *_GPP += F("').value);</script>\n");
+    *_GPP += F("').innerHTML);</script>\n");
     send();
   }
 
@@ -683,9 +678,6 @@ struct Builder {
   void VOID_BOX_BEGIN() {
     SEND(F("<div>\n"));
   }
-  void CENTER_BOX_BEGIN() {
-    SEND(F("<div style='width:100%;justify-content:center;margin-top:8px;margin-bottom:-6px' class='inliner'>\n"));
-  }
   void BOX_END() {
     SEND(F("</div>\n"));
   }
@@ -821,11 +813,9 @@ struct Builder {
   }
 
   void SPAN(const String& text, GPalign al = GP_CENTER, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
-    if (al != GP_CENTER) {
-      *_GPP += F("<div style='text-align:");
-      *_GPP += FPSTR(GPgetAlign(al));
-      *_GPP += F("'>");
-    } else *_GPP += F("<div>");
+    *_GPP += F("<div style='text-align:");
+    *_GPP += FPSTR(GPgetAlign(al));
+    *_GPP += F("'>");
     TAG_RAW(F("span"), text, name, st, size, bold);
     *_GPP += F("</div>\n");
     send();
@@ -1636,6 +1626,9 @@ struct Builder {
   void BUTTON_MINI_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
     BUTTON_LINK_RAW(url, value, st, width, F("miniButton"), name);
   }
+  void BUTTON_MICRO_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
+    BUTTON_LINK_RAW(url, value, st, width, F("microButton"), name);
+  }
 
   void TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
     *_GPP += F("<style>a:link.");
@@ -1690,6 +1683,9 @@ struct Builder {
   }
   void BUTTON_MINI_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
     BUTTON_DOWNLOAD_RAW(url, value, st, width, F("miniButton"));
+  }
+  void BUTTON_MICRO_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
+    BUTTON_DOWNLOAD_RAW(url, value, st, width, F("microButton"));
   }
 
   // ========================= ВВОД ========================

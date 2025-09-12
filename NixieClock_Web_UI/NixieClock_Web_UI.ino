@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_004 релиз от 11.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_009 релиз от 12.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -200,9 +200,28 @@ void PAGE_TITLE_NAME(const String& title) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.nameDevice + String(" - ")) : "") + title + ((settings.namePostfix) ? (String(" - ") + settings.nameDevice) : ""));
 }
 //--------------------------------------------------------------------
+void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, boolean al = false) {
+  String _id_str;
+  _id_str.reserve(30);
+  //_id_str = F("alert");
+  _id_str = id;
+
+  GP.POPUP_BEGIN(_id_str, "350px");
+  GP.BLOCK_BEGIN(GP_THIN, "", title, UI_BLOCK_COLOR);
+  GP.SPAN(desc, GP_LEFT, _id_str + "Desc", UI_LABEL_COLOR);
+  GP.BOX_BEGIN(GP_RIGHT);
+  GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", GP_GREEN, "60px");
+  if (!al) GP.BUTTON_MICRO(_id_str + "Cancel", "Отмена", "", GP_RED, "90px");
+  GP.BOX_END();
+  GP.BLOCK_END();
+  GP.POPUP_END();
+
+  GP.POPUP_CLOSE(_id_str + "Cancel," + _id_str + "Ok");
+}
+//--------------------------------------------------------------------
 void build(void) {
   GP.PAGE_ZOOM("90%", "370px");
-  
+
   GP.BUILD_BEGIN(GP_DEFAULT_THEME);
   GP.PAGE_BLOCK_BEGIN(500);
 
@@ -220,7 +239,7 @@ void build(void) {
       GP.UPDATE("syncUpdate,syncWarn", 300);
     }
     GP.HR(UI_LINE_COLOR);
-    GP.CENTER_BOX_BEGIN();
+    GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.BLOCK_END();
@@ -238,7 +257,7 @@ void build(void) {
     GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(HW_VERSION, HEX));
     if (otaUpdate) {
       GP.HR(UI_LINE_COLOR);
-      GP.CENTER_BOX_BEGIN();
+      GP.BOX_BEGIN(GP_CENTER);
       GP.BUTTON_MINI_LINK("/ota_update", LANG_PAGE_COMPATIBILITY_UPDATE, UI_BUTTON_COLOR);
       GP.BOX_END();
     }
@@ -255,7 +274,7 @@ void build(void) {
     GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "syncWarn", GP_RED); //описание
     GP.HR(UI_LINE_COLOR);
-    GP.CENTER_BOX_BEGIN();
+    GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.UPDATE("syncReboot,syncWarn");
@@ -286,10 +305,12 @@ void build(void) {
 
 
     //ссылки часов
-    GP.UI_LINKS_BEGIN(WiFi.localIP().toString());
+    GP.UI_LINKS_BEGIN("extGroup");
     GP.HR(UI_MENU_LINE_COLOR, 6);
     GP.UI_LINKS_BLOCK();
-    GP.UI_LINKS_END(groupGetList());
+    GP.UI_LINKS_END();
+
+    GP.UI_LINKS_SEND("extGroup", groupGetList());
 
     GP.HR(UI_MENU_LINE_COLOR, 6);
 
@@ -1140,12 +1161,15 @@ void build(void) {
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
-      GP.CONFIRM("extReset", LANG_PAGE_INFO_WARN_RESET);
-      GP.CONFIRM("extReboot", LANG_PAGE_INFO_WARN_REBOOT);
+      PAGE_ALERT_BLOCK("extReset", "Сброс настроек", LANG_PAGE_INFO_WARN_RESET);
+      PAGE_ALERT_BLOCK("extReboot", "Перезагрузка", LANG_PAGE_INFO_WARN_REBOOT);
+
+      //GP.CONFIRM("extReset", LANG_PAGE_INFO_WARN_RESET);
+      //GP.CONFIRM("extReboot", LANG_PAGE_INFO_WARN_REBOOT);
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extReset,extReboot,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extResetOk,extRebootOk,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
       PAGE_TITLE_NAME(LANG_PAGE_NETWORK_TITLE);
@@ -1239,15 +1263,14 @@ void build(void) {
     wirelessResetFoundState();
 
     updateList += F(",extGroup,extReload,extFound");
-    GP.EVAL("extGroup");
+
     GP.RELOAD("extReload");
-    
     GP.CONFIRM("extFound");
 
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
   }
-  
+
   GP.PAGE_BLOCK_END();
   GP.BUILD_END();
 }
@@ -1279,7 +1302,7 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
     }
   }
   GP.HR(UI_LINE_COLOR);
-  GP.CENTER_BOX_BEGIN();
+  GP.BOX_BEGIN(GP_CENTER);
   GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_GUI_HOME, UI_BUTTON_COLOR);
   GP.BOX_END();
   GP.BLOCK_END();
@@ -1736,19 +1759,6 @@ void action() {
         }
         memorySaveSettings(); //обновить данные в памяти
       }
-      if (ui.click("extReset")) {
-        if (ui.getBool("extReset")) {
-          resetMainSettings(); //устанавливаем настройки по умолчанию
-          memoryWriteSettings(); //записать данные в память
-          busRebootDevice(DEVICE_RESET);
-        }
-      }
-      if (ui.click("extReboot")) {
-        if (ui.getBool("extReboot")) {
-          memoryWriteSettings(); //записать данные в память
-          busRebootDevice(DEVICE_REBOOT);
-        }
-      }
 
       if (ui.click("extFound")) {
         if (ui.getBool("extFound")) {
@@ -1766,6 +1776,16 @@ void action() {
       }
       if (ui.click("extScan")) {
         if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
+      }
+
+      if (ui.click("extResetOk")) {
+        resetMainSettings(); //устанавливаем настройки по умолчанию
+        memoryWriteSettings(); //записать данные в память
+        busRebootDevice(DEVICE_RESET);
+      }
+      if (ui.click("extRebootOk")) {
+        memoryWriteSettings(); //записать данные в память
+        busRebootDevice(DEVICE_REBOOT);
       }
     }
     //--------------------------------------------------------------------
@@ -2048,7 +2068,7 @@ void action() {
       }
 
       if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
-        ui.answer(getUiLinksUpdate(groupGetList()));
+        ui.answer(groupGetList());
       }
       if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
         ui.answer(1);

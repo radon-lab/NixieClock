@@ -41,7 +41,6 @@ select:disabled{filter:brightness(0.6);cursor:default;}
 textarea{text-align:left;resize:none;overflow:hidden;max-width:100%;width:100%;box-sizing:unset;}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:white;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
-//input[type=button],button{display:flex;align-items:center;justify-content:center;}
 input[type=submit]:active,input[type=button]:active,button:active{box-shadow:inset 0px 1px 6px #0007;}
 input:focus,select,textarea:focus{outline:none;}
 .led{margin:9px 10px;}
@@ -53,8 +52,8 @@ input:focus,select,textarea:focus{outline:none;}
 .ledn:after{width:20px;height:20px;border-radius:10px;top:-4px;left:-3px;position:relative;content:'';display:inline-block;background-color:#d00;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #f00;}
 .ledn:checked:after{background-color: #3c0;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #4d0;}
 .ledc{width:20px;height:20px;border-radius:10px;display:inline-block;margin-bottom:-3px;background-color:#333;box-shadow:inset 0px 0px 5px 2px #0000005c;}
-.microButton{padding:1px 7px;min-height:30px;height:auto;font-size:15px;width:auto;}
-.miniButton{padding:1px 7px;min-height:40px;height:auto;font-size:20px;width:auto;}
+.microButton.microButton{padding:1px 7px;min-height:30px;height:auto;font-size:15px;width:auto;}
+.miniButton.miniButton{padding:1px 7px;min-height:40px;height:auto;font-size:20px;width:auto;}
 .areaButton{padding:1px 7px;min-height:30px;height:auto;width:auto;border-radius:8px;}
 .areaText.areaText{max-width:100%;text-align:left;height:30px;}
 .switch{margin:10px 2px 5px 2px;position:relative;display:inline-block;width:60px;height:34px}
@@ -148,6 +147,6 @@ input[type=number]{-moz-appearance:textfield;}
 .rad:checked:after{background-color:#37a93c;}
 .radBlock{width:70px;height:30px;margin:5px 12px 14px 2px;}
 .radLable{position:relative;top:-33px;left:5px;cursor:pointer;color:#fff;}
-.popup{z-index:100;position:fixed;width:100%;height:100%;display:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
+.popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
 )";

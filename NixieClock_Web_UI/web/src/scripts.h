@@ -55,12 +55,14 @@ case'_reload':if(resp=='1')location.reload();break;
 case'_alert':alert(val);if(_clkRelList.includes(item.id))location.reload();break;
 case'_prompt':{let res=prompt(item.value,resp);if(res)EVsend('/GP_click?'+item.id+'='+res,_clkRelList.includes(item.id));}break;
 case'_confirm':{let res=confirm(val);EVsend('/GP_click?'+item.id+'='+(res?'1':'0'),res?_clkRelList.includes(item.id):0);}break;
-case'_popup':if(resp=='1')popupOpen(item.value);else if(resp=='-1')popupClose();break;
 case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
-case undefined:item.innerHTML=resp;break;
+case undefined:switch(item.title){
+case'_popup':if(resp=='1')popupOpen(item.innerHTML);else if(resp=='-1')popupClose();break;
+case'_link':linkUpdate(item.id,resp);break;
+default:item.innerHTML=resp;break;}break;
 default:item.value=resp;break;}
 switch(item.type){
 case'range':EVchange(item);break;
@@ -87,4 +89,7 @@ function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.lengt
 function logScroll(id){id.scrollTop=id.scrollHeight;}
 function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.style.backdropFilter='blur(0)';setTimeout(function(){el.style.display='none';document.body.style.overflow=null;},300);}}
 function popupOpen(val){let el=getEl('_popup');if(el.style.display=='none'||!el.style.display){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},5);}}
+function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
+block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
+let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
 )";
