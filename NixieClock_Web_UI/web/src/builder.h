@@ -224,7 +224,8 @@ struct Builder {
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
-               "id='onlImg' fill='#f00' style='transition-duration:0.5s'></path></svg></div>\n");
+               "id='onlImg' fill='#f00' style='transition-duration:0.5s'></path></svg></div>\n"
+               "<div title='_popup' id='loadBlock' style='display:none'><div class='popupBlock'><div class='loadBlock'></div></div></div>\n");
   }
 
   void THEME(PGM_P style) {
@@ -1010,8 +1011,12 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' name='");
     *_GPP += name;
+#ifndef GP_NO_PRESS
     *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' "
                "ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)' onclick='EVclick(this)'>");
+#else
+    *_GPP += F("' onclick='EVclick(this)'>");
+#endif
     *_GPP += icon;
     *_GPP += F("</div>");
   }
@@ -1250,9 +1255,9 @@ struct Builder {
     }
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("_inp' type='file' onchange='EVsubmId(\"");
+    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getEl('loadBlock').innerHTML);setTimeout(popupClose,30000);EVsubmId('");
     *_GPP += name;
-    *_GPP += F("_form\")'/></div>\n"
+    *_GPP += F("_form');\"/></div>\n"
                "</form></div>\n");
     send();
   }
@@ -1557,16 +1562,20 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
+#ifndef GP_NO_PRESS
     *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' ");
-    if (!dis) *_GPP += F("ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)' ");
+    if (!dis) *_GPP += F("ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)");
+#endif
     if (tar.length()) {
-      *_GPP += F("onclick=\"EVclickId('");
+      *_GPP += F("' onclick=\"EVclickId('");
       *_GPP += name;
       *_GPP += F("','");
       *_GPP += tar;
-      *_GPP += F("')\"");
+      *_GPP += F("',");
+      *_GPP += rel;
+      *_GPP += F(")\"");
     } else {
-      *_GPP += F("onclick='EVclick(this,");
+      *_GPP += F("' onclick='EVclick(this,");
       *_GPP += rel;
       *_GPP += F(")'");
     }

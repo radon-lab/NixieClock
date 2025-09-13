@@ -23,7 +23,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 .blockTab{padding-top:0px;}
 .blockHeader{color:#000;font-size:22px;border-radius:10px 10px 0px 0px;background-color:#4caf50;text-align:left;padding:4px 0 0 25px;margin:0px -11px 10px -11px;}
 .thinBlock{background:#13161a;border:2px solid #3c4048;}
-.thinText{padding:0px 7px;background:linear-gradient(0deg,#13161a 0,#13161a 54%,#13161a94 55%,#00000000 60%);font-size:20px;}
+.thinText{padding:0px 7px;white-space:nowrap;background:linear-gradient(0deg,#13161a 0,#13161a 54%,#13161a94 55%,#00000000 60%);font-size:20px;}
 .thinTab{background:none;border:none;color:#9c9ea1;margin-top:-17px;margin-bottom:5px;display:block;}
 .inliner{display:flex;flex-direction:row;align-content:center;flex-wrap:nowrap;align-items:center;width:100%;}
 input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],select,textarea{
@@ -149,4 +149,6 @@ input[type=number]{-moz-appearance:textfield;}
 .radLable{position:relative;top:-33px;left:5px;cursor:pointer;color:#fff;}
 .popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
+.loadBlock{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:load 1s infinite linear;}
+@keyframes load{from{transform:rotate(0deg);}to{transform:rotate(360deg);}
 )";

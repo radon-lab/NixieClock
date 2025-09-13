@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_010 релиз от 13.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_011 релиз от 13.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -29,6 +29,7 @@
 
 #define GP_NO_DNS
 #define GP_NO_MDNS
+#define GP_NO_PRESS
 
 #include <LittleFS.h>
 #include "web/src/GyverPortalMod.h"
@@ -40,7 +41,6 @@ GyverPortalMod ui(&LittleFS);
 GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
 
-char passEnterData[8]; //буфер ввода пароля
 uint8_t passState = 0; //флаг состояния ввода пароля
 uint32_t passTimer = 0; //таймер ожидания пароля
 
@@ -742,9 +742,9 @@ void build(void) {
         GP.HINT("hint4", LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY); //всплывающая подсказка
       for (uint8_t i = 0; i < 5; i++) {
       M_BOX(GP_JUSTIFY, "100%;height:60px",
-        M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
-        GP.SPINNER(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
-      );
+            M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
+            GP.SPINNER(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
+           );
       }
       GP.BLOCK_END();
 
@@ -1348,7 +1348,7 @@ void webShowUpdateUI(void) {
 void webShowUpdateAuth(void) {
   GP.HR_TEXT(LANG_PAGE_UPDATE_HR_AUTH, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
   if (!passGetWriteTimeout()) {
-    M_BOX(GP_CENTER, GP.PASS_EYE("otaPass", LANG_PAGE_UPDATE_GUI_PASS, passEnterData, 8); GP.BUTTON_MINI("otaCheck", LANG_PAGE_UPDATE_GUI_LOGIN, "", UI_BUTTON_COLOR, "200px!important", false, true););
+    M_BOX(GP_CENTER, GP.PASS_EYE("extOtaPass", LANG_PAGE_UPDATE_GUI_PASS, "", 8); GP.BUTTON_MINI("extOtaCheck", LANG_PAGE_UPDATE_GUI_LOGIN, "extOtaPass", UI_BUTTON_COLOR, "200px!important", false, true););
     if (passGetCheckError()) GP.SPAN(LANG_PAGE_UPDATE_WARN_PASS, GP_CENTER, "", GP_RED); //описание
     else GP.SPAN(LANG_PAGE_UPDATE_INFO_AUTH, GP_CENTER, "", GP_YELLOW); //описание
   }
@@ -1779,6 +1779,10 @@ void action() {
         if (wifiGetScanAllowStatus()) wifiStartScanNetworks(); //начинаем поиск
       }
 
+      if (ui.click("extOtaCheck")) {
+        passCheckAttempt(ui.getString("extOtaCheck"));
+      }
+
       if (ui.click("extResetOk")) {
         resetMainSettings(); //устанавливаем настройки по умолчанию
         memoryWriteSettings(); //записать данные в память
@@ -1787,15 +1791,6 @@ void action() {
       if (ui.click("extRebootOk")) {
         memoryWriteSettings(); //записать данные в память
         busRebootDevice(DEVICE_REBOOT);
-      }
-    }
-    //--------------------------------------------------------------------
-    if (ui.clickSub("ota")) {
-      if (ui.click("otaPass")) {
-        ui.copyStr(passEnterData, sizeof(passEnterData));
-      }
-      if (ui.click("otaCheck")) {
-        passCheckAttempt();
       }
     }
     //--------------------------------------------------------------------
@@ -2254,12 +2249,11 @@ void passSetOtaState(void) {
   passState = 0xFC;
 }
 //--------------------------------------------------------------------
-void passCheckAttempt(void) {
+void passCheckAttempt(const String& pass) {
   static uint8_t attempt = 0;
 
   if (((millis() - passTimer) >= OTA_PASS_TIMEOUT) || (attempt < OTA_PASS_ATTEMPT)) {
-    if (strncmp(passEnterData, OTA_PASS, sizeof(passEnterData))) {
-      memset(passEnterData, '\0', sizeof(passEnterData));
+    if (pass.compareTo(OTA_PASS)) {
       if (attempt++ >= OTA_PASS_ATTEMPT) attempt = 0;
       else if (attempt == OTA_PASS_ATTEMPT) passState = 0x03;
       else passState = 0x01;

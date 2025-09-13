@@ -25,7 +25,7 @@ if(_clkRelList.includes(arg.name))r=1;
 if(_clkCloseList.includes(arg.name))popupClose();
 EVsend('/GP_click?'+arg.name+'='+encodeURIComponent(v),r);
 if(_clkUpdList){for(var key in _clkUpdList){if(key.includes(arg.name))EVupdate(_clkUpdList[key]);}}}
-function EVclickId(btn,tar){EVsend('/GP_click?'+btn+'='+encodeURIComponent(getEl(tar).value));}
+function EVclickId(btn,tar,r){EVsend('/GP_click?'+btn+'='+encodeURIComponent(getEl(tar).value),r);}
 function EVchange(arg){arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';
 const _output=getEl(arg.id+'_val');const _range=_output.name.split(',');if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}
 else if((arg.value>=Number(arg.max))&&_range[1]){_output.value=_range[1];}else _output.value=arg.value;}
