@@ -678,6 +678,13 @@ struct Builder {
   void VOID_BOX_BEGIN() {
     SEND(F("<div>\n"));
   }
+  void VOID_BOX(const String& w) {
+    if (w.length()) {
+      *_GPP += F("<div style='width:");
+      *_GPP += w;
+      *_GPP += F("'></div>\n");
+    }
+  }
   void BOX_END() {
     SEND(F("</div>\n"));
   }
@@ -775,7 +782,7 @@ struct Builder {
     if (bold) *_GPP += F("font-weight:bold;");
     if (wrap) *_GPP += F("white-space:normal;");
     if (width) {
-      *_GPP += F("min-width:");
+      *_GPP += F("width:");
       *_GPP += width;
       *_GPP += F("px;");
     }
@@ -2033,15 +2040,6 @@ struct Builder {
     SPINNER_BTN(name, step, st, dec, dis);
     *_GPP += F("</div>\n");
     send();
-  }
-  void SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
-  }
-  void SPINNER_LEFT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-left:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
-  }
-  void SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-right:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
   }
 
   void COLOR(const String& name, uint32_t value = 0, bool dis = false) {

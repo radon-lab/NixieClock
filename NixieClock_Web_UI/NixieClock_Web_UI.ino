@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_009 релиз от 12.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_010 релиз от 13.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -52,8 +52,6 @@ boolean climateLocal = false; //флаг локальных скриптов г�
 boolean alarmSvgImage = false; //флаг локальных изображений будильника
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
-
-boolean failureWarn = true; //флаг отображения предупреждения об сбоях
 
 uint8_t timeState = 0; //флаг состояния актуальности времени
 
@@ -200,7 +198,7 @@ void PAGE_TITLE_NAME(const String& title) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.nameDevice + String(" - ")) : "") + title + ((settings.namePostfix) ? (String(" - ") + settings.nameDevice) : ""));
 }
 //--------------------------------------------------------------------
-void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, boolean al = false) {
+void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean al = false) {
   String _id_str;
   _id_str.reserve(30);
   //_id_str = F("alert");
@@ -208,7 +206,8 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
 
   GP.POPUP_BEGIN(_id_str, "350px");
   GP.BLOCK_BEGIN(GP_THIN, "", title, UI_BLOCK_COLOR);
-  GP.SPAN(desc, GP_LEFT, _id_str + "Desc", UI_LABEL_COLOR);
+  GP.SPAN(desc, GP_LEFT, "", UI_LABEL_COLOR);
+  if (sign.length()) GP.SPAN(sign, GP_LEFT, _id_str + "Text", GP_RED, 13);
   GP.BOX_BEGIN(GP_RIGHT);
   GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", GP_GREEN, "60px");
   if (!al) GP.BUTTON_MICRO(_id_str + "Cancel", "Отмена", "", GP_RED, "90px");
@@ -421,7 +420,7 @@ void build(void) {
           M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SYNC, "", UI_LABEL_COLOR); GP.SWITCH("syncAuto", settings.ntpSync, UI_SWITCH_COLOR, !ntpGetRunStatus()););
           M_BOX(GP.LABEL(LANG_PAGE_HOME_GUI_SUMMER, "", UI_LABEL_COLOR); GP.SWITCH("syncDst", settings.ntpDst, UI_SWITCH_COLOR, !ntpGetRunStatus()););
           GP.HR(UI_LINE_COLOR);
-          GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? LANG_PAGE_HOME_GUI_TIME_DEVICE : LANG_PAGE_HOME_GUI_TIME_SERVER, "", UI_BUTTON_COLOR, "90%;margin-top:10px");
+          M_BOX(GP_CENTER, "100%;height:96px", GP.BUTTON("syncTime", (ntpGetStatus() != NTP_SYNCED) ? LANG_PAGE_HOME_GUI_TIME_DEVICE : LANG_PAGE_HOME_GUI_TIME_SERVER, "", UI_BUTTON_COLOR, "90%"););
           GP.BLOCK_END();
 
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_HOME_BLOCK_EFFECTS, UI_BLOCK_COLOR);
@@ -736,15 +735,15 @@ void build(void) {
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SHOW, UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE, "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER_MID("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT, "", UI_LABEL_COLOR); GP.SELECT("mainAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_DISPLAY, UI_LINE_COLOR, UI_HINT_COLOR, "hint4");
         GP.HINT("hint4", LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY); //всплывающая подсказка
       for (uint8_t i = 0; i < 5; i++) {
-      M_BOX(
+      M_BOX(GP_JUSTIFY, "100%;height:60px",
         M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
-        GP.SPINNER_MID(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
+        GP.SPINNER(String("extShowTime/") + i, extendedSettings.autoShowTimes[i], 1, 5, 1, 0, UI_SPINNER_COLOR);
       );
       }
       GP.BLOCK_END();
@@ -761,26 +760,28 @@ void build(void) {
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR, "hint1");
       GP.HINT("hint1", lightHint); //всплывающая подсказка
       M_BOX(GP_CENTER,
-            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER_LEFT("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
-            GP.SPINNER_RIGHT("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
+            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
+            GP.VOID_BOX("20px");
+            GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SLEEP, UI_LINE_COLOR, UI_HINT_COLOR, "hint2");
       GP.HINT("hint2", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
       M_BOX(GP_CENTER,
-            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER_LEFT("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
-            GP.SPINNER_RIGHT("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52);
+            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
+            GP.VOID_BOX("20px");
+            GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52);
            );
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BURN, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER_MID("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_METHOD, "", UI_LABEL_COLOR); GP.SELECT("mainBurnFlip", LANG_PAGE_SETTINGS_GUI_BURN_MODE, mainSettings.burnMode););
       GP.BLOCK_END();
       );
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_BRIGHT, UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
+        M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -809,8 +810,9 @@ void build(void) {
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_HOUR, UI_LINE_COLOR, UI_HINT_COLOR, "hint3");
         GP.HINT("hint3", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
         M_BOX(GP_CENTER,
-              GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER_LEFT("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
-              GP.SPINNER_RIGHT("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
+              GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
+              GP.VOID_BOX("20px");
+              GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
              );
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -819,12 +821,12 @@ void build(void) {
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_ALARM, UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_AUTO_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_AUTO_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_ADD, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_REPEAT_MINS, "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SOUND_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER_MID("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_REPEAT_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SOUND_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_INDI, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -841,7 +843,7 @@ void build(void) {
         );
         M_BOX(
           GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR);
-          GP.SPINNER_MID("climateTime", (settings.climateChart == SENS_WIRELESS) ? wirelessGetInterval() : settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR, "", (boolean)(settings.climateChart == SENS_WIRELESS));
+          GP.SPINNER("climateTime", (settings.climateChart == SENS_WIRELESS) ? wirelessGetInterval() : settings.climateTime, 1, 60, 1, 0, UI_SPINNER_COLOR, "", (boolean)(settings.climateChart == SENS_WIRELESS));
         );
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_DISPLAY, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -860,7 +862,7 @@ void build(void) {
         );
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_CORRECT, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP_C, "", UI_LABEL_COLOR); GP.SPINNER_MID("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP_C, "", UI_LABEL_COLOR); GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_CORRECT, "", UI_LABEL_COLOR); GP.SELECT("climateCorrectType", LANG_PAGE_SETTINGS_GUI_SENS_NULL + climateGetSendDataList(), extendedSettings.tempCorrectSensor););
         GP.BLOCK_END();
       );
@@ -869,7 +871,7 @@ void build(void) {
       updateList += F(",climateReload");
       GP.RELOAD("climateReload");
 
-      GP.CONFIRM("climateWarn", LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE);
+      PAGE_ALERT_BLOCK("climateWarn", "Сброс статистики", LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE);
       GP.UPDATE_CLICK("climateWarn", "climateChart");
     }
     else if (ui.uri("/climate")) { //микроклимат
@@ -1164,9 +1166,6 @@ void build(void) {
       PAGE_ALERT_BLOCK("extReset", "Сброс настроек", LANG_PAGE_INFO_WARN_RESET);
       PAGE_ALERT_BLOCK("extReboot", "Перезагрузка", LANG_PAGE_INFO_WARN_REBOOT);
 
-      //GP.CONFIRM("extReset", LANG_PAGE_INFO_WARN_RESET);
-      //GP.CONFIRM("extReboot", LANG_PAGE_INFO_WARN_REBOOT);
-
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
       GP.RELOAD_CLICK(String("extResetOk,extRebootOk,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
@@ -1255,9 +1254,11 @@ void build(void) {
       GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
     }
 
+    static boolean failureWarn = true; //флаг отображения предупреждения об сбоях
     if (!(device.failure & 0x8000) && device.failure && failureWarn) {
-      updateList += F(",mainFailWarn");
-      GP.ALERT("mainFailWarn", LANG_FAIL_WARN);
+      failureWarn = false;
+      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_WARN_TITLE, LANG_FAIL_WARN_1, LANG_FAIL_WARN_2, true);
+      GP.POPUP_OPEN("mainFailWarn");
     }
 
     wirelessResetFoundState();
@@ -1882,8 +1883,8 @@ void action() {
         memorySaveSettings(); //обновить данные в памяти
       }
 
-      if (ui.click("climateWarn")) {
-        if (ui.getBool("climateWarn")) {
+      if (ui.clickSub("climateWarn")) {
+        if (ui.click("climateWarnOk")) {
           settings.climateChart = sensorChart;
           climateUpdate(CLIMATE_RESET);
           memorySaveSettings(); //обновить данные в памяти
@@ -2052,10 +2053,6 @@ void action() {
       if (ui.update("mainReload") && (alarm.reload >= 2)) { //если было обновление
         ui.answer(1);
         alarm.reload = 0;
-      }
-      if (ui.update("mainFailWarn") && (failureWarn == true)) { //если было обновление
-        ui.answer(1);
-        failureWarn = false;
       }
     }
     //--------------------------------------------------------------------

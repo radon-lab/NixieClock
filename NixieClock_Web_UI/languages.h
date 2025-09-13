@@ -497,7 +497,9 @@
 #define LANG_PAGE_NETWORK_GUI_LON "Долгота"
 
 //-------------------------------------------------------//
-#define LANG_FAIL_WARN "Внимание! Обнаружен сбой при запуске устройства!\nПодробнее во вкладке - Об устройстве."
+#define LANG_FAIL_WARN_TITLE "Предупреждение"
+#define LANG_FAIL_WARN_1 "Обнаружен сбой при запуске устройства!"
+#define LANG_FAIL_WARN_2 "Подробнее во вкладке - Об устройстве."
 
 #define LANG_FAIL_DATA_1 "Нет связи с RTC"
 #define LANG_FAIL_DATA_2 "Батарея RTC разряжена"
@@ -1016,7 +1018,9 @@
 #define LANG_PAGE_NETWORK_GUI_LON "Longitude"
 
 //-------------------------------------------------------//
-#define LANG_FAIL_WARN "Warning! Device startup failure detected!\nMore details in the tab - About the device."
+#define LANG_FAIL_WARN_TITLE "Warning"
+#define LANG_FAIL_WARN_1 "Device startup failure detected!"
+#define LANG_FAIL_WARN_2 "More details in the tab - About the device."
 
 #define LANG_FAIL_DATA_1 "No connection with RTC"
 #define LANG_FAIL_DATA_2 "RTC battery is low"
