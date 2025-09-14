@@ -1808,7 +1808,7 @@ struct Builder {
     *_GPP += value;
     *_GPP += F("' style='width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='EVclick(this)'");
+    *_GPP += '\'';
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");

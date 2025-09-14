@@ -107,4 +107,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.9_011" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9_012" //версия прошивки модуля esp

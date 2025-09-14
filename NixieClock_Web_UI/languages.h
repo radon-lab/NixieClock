@@ -31,7 +31,7 @@
 #define LANG_WIRELESS_STATUS_4 "Потеряна связь..."
 #define LANG_WIRELESS_STATUS_5 "Нет сенсора..."
 
-#define LANG_WIRELESS_FOUND "Обнаружен беспроводной датчик температуры, подключить?\nUID: "
+#define LANG_WIRELESS_FOUND "Обнаружен беспроводной датчик температуры, подключить?"
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "Отсутствует подключение к сети"
@@ -552,7 +552,7 @@
 #define LANG_WIRELESS_STATUS_4 "Connection lost..."
 #define LANG_WIRELESS_STATUS_5 "No sensor..."
 
-#define LANG_WIRELESS_FOUND "Wireless temperature sensor detected, connect?\nUID: "
+#define LANG_WIRELESS_FOUND "Wireless temperature sensor detected, connect?"
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "No network connection"

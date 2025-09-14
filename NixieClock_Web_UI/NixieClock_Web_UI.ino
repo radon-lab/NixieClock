@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_011 релиз от 13.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_012 релиз от 14.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -198,10 +198,9 @@ void PAGE_TITLE_NAME(const String& title) {
   GP.PAGE_TITLE(((settings.namePrefix) ? (settings.nameDevice + String(" - ")) : "") + title + ((settings.namePostfix) ? (String(" - ") + settings.nameDevice) : ""));
 }
 //--------------------------------------------------------------------
-void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean al = false) {
+void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean rl = false, boolean al = false) {
   String _id_str;
   _id_str.reserve(30);
-  //_id_str = F("alert");
   _id_str = id;
 
   GP.POPUP_BEGIN(_id_str, "350px");
@@ -209,8 +208,11 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
   GP.SPAN(desc, GP_LEFT, "", UI_LABEL_COLOR);
   if (sign.length()) GP.SPAN(sign, GP_LEFT, _id_str + "Text", GP_RED, 13);
   GP.BOX_BEGIN(GP_RIGHT);
-  GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", GP_GREEN, "60px");
-  if (!al) GP.BUTTON_MICRO(_id_str + "Cancel", "Отмена", "", GP_RED, "90px");
+  if (!al) {
+    GP.BUTTON_MICRO(_id_str + "Ok", "Да", "", GP_GREEN, "60px", false, true);
+    GP.BUTTON_MICRO(_id_str + "Cancel", "Нет", "", GP_RED, "90px", false, rl);
+  }
+  else GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", UI_BUTTON_COLOR, "60px");
   GP.BOX_END();
   GP.BLOCK_END();
   GP.POPUP_END();
@@ -868,10 +870,7 @@ void build(void) {
       );
       GP.NAV_BLOCK_END();
 
-      updateList += F(",climateReload");
-      GP.RELOAD("climateReload");
-
-      PAGE_ALERT_BLOCK("climateWarn", "Сброс статистики", LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE);
+      PAGE_ALERT_BLOCK("climateWarn", "Сброс статистики", LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE, "", true);
       GP.UPDATE_CLICK("climateWarn", "climateChart");
     }
     else if (ui.uri("/climate")) { //микроклимат
@@ -1168,7 +1167,7 @@ void build(void) {
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extResetOk,extRebootOk,extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
       PAGE_TITLE_NAME(LANG_PAGE_NETWORK_TITLE);
@@ -1257,16 +1256,14 @@ void build(void) {
     static boolean failureWarn = true; //флаг отображения предупреждения об сбоях
     if (!(device.failure & 0x8000) && device.failure && failureWarn) {
       failureWarn = false;
-      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_WARN_TITLE, LANG_FAIL_WARN_1, LANG_FAIL_WARN_2, true);
+      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_WARN_TITLE, LANG_FAIL_WARN_1, LANG_FAIL_WARN_2, false, true);
       GP.POPUP_OPEN("mainFailWarn");
     }
 
+    updateList += F(",extGroup,extFound,extFoundText");
+
     wirelessResetFoundState();
-
-    updateList += F(",extGroup,extReload,extFound");
-
-    GP.RELOAD("extReload");
-    GP.CONFIRM("extFound");
+    PAGE_ALERT_BLOCK("extFound", "Оповещение", LANG_WIRELESS_FOUND, "UID: 00:00:00:00:00:00");
 
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
@@ -1761,8 +1758,8 @@ void action() {
         memorySaveSettings(); //обновить данные в памяти
       }
 
-      if (ui.click("extFound")) {
-        if (ui.getBool("extFound")) {
+      if (ui.clickSub("extFound")) {
+        if (ui.click("extFoundOk")) {
           wirelessSetNewId();
           wirelessSetData(wireless_found_buffer);
           memorySaveSettings(); //обновить данные в памяти
@@ -1884,7 +1881,7 @@ void action() {
           climateUpdate(CLIMATE_RESET);
           memorySaveSettings(); //обновить данные в памяти
         }
-        sensorChart = SENS_MAX_DATA;
+        sensorChart = 0;
       }
     }
     //--------------------------------------------------------------------
@@ -2062,21 +2059,18 @@ void action() {
       if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
         ui.answer(groupGetList());
       }
-      if (ui.update("extReload") && wirelessGetFoundSuccessState()) { //если было обновление
+
+      if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
         ui.answer(1);
       }
-      if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
-        ui.answer(LANG_WIRELESS_FOUND + wirelessGetId(wireless_found_buffer));
+      if (ui.update("extFoundText") && wirelessGetFoundState()) { //если было обновление
+        ui.answer("UID: " + wirelessGetId(wireless_found_buffer));
       }
     }
     //--------------------------------------------------------------------
     if (ui.updateSub("climate")) {
       if (ui.update("climateWarn")) { //если было обновление
         ui.answer(1);
-      }
-      if (ui.update("climateReload") && (sensorChart >= SENS_MAX_DATA)) { //если было обновление
-        ui.answer(1);
-        sensorChart = 0;
       }
     }
     //--------------------------------------------------------------------
