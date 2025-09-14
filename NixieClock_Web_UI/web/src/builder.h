@@ -919,11 +919,11 @@ struct Builder {
     *_GPP += max;
     *_GPP += F("' step='");
     *_GPP += step;
-    *_GPP += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
+    *_GPP += F("' class='lineBar' style='background-image:linear-gradient(");
     *_GPP += FPSTR(st);
     *_GPP += ',';
     *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='EVchange(this)' disabled>\n");
+    *_GPP += F(");background-size:0% 100%' onload='EVchange(this)' disabled>\n");
 
     *_GPP += F("<output style='display:none' id='");
     *_GPP += name;
@@ -1964,7 +1964,7 @@ struct Builder {
     *_GPP += F(" onload='EVchange(this)' ");
     if (oninp) *_GPP += F("oninput='EVchange(this);EVclick(this)'");
     else *_GPP += F("onchange='EVclick(this)' oninput='EVchange(this)'");
-    *_GPP += F(" onmousewheel='EVwheel(this);EVchange(this);EVclick(this)' ");
+    *_GPP += ' ';
     if (dis) *_GPP += F("disabled");
     *_GPP += ">\n";
     *_GPP += F("<output align='center' id='");

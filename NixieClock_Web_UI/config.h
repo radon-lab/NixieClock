@@ -81,7 +81,7 @@
 
 #define UI_RADIO_POWER_1_COLOR GP_RED //цвет выключенной кнопки питания радио
 #define UI_RADIO_POWER_2_COLOR GP_GREEN //цвет включеной переключателя питания радио
-#define UI_RADIO_BACK_COLOR "#e67b09" //цвет кнопки переключения режима радио
+#define UI_RADIO_BACK_COLOR "#bf531e" //цвет кнопки переключения режима радио
 #define UI_RADIO_VOL_COLOR "#e67b09" //цвет слайдера настройки громкости радио
 #define UI_RADIO_FREQ_1_COLOR "#e67b09" //цвет слайдера настройки частоты радио
 #define UI_RADIO_FREQ_2_COLOR "#e67b09" //цвет кнопок настройки частоты радио
@@ -107,4 +107,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.9_012" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9_013" //версия прошивки модуля esp

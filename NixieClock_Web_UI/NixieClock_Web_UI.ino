@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_012 релиз от 14.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_013 релиз от 14.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -472,6 +472,7 @@ void build(void) {
 
           GP.SEND(F("<style>#alarmMode{width:100%}</style>\n"));
 
+          GP.BREAK();
           M_BOX(GP_CENTER,
                 M_BOX(GP_RIGHT,
                       GP.NUMBER_C("alarmTimeH", LANG_PAGE_HOME_GUI_HOUR, alarm_data[alarm.now][ALARM_DATA_HOUR], 0, 23, "92px", "alarmTimeM");
@@ -480,7 +481,6 @@ void build(void) {
                      );
                 M_BOX(GP_LEFT, GP.SELECT("alarmMode", LANG_PAGE_ALARM_GUI_MODE, alarm_data[alarm.now][ALARM_DATA_MODE]););
                );
-          GP.BREAK();
 
           GP.HR_TEXT(LANG_PAGE_ALARM_GUI_DAYS, UI_LINE_COLOR, UI_HINT_COLOR);
           GP.BLOCK_BEGIN(GP_DIV_RAW, "430px;margin:10px 0px");
@@ -527,8 +527,8 @@ void build(void) {
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP_CENTER,
-                GP.BUTTON_MINI("alarmBack", (alarm.set == 1) ? LANG_PAGE_ALARM_GUI_BACK : LANG_PAGE_ALARM_GUI_ADD, "", UI_ALARM_BACK_COLOR, "210px!important;margin-top:10px;margin-bottom:0", false, true);
-                GP.BUTTON_MINI("alarmDel", (alarm.all > 1) ? ((alarm.set == 1) ? LANG_PAGE_ALARM_GUI_DELETE : LANG_PAGE_ALARM_GUI_CANCEL) : LANG_PAGE_ALARM_GUI_DISABLE, "", (alarm.all > 1) ? UI_ALARM_DEL_COLOR : UI_ALARM_DIS_COLOR, "210px!important;margin-top:10px;margin-bottom:0", false, (boolean)(alarm.all <= 1));
+                GP.BUTTON_MINI("alarmBack", (alarm.set == 1) ? LANG_PAGE_ALARM_GUI_BACK : LANG_PAGE_ALARM_GUI_ADD, "", UI_ALARM_BACK_COLOR, "210px", false, true);
+                GP.BUTTON_MINI("alarmDel", (alarm.all > 1) ? ((alarm.set == 1) ? LANG_PAGE_ALARM_GUI_DELETE : LANG_PAGE_ALARM_GUI_CANCEL) : LANG_PAGE_ALARM_GUI_DISABLE, "", (alarm.all > 1) ? UI_ALARM_DEL_COLOR : UI_ALARM_DIS_COLOR, "210px", false, (boolean)(alarm.all <= 1));
                );
         }
         else { //иначе режим отображения
@@ -955,10 +955,8 @@ void build(void) {
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_HOURS, UI_BLOCK_COLOR);
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
-          if (i) {
-            GP.HR(UI_MENU_LINE_COLOR, 0);
-            GP.BREAK();
-          }
+          if (i) GP.HR(UI_MENU_LINE_COLOR, 0);
+          GP.BREAK();
           M_BOX(
             GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", GP_DEFAULT, 30);
             GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_BAR_TEMP_COLOR);
@@ -994,11 +992,8 @@ void build(void) {
       GP.BLOCK_END();
 
       if (radioSvgImage) {
-        GP.SEND("<style>#radioMode .i_mask{margin-left:5px;margin-right:4px;}\n"
-                "#radioFreqDown .i_mask{margin-left:0px;margin-right:3px;}\n"
-                "#radioFreqUp .i_mask{margin-left:3px;margin-right:0px;}</style>\n"
-               );
-        M_BOX(GP_CENTER,
+        GP.SEND("<style>.i_mask{margin:0;}#radioMode .i_mask{margin-right:4px;}</style>\n");
+        M_BOX(GP_JUSTIFY, "440px;height:70px",
               GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR);
               GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR);
               GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR);
@@ -1008,11 +1003,11 @@ void build(void) {
              );
       }
       else {
-        M_BOX(GP_CENTER,
-              GP.BUTTON("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy;white-space:nowrap;letter-spacing:-4px");
-              GP.BUTTON("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy");
-              GP.BUTTON("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy");
-              GP.BUTTON("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy;white-space:nowrap;letter-spacing:-4px");
+        M_BOX(GP_CENTER, "100%;margin-bottom:5px",
+              GP.BUTTON_MINI("radioSeekDown", "|◄◄", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy;white-space:nowrap;letter-spacing:-4px");
+              GP.BUTTON_MINI("radioFreqDown", "◄", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy");
+              GP.BUTTON_MINI("radioFreqUp", "►", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy");
+              GP.BUTTON_MINI("radioSeekUp", "►►|", "", UI_RADIO_FREQ_2_COLOR, "100px;font-family:fantasy;white-space:nowrap;letter-spacing:-4px");
              );
       }
       GP.BLOCK_END();

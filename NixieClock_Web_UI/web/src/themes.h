@@ -29,7 +29,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],select,textarea{
 width:90%;max-width:200px;border-radius:8px;padding:3px 10px;color:#bbb;border:none;background-color:#2a2d35;vertical-align:middle;position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
 input[type=color]{width:80px;height:40px;}
-input[type=range]:disabled{filter:brightness(0.6);}
+input[type=range]:disabled:disabled{filter:brightness(0.6);cursor:auto;}
 input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
@@ -60,9 +60,10 @@ input:focus,select,textarea:focus{outline:none;}
 .switch input{opacity:0;width:0;height:0}
 .slider{border-radius:34px;position:absolute;cursor:pointer;top:-5px;left:0;right:0;bottom:5px;background-color:#54545485;-webkit-transition:.1s;transition:.1s}
 .slider:before{border-radius:50%;position:absolute;content:'';height:26px;width:26px;left:4px;bottom:4px;background-color:#fff;-webkit-transition:.1s;transition:.1s}
-.slMaxInput.slMaxInput{height:34px;width:100%;max-width:430px;margin:8px 4px 10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);}
+.slMaxInput.slMaxInput{height:34px;width:100%;max-width:430px;margin:8px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);}
 .slMaxLable{color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none;}
 .slMaxValue{position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none;}
+.lineBar.lineBar{filter:none!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;}
 input:checked+.slider{background-color:#37a93c}
 input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}
 output{display:inline-block;font-size:14px;padding:2px 3px;border-radius:5px;color:#fff;min-width:50px;background:#37a93c;margin-right:5px;}
