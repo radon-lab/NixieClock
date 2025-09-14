@@ -210,7 +210,7 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
   GP.BOX_BEGIN(GP_RIGHT);
   if (!al) {
     GP.BUTTON_MICRO(_id_str + "Ok", "Да", "", GP_GREEN, "60px", false, true);
-    GP.BUTTON_MICRO(_id_str + "Cancel", "Нет", "", GP_RED, "90px", false, rl);
+    GP.BUTTON_MICRO(_id_str + "Cancel", "Отмена", "", GP_RED, "90px", false, rl);
   }
   else GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", UI_BUTTON_COLOR, "60px");
   GP.BOX_END();
