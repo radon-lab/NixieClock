@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_013 релиз от 14.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_013 релиз от 17.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1307,6 +1307,7 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
 }
 //--------------------------------------------------------------------
 void webShowUpdateInfo(void) {
+  GP.BREAK();
   GP.SPAN(LANG_PAGE_UPDATE_INFO_FW, GP_CENTER, "", UI_INFO_COLOR); //описание
   GP.BREAK();
   if (fsUpdate) {
