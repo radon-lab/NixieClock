@@ -36,8 +36,8 @@ function EVopenTab(tab,btn,blk){var x=document.getElementsByClassName(blk);
 for(var i=0;i<x.length;i++)x[i].style.display='none';
 getEl(tab).style.display='block';
 x=document.getElementsByClassName(btn.className);
-for(var i=0;i<x.length;i++)x[i].style.background='';
-btn.style.background='#2a2d35';}
+for(var i=0;i<x.length;i++)x[i].classList.remove('navopen');
+btn.classList.add('navopen');}
 function EVspinc(arg){if(arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
 function EVspinw(arg){if(arg.className=='spin_inp')arg.style.width=((arg.value.length+2)*12)+'px';}
 function EVspin(arg){var num=getEl(arg.name);num.value=(Number(num.value)+Number(arg.min)).toFixed(Number(arg.max));

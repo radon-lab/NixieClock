@@ -14,7 +14,7 @@ struct Builder {
   void setTimeUpdatePeriod(uint32_t t) {
     _timeUpdPrd = t;
   }
-  void updateTime() {
+  void updateTime(void) {
     if (!_gp_unix_tmr || millis() - _gp_unix_tmr >= _timeUpdPrd) {
       SEND(F("<script>EVsend('/GP_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
     }
@@ -33,7 +33,7 @@ struct Builder {
   }
 
   // ======================= БИЛДЕР =======================
-  void BUILD_BEGIN() {
+  void BUILD_BEGIN(void) {
     PAGE_BEGIN();
     JS_TOP();
   }
@@ -43,7 +43,7 @@ struct Builder {
     JS_TOP();
   }
 
-  void BUILD_BEGIN_FILE() {
+  void BUILD_BEGIN_FILE(void) {
     PAGE_BEGIN();
     JS_TOP_FILE();
   }
@@ -53,7 +53,7 @@ struct Builder {
     JS_TOP_FILE();
   }
 
-  void BUILD_END() {
+  void BUILD_END(void) {
     JS_BOTTOM();
     PAGE_END();
   }
@@ -151,7 +151,7 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void UI_END() {
+  void UI_END(void) {
     SEND(F("</div></div>\n"));
   }
 
@@ -176,10 +176,10 @@ struct Builder {
     *_GPP += F("' style='display:none'>");
     send();
   }
-  void UI_LINKS_BLOCK() {
+  void UI_LINKS_BLOCK(void) {
     SEND(F("<div id='_link_block' class='sblock' style='padding:0'></div>"));
   }
-  void UI_LINKS_END() {
+  void UI_LINKS_END(void) {
     SEND(F("</div>"));
   }
   void UI_LINKS_SEND(const String& id, String list = "") {
@@ -195,7 +195,7 @@ struct Builder {
   }
 
   // ======================= СТРАНИЦА =======================
-  void PAGE_BEGIN() {
+  void PAGE_BEGIN(void) {
     _gp_nav_id = 0;
     SEND(F("<!DOCTYPE HTML><html><head>\n"
            "<meta charset='utf-8'>\n"
@@ -204,7 +204,7 @@ struct Builder {
            "<meta name='mobile-web-app-capable' content='yes'/>\n"
            "</head><div id='_popup' class='popup'></div>\n<body>\n"));
   }
-  void PAGE_END() {
+  void PAGE_END(void) {
     SEND(F("</body></html>"));
   }
 
@@ -218,7 +218,7 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void PAGE_BLOCK_END() {
+  void PAGE_BLOCK_END(void) {
     *_GPP += F("</div>\n<div id='onlBlock' class='onlBlock'>");
     *_GPP += F("<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
@@ -242,17 +242,17 @@ struct Builder {
     send();
   }
 
-  void JS_TOP_FILE() {
+  void JS_TOP_FILE(void) {
     SEND(F("<script src='/gp_data/scripts.js?=" GP_VERSION "'></script>\n"));
     updateTime();
   }
-  void JS_TOP() {
+  void JS_TOP(void) {
     *_GPP += F("<script src='/GP_SCRIPT.js?v" GP_VERSION "=");
     *_GPP += _gp_seed;
     *_GPP += F("'></script>\n");
     updateTime();
   }
-  void JS_BOTTOM() {
+  void JS_BOTTOM(void) {
     SEND(F("<script>document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});\n"
            "document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));\n"
            "var _bl=0;setInterval(function(){getEl('onlImg').style.fill=_bl?'#ff000000':'#f00';_bl=!_bl;},500);"
@@ -277,7 +277,7 @@ struct Builder {
     *_GPP += F("'>\n");
     send();
   }
-  void SPOILER_END() {
+  void SPOILER_END(void) {
     SEND(F("</div></details>\n"));
   }
 
@@ -291,10 +291,10 @@ struct Builder {
     send();
   }
 
-  void JS_BEGIN() {
+  void JS_BEGIN(void) {
     *_GPP += F("<script>\n");
   }
-  void JS_END() {
+  void JS_END(void) {
     *_GPP += F("\n</script>\n");
   }
 
@@ -447,7 +447,7 @@ struct Builder {
     *_GPP += '>';
     send();
   }
-  void POPUP_END() {
+  void POPUP_END(void) {
     SEND(F("</div>\n</div>\n"));
   }
 
@@ -477,7 +477,7 @@ struct Builder {
     *_GPP += F("'>\n");
     send();
   }
-  void FORM_END() {
+  void FORM_END(void) {
     SEND(F("</form>\n"));
   }
   void SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
@@ -559,7 +559,7 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void GRID_END() {
+  void GRID_END(void) {
     BLOCK_END();
   }
   void GRID_RESPONSIVE(int width) {
@@ -637,14 +637,14 @@ struct Builder {
   void BLOCK_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_TAB, width);
   }
-  void BLOCK_END() {
+  void BLOCK_END(void) {
     SEND(F("</div>\n"));
   }
 
-  void BLOCK_MIDDLE_BEGIN() {
+  void BLOCK_MIDDLE_BEGIN(void) {
     SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
   }
-  void BLOCK_HIDE_BEGIN() {
+  void BLOCK_HIDE_BEGIN(void) {
     SEND(F("<div style='overflow:hidden'>\n"));
   }
 
@@ -676,7 +676,7 @@ struct Builder {
     *_GPP += F("' class='inliner'>\n");
     send();
   }
-  void VOID_BOX_BEGIN() {
+  void VOID_BOX_BEGIN(void) {
     SEND(F("<div>\n"));
   }
   void VOID_BOX(const String& w) {
@@ -684,9 +684,10 @@ struct Builder {
       *_GPP += F("<div style='width:");
       *_GPP += w;
       *_GPP += F("'></div>\n");
+      send();
     }
   }
-  void BOX_END() {
+  void BOX_END(void) {
     SEND(F("</div>\n"));
   }
 
@@ -697,8 +698,15 @@ struct Builder {
     SEND("</footer>");
   }
 
-  void BREAK() {
-    SEND(F("<br>\n"));
+  void BREAK(const String& h = "") {
+    *_GPP += F("<br");
+    if (h.length()) {
+      *_GPP += F(" style='line-height:");
+      *_GPP += h;
+      *_GPP += '\'';
+    }
+    *_GPP += F(">\n");
+    send();
   }
 
   void VR(PGM_P st = GP_DEFAULT, int height = 0) {
@@ -717,7 +725,7 @@ struct Builder {
     send();
   }
 
-  void HR() {
+  void HR(void) {
     SEND(F("<hr>\n"));
   }
   void HR(PGM_P st) {
@@ -795,9 +803,6 @@ struct Builder {
     send();
   }
 
-  void TITLE(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
-    TAG_RAW(F("h2"), val, name, st, size, bold);
-  }
   void LABEL(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0) {
     TAG_RAW(F("label"), val, name, st, size, bold, wrap);
   }
@@ -812,12 +817,24 @@ struct Builder {
     *_GPP += F("px'>");
     *_GPP += val;
     *_GPP += F("</label>");
+    send();
   }
+
   void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
     TAG_RAW(F("label class='display'"), val, name, GP_DEFAULT, size, bold, 0, st);
   }
   void LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
     TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
+  }
+
+  void TITLE(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("h2"), val, name, st, size, bold);
+  }
+  void PLAIN(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
+    TAG_RAW(F("p"), text, name, st);
+  }
+  void BOLD(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
+    TAG_RAW(F("strong"), text, name, st);
   }
 
   void SPAN(const String& text, GPalign al = GP_CENTER, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
@@ -827,12 +844,6 @@ struct Builder {
     TAG_RAW(F("span"), text, name, st, size, bold);
     *_GPP += F("</div>\n");
     send();
-  }
-  void PLAIN(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
-    TAG_RAW(F("p"), text, name, st);
-  }
-  void BOLD(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
-    TAG_RAW(F("strong"), text, name, st);
   }
 
   // ======================= ЛЕДЫ =======================
@@ -965,7 +976,7 @@ struct Builder {
   }
 
   // ======================= ИКОНКИ =======================
-  void ICON_SUPPORT() {
+  void ICON_SUPPORT(void) {
     SEND(F("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>\n"));
   }
 
@@ -1081,7 +1092,7 @@ struct Builder {
     while (n.parse()) {
       u.parse();
       *_GPP += F("<li ");
-      if (_gp_uri->equals(u.str)) *_GPP += F("style='background:#2a2d35' ");
+      if (_gp_uri->equals(u.str)) *_GPP += F("class='navopen' ");
       *_GPP += F("onclick='location.href=\"");
       *_GPP += u.str;
       *_GPP += F("\";'>");
@@ -1092,14 +1103,19 @@ struct Builder {
     send();
   }
 
-  void NAV_TABS_M(const String& name, const String& list, int disp) {
+  void NAV_TABS_M(const String& name, const String& list, int disp, PGM_P st = GP_DEFAULT) {
+    if (st != GP_DEFAULT) {
+      *_GPP += F("<style>.navopen.navopen{background:");
+      *_GPP += st;
+      *_GPP += F(";color:#13161a;}</style>\n");
+    }
     *_GPP += F("<div class='navtab'><ul>\n");
     GP_parser tab(list);
     while (tab.parse()) {
       *_GPP += F("<li ");
-      if (tab.count == disp) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='");
       *_GPP += name;
+      if (tab.count == disp) *_GPP += F(" navopen");
       *_GPP += F("' onclick='EVopenTab(\"");
       *_GPP += name;
       *_GPP += '/';
@@ -1130,9 +1146,9 @@ struct Builder {
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
-      if (!p.count) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='");
       *_GPP += name;
+      if (!p.count) *_GPP += F(" navopen");
       *_GPP += F("' onclick='EVopenTab(\"");
       *_GPP += name;
       *_GPP += '/';
@@ -1190,9 +1206,9 @@ struct Builder {
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
-      if (!p.count) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='nt-");
       *_GPP += _gp_nav_id;
+      if (!p.count) *_GPP += F(" navopen");
       *_GPP += F("' onclick='EVopenTab(\"ntab-");
       *_GPP += _gp_nav_id;
       *_GPP += '/';
@@ -1207,7 +1223,7 @@ struct Builder {
     send();
   }
 
-  void NAV_BLOCK_BEGIN() {
+  void NAV_BLOCK_BEGIN(void) {
     *_GPP += F("<div class='navblock nb-");
     *_GPP += _gp_nav_id;
     *_GPP += F("' id='ntab-");
@@ -1221,7 +1237,7 @@ struct Builder {
     _gp_nav_pos++;
   }
 
-  void NAV_BLOCK_END() {
+  void NAV_BLOCK_END(void) {
     SEND(F("</div>\n"));
   }
 
@@ -1880,7 +1896,9 @@ struct Builder {
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
     *_GPP += F("onclick='EVclick(this)'>\n"
-               "<span class='slider' id='_");
+               "<span class='slider");
+    if (dis) *_GPP += F(" dsbl");
+    *_GPP += F("' id='_");
     *_GPP += name;
     *_GPP += F("'></span></label>\n"
                "<input type='hidden' value='0' name='");

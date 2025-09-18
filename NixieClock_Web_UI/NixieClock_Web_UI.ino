@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_013 релиз от 17.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_016 бета от 18.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -721,7 +721,7 @@ void build(void) {
       if (deviceInformation[LIGHT_SENS_ENABLE]) lightHint += F(LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2);
       else if (weatherGetValidStatus()) lightHint += F(LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3);
 
-      GP.NAV_TABS_M("fastMainTab", LANG_PAGE_SETTINGS_MENU, navMainTab);
+      GP.NAV_TABS_M("fastMainTab", LANG_PAGE_SETTINGS_MENU, navMainTab, UI_BUTTON_COLOR);
 
       GP.NAV_BLOCK_BEGIN("fastMainTab", 0, navMainTab);
       M_GRID(
@@ -934,6 +934,8 @@ void build(void) {
       if (wirelessGetSensorStastus()) {
         M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_TIME, "", UI_LABEL_COLOR); GP.TEXT("", "", String(wirelessGetInterval()) + LANG_PAGE_CLIMATE_GUI_SENS_MINS, "", 0, "", true););
       }
+
+      GP.BREAK("35px");
       GP.BLOCK_END();
     }
     else if (ui.uri("/weather")) { //погода
@@ -1040,7 +1042,7 @@ void build(void) {
     else if (ui.uri("/information")) { //информация о системе
       PAGE_TITLE_NAME(LANG_PAGE_INFO_TITLE);
 
-      GP.NAV_TABS_M("fastInfoTab", LANG_PAGE_INFO_MENU, navInfoTab);
+      GP.NAV_TABS_M("fastInfoTab", LANG_PAGE_INFO_MENU, navInfoTab, UI_BUTTON_COLOR);
 
       GP.NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_SYSTEM, UI_BLOCK_COLOR);
@@ -1094,12 +1096,12 @@ void build(void) {
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_INFO_HR_STATE, UI_LINE_COLOR, UI_HINT_COLOR);
         if (!device.failure) {
-          M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CONNECT, "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? LANG_PAGE_INFO_GUI_STATE_OK : LANG_PAGE_INFO_GUI_STATE_DIS, "", UI_INFO_COLOR, 0, false, true););
+          M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CONNECT, "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? LANG_PAGE_INFO_GUI_STATE_OK : LANG_PAGE_INFO_GUI_STATE_DIS, "", UI_INFO_COLOR););
         }
         else {
           for (uint8_t i = 0; i < 13; i++) {
             if (device.failure & (0x01 << i)) {
-              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERR) + ((i < 10) ? "0" : "") + (i + 1), "", UI_LABEL_COLOR); GP.LABEL(failureDataList[i], "", UI_INFO_COLOR, 0, false, true););
+              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERR) + ((i < 10) ? "0" : "") + (i + 1), "", UI_LABEL_COLOR); GP.LABEL_W(failureDataList[i], "", UI_INFO_COLOR, 0, GP_RIGHT, 0, false, true););
             }
           }
         }
