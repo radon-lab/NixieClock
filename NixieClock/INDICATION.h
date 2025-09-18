@@ -399,7 +399,7 @@ void converterCheck(void) //проверка состояния преобраз
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
   if (debugSettings.max_pwm < (debugSettings.min_pwm + 10)) debugSettings.min_pwm = debugSettings.max_pwm - 10;
-  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * (LAMP_NUM + (INDI_SYMB_TYPE) ? 1 : 0)) / CONSTRAIN(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
+  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * (LAMP_NUM + ((INDI_SYMB_TYPE) ? 1 : 0))) / CONSTRAIN(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
 }
 //---------------------Установка нового значения шим линейного регулирования----------------------
 void indiChangePwm(void) //установка нового значения шим линейного регулирования
