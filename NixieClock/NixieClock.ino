@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_014 бета от 18.09.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_017 бета от 18.09.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1137,18 +1137,18 @@ uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расч�
 uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет периода шага яркости
 {
   uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
-  if (temp < _step) temp = _step; //если шаг слишком мал, устанавливаем минимум
+  if (temp < _step) temp = _step; //если шаг слишком мал то устанавливаем минимум
   return temp;
+}
+//---------------------Получить усредненную яркость-----------------------------
+uint8_t getMidBright(uint8_t night, uint8_t day) //получить усредненную яркость
+{
+  return night + ((day - night) >> 1);
 }
 //---------------------Установка яркости от времени суток-----------------------------
 boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
 {
   return ((_start > _end && (RTC.h >= _start || RTC.h < _end)) || (_start < _end && RTC.h >= _start && RTC.h < _end));
-}
-//-------------------------Получить 12-ти часовой формат------------------------
-uint8_t get_12h(uint8_t timeH) //получить 12-ти часовой формат
-{
-  return (timeH > 12) ? (timeH - 12) : (timeH) ? timeH : 12; //возвращаем результат
 }
 //---------------------------------Получить время со сдвигом фазы-----------------------------------------
 uint16_t getPhaseTime(uint8_t time, int8_t phase) //получить время со сдвигом фазы
@@ -6497,14 +6497,14 @@ void changeBright(void) //установка яркости от времени 
 #if LIGHT_SENS_ENABLE || ESP_ENABLE
     case 1: //промежуточный режим
 #if (NEON_DOT != 3) || !DOTS_PORT_ENABLE
-      dot.maxBright = dot.menuBright = mainSettings.dotBright[TIME_NIGHT] + ((mainSettings.dotBright[TIME_DAY] - mainSettings.dotBright[TIME_NIGHT]) >> 1); //установка максимальной яркости точек
+      dot.maxBright = dot.menuBright = getMidBright(mainSettings.dotBright[TIME_NIGHT], mainSettings.dotBright[TIME_DAY]); //установка максимальной яркости точек
 #else
       dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
 #endif
 #if BACKL_TYPE
-      backl.menuBright = backl.maxBright = mainSettings.backlBright[TIME_NIGHT] + ((mainSettings.backlBright[TIME_DAY] - mainSettings.backlBright[TIME_NIGHT]) >> 1); //установка максимальной яркости подсветки
+      backl.menuBright = getMidBright(mainSettings.backlBright[TIME_NIGHT], mainSettings.backlBright[TIME_DAY]); //установка максимальной яркости подсветки
 #endif
-      indi.maxBright = mainSettings.indiBright[TIME_NIGHT] + ((mainSettings.indiBright[TIME_DAY] - mainSettings.indiBright[TIME_NIGHT]) >> 1); //установка максимальной яркости индикаторов
+      indi.maxBright = getMidBright(mainSettings.indiBright[TIME_NIGHT], mainSettings.indiBright[TIME_DAY]); //установка максимальной яркости индикаторов
       if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
       break;
 #endif
