@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_017 бета от 18.09.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_021 бета от 19.09.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -89,6 +89,7 @@ enum {
 #include "WIRE.h"
 #include "EEPROM.h"
 #include "PLAYER.h"
+#include "SOUND.h"
 #include "RDA.h"
 #include "RTC.h"
 #include "AHT.h"
@@ -206,17 +207,6 @@ struct indiData {
   uint8_t sleepMode; //флаг режима сна индикаторов
   uint8_t maxBright; //максимальная яркость индикаторов
 } indi;
-
-//переменные работы со звуками
-struct soundData {
-  uint8_t replay; //флаг повтора мелодии
-  uint16_t semp; //текущий семпл мелодии
-  uint16_t link; //ссылка на мелодию
-  uint16_t size; //количество семплов мелодии
-} sound;
-volatile uint16_t buzz_cnt_puls; //счетчик циклов длительности
-volatile uint16_t buzz_cnt_time; //счетчик циклов полуволны
-uint16_t buzz_time; //циклы полуволны для работы пищалки
 
 //флаги анимаций
 uint8_t changeBrightState; //флаг состояния смены яркости подсветки
@@ -444,24 +434,6 @@ enum {
   ALARM_CHECK_MAIN, //основной режим проверки будильников
   ALARM_CHECK_SET, //проверка на установленный будильник
   ALARM_CHECK_INIT //проверка будильников при запуске
-};
-
-//перечисления системных звуков
-enum {
-  SOUND_TEST_SPEAKER, //звук ошибки ввода пароля
-  SOUND_PASS_ERROR, //звук ошибки ввода пароля
-  SOUND_RESET_SETTINGS, //звук сброса настроек
-  SOUND_ALARM_DISABLE, //звук отключения будильника
-  SOUND_ALARM_WAIT, //звук ожидания будильника
-  SOUND_TIMER_WARN, //звук окончания таймера
-  SOUND_HOUR //звук смены часа
-};
-
-//перечисления режимов воспроизведения мелодий
-enum {
-  REPLAY_STOP, //остановить воспроизведение
-  REPLAY_ONCE, //проиграть один раз
-  REPLAY_CYCLE //проиграть по кругу
 };
 
 //перечисления режимов озвучки температуры
@@ -1036,32 +1008,6 @@ void INIT_SYSTEM(void) //инициализация
 #endif
   mainTask = MAIN_PROGRAM; //установили основную программу
 }
-//-----------------------------Прерывание от RTC--------------------------------
-#if SQW_PORT_ENABLE
-ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
-{
-  tick_sec++; //прибавляем секунду
-}
-#endif
-//-----------------------Прерывание сигнала для пищалки-------------------------
-#if !PLAYER_TYPE
-ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалки
-{
-  if (!buzz_cnt_time) { //если циклы полуволны кончились
-    BUZZ_INV; //инвертируем бузер
-    buzz_cnt_time = buzz_time; //устанавливаем циклы полуволны
-    if (!--buzz_cnt_puls) { //считаем циклы времени работы бузера
-      BUZZ_OFF; //если циклы кончились, выключаем бузер
-      TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
-    }
-  }
-  if (buzz_cnt_time > 255) buzz_cnt_time -= 255; //считаем циклы полуволны
-  else if (buzz_cnt_time) { //если остался хвост
-    OCR2B += buzz_cnt_time; //устанавливаем хвост
-    buzz_cnt_time = 0; //сбрасываем счетчик циклов полуволны
-  }
-}
-#endif
 //-----------------------------Установка ошибки---------------------------------
 void SET_ERROR(uint8_t err) //установка ошибки
 {
@@ -2215,45 +2161,6 @@ void debug_menu(void) //отладка
         break;
     }
   }
-}
-//--------------------------------Генерация частот бузера----------------------------------------------
-void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
-{
-  TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
-  BUZZ_OFF; //выключаем бузер
-  buzz_cnt_time = 0; //сбросили счетчик
-  buzz_cnt_puls = ((uint32_t)freq * (uint32_t)time) / 500; //пересчитываем частоту и время в циклы таймера
-  buzz_time = (1000000 / freq); //пересчитываем частоту в циклы полуволны
-  OCR2B = 255; //устанавливаем COMB в начало
-  TIFR2 |= (0x01 << OCF2B); //сбрасываем флаг прерывания
-  TIMSK2 |= (0x01 << OCIE2B); //запускаем таймер
-}
-//--------------------------------Воспроизведение мелодии-----------------------------------------------
-void melodyUpdate(void) //воспроизведение мелодии
-{
-  if (sound.replay && !_timer_ms[TMR_PLAYER]) { //если пришло время
-    buzz_pulse(pgm_read_word(sound.link + sound.semp), pgm_read_word(sound.link + sound.semp + 2)); //запускаем звук с задоной частотой и временем
-    _timer_ms[TMR_PLAYER] = pgm_read_word(sound.link + sound.semp + 4); //устанавливаем паузу перед воспроизведением нового звука
-    if ((sound.semp += 6) >= sound.size) { //переключаем на следующий семпл
-      if (sound.replay == REPLAY_ONCE) melodyStop(); //если повтор выключен то остановка воспроизведения мелодии
-      sound.semp = 0; //сбросили семпл
-    }
-  }
-}
-//----------------------------Запуск воспроизведения мелодии---------------------------------------------
-void melodyPlay(uint8_t melody, uint16_t link, uint8_t replay) //запуск воспроизведения мелодии
-{
-  sound.semp = 0; //сбросили позицию семпла
-  sound.replay = replay; //установили повтор
-  sound.link = pgm_read_word(link + (melody << 2)); //установили ссылку
-  sound.size = pgm_read_word(link + (melody << 2) + 2); //установили размер
-  _timer_ms[TMR_PLAYER] = 0; //сбросили таймер
-}
-//---------------------------Остановка воспроизведения мелодии-------------------------------------------
-void melodyStop(void) //остановка воспроизведения мелодии
-{
-  sound.replay = REPLAY_STOP; //сбросили воспроизведение
-  _timer_ms[TMR_PLAYER] = 0; //сбросили таймер
 }
 //---------------------------------Инициализация будильника----------------------------------------------
 void alarmInit(void) //инициализация будильника
@@ -6463,7 +6370,7 @@ void hourSound(void) //звук смены часа
       }
 #endif
 #else
-      if (mainSettings.knockSound) melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
+      melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
 #endif
     }
   }
