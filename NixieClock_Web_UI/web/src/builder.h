@@ -224,7 +224,7 @@ struct Builder {
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
-               "id='onlImg' fill='#f00' style='transition-duration:0.5s'></path></svg></div>\n"
+               "fill='#f00' class='onlImg'></path></svg></div>\n"
                "<div title='_popup' id='loadBlock' style='display:none'><div class='popupBlock'><div class='loadBlock'></div></div></div>\n");
   }
 
@@ -255,7 +255,6 @@ struct Builder {
   void JS_BOTTOM(void) {
     SEND(F("<script>document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});\n"
            "document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));\n"
-           "var _bl=0;setInterval(function(){getEl('onlImg').style.fill=_bl?'#ff000000':'#f00';_bl=!_bl;},500);"
            "</script>\n"));
   }
 
@@ -288,6 +287,29 @@ struct Builder {
     *_GPP += txt;
     *_GPP += F("')");
     *_GPP += F("</script>\n");
+    send();
+  }
+
+  void HINT_BOX(const String& name, const String& min, const String& max, const String& txt) {
+    *_GPP += F("<div id='");
+    *_GPP += name;
+    *_GPP += F("' class='hintBlock'>");
+    *_GPP += txt;
+    *_GPP += F("</div>\n<script>function ");
+    *_GPP += name;
+    *_GPP += F("(){EVhintBox('");
+    *_GPP += min;
+    *_GPP += F("','");
+    *_GPP += max;
+    *_GPP += F("','");
+    *_GPP += name;
+    *_GPP += F("');}\nEVhintLoad('");
+    *_GPP += min;
+    *_GPP += F("','");
+    *_GPP += max;
+    *_GPP += F("',");
+    *_GPP += name;
+    *_GPP += F(");</script>\n");
     send();
   }
 

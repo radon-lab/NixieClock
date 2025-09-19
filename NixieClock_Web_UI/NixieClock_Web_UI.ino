@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_016 бета от 18.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_020 бета от 19.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -209,10 +209,10 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
   if (sign.length()) GP.SPAN(sign, GP_LEFT, _id_str + "Text", GP_RED, 13);
   GP.BOX_BEGIN(GP_RIGHT);
   if (!al) {
-    GP.BUTTON_MICRO(_id_str + "Ok", "Да", "", GP_GREEN, "60px", false, true);
-    GP.BUTTON_MICRO(_id_str + "Cancel", "Отмена", "", GP_RED, "90px", false, rl);
+    GP.BUTTON_MICRO(_id_str + "Ok", LANG_ALERT_YES, "", GP_GREEN, "60px", false, true);
+    GP.BUTTON_MICRO(_id_str + "Cancel", LANG_ALERT_CANCEL, "", GP_RED, "90px", false, rl);
   }
-  else GP.BUTTON_MICRO(_id_str + "Ok", "Ок", "", UI_BUTTON_COLOR, "60px");
+  else GP.BUTTON_MICRO(_id_str + "Ok", LANG_ALERT_OK, "", UI_BUTTON_COLOR, "60px");
   GP.BOX_END();
   GP.BLOCK_END();
   GP.POPUP_END();
@@ -760,13 +760,13 @@ void build(void) {
       M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR, "hint1");
-      GP.HINT("hint1", lightHint); //всплывающая подсказка
+      GP.HINT("hint1", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
             GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
-      GP.BREAK();
+      GP.HINT_BOX("hintB1", "mainTimeBrightS", "mainTimeBrightE", lightHint);
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SLEEP, UI_LINE_COLOR, UI_HINT_COLOR, "hint2");
       GP.HINT("hint2", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
       M_BOX(GP_CENTER,
@@ -816,7 +816,7 @@ void build(void) {
               GP.VOID_BOX("20px");
               GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
              );
-        GP.BREAK();
+        GP.HINT_BOX("hintB2", "mainHourSoundS", "mainHourSoundE", LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1);
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP, "", UI_LABEL_COLOR); GP.SWITCH("mainHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)!(deviceInformation[PLAYER_TYPE] && sensorAvaibleData())););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT("mainHourSound", LANG_PAGE_SETTINGS_GUI_HOUR_MODE, mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
@@ -870,7 +870,7 @@ void build(void) {
       );
       GP.NAV_BLOCK_END();
 
-      PAGE_ALERT_BLOCK("climateWarn", "Сброс статистики", LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE, "", true);
+      PAGE_ALERT_BLOCK("climateWarn", LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE, LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1, "", true);
       GP.UPDATE_CLICK("climateWarn", "climateChart");
     }
     else if (ui.uri("/climate")) { //микроклимат
@@ -1155,12 +1155,13 @@ void build(void) {
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_CONTROL, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.BUTTON("resetButton", LANG_PAGE_INFO_GUI_RESET, "", UI_BUTTON_COLOR, "90%;margin-bottom:15px"); GP.BUTTON("rebootButton", LANG_PAGE_INFO_GUI_REBOOT, "", UI_BUTTON_COLOR, "90%;margin-bottom:15px"););
+      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_RESET, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("resetButton", "Выполнить", "", UI_BUTTON_COLOR, "200px"););
+      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_REBOOT, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("rebootButton", "Выполнить", "", UI_BUTTON_COLOR, "200px"););
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
-      PAGE_ALERT_BLOCK("extReset", "Сброс настроек", LANG_PAGE_INFO_WARN_RESET);
-      PAGE_ALERT_BLOCK("extReboot", "Перезагрузка", LANG_PAGE_INFO_WARN_REBOOT);
+      PAGE_ALERT_BLOCK("extReset", LANG_PAGE_INFO_ALERT_RESET_TITLE, LANG_PAGE_INFO_ALERT_RESET_1);
+      PAGE_ALERT_BLOCK("extReboot", LANG_PAGE_INFO_ALERT_REBOOT_TITLE, LANG_PAGE_INFO_ALERT_REBOOT_1);
 
       GP.UPDATE_CLICK("extReset", "resetButton");
       GP.UPDATE_CLICK("extReboot", "rebootButton");
@@ -1253,14 +1254,14 @@ void build(void) {
     static boolean failureWarn = true; //флаг отображения предупреждения об сбоях
     if (!(device.failure & 0x8000) && device.failure && failureWarn) {
       failureWarn = false;
-      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_WARN_TITLE, LANG_FAIL_WARN_1, LANG_FAIL_WARN_2, false, true);
+      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_ALERT_TITLE, LANG_FAIL_ALERT_1, LANG_FAIL_ALERT_2, false, true);
       GP.POPUP_OPEN("mainFailWarn");
     }
 
     updateList += F(",extGroup,extFound,extFoundText");
 
     wirelessResetFoundState();
-    PAGE_ALERT_BLOCK("extFound", "Оповещение", LANG_WIRELESS_FOUND, "UID: 00:00:00:00:00:00");
+    PAGE_ALERT_BLOCK("extFound", LANG_WIRELESS_ALERT_TITLE, LANG_WIRELESS_ALERT_FOUND, "UID: 00:00:00:00:00:00");
 
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления

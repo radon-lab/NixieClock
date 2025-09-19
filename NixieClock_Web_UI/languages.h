@@ -31,7 +31,8 @@
 #define LANG_WIRELESS_STATUS_4 "Потеряна связь..."
 #define LANG_WIRELESS_STATUS_5 "Нет сенсора..."
 
-#define LANG_WIRELESS_FOUND "Обнаружен беспроводной датчик температуры, подключить?"
+#define LANG_WIRELESS_ALERT_TITLE "Оповещение"
+#define LANG_WIRELESS_ALERT_FOUND "Обнаружен беспроводной датчик температуры, подключить?"
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "Отсутствует подключение к сети"
@@ -51,6 +52,11 @@
 #define LANG_UPDATE_FW_STATUS_6 "Ошибка!<br><small>Загрузка файла прервана!</small>"
 #define LANG_UPDATE_FW_STATUS_7 "Загрузка прошивки..."
 #define LANG_UPDATE_FW_STATUS_8 "Подключение..."
+
+//-------------------------------------------------------//
+#define LANG_ALERT_OK "Ок"
+#define LANG_ALERT_YES "Да"
+#define LANG_ALERT_CANCEL "Отмена"
 
 //-------------------------------------------------------//
 #define LANG_ALARM_MODE_1 "Отключен"
@@ -236,15 +242,20 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Микроклимат"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Датчики"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Одинаковое время - отключить смену яркости"
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 " или активировать датчик освещения"
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 " или активировать автоматическую смену яркости"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "Одинаковое время - отключить смену яркости по времени"
+
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Автоматическая смена яркости по времени отключена"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Автоматическая смена яркости по датчику освещения"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Автоматическая смена яркости по времени суток"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник и время в секундах"
 #define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - отключить режим сна для выбранного промежутка времени"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
 
-#define LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE "Статистика микроклимата будет сброшена, продолжить?"
+#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
+#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Звук смены часа отключен"
+
+#define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Сброс статистики"
+#define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Статистика микроклимата будет сброшена, продолжить?"
 
 #define LANG_PAGE_SETTINGS_GUI_HR_SHOW "Автопоказ"
 #define LANG_PAGE_SETTINGS_GUI_HR_DISPLAY "Отображение"
@@ -424,8 +435,11 @@
 #define LANG_PAGE_INFO_HR_RTC "Модуль RTC"
 #define LANG_PAGE_INFO_HR_CONTROL "Управление"
 
-#define LANG_PAGE_INFO_WARN_RESET "Сбросить все настройки устройства?"
-#define LANG_PAGE_INFO_WARN_REBOOT "Перезагрузить устройство?"
+#define LANG_PAGE_INFO_ALERT_RESET_TITLE "Сброс настроек"
+#define LANG_PAGE_INFO_ALERT_RESET_1 "Сбросить все настройки устройства?"
+
+#define LANG_PAGE_INFO_ALERT_REBOOT_TITLE "Перезагрузка"
+#define LANG_PAGE_INFO_ALERT_REBOOT_1 "Перезагрузить устройство?"
 
 #define LANG_PAGE_INFO_GUI_ID "ID чипа"
 #define LANG_PAGE_INFO_GUI_CPU "Частота процессора"
@@ -497,9 +511,9 @@
 #define LANG_PAGE_NETWORK_GUI_LON "Долгота"
 
 //-------------------------------------------------------//
-#define LANG_FAIL_WARN_TITLE "Предупреждение"
-#define LANG_FAIL_WARN_1 "Обнаружен сбой при запуске устройства!"
-#define LANG_FAIL_WARN_2 "Подробнее во вкладке - Об устройстве."
+#define LANG_FAIL_ALERT_TITLE "Предупреждение"
+#define LANG_FAIL_ALERT_1 "Обнаружен сбой при запуске устройства!"
+#define LANG_FAIL_ALERT_2 "Подробнее во вкладке - Об устройстве."
 
 #define LANG_FAIL_DATA_1 "Нет связи с RTC"
 #define LANG_FAIL_DATA_2 "Батарея RTC разряжена"
@@ -515,8 +529,6 @@
 #define LANG_FAIL_DATA_12 "Переполнение тиков времени"
 #define LANG_FAIL_DATA_13 "Сбой динамической индикации"
 
-//-------------------------------------------------------//
-#define LANG_DEVICE_OFFLINE "Нет соединения"
 //-------------------------------------------------------//
 #endif
 #ifdef ENGLISH //если выбран язык веб интерфейса Английский
@@ -552,7 +564,8 @@
 #define LANG_WIRELESS_STATUS_4 "Connection lost..."
 #define LANG_WIRELESS_STATUS_5 "No sensor..."
 
-#define LANG_WIRELESS_FOUND "Wireless temperature sensor detected, connect?"
+#define LANG_WIRELESS_ALERT_TITLE "Notification"
+#define LANG_WIRELESS_ALERT_FOUND "Wireless temperature sensor detected, connect?"
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "No network connection"
@@ -572,6 +585,11 @@
 #define LANG_UPDATE_FW_STATUS_6 "Error!<br><small>File download interrupted!</small>"
 #define LANG_UPDATE_FW_STATUS_7 "Loading firmware..."
 #define LANG_UPDATE_FW_STATUS_8 "Connecting..."
+
+//-------------------------------------------------------//
+#define LANG_ALERT_OK "Ok"
+#define LANG_ALERT_YES "Yes"
+#define LANG_ALERT_CANCEL "Cancel"
 
 //-------------------------------------------------------//
 #define LANG_ALARM_MODE_1 "Disabled"
@@ -757,15 +775,20 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Microclimate"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Sensors"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Same time - disable brightness change"
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 " or activate the light sensor"
-#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 " or activate automatic brightness change"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "The same time - turn off the brightness change by time"
+
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Automatic time-based brightness change is disabled"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Automatic brightness change by light sensor"
+#define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Automatic brightness change by time of day"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Source and time in seconds"
 #define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - disable sleep mode for the selected period of time"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Same time - disable hour change sound"
 
-#define LANG_PAGE_SETTINGS_GUI_WARN_CLIMATE "Microclimate statistics will be reset, continue?"
+#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Same time - disable hour change sound"
+#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Hour change sound is disabled"
+
+#define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Resetting statistics"
+#define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Microclimate statistics will be reset, continue?"
 
 #define LANG_PAGE_SETTINGS_GUI_HR_SHOW "Auto show"
 #define LANG_PAGE_SETTINGS_GUI_HR_DISPLAY "Display"
@@ -945,8 +968,11 @@
 #define LANG_PAGE_INFO_HR_RTC "RTC module"
 #define LANG_PAGE_INFO_HR_CONTROL "Control"
 
-#define LANG_PAGE_INFO_WARN_RESET "Reset all device settings?"
-#define LANG_PAGE_INFO_WARN_REBOOT "Restart device?"
+#define LANG_PAGE_INFO_ALERT_RESET_TITLE "Reset settings"
+#define LANG_PAGE_INFO_ALERT_RESET_1 "Reset all device settings?"
+
+#define LANG_PAGE_INFO_ALERT_REBOOT_TITLE "Restart"
+#define LANG_PAGE_INFO_ALERT_REBOOT_1 "Restart device?"
 
 #define LANG_PAGE_INFO_GUI_ID "Chip ID"
 #define LANG_PAGE_INFO_GUI_CPU "Processor frequency"
@@ -991,7 +1017,7 @@
 #define LANG_PAGE_INFO_GUI_STATE "State"
 #define LANG_PAGE_INFO_GUI_CORRECT "Correction"
 #define LANG_PAGE_INFO_GUI_RESET "Reset settings"
-#define LANG_PAGE_INFO_GUI_REBOOT "Restart"
+#define LANG_PAGE_INFO_GUI_REBOOT "Restart device"
 
 //-------------------------------------------------------//
 #define LANG_PAGE_NETWORK_TITLE "Network settings"
@@ -1018,9 +1044,9 @@
 #define LANG_PAGE_NETWORK_GUI_LON "Longitude"
 
 //-------------------------------------------------------//
-#define LANG_FAIL_WARN_TITLE "Warning"
-#define LANG_FAIL_WARN_1 "Device startup failure detected!"
-#define LANG_FAIL_WARN_2 "More details in the tab - About the device."
+#define LANG_FAIL_ALERT_TITLE "Warning"
+#define LANG_FAIL_ALERT_1 "Device startup failure detected!"
+#define LANG_FAIL_ALERT_2 "More details in the tab - About the device."
 
 #define LANG_FAIL_DATA_1 "No connection with RTC"
 #define LANG_FAIL_DATA_2 "RTC battery is low"
@@ -1036,7 +1062,5 @@
 #define LANG_FAIL_DATA_12 "Time tick overflow"
 #define LANG_FAIL_DATA_13 "Dynamic indication failure"
 
-//-------------------------------------------------------//
-#define LANG_DEVICE_OFFLINE "Device offline"
 //-------------------------------------------------------//
 #endif

@@ -3,8 +3,8 @@
 // GP Themes
 
 const char GP_DEFAULT_THEME[] PROGMEM = R"(
-p{display:inline;}
 .mainblock{margin:auto;max-width:100%}
+p{display:inline;}
 a,a:visited{color:#4CAF50}
 a:hover{color:#3d9941}
 #blockBack input[type=password],#blockBack input[type=text],#blockBack input[type=date],#blockBack input[type=time],#blockBack input[type=number],#blockBack textarea,#blockBack select,#blockBack .slider{background:#13161a}
@@ -29,7 +29,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],select,textarea{
 width:90%;max-width:200px;border-radius:8px;padding:3px 10px;color:#bbb;border:none;background-color:#2a2d35;vertical-align:middle;position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
 input[type=color]{width:80px;height:40px;}
-input[type=range]:disabled:disabled{filter:brightness(0.6);cursor:auto;}
+input[type=range]:disabled:disabled{filter:brightness(0.6);cursor:default;}
 input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;width:0px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
@@ -66,7 +66,7 @@ input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:tr
 .slMaxLable{color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none;}
 .slMaxValue{position:relative;right:70px;margin-right:-55px;background:none;color:#fff;display:inline-flex;justify-content:end;pointer-events:none;}
 .lineBar.lineBar{filter:none!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;}
-output{display:inline-block;font-size:14px;padding:2px 3px;border-radius:5px;color:#13161a;min-width:50px;background:#37a93c;margin-right:5px;}
+output{display:inline-block;font-size:14px;padding:2px 3px;border-radius:5px;color:#13161a;min-width:50px;background:#37a93c;margin-right:5px;cursor:default;}
 input[type=range]{max-width:250px;-webkit-appearance:none;width:70%;margin:12px 8px;height:20px;background:#2a2d35;border-radius:5px;background-repeat:no-repeat;cursor:pointer;padding:0px;background-image:linear-gradient(#37a93c,#37a93c);}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:15px;width:15px;}
 input[type=range]:hover{filter:brightness(0.93);}
@@ -97,7 +97,7 @@ textarea::-webkit-scrollbar-thumb{background-color:#556;border-radius:3px;}
 body::-webkit-scrollbar{width:8px;}
 body::-webkit-scrollbar-track{background-color:#0000;}
 body::-webkit-scrollbar-thumb{background-color:#556;border-radius:4px;}
-.dsbl{filter:brightness(0.6);cursor:auto;}
+.dsbl{filter:brightness(0.6);cursor:default;}
 :root{color-scheme:light dark;}
 html{scrollbar-width:none;}
 body{-webkit-tap-highlight-color:transparent;}
@@ -114,7 +114,6 @@ input[type=number]{-moz-appearance:textfield;}
 .burgbtn{padding:0 8px;cursor:pointer;}
 #menuToggle span{display:block;width:20px;height:3px;margin:4px;position:relative;background:#fff;border-radius:3px;}
 .sidebar{z-index:3;width:250px;background-color:#2a2d35;top:0;left:-250px;height:100%;position:fixed;overflow:auto;box-shadow:#000 0px 0px 10px;transition-duration:.2s;scrollbar-width:none;}
-@keyframes opac{from{opacity:0}to{opacity:1}}
 .overlay{cursor:pointer;position:fixed;left:0;top:0;display:none;width:100%;height:100%;background-color:#0009;z-index:2;animation:opac .2s;}
 .page{margin-top:40px;margin-left:0px;transition:margin-left .2s;}
 .sbsel.sbsel{color:#13161a;}
@@ -123,6 +122,9 @@ input[type=number]{-moz-appearance:textfield;}
 .sblock>a:active{color:#13161a;}
 .sblock>a:hover{background-color:#ddd1;filter:brightness(0.9);}
 .ui_block{padding:2px 5px;max-width:1000px;}
+@keyframes opac{from{opacity:0}to{opacity:1}}
+@keyframes load{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes offl{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @media screen and (max-width:1000px){.page{margin-top:43px;}.onlBlock{top:-5px;}}
 @media screen and (max-width:1100px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}
 @media(min-width:1000px){
@@ -140,17 +142,16 @@ input[type=number]{-moz-appearance:textfield;}
 .check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='m12.82,3l-6.6,6.6l-3,-3-1.9,1.9l5,5.00687l8.5,-8.5-1.9,-1.9z' fill='%23fff'/%3e%3c/svg%3e");}
 .check_c>input:disabled+span::before{background-color:#e9ecef;}
 .check_c>input:hover+span::before{filter:brightness(0.85);}
+.onlImg{animation:offl .5s infinite alternate;}
 .onlBlock{display:none;position:fixed;bottom:0;right:0;z-index:99;cursor:default;padding:5px;}
-.ctrlBlock{position:absolute;top:5px;right:9px;}
-.areaCtrl{padding:3px;font-size:13px;cursor:pointer;}
+.loadBlock{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:load 1s infinite linear;}
 .vr{border:1px solid #3c4048;height:50px;margin:0 10px;}
 .rad{margin:3px 3px;appearance:none;cursor:pointer;}
 .rad:after{width:70px;height:30px;border-radius:25px;content:'';display:inline-block;border-style:solid;border-width:2px;border-color:#37a93c;}
 .rad:checked:after{background-color:#37a93c;}
 .radBlock{width:70px;height:30px;margin:5px 12px 14px 2px;}
 .radLable{position:relative;top:-33px;left:5px;cursor:pointer;color:#fff;}
+.hintBlock{visibility:hidden;height:20px;color:#505050;font-size:14px;line-height:10px;padding:0 10px;cursor:default;}
 .popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
-.loadBlock{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:load 1s infinite linear;}
-@keyframes load{from{transform:rotate(0deg);}to{transform:rotate(360deg);}
 )";

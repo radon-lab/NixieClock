@@ -6,6 +6,9 @@ const char GP_JS_TOP[] PROGMEM = R"(
 var _tout=2000,_err=0;
 var _clkRelList=[],_clkCloseList=[],_clkUpdList={},_pressId=null,_spinInt=null,_spinF=0,_touch=0;
 document.title='GyverPortalMod';
+function EVhintBox(min,max,box){_min=getEl(min);_max=getEl(max);_box=getEl(box);
+_box.style.visibility=(_min.value==_max.value)?'visible':'hidden';}
+function EVhintLoad(min,max,func){func();getEl(min).addEventListener("change", func);getEl(max).addEventListener("change", func);}
 function EVsend(req,r=null,upd=null){var xhttp=new XMLHttpRequest();xhttp.open(upd?'GET':'POST',req,true);
 xhttp.send();xhttp.timeout=_tout;xhttp.onreadystatechange=function(){if(this.status||(++_err>=5)){onlShow(!this.status);_err=0;}if(this.status||upd){
 if(this.readyState==4&&this.status==200){if(r){if(r==1)location.reload();else location.href=r;}if(upd)EVapply(upd,this.responseText);}}}}
@@ -83,7 +86,7 @@ function getEl(id){return document.getElementById(id);}
 function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';}
 function onlShow(s){getEl('onlBlock').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
-function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data<min)data=min;else if(data>max)data=max;arg.value=data;}
+function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
 function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
