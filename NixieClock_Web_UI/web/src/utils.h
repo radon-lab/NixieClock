@@ -31,6 +31,8 @@ GP_PGM(GP_BLACK, "#13161a");
 GP_PGM(GP_WHITE, "#fff");
 GP_PGM(GP_DEFAULT, "#fff");
 
+#define GP_ITEM_DISABLE "&dsbl&"
+
 enum GPalign {
   GP_CENTER,
   GP_LEFT,

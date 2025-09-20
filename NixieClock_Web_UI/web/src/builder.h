@@ -1578,7 +1578,7 @@ struct Builder {
   }
 
   // ======================= КНОПКА =======================
-  void BUTTON_RAW(const String& name, const String& value, const String& tar, PGM_P st, const String& width = "", const String& cls = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_RAW(const String& name, const String& value, const String& tar, PGM_P st, const String& width = "", const String& cls = "", int num = -1, bool dis = 0, bool rel = 0) {
     *_GPP += F("<button type='button' ");
     if (cls.length()) {
       *_GPP += F("class='");
@@ -1600,6 +1600,10 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
+    if (num >= 0) {
+      *_GPP += '_';
+      *_GPP += num;
+    }
 #ifndef GP_NO_PRESS
     *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' ");
     if (!dis) *_GPP += F("ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)");
@@ -1615,6 +1619,10 @@ struct Builder {
     } else {
       *_GPP += F("' onclick='EVclick(this,");
       *_GPP += rel;
+      if (num >= 0) {
+        *_GPP += ',';
+        *_GPP += num;
+      }
       *_GPP += F(")'");
     }
     if (dis) *_GPP += F(" disabled");
@@ -1625,13 +1633,23 @@ struct Builder {
   }
 
   void BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
-    BUTTON_RAW(name, value, tar, st, width, "", dis, rel);
+    BUTTON_RAW(name, value, tar, st, width, "", -1, dis, rel);
   }
   void BUTTON_MINI(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
-    BUTTON_RAW(name, value, tar, st, width, F("miniButton"), dis, rel);
+    BUTTON_RAW(name, value, tar, st, width, F("miniButton"), -1, dis, rel);
   }
   void BUTTON_MICRO(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
-    BUTTON_RAW(name, value, tar, st, width, F("microButton"), dis, rel);
+    BUTTON_RAW(name, value, tar, st, width, F("microButton"), -1, dis, rel);
+  }
+
+  void BUTTON_NUM(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, "", num, dis, rel);
+  }
+  void BUTTON_NUM_MINI(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, F("miniButton"), num, dis, rel);
+  }
+  void BUTTON_NUM_MICRO(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, F("microButton"), num, dis, rel);
   }
 
   // ======================= КНОПКА-ССЫЛКА =======================
@@ -2248,6 +2266,38 @@ struct Builder {
     }
     *_GPP += F("</select>\n");
     send();
+  }
+
+  void SELECT_LIST(const String& name, const String& list, int sel = 0, bool nums = 0, bool dis = 0, bool rel = 0) {
+    if (sel < 0) sel = 0;
+    *_GPP += F("<input type='button' class='selButton' name='_select' id='");
+    *_GPP += name;
+    *_GPP += F("' step='");
+    *_GPP += rel;
+    *_GPP += F("' min='");
+    *_GPP += nums;
+    *_GPP += F("' max='");
+    *_GPP += sel;
+    *_GPP += F("' placeholder='");
+    *_GPP += list;
+    *_GPP += F("' onclick='selectList(this)'");
+    if (dis) *_GPP += F(" disabled\n");
+    *_GPP += F(">\n");
+    *_GPP += F("<script>selectUpdate('");
+    *_GPP += name;
+    *_GPP += F("');</script>\n");
+    send();
+  }
+  void SELECT_LIST_STYLE(PGM_P st_1, PGM_P st_2 = GP_GREEN) {
+    *_GPP += F("<style>.selActive{background:");
+    *_GPP += FPSTR(st_1);
+    *_GPP += F("!important;}");
+    if (st_2 != GP_GREEN) {
+      *_GPP += F(".selList{border:2px solid ");
+      *_GPP += FPSTR(st_2);
+      *_GPP += F("!important;}");
+    }
+    *_GPP += F("</style>\n");
   }
 
   // ======================= ГРАФИКИ =======================

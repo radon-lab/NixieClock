@@ -93,6 +93,8 @@
 #define LANG_CLIMATE_HUM "Влажность"
 #define LANG_CLIMATE_PRESS "Давление"
 
+#define LANG_CLIMATE_NO_DATA "Нет данных"
+
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Выключена,Статичная,Дыхание"
 #define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти"
@@ -286,7 +288,6 @@
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 " (есп)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 " (датчик)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 " (погода)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL "(недоступно)"
 
 #define LANG_PAGE_SETTINGS_GUI_SENS_CLOCK "Датчик в часах"
 #define LANG_PAGE_SETTINGS_GUI_SENS_ESP "Датчик в есп"
@@ -626,6 +627,8 @@
 #define LANG_CLIMATE_HUM "Humidity"
 #define LANG_CLIMATE_PRESS "Pressure"
 
+#define LANG_CLIMATE_NO_DATA "No data"
+
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Off,Static,Breathing"
 #define LANG_BACKL_MODE_2 ",Breathing with color change when fading,Running fire,Running fire with color change,Running fire with rainbow,Running fire with confetti,Wave,Wave with color change,Wave with rainbow,Wave with confetti,Smooth color change,Rainbow,Confetti"
@@ -819,7 +822,6 @@
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2 " (esp)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3 " (sensor)"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4 " (weather)"
-#define LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL "(unavailable)"
 
 #define LANG_PAGE_SETTINGS_GUI_SENS_CLOCK "Sensor in clock"
 #define LANG_PAGE_SETTINGS_GUI_SENS_ESP "Sensor in esp"

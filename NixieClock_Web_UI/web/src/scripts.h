@@ -17,12 +17,12 @@ function EVdelete(url){if(!confirm('Delete '+url+'?'))return;EVsend('/GP_delete?
 function EVrename(url){res=prompt('Rename File',url);if(!res)return;EVsend('/GP_rename?'+url+'='+res,1);}
 function EVhint(id,txt){el=getEl(id);if(el.className=='_sw_c'){el=getEl('_'+id)}el.title=txt;}
 function EVpress(arg,dir){_pressId=(dir==1)?arg.name:null;if(arg.name)EVsend('/GP_press?'+arg.name+'='+dir);}
-function EVclick(arg,r=null){if(!arg.name)arg.name=arg.id;var v;
+function EVclick(arg,r=null,s=null){if(!arg.name)arg.name=arg.id;var v;
 if(arg.type=='number'){
 if(arg.hasAttribute('min')&&Number(arg.value)<=Number(arg.min))arg.value=arg.min;
 if(arg.hasAttribute('max')&&Number(arg.value)>=Number(arg.max))arg.value=arg.max;}
 if(arg.type=='checkbox')v=arg.checked?'1':'0';
-else if(arg.type=='button'||arg.value==undefined)v='';
+else if(arg.type=='button'||arg.value==undefined)v=(s!=null)?s:'';
 else v=arg.value;
 if(_clkRelList.includes(arg.name))r=1;
 if(_clkCloseList.includes(arg.name))popupClose();
@@ -62,6 +62,7 @@ case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
+case'button':if(item.name=='_select'){item.max=Number(resp);selectUpdate(item.id);}else item.value=resp;break;
 case undefined:switch(item.title){
 case'_popup':if(resp=='1')popupOpen(item.innerHTML);else if(resp=='-1')popupClose();break;
 case'_link':linkUpdate(item.id,resp);break;
@@ -90,9 +91,16 @@ function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.len
 function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
-function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.style.backdropFilter='blur(0)';setTimeout(function(){el.style.display='none';document.body.style.overflow=null;},300);}}
-function popupOpen(val){let el=getEl('_popup');if(el.style.display=='none'||!el.style.display){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},5);}}
+function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.removeAttribute('onclick');el.style.backdropFilter='blur(0)';setTimeout(function(){if(el.innerHTML==''){el.style.display='none';document.body.style.overflow=null;}},300);}}
+function popupOpen(val){let el=getEl('_popup');if(el.innerHTML==''){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},5);}}
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
+function selectUpdate(id){let el=getEl(id);let val=el.placeholder.split(',');let num=(Number(val.length)>Number(el.max))?el.max:0;el.value=((el.min!=0)?((Number(el.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
+function selectClick(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
+function selectList(arg){const list=document.createElement('div');list.className='blockBase block thinBlock selList';let val=arg.placeholder.split(',');
+for(let i=0;i<val.length;i++){const item=document.createElement('input');item.className='selItem';item.id='_sel_'+i;item.name=arg.id;item.type='button';item.max=i;
+item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectClick(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
+if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
+const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectClick(event.target)');}
 )";

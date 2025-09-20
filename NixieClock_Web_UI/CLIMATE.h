@@ -38,7 +38,7 @@ enum {
 #define SENS_BME 0x08
 
 const char *climateMainList[] = {LANG_PAGE_SETTINGS_GUI_SENS_CLOCK, LANG_PAGE_SETTINGS_GUI_SENS_ESP, LANG_PAGE_SETTINGS_GUI_SENS_WIRELESS, LANG_PAGE_SETTINGS_GUI_SENS_WEATHER};
-const char *climateDataList[] = {LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_NULL};
+const char *climateDataList[] = {LANG_PAGE_SETTINGS_GUI_SHOW_DATA_1, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_2, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_3, LANG_PAGE_SETTINGS_GUI_SHOW_DATA_4, GP_ITEM_DISABLE};
 const char *climateShowList[] = {LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_1, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_2, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_3, LANG_PAGE_SETTINGS_GUI_SHOW_T_MODE_4};
 const char *climateTempSensList[] = {"DS3231", "AHT", "SHT", "BMP/BME", "DS18B20", "DHT"};
 
@@ -56,7 +56,7 @@ String climateGetSensList(uint8_t sens, boolean shift) {
     }
     sens >>= 1;
   }
-  if (str[0] == '\0') str = "Нет данных";
+  if (str[0] == '\0') str = F(LANG_CLIMATE_NO_DATA);
 
   return str;
 }
@@ -64,7 +64,7 @@ String climateGetSensList(uint8_t sens, boolean shift) {
 String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
   String str;
   str.reserve(30);
-  str = F("Нет данных");
+  str = F(LANG_CLIMATE_NO_DATA);
 
   if (temp != 0x7FFF) {
     str = String(temp / 10.0, 1) + F("°С");
@@ -156,13 +156,13 @@ uint8_t climateGetBarHum(void) {
 }
 //--------------------------------------------------------------------
 String climateGetBarTempStr(void) {
-  return String(climateGetBarTempFloat(), 1) + "°С";
+  return String(climateGetBarTempFloat(), 1) + F("°С");
 }
 String climateGetBarHumStr(void) {
-  return String(climateGetBarHum()) + "%";
+  return String(climateGetBarHum()) + '%';
 }
 String climateGetBarPressStr(void) {
-  return String(climateGetBarPress()) + "mm.Hg";
+  return String(climateGetBarPress()) + F("mm.Hg");
 }
 //--------------------------------------------------------------------
 void climateReset(void) {
