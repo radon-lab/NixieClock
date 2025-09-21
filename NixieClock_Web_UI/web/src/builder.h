@@ -142,13 +142,13 @@ struct Builder {
   }
 
   void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
-    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n<div class='loadbar'>");
+    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n");
     if (st != GP_DEFAULT) {
       *_GPP += F("<style>.lw{background-color:");
       *_GPP += FPSTR(st);
       *_GPP += F("}</style>\n");
     }
-    *_GPP += F("<div class='lw'></div><div class='lw'></div><div class='lw'></div></div>\n<div class='ui_block' style='display:none'");
+    *_GPP += F("<div class='loadbar'><div class='lw'></div><div class='lw'></div><div class='lw'></div></div>\n<div class='ui_block' style='display:none'");
     if (w != 1000) {
       *_GPP += F(" style='max-width:");
       *_GPP += w;
