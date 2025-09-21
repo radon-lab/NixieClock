@@ -487,6 +487,8 @@
 #define LANG_PAGE_INFO_GUI_RESET "Сброс настроек"
 #define LANG_PAGE_INFO_GUI_REBOOT "Перезагрузка"
 
+#define LANG_PAGE_INFO_GUI_EXECUTE "Выполнить"
+
 //-------------------------------------------------------//
 #define LANG_PAGE_NETWORK_TITLE "Сетевые настройки"
 
@@ -1020,6 +1022,8 @@
 #define LANG_PAGE_INFO_GUI_CORRECT "Correction"
 #define LANG_PAGE_INFO_GUI_RESET "Reset settings"
 #define LANG_PAGE_INFO_GUI_REBOOT "Restart device"
+
+#define LANG_PAGE_INFO_GUI_EXECUTE "Execute"
 
 //-------------------------------------------------------//
 #define LANG_PAGE_NETWORK_TITLE "Network settings"

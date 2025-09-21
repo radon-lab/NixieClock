@@ -59,7 +59,7 @@ struct Builder {
   }
 
   void PAGE_ZOOM(const String& zoom, const String& width = "") {
-    *_GPP += F("<style type='text/css'>");
+    *_GPP += F("<style>");
     if (width.length()) {
       *_GPP += F("@media (max-width:");
       *_GPP += width;
@@ -113,7 +113,7 @@ struct Builder {
 
   void UI_MENU(const String& title, PGM_P st = GP_GREEN) {
     _ui_style = st;
-    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");      // force full width
+    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     *_GPP += title;
     *_GPP += F("</div></div>\n<nav class='sidebar' id='dashSdb'><div class='sblock'><div class='header header_s'>");
@@ -141,8 +141,14 @@ struct Builder {
     send();
   }
 
-  void UI_BODY(int w = 1000) {
-    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'><div class='ui_block'");
+  void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
+    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n<div class='loadbar'>");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("<style>.lw{background-color:");
+      *_GPP += FPSTR(st);
+      *_GPP += F("}</style>\n");
+    }
+    *_GPP += F("<div class='lw'></div><div class='lw'></div><div class='lw'></div></div>\n<div class='ui_block' style='display:none'");
     if (w != 1000) {
       *_GPP += F(" style='max-width:");
       *_GPP += w;
@@ -202,14 +208,14 @@ struct Builder {
            "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>\n"
            "<meta name='apple-mobile-web-app-capable' content='yes'/>\n"
            "<meta name='mobile-web-app-capable' content='yes'/>\n"
-           "</head><div id='_popup' class='popup'></div>\n<body>\n"));
+           "</head><body>\n"));
   }
   void PAGE_END(void) {
     SEND(F("</body></html>"));
   }
 
   void PAGE_BLOCK_BEGIN(int width = 350) {
-    *_GPP += F("<div align='center' class='mainblock'");
+    *_GPP += F("<div id='_popup' class='popup'></div>\n<div align='center' class='mainblock'");
     if (width) {
       *_GPP += F(" style='max-width:");
       *_GPP += width;
@@ -225,7 +231,7 @@ struct Builder {
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
                "fill='#f00' class='onlImg'></path></svg></div>\n"
-               "<div title='_popup' id='loadBlock' style='display:none'><div class='popupBlock'><div class='loadBlock'></div></div></div>\n");
+               "<div title='_popup' id='uploadBlock' style='display:none'><div class='popupBlock'><div class='uploadBlock'></div></div></div>\n");
   }
 
   void THEME(PGM_P style) {
@@ -255,6 +261,9 @@ struct Builder {
   void JS_BOTTOM(void) {
     SEND(F("<script>document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});\n"
            "document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));\n"
+           "document.querySelectorAll('.sel_btn').forEach(x=>selectUpdate(x));\n"
+           "document.querySelector('.ui_block').removeAttribute('style');\n"
+           "document.querySelector('.loadbar').remove();\n"
            "</script>\n"));
   }
 
@@ -784,6 +793,7 @@ struct Builder {
   void TAG_RAW(const String& tag, const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0, PGM_P back = GP_DEFAULT, int width = 0, int align = GP_CENTER) {
     *_GPP += F("<");
     *_GPP += tag;
+    if (back != GP_DEFAULT) *_GPP += F(" class='display'");
     if (name.length()) {
       *_GPP += F(" id='");
       *_GPP += name;
@@ -842,11 +852,11 @@ struct Builder {
     send();
   }
 
-  void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
-    TAG_RAW(F("label class='display'"), val, name, GP_DEFAULT, size, bold, 0, st);
+  void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("label"), val, name, GP_DEFAULT, size, bold, 0, st);
   }
-  void LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
-    TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
+  void LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("label"), val, name, GP_WHITE, size, bold, 0, st);
   }
 
   void TITLE(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
@@ -1293,7 +1303,7 @@ struct Builder {
     }
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getEl('loadBlock').innerHTML);setTimeout(popupClose,30000);EVsubmId('");
+    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getEl('uploadBlock').innerHTML);setTimeout(popupClose,30000);EVsubmId('");
     *_GPP += name;
     *_GPP += F("_form');\"/></div>\n"
                "</form></div>\n");
@@ -2270,7 +2280,7 @@ struct Builder {
 
   void SELECT_LIST(const String& name, const String& list, int sel = 0, bool nums = 0, bool dis = 0, bool rel = 0) {
     if (sel < 0) sel = 0;
-    *_GPP += F("<input type='button' class='selButton' name='_select' id='");
+    *_GPP += F("<input type='button' class='sel_btn' name='_select' id='");
     *_GPP += name;
     *_GPP += F("' step='");
     *_GPP += rel;
@@ -2283,9 +2293,6 @@ struct Builder {
     *_GPP += F("' onclick='selectList(this)'");
     if (dis) *_GPP += F(" disabled\n");
     *_GPP += F(">\n");
-    *_GPP += F("<script>selectUpdate('");
-    *_GPP += name;
-    *_GPP += F("');</script>\n");
     send();
   }
   void SELECT_LIST_STYLE(PGM_P st_1, PGM_P st_2 = GP_GREEN) {

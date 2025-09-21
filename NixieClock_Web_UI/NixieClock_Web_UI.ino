@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_025 бета от 20.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_029 бета от 21.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -221,10 +221,11 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
 }
 //--------------------------------------------------------------------
 void build(void) {
-  GP.PAGE_ZOOM("90%", "370px");
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
 
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+
+  GP.PAGE_ZOOM("90%", "370px");
   GP.PAGE_BLOCK_BEGIN(500);
 
   if (updaterState()) {
@@ -359,7 +360,7 @@ void build(void) {
     GP.TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/", LANG_PAGE_MENU_FOOTER_FORUM, "forum", "#e67b09");
     GP.FOOTER_END();
 
-    GP.UI_BODY(); //начать основное окно
+    GP.UI_BODY(1000, UI_LOAD_COLOR); //начать основное окно
 
     GP.BOX_BEGIN(GP_JUSTIFY, "100%;width:auto;padding-left:2%;padding-right:2%");
     GP.LABEL_BLOCK(encodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
@@ -1156,8 +1157,8 @@ void build(void) {
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_CONTROL, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_RESET, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("resetButton", "Выполнить", "", UI_BUTTON_COLOR, "200px"););
-      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_REBOOT, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("rebootButton", "Выполнить", "", UI_BUTTON_COLOR, "200px"););
+      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_RESET, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("resetButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
+      M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_REBOOT, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("rebootButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
@@ -1273,9 +1274,9 @@ void build(void) {
 }
 //--------------------------------------------------------------------
 void buildUpdate(bool UpdateEnd, const String& UpdateError) {
-  GP.PAGE_ZOOM("90%", "370px");
-
   GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+
+  GP.PAGE_ZOOM("90%", "370px");
   GP.PAGE_BLOCK_BEGIN(500);
 
   GP.PAGE_TITLE(LANG_PAGE_UPDATE_TITLE);

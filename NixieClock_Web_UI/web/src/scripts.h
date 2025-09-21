@@ -62,7 +62,7 @@ case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
-case'button':if(item.name=='_select'){item.max=Number(resp);selectUpdate(item.id);}else item.value=resp;break;
+case'button':if(item.name=='_select'){item.max=Number(resp);selectUpdate(item);}else item.value=resp;break;
 case undefined:switch(item.title){
 case'_popup':if(resp=='1')popupOpen(item.innerHTML);else if(resp=='-1')popupClose();break;
 case'_link':linkUpdate(item.id,resp);break;
@@ -96,7 +96,7 @@ function popupOpen(val){let el=getEl('_popup');if(el.innerHTML==''){document.bod
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
-function selectUpdate(id){let el=getEl(id);let val=el.placeholder.split(',');let num=(Number(val.length)>Number(el.max))?el.max:0;el.value=((el.min!=0)?((Number(el.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
+function selectUpdate(arg){let val=arg.placeholder.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
 function selectClick(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
 function selectList(arg){const list=document.createElement('div');list.className='blockBase block thinBlock selList';let val=arg.placeholder.split(',');
 for(let i=0;i<val.length;i++){const item=document.createElement('input');item.className='selItem';item.id='_sel_'+i;item.name=arg.id;item.type='button';item.max=i;

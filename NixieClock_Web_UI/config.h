@@ -53,6 +53,7 @@
 #define UI_HINT_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 #define UI_INFO_COLOR "#07b379" //цвет информационных подсказок веб интерфейса
 #define UI_LINK_COLOR "#07b379" //цвет текста ссылки веб интерфейса
+#define UI_LOAD_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 
 #define UI_MENU_COLOR "#e67b09" //цвет меню веб интерфейса
 #define UI_MENU_NAME_COLOR GP_GRAY //цвет имени устройства в меню веб интерфейса
@@ -107,4 +108,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.9_025" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9_029" //версия прошивки модуля esp
