@@ -4,7 +4,7 @@
 
 const char GP_JS_TOP[] PROGMEM = R"(
 var _tout=2000,_err=0;
-var _clkRelList=[],_clkCloseList=[],_clkUpdList={},_pressId=null,_spinInt=null,_spinF=0,_touch=0;
+var _popupStack=[],_clkRelList=[],_clkCloseList=[],_clkUpdList={},_pressId=null,_spinInt=null,_spinF=0,_touch=0;
 document.title='GyverPortalMod';
 function EVhintBox(min,max,box){_min=getEl(min);_max=getEl(max);_box=getEl(box);
 _box.style.visibility=(_min.value==_max.value)?'visible':'hidden';}
@@ -64,7 +64,7 @@ case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
 case'button':if(item.name=='_select'){item.max=Number(resp);selectUpdate(item);}else item.value=resp;break;
 case undefined:switch(item.title){
-case'_popup':if(resp=='1')popupOpen(item.innerHTML);else if(resp=='-1')popupClose();break;
+case'_popup':if(resp=='1')popupOpen(item.innerHTML,item.id);else if(resp=='-1')popupClose();break;
 case'_link':linkUpdate(item.id,resp);break;
 default:item.innerHTML=resp;break;}break;
 default:item.value=resp;break;}
@@ -91,8 +91,10 @@ function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.len
 function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
-function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.removeAttribute('onclick');el.style.backdropFilter='blur(0)';setTimeout(function(){if(el.innerHTML==''){el.style.display='none';document.body.style.overflow=null;}},300);}}
-function popupOpen(val){let el=getEl('_popup');if(el.innerHTML==''){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},15);}}
+function popupOpen(val,id=null){let el=getEl('_popup');if((el.innerHTML=='')||(id==null)){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},15);}
+else if(id!=null){if(!_popupStack.includes(id)&&(_popupStack.length<=10))_popupStack.push(id);}}
+function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.removeAttribute('onclick');el.style.backdropFilter='blur(0)';setTimeout(function(){if(el.innerHTML==''){el.style.display='none';document.body.style.overflow=null;}},300);}
+if(_popupStack.length!=0){let pop=getEl(_popupStack.shift());popupOpen(pop.innerHTML,pop.id);}}
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
