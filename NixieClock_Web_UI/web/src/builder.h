@@ -142,13 +142,14 @@ struct Builder {
   }
 
   void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
-    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n");
+    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n"
+               "<div class='ui_load'><div class='lw'></div><div class='lw'></div><div class='lw'></div>");
     if (st != GP_DEFAULT) {
       *_GPP += F("<style>.lw{background-color:");
       *_GPP += FPSTR(st);
       *_GPP += F("}</style>\n");
     }
-    *_GPP += F("<div class='loadbar'><div class='lw'></div><div class='lw'></div><div class='lw'></div></div>\n<div class='ui_block' style='display:none'");
+    *_GPP += F("</div>\n<div class='ui_block'");
     if (w != 1000) {
       *_GPP += F(" style='max-width:");
       *_GPP += w;
@@ -259,12 +260,7 @@ struct Builder {
     updateTime();
   }
   void JS_BOTTOM(void) {
-    SEND(F("<script>document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});\n"
-           "document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));\n"
-           "document.querySelectorAll('.sel_btn').forEach(x=>selectUpdate(x));\n"
-           "document.querySelector('.ui_block').removeAttribute('style');\n"
-           "document.querySelector('.loadbar').remove();\n"
-           "</script>\n"));
+    SEND(F("<script>pageUpdate();</script>\n"));
   }
 
   void SPOILER_BEGIN(const String& text, PGM_P st = GP_GREEN) {

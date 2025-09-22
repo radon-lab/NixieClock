@@ -92,7 +92,7 @@ function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShado
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
 function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.removeAttribute('onclick');el.style.backdropFilter='blur(0)';setTimeout(function(){if(el.innerHTML==''){el.style.display='none';document.body.style.overflow=null;}},300);}}
-function popupOpen(val){let el=getEl('_popup');if(el.innerHTML==''){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},5);}}
+function popupOpen(val){let el=getEl('_popup');if(el.innerHTML==''){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},15);}}
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
@@ -103,4 +103,6 @@ for(let i=0;i<val.length;i++){const item=document.createElement('input');item.cl
 item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectClick(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
 const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectClick(event.target)');}
+function pageUpdate(){document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});document.querySelector('.ui_load').remove();document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));document.querySelectorAll('.sel_btn').forEach(x=>selectUpdate(x));
+let el=document.querySelector('.ui_block');el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}
 )";

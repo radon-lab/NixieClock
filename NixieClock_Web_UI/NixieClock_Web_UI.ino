@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_029 бета от 21.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_031 бета от 22.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -41,9 +41,6 @@ GyverPortalMod ui(&LittleFS);
 GPdate mainDate; //основная дата
 GPtime mainTime; //основное время
 
-uint8_t passState = 0; //флаг состояния ввода пароля
-uint32_t passTimer = 0; //таймер ожидания пароля
-
 boolean clockUpdate = false; //флаг запрета обновления часов
 boolean otaUpdate = false; //флаг запрета обновления есп
 boolean fsUpdate = false; //флаг запрета обновления фс
@@ -52,6 +49,9 @@ boolean climateLocal = false; //флаг локальных скриптов г�
 boolean alarmSvgImage = false; //флаг локальных изображений будильника
 boolean timerSvgImage = false; //флаг локальных изображений таймера/секундомера
 boolean radioSvgImage = false; //флаг локальных изображений радиоприемника
+
+uint8_t passState = 0; //флаг состояния ввода пароля
+uint32_t passTimer = 0; //таймер ожидания пароля
 
 uint8_t timeState = 0; //флаг состояния актуальности времени
 
@@ -997,7 +997,7 @@ void build(void) {
 
       if (radioSvgImage) {
         GP.SEND("<style>.i_mask{margin:0;}#radioMode .i_mask{margin-right:4px;}</style>\n");
-        M_BOX(GP_JUSTIFY, "440px;height:70px",
+        M_BOX(GP_JUSTIFY, "380px;height:70px",
               GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR);
               GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR);
               GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR);
