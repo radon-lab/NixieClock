@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_032 бета от 22.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_033 бета от 22.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -396,26 +396,26 @@ void build(void) {
           M_BOX(
             GP.LABEL(LANG_PAGE_HOME_GUI_TIME, "", UI_LABEL_COLOR);
             M_BOX(GP_RIGHT,
-                  GP.NUMBER_C("mainTimeH", LANG_PAGE_HOME_GUI_HOUR, -1, 0, 23, "56px", "mainTimeM");
+                  GP.NUMBER_C("setsTimeH", LANG_PAGE_HOME_GUI_HOUR, -1, 0, 23, "56px", "setsTimeM");
                   GP.LABEL_M(":", -1, 9);
-                  GP.NUMBER_C("mainTimeM", LANG_PAGE_HOME_GUI_MIN, -1, 0, 59, "56px", "mainTimeS");
+                  GP.NUMBER_C("setsTimeM", LANG_PAGE_HOME_GUI_MIN, -1, 0, 59, "56px", "setsTimeS");
                   GP.LABEL_M(":", -1, 9);
-                  GP.NUMBER_C("mainTimeS", LANG_PAGE_HOME_GUI_SEC, -1, 0, 59, "56px"););
+                  GP.NUMBER_C("setsTimeS", LANG_PAGE_HOME_GUI_SEC, -1, 0, 59, "56px"););
           );
           M_BOX(
             GP.LABEL(LANG_PAGE_HOME_GUI_DATE, "", UI_LABEL_COLOR);
             M_BOX(GP_RIGHT,
-                  GP.NUMBER_C("mainDateD", LANG_PAGE_HOME_GUI_DAY, -1, 1, 31, "56px", "mainDateM");
+                  GP.NUMBER_C("setsDateD", LANG_PAGE_HOME_GUI_DAY, -1, 1, 31, "56px", "setsDateM");
                   GP.LABEL_M(".", 0, 7);
-                  GP.NUMBER_C("mainDateM", LANG_PAGE_HOME_GUI_MOUN, -1, 1, 12, "56px", "mainDateY");
+                  GP.NUMBER_C("setsDateM", LANG_PAGE_HOME_GUI_MOUN, -1, 1, 12, "56px", "setsDateY");
                   GP.LABEL_M(".", 0, 7);
-                  GP.NUMBER_C("mainDateY", LANG_PAGE_HOME_GUI_YEAR, -1, 0, 99, "56px"););
+                  GP.NUMBER_C("setsDateY", LANG_PAGE_HOME_GUI_YEAR, -1, 0, 99, "56px"););
           );
           M_BOX(
             GP.LABEL(LANG_PAGE_HOME_GUI_FORMAT, "", UI_LABEL_COLOR);
             M_BOX(GP_RIGHT,
                   GP.LABEL(LANG_PAGE_HOME_GUI_FORMAT_1, "", UI_LABEL_COLOR);
-                  GP.SWITCH("mainTimeFormat", mainSettings.timeFormat, UI_SWITCH_COLOR);
+                  GP.SWITCH("setsTimeFormat", mainSettings.timeFormat, UI_SWITCH_COLOR);
                   GP.LABEL(LANG_PAGE_HOME_GUI_FORMAT_2, "", UI_LABEL_COLOR);
                  );
           );
@@ -428,16 +428,16 @@ void build(void) {
           GP.BLOCK_END();
 
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_HOME_BLOCK_EFFECTS, UI_BLOCK_COLOR);
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_GLITCH, "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_DOTS, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastDot", dotModeList(false), fastSettings.dotMode););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_FLIP, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastFlip", flipModeList(false), fastSettings.flipMode););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_GLITCH, "", UI_LABEL_COLOR); GP.SWITCH("setsGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_DOTS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsDot", dotModeList(false), fastSettings.dotMode););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_FLIP, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsFlip", flipModeList(false), fastSettings.flipMode););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
           GP.HR(UI_LINE_COLOR);
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_BACKL, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_BACKL, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_C("setsColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
           GP.HR(UI_LINE_COLOR);
-          M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? LANG_PAGE_SETTINGS_GUI_ACTION : LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("mainSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
+          M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? LANG_PAGE_SETTINGS_GUI_ACTION : LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.knockSound, UI_SWITCH_COLOR););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
           GP.BLOCK_END();
         );
       }
@@ -445,7 +445,7 @@ void build(void) {
       if (deviceInformation[ALARM_TYPE]) {
         if (alarm.reload >= 2) alarm.reload = 0;
         updateList += F(",mainReload");
-        GP.RELOAD("mainReload");
+        GP.RELOAD("extReload");
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_ALARM_BLOCK, UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
@@ -649,7 +649,7 @@ void build(void) {
 
           GP.BLOCK_BEGIN(GP_DIV_RAW , "280px");
           GP.BLOCK_BEGIN(GP_THIN, "", "", UI_TIMER_BLOCK_COLOR);
-          GP.LABEL(getTimerState(), "mainTimerState", UI_TIMER_INFO_COLOR, 0, 1);
+          GP.LABEL(getTimerState(), "timerState", UI_TIMER_INFO_COLOR, 0, 1);
 
           GP.TABLE_BEGIN("15%,15%,15%", GP_ALS(GP_CENTER, GP_CENTER, GP_CENTER), "200px");
           GP.TR();
@@ -668,7 +668,7 @@ void build(void) {
             if (i == 2) {
               GP.TR();
               GP.TD(GP_CENTER, 3);
-              M_BOX(GP_CENTER, GP.LABEL(convertTimerTime(), "mainTimer", UI_TIMER_TIME_COLOR, 40, 1););
+              M_BOX(GP_CENTER, GP.LABEL(convertTimerTime(), "timerTime", UI_TIMER_TIME_COLOR, 40, 1););
               GP.TR();
             }
           }
@@ -692,8 +692,8 @@ void build(void) {
           }
           GP.BLOCK_END();
 
-          GP.UPDATE_CLICK("mainTimer", "timerHour/0,timerHour/1,timerHour/2,timerHour/3,timerHour/4,timerHour/5");
-          GP.UPDATE_CLICK("mainTimer,mainTimerState", "timerControl/0,timerControl/1,timerControl/2");
+          GP.UPDATE_CLICK("timerTime", "timerHour/0,timerHour/1,timerHour/2,timerHour/3,timerHour/4,timerHour/5");
+          GP.UPDATE_CLICK("timerTime,mainTimerState", "timerControl/0,timerControl/1,timerControl/2");
         }
       }
     }
@@ -723,9 +723,9 @@ void build(void) {
       if (deviceInformation[LIGHT_SENS_ENABLE]) lightHint += F(LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2);
       else if (weatherGetValidStatus()) lightHint += F(LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3);
 
-      GP.NAV_TABS_M("fastMainTab", LANG_PAGE_SETTINGS_MENU, navMainTab, UI_BUTTON_COLOR);
+      GP.NAV_TABS_M("extMainTab", LANG_PAGE_SETTINGS_MENU, navMainTab, UI_BUTTON_COLOR);
 
-      GP.NAV_BLOCK_BEGIN("fastMainTab", 0, navMainTab);
+      GP.NAV_BLOCK_BEGIN("extMainTab", 0, navMainTab);
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_WEATHER, UI_BLOCK_COLOR);
         M_BOX(
@@ -738,9 +738,9 @@ void build(void) {
         );
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SHOW, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE, "", UI_LABEL_COLOR); GP.SWITCH("mainAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("mainAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT, "", UI_LABEL_COLOR); GP.SELECT_LIST("mainAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE, "", UI_LABEL_COLOR); GP.SWITCH("setsAutoShow", (boolean)!(mainSettings.autoShowTime & 0x80), UI_SWITCH_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("setsAutoShowTime", mainSettings.autoShowTime & 0x7F, 1, 15, 1, 0, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_DISPLAY, UI_LINE_COLOR, UI_HINT_COLOR, "hint4");
         GP.HINT("hint4", LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY); //всплывающая подсказка
@@ -753,75 +753,75 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_INDI, UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_GLITCH, "", UI_LABEL_COLOR); GP.SWITCH("mainGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_FLIP, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastFlip", flipModeList(false), fastSettings.flipMode););
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_GLITCH, "", UI_LABEL_COLOR); GP.SWITCH("setsGlitch", mainSettings.glitchMode, UI_SWITCH_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_FLIP, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsFlip", flipModeList(false), fastSettings.flipMode););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainIndiBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR, "hint1");
       GP.HINT("hint1", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
       M_BOX(GP_CENTER,
-            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
+            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
-            GP.SPINNER("mainTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
+            GP.SPINNER("setsTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
-      GP.HINT_BOX("hintB1", "mainTimeBrightS", "mainTimeBrightE", lightHint);
+      GP.HINT_BOX("hintB1", "setsTimeBrightS", "setsTimeBrightE", lightHint);
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SLEEP, UI_LINE_COLOR, UI_HINT_COLOR, "hint2");
       GP.HINT("hint2", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
       M_BOX(GP_CENTER,
-            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
+            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
-            GP.SPINNER("mainSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52);
+            GP.SPINNER("setsSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52);
            );
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BURN, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("mainBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_METHOD, "", UI_LABEL_COLOR); GP.SELECT_LIST("mainBurnFlip", LANG_PAGE_SETTINGS_GUI_BURN_MODE, mainSettings.burnMode););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TIME_MINS, "", UI_LABEL_COLOR); GP.SPINNER("setsBurnTime", mainSettings.burnTime, 10, 180, 5, 0, UI_SPINNER_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_METHOD, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBurnFlip", LANG_PAGE_SETTINGS_GUI_BURN_MODE, mainSettings.burnMode););
       GP.BLOCK_END();
       );
 
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_BRIGHT, UI_BLOCK_COLOR);
-        M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("fastColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("setsColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainBacklBrightDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
-        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainBacklBrightNight", LANG_PAGE_SETTINGS_GUI_DISABLE, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightNight", LANG_PAGE_SETTINGS_GUI_DISABLE, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_DOTS, UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] == 3) || !deviceInformation[DOTS_PORT_ENABLE])););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("fastDot", dotModeList(false), fastSettings.dotMode););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] == 3) || !deviceInformation[DOTS_PORT_ENABLE])););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsDot", dotModeList(false), fastSettings.dotMode););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
-        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("mainDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] == 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
+        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
+        M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] == 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
         GP.BLOCK_END();
       );
       GP.NAV_BLOCK_END();
 
-      GP.NAV_BLOCK_BEGIN("fastMainTab", 1, navMainTab);
+      GP.NAV_BLOCK_BEGIN("extMainTab", 1, navMainTab);
       M_GRID(
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_SOUND, UI_BLOCK_COLOR);
-        M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? LANG_PAGE_SETTINGS_GUI_ACTION : LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("mainSound", mainSettings.knockSound, UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("mainVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
-        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("mainSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP.LABEL((deviceInformation[PLAYER_TYPE]) ? LANG_PAGE_SETTINGS_GUI_ACTION : LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.knockSound, UI_SWITCH_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_HOUR, UI_LINE_COLOR, UI_HINT_COLOR, "hint3");
         GP.HINT("hint3", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
         M_BOX(GP_CENTER,
-              GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("mainHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
+              GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
               GP.VOID_BOX("20px");
-              GP.SPINNER("mainHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
+              GP.SPINNER("setsHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
              );
-        GP.HINT_BOX("hintB2", "mainHourSoundS", "mainHourSoundE", LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1);
+        GP.HINT_BOX("hintB2", "setsHourSoundS", "setsHourSoundE", LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1);
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP, "", UI_LABEL_COLOR); GP.SWITCH("mainHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)!(deviceInformation[PLAYER_TYPE] && sensorAvaibleData())););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("mainHourSound", LANG_PAGE_SETTINGS_GUI_HOUR_MODE, mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP, "", UI_LABEL_COLOR); GP.SWITCH("setsHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)!(deviceInformation[PLAYER_TYPE] && sensorAvaibleData())););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsHourSound", LANG_PAGE_SETTINGS_GUI_HOUR_MODE, mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
         GP.BLOCK_END();
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_ALARM, UI_BLOCK_COLOR);
@@ -866,14 +866,14 @@ void build(void) {
         );
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_CORRECT, UI_LINE_COLOR, UI_HINT_COLOR);
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP_C, "", UI_LABEL_COLOR); GP.SPINNER("mainTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP_C, "", UI_LABEL_COLOR); GP.SPINNER("setsTempCorrect", mainSettings.tempCorrect / 10.0, -12.7, 12.7, 0.1, 1, UI_SPINNER_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_CORRECT, "", UI_LABEL_COLOR); GP.SELECT_LIST("climateCorrectType", LANG_PAGE_SETTINGS_GUI_SENS_NULL + climateGetSendDataList(), extendedSettings.tempCorrectSensor););
         GP.BLOCK_END();
       );
       GP.NAV_BLOCK_END();
 
-      PAGE_ALERT_BLOCK("climateWarn", LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE, LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1, "", true);
-      GP.UPDATE_CLICK("climateWarn", "climateChart");
+      PAGE_ALERT_BLOCK("alertClimate", LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE, LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1, "", true);
+      GP.UPDATE_CLICK("alertClimate", "climateChart");
     }
     else if (ui.uri("/climate")) { //микроклимат
       PAGE_TITLE_NAME(LANG_PAGE_CLIMATE_TITLE);
@@ -1044,9 +1044,9 @@ void build(void) {
     else if (ui.uri("/information")) { //информация о системе
       PAGE_TITLE_NAME(LANG_PAGE_INFO_TITLE);
 
-      GP.NAV_TABS_M("fastInfoTab", LANG_PAGE_INFO_MENU, navInfoTab, UI_BUTTON_COLOR);
+      GP.NAV_TABS_M("extInfoTab", LANG_PAGE_INFO_MENU, navInfoTab, UI_BUTTON_COLOR);
 
-      GP.NAV_BLOCK_BEGIN("fastInfoTab", 0, navInfoTab);
+      GP.NAV_BLOCK_BEGIN("extInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_SYSTEM, UI_BLOCK_COLOR);
       GP.BLOCK_HIDE_BEGIN();
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ID, "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
@@ -1113,7 +1113,7 @@ void build(void) {
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
-      GP.NAV_BLOCK_BEGIN("fastInfoTab", 1, navInfoTab);
+      GP.NAV_BLOCK_BEGIN("extInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_DEVICE, UI_BLOCK_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NAME, "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", LANG_PAGE_INFO_GUI_NONE, settings.nameDevice, "", 19););
       GP.BREAK();
@@ -1162,11 +1162,11 @@ void build(void) {
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
-      PAGE_ALERT_BLOCK("extReset", LANG_PAGE_INFO_ALERT_RESET_TITLE, LANG_PAGE_INFO_ALERT_RESET_1);
-      PAGE_ALERT_BLOCK("extReboot", LANG_PAGE_INFO_ALERT_REBOOT_TITLE, LANG_PAGE_INFO_ALERT_REBOOT_1);
+      PAGE_ALERT_BLOCK("alertReset", LANG_PAGE_INFO_ALERT_RESET_TITLE, LANG_PAGE_INFO_ALERT_RESET_1);
+      PAGE_ALERT_BLOCK("alertReboot", LANG_PAGE_INFO_ALERT_REBOOT_TITLE, LANG_PAGE_INFO_ALERT_REBOOT_1);
 
-      GP.UPDATE_CLICK("extReset", "resetButton");
-      GP.UPDATE_CLICK("extReboot", "rebootButton");
+      GP.UPDATE_CLICK("alertReset", "resetButton");
+      GP.UPDATE_CLICK("alertReboot", "rebootButton");
       GP.RELOAD_CLICK(String("extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
@@ -1256,14 +1256,14 @@ void build(void) {
     static boolean failureWarn = true; //флаг отображения предупреждения об сбоях
     if (!(device.failure & 0x8000) && device.failure && failureWarn) {
       failureWarn = false;
-      PAGE_ALERT_BLOCK("mainFailWarn", LANG_FAIL_ALERT_TITLE, LANG_FAIL_ALERT_1, LANG_FAIL_ALERT_2, false, true);
-      GP.POPUP_OPEN("mainFailWarn");
+      PAGE_ALERT_BLOCK("alertFail", LANG_FAIL_ALERT_TITLE, LANG_FAIL_ALERT_1, LANG_FAIL_ALERT_2, false, true);
+      GP.POPUP_OPEN("alertFail");
     }
 
-    updateList += F(",extGroup,extFound,extFoundText");
+    updateList += F(",extGroup,alertFound,alertFoundText");
 
     wirelessResetFoundState();
-    PAGE_ALERT_BLOCK("extFound", LANG_WIRELESS_ALERT_TITLE, LANG_WIRELESS_ALERT_FOUND, "UID: 00:00:00:00:00:00");
+    PAGE_ALERT_BLOCK("alertFound", LANG_WIRELESS_ALERT_TITLE, LANG_WIRELESS_ALERT_FOUND, "UID: 00:00:00:00:00:00");
 
     GP.UPDATE(updateList);
     GP.UI_END(); //завершить окно панели управления
@@ -1521,165 +1521,157 @@ void action() {
       }
     }
     //--------------------------------------------------------------------
-    if (ui.clickSub("fast")) {
-      if (ui.clickInt("fastDot", fastSettings.dotMode)) {
+    if (ui.clickSub("sets")) {
+      if (ui.click("setsDateD")) {
+        mainDate.day = constrain(ui.getInt("setsDateD"), 1, maxDays(mainDate.year, mainDate.month));
+        busSetCommand(WRITE_DATE);
+      }
+      if (ui.click("setsDateM")) {
+        mainDate.month = constrain(ui.getInt("setsDateM"), 1, 12);
+        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
+        busSetCommand(WRITE_DATE);
+      }
+      if (ui.click("setsDateY")) {
+        mainDate.year = constrain(ui.getInt("setsDateY"), 1, 12);
+        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
+        busSetCommand(WRITE_DATE);
+      }
+      if (ui.click("setsTimeH")) {
+        mainTime.hour = constrain(ui.getInt("setsTimeH"), 0, 23);
+        busSetCommand(WRITE_TIME);
+      }
+      if (ui.click("setsTimeM")) {
+        mainTime.minute = constrain(ui.getInt("setsTimeM"), 0, 59);
+        busSetCommand(WRITE_TIME);
+      }
+      if (ui.click("setsTimeS")) {
+        mainTime.second = constrain(ui.getInt("setsTimeS"), 0, 59);
+        busSetCommand(WRITE_TIME);
+      }
+
+      if (ui.clickBool("setsTimeFormat", mainSettings.timeFormat)) {
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
+      }
+      if (ui.clickBool("setsGlitch", mainSettings.glitchMode)) {
+        busSetCommand(WRITE_MAIN_SET, MAIN_GLITCH_MODE);
+      }
+
+      if (ui.clickInt("setsDot", fastSettings.dotMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_DOT_MODE);
       }
-      if (ui.clickInt("fastNeonDot", fastSettings.neonDotMode)) {
+      if (ui.clickInt("setsNeonDot", fastSettings.neonDotMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_NEON_DOT_MODE);
       }
-      if (ui.clickInt("fastFlip", fastSettings.flipMode)) {
+      if (ui.clickInt("setsFlip", fastSettings.flipMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_FLIP_MODE);
       }
-      if (ui.clickInt("fastSecsFlip", fastSettings.secsMode)) {
+      if (ui.clickInt("setsSecsFlip", fastSettings.secsMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_SECS_MODE);
       }
-      if (ui.clickInt("fastBackl", fastSettings.backlMode)) {
+      if (ui.clickInt("setsBackl", fastSettings.backlMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_BACKL_MODE);
       }
-      if (ui.click("fastColor")) {
-        uint8_t color = constrain(ui.getInt("fastColor"), 0, 28);
+      if (ui.click("setsColor")) {
+        uint8_t color = constrain(ui.getInt("setsColor"), 0, 28);
         fastSettings.backlColor = (color > 25) ? (color + 227) : (color * 10);
         busSetCommand(WRITE_FAST_SET, FAST_BACKL_COLOR);
       }
 
-      if (ui.clickSub("fastMainTab")) {
-        navMainTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
-      }
-      if (ui.clickSub("fastInfoTab")) {
-        navInfoTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
-      }
-    }
-    //--------------------------------------------------------------------
-    if (ui.clickSub("main")) {
-      if (ui.click("mainDateD")) {
-        mainDate.day = constrain(ui.getInt("mainDateD"), 1, maxDays(mainDate.year, mainDate.month));
-        busSetCommand(WRITE_DATE);
-      }
-      if (ui.click("mainDateM")) {
-        mainDate.month = constrain(ui.getInt("mainDateM"), 1, 12);
-        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
-        busSetCommand(WRITE_DATE);
-      }
-      if (ui.click("mainDateY")) {
-        mainDate.year = constrain(ui.getInt("mainDateY"), 1, 12);
-        mainDate.day = constrain(mainDate.day, 1, maxDays(mainDate.year, mainDate.month));
-        busSetCommand(WRITE_DATE);
-      }
-      if (ui.click("mainTimeH")) {
-        mainTime.hour = constrain(ui.getInt("mainTimeH"), 0, 23);
-        busSetCommand(WRITE_TIME);
-      }
-      if (ui.click("mainTimeM")) {
-        mainTime.minute = constrain(ui.getInt("mainTimeM"), 0, 59);
-        busSetCommand(WRITE_TIME);
-      }
-      if (ui.click("mainTimeS")) {
-        mainTime.second = constrain(ui.getInt("mainTimeS"), 0, 59);
-        busSetCommand(WRITE_TIME);
-      }
-      if (ui.clickBool("mainTimeFormat", mainSettings.timeFormat)) {
-        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_FORMAT);
-      }
-      if (ui.clickBool("mainGlitch", mainSettings.glitchMode)) {
-        busSetCommand(WRITE_MAIN_SET, MAIN_GLITCH_MODE);
-      }
-
-      if (ui.clickInt("mainIndiBrtDay", mainSettings.indiBrightDay)) {
+      if (ui.clickInt("setsIndiBrtDay", mainSettings.indiBrightDay)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_D);
       }
-      if (ui.clickInt("mainIndiBrtNight", mainSettings.indiBrightNight)) {
+      if (ui.clickInt("setsIndiBrtNight", mainSettings.indiBrightNight)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_INDI_BRIGHT_N);
       }
 
-      if (ui.clickInt("mainBurnFlip", mainSettings.burnMode)) {
+      if (ui.clickInt("setsBurnFlip", mainSettings.burnMode)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_BURN_MODE);
       }
-      if (ui.clickInt("mainBurnTime", mainSettings.burnTime)) {
+      if (ui.clickInt("setsBurnTime", mainSettings.burnTime)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_BURN_TIME);
       }
 
-      if (ui.click("mainAutoShow")) {
-        if (ui.getBool("mainAutoShow")) mainSettings.autoShowTime &= 0x7F;
+      if (ui.click("setsAutoShow")) {
+        if (ui.getBool("setsAutoShow")) mainSettings.autoShowTime &= 0x7F;
         else mainSettings.autoShowTime |= 0x80;
         busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
       }
-      if (ui.click("mainAutoShowTime")) {
+      if (ui.click("setsAutoShowTime")) {
         if (mainSettings.autoShowTime & 0x80) {
-          mainSettings.autoShowTime = ui.getInt("mainAutoShowTime") | 0x80;
+          mainSettings.autoShowTime = ui.getInt("setsAutoShowTime") | 0x80;
         }
         else {
-          mainSettings.autoShowTime = ui.getInt("mainAutoShowTime");
+          mainSettings.autoShowTime = ui.getInt("setsAutoShowTime");
           busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_TIME);
         }
       }
-      if (ui.clickInt("mainAutoShowFlip", mainSettings.autoShowFlip)) {
+      if (ui.clickInt("setsAutoShowFlip", mainSettings.autoShowFlip)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_AUTO_SHOW_FLIP);
       }
-      if (ui.click("mainTempCorrect")) {
-        mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("mainTempCorrect") * 10), -127, 127);
+      if (ui.click("setsTempCorrect")) {
+        mainSettings.tempCorrect = constrain((int16_t)(ui.getFloat("setsTempCorrect") * 10), -127, 127);
         busSetCommand(WRITE_MAIN_SET, MAIN_TEMP_CORRECT);
       }
 
-      if (ui.clickInt("mainTimeBrightS", mainSettings.timeBrightStart)) {
+      if (ui.clickInt("setsTimeBrightS", mainSettings.timeBrightStart)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_S);
       }
-      if (ui.clickInt("mainTimeBrightE", mainSettings.timeBrightEnd)) {
+      if (ui.clickInt("setsTimeBrightE", mainSettings.timeBrightEnd)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_E);
       }
 
-      if (ui.clickInt("mainHourSoundS", mainSettings.timeHourStart)) {
+      if (ui.clickInt("setsHourSoundS", mainSettings.timeHourStart)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_S);
       }
-      if (ui.clickInt("mainHourSoundE", mainSettings.timeHourEnd)) {
+      if (ui.clickInt("setsHourSoundE", mainSettings.timeHourEnd)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_E);
       }
 
-      if (ui.clickInt("mainSleepD", mainSettings.timeSleepDay)) {
+      if (ui.clickInt("setsSleepD", mainSettings.timeSleepDay)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_D);
       }
-      if (ui.clickInt("mainSleepN", mainSettings.timeSleepNight)) {
+      if (ui.clickInt("setsSleepN", mainSettings.timeSleepNight)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_SLEEP_N);
       }
 
-      if (ui.click("mainDotBrtDay")) {
-        mainSettings.dotBrightDay = constrain(ui.getInt("mainDotBrtDay"), 1, 25) * 10;
+      if (ui.click("setsDotBrtDay")) {
+        mainSettings.dotBrightDay = constrain(ui.getInt("setsDotBrtDay"), 1, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_D);
       }
-      if (ui.click("mainDotBrtNight")) {
-        mainSettings.dotBrightNight = constrain(ui.getInt("mainDotBrtNight"), 0, 25);
+      if (ui.click("setsDotBrtNight")) {
+        mainSettings.dotBrightNight = constrain(ui.getInt("setsDotBrtNight"), 0, 25);
         if (deviceInformation[NEON_DOT] != 3) mainSettings.dotBrightNight *= 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
 
-      if (ui.click("mainBacklBrightDay")) {
-        mainSettings.backlBrightDay = constrain(ui.getInt("mainBacklBrightDay"), 1, 25) * 10;
+      if (ui.click("setsBacklBrightDay")) {
+        mainSettings.backlBrightDay = constrain(ui.getInt("setsBacklBrightDay"), 1, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_D);
       }
-      if (ui.click("mainBacklBrightNight")) {
-        mainSettings.backlBrightNight = constrain(ui.getInt("mainBacklBrightNight"), 0, 25) * 10;
+      if (ui.click("setsBacklBrightNight")) {
+        mainSettings.backlBrightNight = constrain(ui.getInt("setsBacklBrightNight"), 0, 25) * 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_BACKL_BRIGHT_N);
       }
 
-      if (ui.click("mainSound")) {
-        mainSettings.knockSound = ui.getBool("mainSound");
+      if (ui.click("setsSound")) {
+        mainSettings.knockSound = ui.getBool("setsSound");
         busSetCommand(WRITE_MAIN_SET, MAIN_KNOCK_SOUND);
       }
-      if (ui.clickInt("mainVoice", mainSettings.voiceSound)) {
+      if (ui.clickInt("setsVoice", mainSettings.voiceSound)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_VOICE_SOUND);
         busSetCommand(WRITE_TEST_MAIN_VOICE);
       }
-      if (ui.clickInt("mainSoundVol", mainSettings.volumeSound)) {
+      if (ui.clickInt("setsSoundVol", mainSettings.volumeSound)) {
         busSetCommand(WRITE_MAIN_SET, MAIN_VOLUME_SOUND);
         busSetCommand(WRITE_TEST_MAIN_VOL);
       }
-      if (ui.click("mainHourTemp")) {
-        if (ui.getBool("mainHourTemp")) mainSettings.hourSound |= 0x80;
+      if (ui.click("setsHourTemp")) {
+        if (ui.getBool("setsHourTemp")) mainSettings.hourSound |= 0x80;
         else mainSettings.hourSound &= ~0x80;
         busSetCommand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
       }
-      if (ui.click("mainHourSound")) {
-        mainSettings.hourSound = (mainSettings.hourSound & 0x80) | constrain(ui.getInt("mainHourSound"), 0, 3);
+      if (ui.click("setsHourSound")) {
+        mainSettings.hourSound = (mainSettings.hourSound & 0x80) | constrain(ui.getInt("setsHourSound"), 0, 3);
         busSetCommand(WRITE_MAIN_SET, MAIN_HOUR_SOUND);
       }
     }
@@ -1698,74 +1690,69 @@ void action() {
         busSetCommand(WRITE_EXTENDED_SHOW_TIME, pos);
       }
 
-      if (ui.click("extAlarmTimeout")) {
-        extendedSettings.alarmTime = ui.getInt("extAlarmTimeout");
-        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT);
-      }
-      if (ui.click("extAlarmWaitTime")) {
-        extendedSettings.alarmWaitTime = ui.getInt("extAlarmWaitTime");
-        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_WAIT);
-      }
-      if (ui.click("extAlarmSoundTime")) {
-        extendedSettings.alarmSoundTime = ui.getInt("extAlarmSoundTime");
-        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT_SOUND);
-      }
-      if (ui.click("extAlarmDotOn")) {
-        extendedSettings.alarmDotOn = ui.getInt("extAlarmDotOn");
-        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_ON);
-      }
-      if (ui.click("extAlarmDotWait")) {
-        extendedSettings.alarmDotWait = ui.getInt("extAlarmDotWait");
-        busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_WAIT);
-      }
-
-      if (ui.click("extDeviceName")) {
-        String _name;
-        _name.reserve(20);
-        _name = ui.getString("extDeviceName");
-
-        _name.trim();
-        _name.replace(",", "");
-        _name.replace(":", "");
-
-        strncpy(settings.nameDevice, _name.c_str(), 20); //копируем себе
-        settings.nameDevice[19] = '\0'; //устанавливаем последний символ
-
-        if (groupGetSearchStatus()) { //если сервис обнаружения устройств запущен
-          groupSearch(); //запустить поиск устройств поблизости
-          groupReload(); //обновить состояние для устройств поблизости
+      if (ui.clickSub("extAlarm")) {
+        if (ui.click("extAlarmTimeout")) {
+          extendedSettings.alarmTime = ui.getInt("extAlarmTimeout");
+          busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT);
         }
-
-        memorySaveSettings(); //обновить данные в памяти
-      }
-      if (ui.clickBool("extDeviceAp", settings.nameAp)) {
-        memorySaveSettings(); //обновить данные в памяти
-      }
-      if (ui.clickBool("extDeviceMenu", settings.nameMenu)) {
-        memorySaveSettings(); //обновить данные в памяти
-      }
-      if (ui.clickBool("extDevicePrefix", settings.namePrefix)) {
-        memorySaveSettings(); //обновить данные в памяти
-      }
-      if (ui.clickBool("extDevicePostfix", settings.namePostfix)) {
-        memorySaveSettings(); //обновить данные в памяти
-      }
-
-      if (ui.clickBool("extDeviceGroup", settings.groupFind)) {
-        if (wifiGetConnectStatus()) {
-          if (settings.groupFind) groupStart(); //запустили обнаружение устройств поблизости
-          else groupStop(); //остановить обнаружение устройств поблизости
+        if (ui.click("extAlarmWaitTime")) {
+          extendedSettings.alarmWaitTime = ui.getInt("extAlarmWaitTime");
+          busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_WAIT);
         }
-        memorySaveSettings(); //обновить данные в памяти
+        if (ui.click("extAlarmSoundTime")) {
+          extendedSettings.alarmSoundTime = ui.getInt("extAlarmSoundTime");
+          busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_TIMEOUT_SOUND);
+        }
+        if (ui.click("extAlarmDotOn")) {
+          extendedSettings.alarmDotOn = ui.getInt("extAlarmDotOn");
+          busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_ON);
+        }
+        if (ui.click("extAlarmDotWait")) {
+          extendedSettings.alarmDotWait = ui.getInt("extAlarmDotWait");
+          busSetCommand(WRITE_EXTENDED_ALARM, EXT_ALARM_DOT_WAIT);
+        }
       }
 
-      if (ui.clickSub("extFound")) {
-        if (ui.click("extFoundOk")) {
-          wirelessSetNewId();
-          wirelessSetData(wireless_found_buffer);
+      if (ui.clickSub("extDevice")) {
+        if (ui.click("extDeviceName")) {
+          String _name;
+          _name.reserve(20);
+          _name = ui.getString("extDeviceName");
+
+          _name.trim();
+          _name.replace(",", "");
+          _name.replace(":", "");
+
+          strncpy(settings.nameDevice, _name.c_str(), 20); //копируем себе
+          settings.nameDevice[19] = '\0'; //устанавливаем последний символ
+
+          if (groupGetSearchStatus()) { //если сервис обнаружения устройств запущен
+            groupSearch(); //запустить поиск устройств поблизости
+            groupReload(); //обновить состояние для устройств поблизости
+          }
+
           memorySaveSettings(); //обновить данные в памяти
         }
-        else wirelessResetFoundState();
+        if (ui.clickBool("extDeviceAp", settings.nameAp)) {
+          memorySaveSettings(); //обновить данные в памяти
+        }
+        if (ui.clickBool("extDeviceMenu", settings.nameMenu)) {
+          memorySaveSettings(); //обновить данные в памяти
+        }
+        if (ui.clickBool("extDevicePrefix", settings.namePrefix)) {
+          memorySaveSettings(); //обновить данные в памяти
+        }
+        if (ui.clickBool("extDevicePostfix", settings.namePostfix)) {
+          memorySaveSettings(); //обновить данные в памяти
+        }
+
+        if (ui.clickBool("extDeviceGroup", settings.groupFind)) {
+          if (wifiGetConnectStatus()) {
+            if (settings.groupFind) groupStart(); //запустили обнаружение устройств поблизости
+            else groupStop(); //остановить обнаружение устройств поблизости
+          }
+          memorySaveSettings(); //обновить данные в памяти
+        }
       }
 
       if (ui.click("extClear")) {
@@ -1781,14 +1768,11 @@ void action() {
         passCheckAttempt(ui.getString("extOtaCheck"));
       }
 
-      if (ui.click("extResetOk")) {
-        resetMainSettings(); //устанавливаем настройки по умолчанию
-        memoryWriteSettings(); //записать данные в память
-        busRebootDevice(DEVICE_RESET);
+      if (ui.clickSub("extMainTab")) {
+        navMainTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
       }
-      if (ui.click("extRebootOk")) {
-        memoryWriteSettings(); //записать данные в память
-        busRebootDevice(DEVICE_REBOOT);
+      if (ui.clickSub("extInfoTab")) {
+        navInfoTab = constrain(ui.clickNameSub(1).toInt(), 0, 1);
       }
     }
     //--------------------------------------------------------------------
@@ -1875,15 +1859,6 @@ void action() {
       if (ui.clickBool("climateAvg", settings.climateAvg)) {
         memorySaveSettings(); //обновить данные в памяти
       }
-
-      if (ui.clickSub("climateWarn")) {
-        if (ui.click("climateWarnOk")) {
-          settings.climateChart = sensorChart;
-          climateUpdate(CLIMATE_RESET);
-          memorySaveSettings(); //обновить данные в памяти
-        }
-        sensorChart = 0;
-      }
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("radio")) {
@@ -1938,6 +1913,36 @@ void action() {
           radioSettings.stationsSave[stationNum] = stationFreq;
           busSetCommand(WRITE_RADIO_STA, stationNum);
         }
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.clickSub("alert")) {
+      if (ui.click("alertResetOk")) {
+        resetMainSettings(); //устанавливаем настройки по умолчанию
+        memoryWriteSettings(); //записать данные в память
+        busRebootDevice(DEVICE_RESET);
+      }
+      if (ui.click("alertRebootOk")) {
+        memoryWriteSettings(); //записать данные в память
+        busRebootDevice(DEVICE_REBOOT);
+      }
+
+      if (ui.clickSub("alertClimate")) {
+        if (ui.click("alertClimateOk")) {
+          settings.climateChart = sensorChart;
+          climateUpdate(CLIMATE_RESET);
+          memorySaveSettings(); //обновить данные в памяти
+        }
+        sensorChart = 0;
+      }
+
+      if (ui.clickSub("alertFound")) {
+        if (ui.click("alertFoundOk")) {
+          wirelessSetNewId();
+          wirelessSetData(wireless_found_buffer);
+          memorySaveSettings(); //обновить данные в памяти
+        }
+        else wirelessResetFoundState();
       }
     }
   }
@@ -2034,44 +2039,23 @@ void action() {
       }
     }
     //--------------------------------------------------------------------
-    if (ui.updateSub("main")) {
-      if (ui.update("mainTimerState")) { //если было обновление
+    if (ui.updateSub("timer")) {
+      if (ui.update("timerState")) { //если было обновление
         ui.answer(getTimerState());
         if (!timer.mode) busSetCommand(READ_TIMER_STATE);
       }
-      if (ui.update("mainTimer")) { //если было обновление
+      if (ui.update("timerTime")) { //если было обновление
         ui.answer(convertTimerTime());
-      }
-
-      if (ui.update("mainReload") && (alarm.reload >= 2)) { //если было обновление
-        ui.answer(1);
-        alarm.reload = 0;
       }
     }
     //--------------------------------------------------------------------
     if (ui.updateSub("ext")) {
-      if (ui.update("extReset")) { //если было обновление
+      if (ui.update("extReload") && (alarm.reload >= 2)) { //если было обновление
         ui.answer(1);
+        alarm.reload = 0;
       }
-      if (ui.update("extReboot")) { //если было обновление
-        ui.answer(1);
-      }
-
       if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
         ui.answer(groupGetList());
-      }
-
-      if (ui.update("extFound") && wirelessGetFoundState()) { //если было обновление
-        ui.answer(1);
-      }
-      if (ui.update("extFoundText") && wirelessGetFoundState()) { //если было обновление
-        ui.answer("UID: " + wirelessGetId(wireless_found_buffer));
-      }
-    }
-    //--------------------------------------------------------------------
-    if (ui.updateSub("climate")) {
-      if (ui.update("climateWarn")) { //если было обновление
-        ui.answer(1);
       }
     }
     //--------------------------------------------------------------------
@@ -2089,6 +2073,26 @@ void action() {
       if (ui.updateSub("radioSta")) {
         uint8_t stationNum = constrain(ui.updateNameSub(1).toInt(), 0, 9);
         ui.answer((radioSettings.stationsSave[stationNum]) ? String(radioSettings.stationsSave[stationNum] / 10.0, 1) : " ");
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.updateSub("alert")) {
+      if (ui.update("alertReset")) { //если было обновление
+        ui.answer(1);
+      }
+      if (ui.update("alertReboot")) { //если было обновление
+        ui.answer(1);
+      }
+
+      if (ui.update("alertClimate")) { //если было обновление
+        ui.answer(1);
+      }
+
+      if (ui.update("alertFound") && wirelessGetFoundState()) { //если было обновление
+        ui.answer(1);
+      }
+      if (ui.update("alertFoundText") && wirelessGetFoundState()) { //если было обновление
+        ui.answer("UID: " + wirelessGetId(wireless_found_buffer));
       }
     }
   }
