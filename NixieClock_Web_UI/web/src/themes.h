@@ -20,6 +20,10 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 #grid .block{width:100%;margin:15px 10px;}
 .blockBase{padding:5px 10px;margin:20px 10px;}
 .block{border-radius:10px;background-color:#2a2d35;box-shadow:#111 0px 0px 20px;}
+.blockMid{display:flex;align-items:center;height:90vh;}
+.blockSh{box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;}
+.blockSp{flex-grow:1;display:block;padding:0px;}
+.blockOfst{padding-bottom:10px;padding-top:5px;}
 .blockTab{padding-top:0px;}
 .blockHeader{background-color:#4caf50;color:#13161a;font-size:22px;text-align:center;border-radius:10px 10px 0px 0px;padding:4px;margin:0px -10px 10px -10px;}
 .thinBlock{background:#13161a;border:2px solid #3c4048;}
@@ -104,8 +108,10 @@ html{scrollbar-width:none;overscroll-behavior:none;}
 html::-webkit-scrollbar{display:none;}
 body{-webkit-tap-highlight-color:transparent;}
 form{margin:0;}
+embed{width:90%;border-radius:5px;background:white;}
 input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=date]:focus,input[type=time]:focus{border:2px solid #666}
 input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disabled,input[type=password]:disabled,input[type=date]:disabled,input[type=time]:disabled,input[type=color]:disabled,input[type=button]:disabled,button:disabled{filter:brightness(0.6);cursor:default;box-shadow:none;}
+.pass{width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlBlock{display:inline-block;position:relative}
 table{border-collapse:collapse;}
@@ -126,9 +132,9 @@ input[type=number]{-moz-appearance:textfield;}
 .sblock>a:hover{background-color:#ddd1;filter:brightness(0.9);}
 .ui_block{display:none;padding:2px 5px;max-width:1000px;opacity:0;transition-duration:.4s;}
 .ui_load{display:flex;align-items:center;justify-content:center;opacity:0;margin-top:50vh;animation:delay .5s forwards;}
-.lw{height:20px;width:20px;margin:5px;border-radius:25px;background-color:#4CAF50;animation:load 1s linear infinite;}
-.lw:nth-child(1){animation-delay:.2s;}
-.lw:nth-child(2){animation-delay:.1s;}
+.ui_load>span{height:20px;width:20px;margin:5px;border-radius:25px;background-color:#4CAF50;animation:load 1s linear infinite;}
+.ui_load>span:nth-child(1){animation-delay:.2s;}
+.ui_load>span:nth-child(2){animation-delay:.1s;}
 .i_mask{width:35px;height:35px;vertical-align:middle;display:inline-block;background-color:#fff;margin:5px 7px;}
 .i_btn{width:fit-content;cursor:pointer}
 .i_btn:hover{filter:brightness(0.8);}
@@ -137,10 +143,14 @@ input[type=number]{-moz-appearance:textfield;}
 .check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='m12.82,3l-6.6,6.6l-3,-3-1.9,1.9l5,5.00687l8.5,-8.5-1.9,-1.9z' fill='%23fff'/%3e%3c/svg%3e");}
 .check_c>input:disabled+span::before{background-color:#e9ecef;}
 .check_c>input:hover+span::before{filter:brightness(0.85);}
+.lineled{display:block;height:30px;margin-top:-13px;}
+.lineled>input{margin-left:0px;}
+.lineled>span::before{border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}
+.lineled>input:checked+span::before{background-image:none;}
 .onlImg{animation:offline .5s infinite alternate;}
 .onlBlock{display:none;position:fixed;bottom:0;right:0;z-index:99;cursor:default;padding:5px;}
 .uploadBlock{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:upload 1s infinite linear;}
-.selList{border:2px solid #3c4048;max-width:300px;padding:10px}
+.selBlock{border:2px solid #3c4048;max-width:300px;padding:10px}
 .selItem.selItem{background:#2a2d35;color:#bbb;font-size:16px;height:30px;width:99%;max-width:100%;margin:2px;padding:0 10px;white-space:normal;cursor:pointer;}
 .selActive.selActive{background:#4CAF50;color:#13161a;}
 .vr{border:1px solid #3c4048;height:50px;margin:0 10px;}

@@ -100,7 +100,7 @@ block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
 function selectUpdate(arg){let val=arg.placeholder.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
 function selectClick(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
-function selectList(arg){const list=document.createElement('div');list.className='blockBase block thinBlock selList';let val=arg.placeholder.split(',');
+function selectList(arg){const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.placeholder.split(',');
 for(let i=0;i<val.length;i++){const item=document.createElement('input');item.className='selItem';item.id='_sel_'+i;item.name=arg.id;item.type='button';item.max=i;
 item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectClick(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}

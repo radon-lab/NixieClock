@@ -43,6 +43,10 @@ IPAddress wifiGetBroadcastIP(void) {
   return IPAddress(data.ip.addr | ~(data.netmask.addr));
 }
 //--------------------------------------------------------------------
+uint8_t wifiGetSignalStrength(void) {
+  return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
+}
+//--------------------------------------------------------------------
 boolean wifiGetConnectStatus(void) {
   return (wifi_status == WL_CONNECTED);
 }

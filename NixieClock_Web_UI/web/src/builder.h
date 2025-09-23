@@ -143,9 +143,9 @@ struct Builder {
 
   void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
     *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n"
-               "<div class='ui_load'><div class='lw'></div><div class='lw'></div><div class='lw'></div>");
+               "<div class='ui_load'><span></span><span></span><span></span>");
     if (st != GP_DEFAULT) {
-      *_GPP += F("<style>.lw{background-color:");
+      *_GPP += F("<style>.ui_load>span{background-color:");
       *_GPP += FPSTR(st);
       *_GPP += F("}</style>\n");
     }
@@ -669,7 +669,10 @@ struct Builder {
   }
 
   void BLOCK_MIDDLE_BEGIN(void) {
-    SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
+    SEND(F("<div class='blockMid'>\n<style>.block{width:500px;}</style>\n"));
+  }
+  void BLOCK_OFFSET_BEGIN(void) {
+    SEND(F("<div class='blockOfst'>\n"));
   }
   void BLOCK_HIDE_BEGIN(void) {
     SEND(F("<div style='overflow:hidden'>\n"));
@@ -686,7 +689,7 @@ struct Builder {
   }
 
   void BLOCK_SHADOW_BEGIN(void) {
-    SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));
+    SEND(F("<div class='blockSh'>\n"));
   }
   void BLOCK_SHADOW_END(void) {
     SEND(F("</div>\n"));
@@ -719,7 +722,7 @@ struct Builder {
   }
 
   void FOOTER_BEGIN(void) {
-    SEND("<div style='flex-grow:1;display:block;padding:0px;'></div>\n<footer>");
+    SEND("<div class='blockSp'></div>\n<footer>");
   }
   void FOOTER_END(void) {
     SEND("</footer>");
@@ -921,7 +924,6 @@ struct Builder {
     send();
   }
 
-  // устарело
   void LED_RED(const String& name, bool state = 0) {
     *_GPP += F("<input class='led red' type='radio' disabled ");
     if (state) *_GPP += F("checked ");
@@ -962,9 +964,9 @@ struct Builder {
     *_GPP += FPSTR(st);
     *_GPP += ',';
     *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:0% 100%' onload='EVchange(this)' disabled>\n");
-
-    *_GPP += F("<output style='display:none' id='");
+    *_GPP += F(");background-size:");
+    *_GPP += map(value, min, max, 0, 100);
+    *_GPP += F("% 100%' disabled>\n<output style='display:none' id='");
     *_GPP += name;
     *_GPP += F("_val'></output>\n");
     send();
@@ -975,29 +977,19 @@ struct Builder {
     *_GPP += name;
     *_GPP += F(" input:checked+span::before{background-color:");
     *_GPP += FPSTR(st_1);
-    *_GPP += F(";background-image:none}\n");
-
-    *_GPP += F("#__");
+    *_GPP += F("}\n#__");
     *_GPP += name;
     *_GPP += F(" span::before{background-color:");
     *_GPP += FPSTR(st_0);
-    *_GPP += F(";border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}\n");
-
-    *_GPP += F("#__");
+    *_GPP += F("}\n</style>\n<label id='__");
     *_GPP += name;
-    *_GPP += F(" input[type=checkbox]{cursor:default;margin-left:0px}</style>\n");
-
-    *_GPP += F("<label id='__");
-    *_GPP += name;
-    *_GPP += F("' class='check_c' style='display:block;height:30px;margin-top:-13px;cursor:default'><input type='checkbox' name='");
+    *_GPP += F("' class='check_c lineled'><input type='checkbox' name='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("disabled ");
-    *_GPP += F("onclick='EVclick(this)'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
+    *_GPP += '\'';
+    if (state) *_GPP += F(" checked");
+    *_GPP += F(" disabled><span></span></label>\n<input type='hidden' value='0' name='");
     *_GPP += name;
     *_GPP += F("'>\n");
     send();
@@ -1341,7 +1333,7 @@ struct Builder {
   void EMBED(const String& uri, const String& w = "100%", const String& h = "") {
     *_GPP += F("<embed src='");
     *_GPP += uri;
-    *_GPP += F("' style='width:90%;border-radius:5px;background:white;width:");
+    *_GPP += F("' style='width:");
     *_GPP += w;
     if (h.length()) {
       *_GPP += F(";height:");
@@ -1862,13 +1854,13 @@ struct Builder {
   }
 
   void PASS(const String& name, const String& place = "", const String& value = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool eye = 0) {
-    *_GPP += F("<div class='inlBlock'><input type='password' name='");
+    *_GPP += F("<div class='inlBlock'><input type='password' class='pass' name='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += value;
-    *_GPP += F("' style='width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;' placeholder='");
+    *_GPP += F("' placeholder='");
     *_GPP += place;
     *_GPP += '\'';
     if (dis) *_GPP += F(" disabled");
@@ -2024,12 +2016,10 @@ struct Builder {
     *_GPP += ',';
     *_GPP += FPSTR(st);
     *_GPP += F(");background-size:0% 100%'");
-    if (maxsz) *_GPP += F("class='slMaxInput'");
-    *_GPP += F(" onload='EVchange(this)' ");
-    if (oninp) *_GPP += F("oninput='EVchange(this);EVclick(this)'");
-    else *_GPP += F("onchange='EVclick(this)' oninput='EVchange(this)'");
-    *_GPP += ' ';
-    if (dis) *_GPP += F("disabled");
+    if (maxsz) *_GPP += F(" class='slMaxInput'");
+    if (oninp) *_GPP += F(" oninput='EVchange(this);EVclick(this)'");
+    else *_GPP += F(" onchange='EVclick(this)' oninput='EVchange(this)'");
+    if (dis) *_GPP += F(" disabled");
     *_GPP += ">\n";
     *_GPP += F("<output align='center' id='");
     *_GPP += name;
@@ -2296,7 +2286,7 @@ struct Builder {
     *_GPP += FPSTR(st_1);
     *_GPP += F("!important;}");
     if (st_2 != GP_GREEN) {
-      *_GPP += F(".selList{border:2px solid ");
+      *_GPP += F(".selBlock{border:2px solid ");
       *_GPP += FPSTR(st_2);
       *_GPP += F("!important;}");
     }

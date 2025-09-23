@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_033 бета от 22.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_034 бета от 23.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -233,6 +233,7 @@ void build(void) {
 
     GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
     if (!updaterFlash()) {
       GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
     }
@@ -241,6 +242,7 @@ void build(void) {
       GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "syncWarn", GP_RED); //описание
       GP.UPDATE("syncUpdate,syncWarn", 300);
     }
+    GP.BLOCK_END();
     GP.HR(UI_LINE_COLOR);
     GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
@@ -253,11 +255,13 @@ void build(void) {
 
     GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
     GP.BREAK();
     GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_C + String(deviceInformation[HARDWARE_VERSION], HEX));
     GP.BREAK();
     GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(HW_VERSION, HEX));
+    GP.BLOCK_END();
     if (otaUpdate) {
       GP.HR(UI_LINE_COLOR);
       GP.BOX_BEGIN(GP_CENTER);
@@ -274,8 +278,10 @@ void build(void) {
 
     GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
     GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "syncWarn", GP_RED); //описание
+    GP.BLOCK_END();
     GP.HR(UI_LINE_COLOR);
     GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
@@ -349,7 +355,7 @@ void build(void) {
       updateList += F(",bar_wifi");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_WIFI, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_BAR("bar_wifi", constrain(2 * (WiFi.RSSI() + 100), 0, 100), 0, 100, 1, UI_MENU_WIFI_COLOR);
+      GP.LINE_BAR("bar_wifi", wifiGetSignalStrength(), 0, 100, 1, UI_MENU_WIFI_COLOR);
       GP.BLOCK_SHADOW_END();
     }
 
@@ -1067,7 +1073,7 @@ void build(void) {
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_NETWORK, UI_LINE_COLOR, UI_HINT_COLOR);
 
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(constrain(2 * (WiFi.RSSI() + 100), 0, 100)) + '%', "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(wifiGetSignalStrength()) + '%', "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MODE, "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MAC, "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
@@ -2035,7 +2041,7 @@ void action() {
       }
 
       if (ui.update("bar_wifi")) { //если было обновление
-        ui.answer(constrain(2 * (WiFi.RSSI() + 100), 0, 100));
+        ui.answer(wifiGetSignalStrength());
       }
     }
     //--------------------------------------------------------------------
