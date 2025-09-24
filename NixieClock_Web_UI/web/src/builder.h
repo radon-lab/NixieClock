@@ -226,13 +226,13 @@ struct Builder {
     send();
   }
   void PAGE_BLOCK_END(void) {
-    *_GPP += F("</div>\n<div id='onlBlock' class='onlBlock'>");
+    *_GPP += F("</div>\n<div id='offlAnim' class='offlAnim'>");
     *_GPP += F("<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
-               "fill='#f00' class='onlImg'></path></svg></div>\n"
-               "<div title='_popup' id='uploadBlock' style='display:none'><div class='popupBlock'><div class='uploadBlock'></div></div></div>\n");
+               "fill='#f00' class='offlImg'></path></svg></div>\n"
+               "<div title='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
   }
 
   void THEME(PGM_P style) {
@@ -487,9 +487,9 @@ struct Builder {
   }
 
   void POPUP_OPEN(const String& id) {
-    *_GPP += F("<script>popupOpen(getEl('");
+    *_GPP += F("<script>popupOpen(getPop('");
     *_GPP += id;
-    *_GPP += F("').innerHTML);</script>\n");
+    *_GPP += F("'));</script>\n");
     send();
   }
 
@@ -1291,7 +1291,7 @@ struct Builder {
     }
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getEl('uploadBlock').innerHTML);setTimeout(popupClose,30000);EVsubmId('");
+    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getPop('uploadAnim'));setTimeout(popupClose,30000);EVsubmId('");
     *_GPP += name;
     *_GPP += F("_form');\"/></div>\n"
                "</form></div>\n");
@@ -2266,7 +2266,9 @@ struct Builder {
 
   void SELECT_LIST(const String& name, const String& list, int sel = 0, bool nums = 0, bool dis = 0, bool rel = 0) {
     if (sel < 0) sel = 0;
-    *_GPP += F("<input type='button' class='sel_btn' name='_select' id='");
+    *_GPP += F("<input type='select' name='");
+    *_GPP += name;
+    *_GPP += F("' id='");
     *_GPP += name;
     *_GPP += F("' step='");
     *_GPP += rel;
@@ -2276,7 +2278,7 @@ struct Builder {
     *_GPP += sel;
     *_GPP += F("' placeholder='");
     *_GPP += list;
-    *_GPP += F("' onclick='selectList(this)'");
+    *_GPP += F("' onclick='selectList(this)' readonly");
     if (dis) *_GPP += F(" disabled\n");
     *_GPP += F(">\n");
     send();

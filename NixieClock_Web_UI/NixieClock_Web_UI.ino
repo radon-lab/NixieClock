@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_034 бета от 23.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_037 бета от 24.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1215,7 +1215,7 @@ void build(void) {
           GP.BOX_END();
         }
         else { //выбор сети из списка
-          GP.SELECT_LIST("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
+          GP.SELECT_LIST("wifiSsid", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
           GP.BREAK();
           GP.PASS_EYE("wifiPass", LANG_PAGE_NETWORK_GUI_PASS, settings.wifiPASS, 64);
           GP.BREAK();
@@ -1957,11 +1957,13 @@ void action() {
     if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
         wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
-        if (!ui.copyStr("wifiSsid", settings.wifiSSID, 64)) { //копируем из строки
-          int network = 0; //номер сети из списка
-          if (ui.copyInt("wifiNetwork", network)) strncpy(settings.wifiSSID, WiFi.SSID(network).c_str(), 64); //копируем из списка
-          else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
+        String _ssid; //временная строка ssid сети
+        _ssid.reserve(64); //резервируем всю длинну
+        if (ui.copyString("wifiSsid", _ssid)) { //копируем ssid сети
+          _ssid.replace(" 🔒", ""); //удаляем лишниесимволы
+          strncpy(settings.wifiSSID, _ssid.c_str(), 64); //копируем ssid сети
         }
+        else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
         settings.wifiSSID[63] = '\0'; //устанавливаем последний символ
         ui.copyStr("wifiPass", settings.wifiPASS, 64); //копируем пароль сети
         settings.wifiPASS[63] = '\0'; //устанавливаем последний символ

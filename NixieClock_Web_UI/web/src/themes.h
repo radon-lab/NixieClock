@@ -7,7 +7,7 @@ const char GP_DEFAULT_THEME[] PROGMEM = R"(
 p{display:inline;}
 a,a:visited{color:#4CAF50;}
 a:hover{color:#3d9941;}
-#blockBack input[type=password],#blockBack input[type=text],#blockBack input[type=date],#blockBack input[type=time],#blockBack input[type=number],#blockBack textarea,#blockBack select,#blockBack .slider{background:#13161a}
+#blockBack input[type=password],#blockBack input[type=text],#blockBack input[type=date],#blockBack input[type=time],#blockBack input[type=number],#blockBack input[type=select],#blockBack textarea,#blockBack select,#blockBack .slider{background:#13161a}
 #blockBack input[type=range]{background:#13161a;background-repeat:no-repeat;}
 #blockBack input:checked+.slider{background-color:#37a93c;}
 body{font-family:Verdana;background:#13161a;color:#bbb;margin-top:15px;}
@@ -30,7 +30,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 .thinText{padding:0px 7px;white-space:nowrap;background:linear-gradient(0deg,#13161a 0,#13161a 54%,#13161a94 55%,#00000000 60%);font-size:20px;}
 .thinTab{background:none;border:none;color:#9c9ea1;text-align:left;padding:4px 0 0 25px;margin:-20px -10px 5px -10px;display:block;}
 .inliner{display:flex;flex-direction:row;align-content:center;flex-wrap:nowrap;align-items:center;width:100%;}
-input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],select,textarea,.sel_btn.sel_btn{
+input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],input[type=select],select,textarea{
 width:90%;max-width:200px;border-radius:8px;padding:3px 10px;color:#bbb;border:none;background-color:#2a2d35;vertical-align:middle;
 position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
 input[type=color]{width:80px;height:40px;}
@@ -39,10 +39,10 @@ input[type=range]::-moz-range-thumb{-moz-appearance:none;border:none;height:0px;
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}
-input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],select,textarea{text-align:center;appearance:none;}
-input[type=number],input[type=text],input[type=password],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
-select{min-width:130px;width:200px;cursor:pointer;}
-select:disabled{filter:brightness(0.6);cursor:default;}
+input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],input[type=select],select,textarea{text-align:center;appearance:none;}
+input[type=number],input[type=text],input[type=password],input[type=select],select,textarea{display:inline-block;border-radius:8px;box-sizing:border-box;cursor:auto;}
+input[type=select],select{min-width:130px;width:200px;cursor:pointer;}
+input[type=select]:disabled,select:disabled{filter:brightness(0.6);cursor:default;}
 textarea{text-align:left;resize:none;overflow:hidden;max-width:100%;width:100%;box-sizing:unset;}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:#13161a;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
@@ -111,7 +111,7 @@ form{margin:0;}
 embed{width:90%;border-radius:5px;background:white;}
 input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=date]:focus,input[type=time]:focus{border:2px solid #666}
 input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disabled,input[type=password]:disabled,input[type=date]:disabled,input[type=time]:disabled,input[type=color]:disabled,input[type=button]:disabled,button:disabled{filter:brightness(0.6);cursor:default;box-shadow:none;}
-.pass{width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;}
+.pass.pass{width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlBlock{display:inline-block;position:relative}
 table{border-collapse:collapse;}
@@ -147,9 +147,6 @@ input[type=number]{-moz-appearance:textfield;}
 .lineled>input{margin-left:0px;}
 .lineled>span::before{border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}
 .lineled>input:checked+span::before{background-image:none;}
-.onlImg{animation:offline .5s infinite alternate;}
-.onlBlock{display:none;position:fixed;bottom:0;right:0;z-index:99;cursor:default;padding:5px;}
-.uploadBlock{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:upload 1s infinite linear;}
 .selBlock{border:2px solid #3c4048;max-width:300px;padding:10px}
 .selItem.selItem{background:#2a2d35;color:#bbb;font-size:16px;height:30px;width:99%;max-width:100%;margin:2px;padding:0 10px;white-space:normal;cursor:pointer;}
 .selActive.selActive{background:#4CAF50;color:#13161a;}
@@ -163,12 +160,15 @@ input[type=number]{-moz-appearance:textfield;}
 .popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popup::-webkit-scrollbar{display:none;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
+.offlImg{animation:offline .5s infinite alternate;}
+.offlAnim{display:none;position:fixed;bottom:0;right:0;z-index:99;cursor:default;padding:5px;}
+.uploadAnim{width:50px;height:50px;border:10px solid #2a2d35;border-top:10px solid #e67b09;border-radius:100%;margin:auto;animation:upload 1s infinite linear;}
 @keyframes opac{from{opacity:0;}to{opacity:1;}}
 @keyframes load{0%{transform:translateX(0);}25%{transform:translateX(15px);}50%{transform:translateX(-15px);}100%{transform:translateX(0);}}
 @keyframes delay{0%{opacity:0;}30%{opacity:0;}100%{opacity:1;}}
 @keyframes offline{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-@media screen and (max-width:1000px){.page{margin-top:43px;}.onlBlock{top:-5px;}}
+@media screen and (max-width:1000px){.page{margin-top:43px;}.offlAnim{top:-5px;}}
 @media screen and (max-width:1100px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}
 @media(min-width:1000px){
 .burgbtn{display:none!important;}

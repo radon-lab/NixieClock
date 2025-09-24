@@ -62,7 +62,7 @@ case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox': case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
-case'button':if(item.name=='_select'){item.max=Number(resp);selectUpdate(item);}else item.value=resp;break;
+case'select':item.max=Number(resp);selectUpdate(item);break;
 case undefined:switch(item.title){
 case'_popup':if(resp=='1')popupOpen(item.innerHTML,item.id);else if(resp=='-1')popupClose();break;
 case'_link':linkUpdate(item.id,resp);break;
@@ -84,17 +84,18 @@ function EVeye(arg){var p=arg.previousElementSibling;
 p.type=p.type=='text'?'password':'text';
 arg.style.color=p.type=='text'?'#bbb':'#13161a';}
 function getEl(id){return document.getElementById(id);}
+function getPop(id){return getEl(id).innerHTML;}
 function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';}
-function onlShow(s){getEl('onlBlock').style.display=s?'block':'none';}
+function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
 function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
 function popupOpen(val,id=null){let el=getEl('_popup');if((el.innerHTML=='')||(id==null)){document.body.style.overflow='hidden';el.innerHTML=val;el.style.display='flex';setTimeout(function(){el.style.backdropFilter='blur(5px)';},15);}
-else if(id!=null){if(!_popupStack.includes(id)&&(_popupStack.length<=10))_popupStack.push(id);}}
+if(id!=null){if(!_popupStack.includes(id)&&(_popupStack.length<=10))_popupStack.push(id);}else if(!_popupStack.includes('&pop&'))_popupStack.unshift('&pop&');}
 function popupClose(){let el=getEl('_popup');if(el.style.display!='none'){el.innerHTML='';el.removeAttribute('onclick');el.style.backdropFilter='blur(0)';setTimeout(function(){if(el.innerHTML==''){el.style.display='none';document.body.style.overflow=null;}},300);}
-if(_popupStack.length!=0){let pop=getEl(_popupStack.shift());popupOpen(pop.innerHTML,pop.id);}}
+_popupStack.shift();if(_popupStack.length>0){let pop=getEl(_popupStack[0]);popupOpen(pop.innerHTML,pop.id);}}
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
@@ -105,6 +106,6 @@ for(let i=0;i<val.length;i++){const item=document.createElement('input');item.cl
 item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectClick(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
 const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectClick(event.target)');}
-function pageUpdate(){document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});document.querySelector('.ui_load').remove();document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));document.querySelectorAll('.sel_btn').forEach(x=>selectUpdate(x));
-let el=document.querySelector('.ui_block');el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}
+function pageUpdate(){document.querySelectorAll('input[type=range]').forEach(x=>{EVchange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));document.querySelectorAll('input[type=select]').forEach(x=>selectUpdate(x));
+let el=document.querySelector('.ui_block');if(el!=null){document.querySelector('.ui_load').remove();el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}}
 )";
