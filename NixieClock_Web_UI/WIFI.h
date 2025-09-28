@@ -8,7 +8,7 @@ String wifi_scan_list; //список найденых wifi сетей
 String wifi_host_name; //имя устройства
 
 //--------------------------------------------------------------------
-String wifiGetApSSID(void) {
+String wifiGetLocalSSID(void) {
   String str;
   str.reserve(70);
   if (settings.wifiSSID[0]) str = settings.wifiSSID;
@@ -16,7 +16,7 @@ String wifiGetApSSID(void) {
   return str;
 }
 //--------------------------------------------------------------------
-String wifiGetApIP(void) {
+String wifiGetLocalIP(void) {
   String str;
   str.reserve(30);
   if (wifi_status == WL_CONNECTED) str = WiFi.localIP().toString();

@@ -118,7 +118,7 @@ table{border-collapse:collapse;}
 input[type=number]{-moz-appearance:textfield;}
 .header{font-size:25px;color:#fff;}
 .header_s{display:none;padding-bottom:5px;}
-.headbar{height:40px;z-index:3;background-color:#2a2d35;position:fixed;top:0;left:0;width:100%;display:flex;justify-content:flex-start;align-items:center;}
+.headbar{height:40px;z-index:3;background-color:#2a2d35;box-shadow:#000 0px 0px 10px;position:fixed;top:0;left:0;width:100%;display:flex;justify-content:flex-start;align-items:center;}
 .burgbtn{padding:0 8px;cursor:pointer;}
 #menuToggle span{display:block;width:20px;height:3px;margin:4px;position:relative;background:#fff;border-radius:3px;}
 .sidebar{z-index:3;width:250px;background-color:#2a2d35;top:0;left:-250px;height:100%;position:fixed;box-shadow:#000 0px 0px 10px;overflow-y:auto;scrollbar-width:none;overscroll-behavior:none;transition-duration:.2s;}

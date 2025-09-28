@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_037 бета от 24.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_039 бета от 28.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1186,9 +1186,9 @@ void build(void) {
         }
 
         GP.FORM_BEGIN("/network");
-        GP.TEXT("", "", wifiGetApSSID(), "", 0, "", true);
+        GP.TEXT("", "", wifiGetLocalSSID(), "", 0, "", true);
         GP.BREAK();
-        GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
+        GP.TEXT("", "", wifiGetLocalIP(), "", 0, "", true);
         GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
         GP.SUBMIT((wifiGetConnectStatus()) ? LANG_PAGE_NETWORK_GUI_DISCONNECT : LANG_PAGE_NETWORK_GUI_CANCEL, UI_BUTTON_COLOR);
