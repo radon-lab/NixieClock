@@ -32,12 +32,16 @@ enum {
   DOT_ALL //две неоновые лампы
 };
 
+#if INDI_MODE == 1
+#include "DYNAMICx2.h"
+#else
 #include "DYNAMIC.h"
+#endif
 
 void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //установка общей яркости
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
 void animPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
-#if NEON_DOT == 2
+#if SECS_DOT == 2
 boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //умегьшение яркости точек
 boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //увеличение яркости точек
 #endif
@@ -326,14 +330,14 @@ void animBright(uint8_t pwm) //анимация смены яркости циф
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
 {
-#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
+#if (SECS_DOT == 3) && DOTS_PORT_ENABLE
   return indi_dot_l | indi_dot_r; //возвращаем состояние точек
-#elif NEON_DOT
+#elif SECS_DOT
   return dot_dimm; //возвращаем яркость
 #else
-#if DOT_1_PIN == 9
+#if SECL_PIN == 9
   return OCR1A; //возвращаем яркость
-#elif DOT_1_PIN == 10
+#elif SECL_PIN == 10
   return OCR1B; //возвращаем яркость
 #endif
 #endif
@@ -358,25 +362,25 @@ void neonDotSetBright(uint8_t _pwm) //установка яркости неон
 //---------------------------------Установка яркости точек---------------------------------------
 void dotSetBright(uint8_t _pwm) //установка яркости точек
 {
-#if (NEON_DOT == 3) && DOTS_PORT_ENABLE
+#if (SECS_DOT == 3) && DOTS_PORT_ENABLE
   if (_pwm) indiSetDotsMain(DOT_ALL); //установка разделительных точек
   else indiClrDots(); //очистка разделительных точек
-#elif NEON_DOT == 2
+#elif SECS_DOT == 2
   neonDotSetBright(_pwm); //установка яркости неоновых точек
   neonDotSet((_pwm) ? DOT_ALL : DOT_NULL); //установка неоновых точек
-#elif NEON_DOT == 1
+#elif SECS_DOT == 1
   neonDotSetBright(_pwm); //установка яркости неоновых точек
   if (_pwm) indi_buf[0] = (INDI_NULL | 0x80); //разрешаем включать точки
   else indi_buf[0] = INDI_NULL; //запрещаем включать точки
-#elif NEON_DOT == 0
-#if DOT_1_PIN == 9
+#elif SECS_DOT == 0
+#if SECL_PIN == 9
   OCR1A = _pwm; //устанавливаем яркость точек
   if (_pwm) TCCR1A |= (0x01 << COM1A1); //подключаем D9
   else {
     TCCR1A &= ~(0x01 << COM1A1); //отключаем D9
     DOT_1_CLEAR; //выключили точки
   }
-#elif DOT_1_PIN == 10
+#elif SECL_PIN == 10
   OCR1B = _pwm; //устанавливаем яркость точек
   if (_pwm) TCCR1A |= (0x01 << COM1B1); //подключаем D10
   else {
@@ -386,7 +390,7 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
 #endif
 #endif
 }
-#if NEON_DOT != 2
+#if SECS_DOT != 2
 //--------------------------------Уменьшение яркости точек----------------------------------------
 boolean dotDecBright(uint8_t _step, uint8_t _min)
 {

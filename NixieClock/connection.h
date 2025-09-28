@@ -24,19 +24,19 @@
 
 //Основная периферия
 #define CONV_PIN  9  //пин преобразователя(9..10)(pin D)
-#define DOT_1_PIN 10 //пин секундных точек(левой неонки)(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
-#define DOT_2_PIN 11 //пин секундных точек(правой неонки)(0..13)(pin D)
-#define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
 #define BUZZ_PIN  13 //пин пищалки(бузер - 0..13 | SD карта - 9..10)(pin D)
+#define SECL_PIN  10 //пин левой секундной точки(основной)(неоновая точка - 0..13 | светодиодная точка - 9..10)(pin D)
+#define SECR_PIN  11 //пин правой секундной точки(дополнительной)(0..13)(pin D)
+#define BACKL_PIN 11 //пин подсветки(софтверный шим(обычные светодиоды) или светодиоды WS2812B - 0..13 | хардверный шим(обычные светодиоды) - 11)(pin D)
 
 //Дополнительная периферия
-#define DOTL_PIN 0 //пин левых(основных) разделительных точек в индикаторах(0..13)(pin D)
-#define DOTR_PIN 1 //пин правых(дополнительных) разделительных точек в индикаторах(0..13)(pin D)
-#define SENS_PIN 1 //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
-#define SQW_PIN  2 //пин SQW(только пин 2)(pin D)
-#define AMP_PIN  8 //пин управления питанием усилителя(0..13)(pin D)
-#define MOV_PIN  8 //пин датчика движения(0..13)(pin D)
-#define IR_PIN   7 //пин инфракрасного приемника(0..13)(pin D)
+#define DOTSL_PIN 0 //пин левых(основных) разделительных точек в индикаторах(0..13)(pin D)
+#define DOTSR_PIN 1 //пин правых(дополнительных) разделительных точек в индикаторах(0..13)(pin D)
+#define SENS_PIN  1 //пин сенсора температуры(для DS18xx и DHTxx)(0..13)(pin D)
+#define SQW_PIN   2 //пин SQW(только пин 2)(pin D)
+#define AMP_PIN   8 //пин управления питанием усилителя(0..13)(pin D)
+#define MOV_PIN   8 //пин датчика движения(0..13)(pin D)
+#define IR_PIN    7 //пин инфракрасного приемника(0..13)(pin D)
 
 //DF плеер
 #define DF_RX_PIN   1 //пин DF плеера RX(софтверный UART - 0..13 | хардверный UART - 1)(pin D)
@@ -101,8 +101,8 @@
 #define ANODE_INIT(pin)  ANODE_CLEAR(pin); ANODE_OUT(pin)
 
 //Пин левых точек
-#define DOT_1_BIT   DECODE_BIT(DOT_1_PIN)
-#define DOT_1_PORT  DECODE_PORT(DOT_1_PIN)
+#define DOT_1_BIT   DECODE_BIT(SECL_PIN)
+#define DOT_1_PORT  DECODE_PORT(SECL_PIN)
 
 #define DOT_1_CLEAR (BIT_CLEAR(DOT_1_PORT, DOT_1_BIT))
 #define DOT_1_SET   (BIT_SET(DOT_1_PORT, DOT_1_BIT))
@@ -111,8 +111,8 @@
 #define DOT_1_INIT  DOT_1_CLEAR; DOT_1_OUT
 
 //Пин правых точек
-#define DOT_2_BIT   DECODE_BIT(DOT_2_PIN)
-#define DOT_2_PORT  DECODE_PORT(DOT_2_PIN)
+#define DOT_2_BIT   DECODE_BIT(SECR_PIN)
+#define DOT_2_PORT  DECODE_PORT(SECR_PIN)
 
 #define DOT_2_CLEAR (BIT_CLEAR(DOT_2_PORT, DOT_2_BIT))
 #define DOT_2_SET   (BIT_SET(DOT_2_PORT, DOT_2_BIT))
@@ -121,8 +121,8 @@
 #define DOT_2_INIT  DOT_2_CLEAR; DOT_2_OUT
 
 //Пин левых точек индикаторов
-#define INDI_DOTL_BIT   DECODE_BIT(DOTL_PIN)
-#define INDI_DOTL_PORT  DECODE_PORT(DOTL_PIN)
+#define INDI_DOTL_BIT   DECODE_BIT(DOTSL_PIN)
+#define INDI_DOTL_PORT  DECODE_PORT(DOTSL_PIN)
 
 #define INDI_DOTL_OFF   (BIT_CLEAR(INDI_DOTL_PORT, INDI_DOTL_BIT))
 #define INDI_DOTL_ON    (BIT_SET(INDI_DOTL_PORT, INDI_DOTL_BIT))
@@ -131,8 +131,8 @@
 #define INDI_DOTL_INIT  INDI_DOTL_OFF; INDI_DOTL_OUT
 
 //Пин правых точек индикаторов
-#define INDI_DOTR_BIT   DECODE_BIT(DOTR_PIN)
-#define INDI_DOTR_PORT  DECODE_PORT(DOTR_PIN)
+#define INDI_DOTR_BIT   DECODE_BIT(DOTSR_PIN)
+#define INDI_DOTR_PORT  DECODE_PORT(DOTSR_PIN)
 
 #define INDI_DOTR_OFF   (BIT_CLEAR(INDI_DOTR_PORT, INDI_DOTR_BIT))
 #define INDI_DOTR_ON    (BIT_SET(INDI_DOTR_PORT, INDI_DOTR_BIT))
