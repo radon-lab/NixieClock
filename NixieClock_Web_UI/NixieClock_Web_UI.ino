@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_039 бета от 28.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_040 бета от 28.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1209,7 +1209,6 @@ void build(void) {
           GP.TEXT_LINK("/network", LANG_PAGE_NETWORK_GUI_LIST, "net", UI_LINK_COLOR);
           GP.HR(UI_LINE_COLOR);
           GP.BOX_BEGIN(GP_CENTER, "300px");
-          GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
           GP.SUBMIT(LANG_PAGE_NETWORK_GUI_CONNECT, UI_BUTTON_COLOR);
           GP.BUTTON("extClear", "✕", "", (!settings.wifiSSID[0] && !settings.wifiPASS[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px", (boolean)(!settings.wifiSSID[0] && !settings.wifiPASS[0]), true);
           GP.BOX_END();
@@ -1725,9 +1724,9 @@ void action() {
           _name.reserve(20);
           _name = ui.getString("extDeviceName");
 
-          _name.trim();
-          _name.replace(",", "");
-          _name.replace(":", "");
+          _name.replace(",", ""); //удаляем лишние символы
+          _name.replace(":", ""); //удаляем лишние символы
+          _name.trim(); //удаляем пробелы
 
           strncpy(settings.nameDevice, _name.c_str(), 20); //копируем себе
           settings.nameDevice[19] = '\0'; //устанавливаем последний символ
@@ -1956,14 +1955,15 @@ void action() {
   if (ui.form()) {
     if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
-        wifiSetConnectWaitInterval(1); //устанавливаем интервал переподключения
+        wifiSetConnectStatus(true); //устанавливаем интервал переподключения
         String _ssid; //временная строка ssid сети
         _ssid.reserve(64); //резервируем всю длинну
         if (ui.copyString("wifiSsid", _ssid)) { //копируем ssid сети
-          _ssid.replace(" 🔒", ""); //удаляем лишниесимволы
+          _ssid.replace(LANG_WIFI_SSID_LOCK, ""); //удаляем лишние символы
+          _ssid.trim(); //удаляем пробелы
           strncpy(settings.wifiSSID, _ssid.c_str(), 64); //копируем ssid сети
         }
-        else wifiSetConnectWaitInterval(0); //сбрасываем интервал переподключения
+        else wifiSetConnectStatus(false); //сбрасываем интервал переподключения
         settings.wifiSSID[63] = '\0'; //устанавливаем последний символ
         ui.copyStr("wifiPass", settings.wifiPASS, 64); //копируем пароль сети
         settings.wifiPASS[63] = '\0'; //устанавливаем последний символ
@@ -2496,9 +2496,7 @@ void timeUpdate(void) {
       if (!playbackTimer) busSetCommand(WRITE_STOP_SOUND); //остановка воспроизведения
       playbackTimer--;
     }
-#if STATUS_LED == 1
-    if (!wifiGetConnectStatus() && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#elif STATUS_LED == 2
+#if STATUS_LED == 2
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif
   }

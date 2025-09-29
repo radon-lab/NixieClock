@@ -8,6 +8,10 @@
 #define LANG_WIFI_SCAN_NULL "Нет сетей"
 #define LANG_WIFI_SCAN_BEGIN "Поиск..."
 
+#define LANG_WIFI_IP_NULL "0.0.0.0"
+#define LANG_WIFI_SSID_NULL "unset"
+#define LANG_WIFI_SSID_LOCK " 🔒"
+
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
@@ -543,6 +547,10 @@
 
 #define LANG_WIFI_SCAN_NULL "No networks"
 #define LANG_WIFI_SCAN_BEGIN "Search..."
+
+#define LANG_WIFI_IP_NULL "0.0.0.0"
+#define LANG_WIFI_SSID_NULL "unset"
+#define LANG_WIFI_SSID_LOCK " 🔒"
 
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "No network connection"
