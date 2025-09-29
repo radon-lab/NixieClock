@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_040 бета от 28.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_041 бета от 29.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -450,7 +450,7 @@ void build(void) {
 
       if (deviceInformation[ALARM_TYPE]) {
         if (alarm.reload >= 2) alarm.reload = 0;
-        updateList += F(",mainReload");
+        updateList += F(",extReload");
         GP.RELOAD("extReload");
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_ALARM_BLOCK, UI_BLOCK_COLOR);
