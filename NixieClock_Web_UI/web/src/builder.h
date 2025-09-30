@@ -1826,7 +1826,7 @@ struct Builder {
     NUMBER_RAW(name, place, (isnan(value) ? String("") : String(value, (uint16_t)dec)), "", "", width, "", dis);
   }
 
-  void TEXT(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+  void TEXT(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool en = false) {
     *_GPP += F("<input type='text' name='");
     *_GPP += name;
     *_GPP += F("' id='");
@@ -1840,6 +1840,7 @@ struct Builder {
     *_GPP += F("' placeholder='");
     *_GPP += place;
     *_GPP += F("' onchange='EVclick(this)'");
+    if (en) *_GPP += F(" onkeypress='return((event.which>31)&&(event.which<127))'");
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
@@ -1851,6 +1852,9 @@ struct Builder {
     }
     *_GPP += ">\n";
     send();
+  }
+  void TEXT_EN(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+    TEXT(name, place, value, width, maxlength, pattern, dis, true);
   }
 
   void PASS(const String& name, const String& place = "", const String& value = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool eye = 0) {

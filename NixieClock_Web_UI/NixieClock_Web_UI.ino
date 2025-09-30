@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_041 бета от 29.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_042 бета от 30.09.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -199,25 +199,21 @@ void PAGE_TITLE_NAME(const String& title) {
 }
 //--------------------------------------------------------------------
 void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean rl = false, boolean al = false) {
-  String _id_str;
-  _id_str.reserve(30);
-  _id_str = id;
-
-  GP.POPUP_BEGIN(_id_str, "350px");
+  GP.POPUP_BEGIN(id, "350px");
   GP.BLOCK_BEGIN(GP_THIN, "", title, UI_BLOCK_COLOR);
   GP.SPAN(desc, GP_LEFT, "", UI_LABEL_COLOR);
-  if (sign.length()) GP.SPAN(sign, GP_LEFT, _id_str + "Text", GP_RED, 13);
+  if (sign.length()) GP.SPAN(sign, GP_LEFT, id + "Text", GP_RED, 13);
   GP.BOX_BEGIN(GP_RIGHT);
   if (!al) {
-    GP.BUTTON_MICRO(_id_str + "Ok", LANG_ALERT_YES, "", GP_GREEN, "60px", false, true);
-    GP.BUTTON_MICRO(_id_str + "Cancel", LANG_ALERT_CANCEL, "", GP_RED, "90px", false, rl);
+    GP.BUTTON_MICRO(id + "Ok", LANG_ALERT_YES, "", GP_GREEN, "60px", false, true);
+    GP.BUTTON_MICRO(id + "Cancel", LANG_ALERT_CANCEL, "", GP_RED, "90px", false, rl);
   }
-  else GP.BUTTON_MICRO(_id_str + "Ok", LANG_ALERT_OK, "", UI_BUTTON_COLOR, "60px");
+  else GP.BUTTON_MICRO(id + "Ok", LANG_ALERT_OK, "", UI_BUTTON_COLOR, "60px");
   GP.BOX_END();
   GP.BLOCK_END();
   GP.POPUP_END();
 
-  GP.POPUP_CLOSE(_id_str + "Cancel," + _id_str + "Ok");
+  GP.POPUP_CLOSE(id + "Cancel," + id + "Ok");
 }
 //--------------------------------------------------------------------
 void build(void) {
@@ -235,12 +231,12 @@ void build(void) {
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     if (!updaterFlash()) {
-      GP.SPAN(getUpdaterState(), GP_CENTER, "syncUpdate", GP_YELLOW); //описание
+      GP.SPAN(getUpdaterState(), GP_CENTER, "extUpdate", GP_YELLOW); //описание
     }
     else {
-      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
-      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "syncWarn", GP_RED); //описание
-      GP.UPDATE("syncUpdate,syncWarn", 300);
+      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "extWarn", GP_RED); //описание
+      GP.UPDATE("extUpdate,extWarn", 300);
     }
     GP.BLOCK_END();
     GP.HR(UI_LINE_COLOR);
@@ -279,14 +275,14 @@ void build(void) {
     GP.BLOCK_MIDDLE_BEGIN();
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
-    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "syncReboot", UI_INFO_COLOR); //описание
-    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "syncWarn", GP_RED); //описание
+    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
+    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "extWarn", GP_RED); //описание
     GP.BLOCK_END();
     GP.HR(UI_LINE_COLOR);
     GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
-    GP.UPDATE("syncReboot,syncWarn");
+    GP.UPDATE("extReboot,extWarn");
     GP.BLOCK_END();
     GP.BLOCK_END();
   }
@@ -450,8 +446,8 @@ void build(void) {
 
       if (deviceInformation[ALARM_TYPE]) {
         if (alarm.reload >= 2) alarm.reload = 0;
-        updateList += F(",extReload");
-        GP.RELOAD("extReload");
+        updateList += F(",extAlarm");
+        GP.RELOAD("extAlarm");
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_ALARM_BLOCK, UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
@@ -1121,7 +1117,7 @@ void build(void) {
 
       GP.NAV_BLOCK_BEGIN("extInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_DEVICE, UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NAME, "", UI_LABEL_COLOR); GP.TEXT("extDeviceName", LANG_PAGE_INFO_GUI_NONE, settings.nameDevice, "", 19););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NAME, "", UI_LABEL_COLOR); GP.TEXT_EN("extDeviceName", LANG_PAGE_INFO_GUI_NONE, settings.nameDevice, "", 19););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_SHOW, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MENU, "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
@@ -1154,8 +1150,7 @@ void build(void) {
         else if (device.failure & 0x02) rtcStatus = F(LANG_RTC_STATUS_2);
       }
       else if (rtcGetFoundStatus()) {
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CORRECT, "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging););
-        GP.UPDATE_CLICK("syncAging", "syncAging");
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CORRECT, "", UI_LABEL_COLOR); GP.NUMBER("syncAging", "-128..127", rtc_aging, "-128", "127"););
         if (!rtcGetNormalStatus()) rtcStatus = F(LANG_RTC_STATUS_2);
         else rtcStatus = F(LANG_RTC_STATUS_4);
       }
@@ -1181,15 +1176,15 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_NETWORK_BLOCK_WIFI, UI_BLOCK_COLOR);
       if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) { //подключение к сети
         if (!wifiGetConnectStatus()) {
-          updateList += F(",syncConnect,syncNetwork");
-          GP.RELOAD("syncConnect");
+          updateList += F(",extConnect,extNetwork");
+          GP.RELOAD("extConnect");
         }
 
         GP.FORM_BEGIN("/network");
         GP.TEXT("", "", wifiGetLocalSSID(), "", 0, "", true);
         GP.BREAK();
         GP.TEXT("", "", wifiGetLocalIP(), "", 0, "", true);
-        GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+        GP.SPAN(wifiGetConnectState(), GP_CENTER, "extNetwork", UI_INFO_COLOR); //описание
         GP.HR(UI_LINE_COLOR);
         GP.SUBMIT((wifiGetConnectStatus()) ? LANG_PAGE_NETWORK_GUI_DISCONNECT : LANG_PAGE_NETWORK_GUI_CANCEL, UI_BUTTON_COLOR);
         GP.FORM_END();
@@ -1197,8 +1192,8 @@ void build(void) {
       else { //выбор сети
         if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
-        updateList += F(",syncReload");
-        GP.RELOAD("syncReload");
+        updateList += F(",extScan");
+        GP.RELOAD("extScan");
 
         GP.FORM_BEGIN("/connection");
         if (ui.uri("/manual")) { //ручной режим ввода сети
@@ -1230,18 +1225,18 @@ void build(void) {
       }
       GP.BLOCK_END();
 
-      updateList += F(",syncStatus,syncWeather");
+      updateList += F(",extNtp,extWeather");
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_NETWORK_BLOCK_NTP, UI_BLOCK_COLOR);
       GP.TEXT("syncHost", LANG_PAGE_NETWORK_GUI_HOST, settings.ntpHost, "", 19);
       GP.BREAK();
       GP.SELECT_LIST("syncPer", String(LANG_PAGE_NETWORK_TIME_MODE_1) + ((settings.ntpDst) ? "" : LANG_PAGE_NETWORK_TIME_MODE_2), (settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime);
-      GP.SPAN(ntpGetState(), GP_CENTER, "syncStatus", UI_INFO_COLOR); //описание
+      GP.SPAN(ntpGetState(), GP_CENTER, "extNtp", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.BUTTON("syncCheck", LANG_PAGE_NETWORK_GUI_SYNC, "", (!ntpGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%", (boolean)(!ntpGetRunStatus() || !wifiGetConnectStatus()));
       GP.BLOCK_END();
 
-      GP.UPDATE_CLICK("syncStatus", "syncCheck");
+      GP.UPDATE_CLICK("extNtp", "syncCheck");
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_NETWORK_BLOCK_WEATHER, UI_BLOCK_COLOR);
       GP.SELECT_LIST("weatherCity", String(weatherCityList) + LANG_PAGE_NETWORK_WEATHER_MODE, settings.weatherCity, 0, false, true);
@@ -1250,12 +1245,12 @@ void build(void) {
             GP.NUMBER_F("weatherLat", LANG_PAGE_NETWORK_GUI_LAT, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
             GP.NUMBER_F("weatherLon", LANG_PAGE_NETWORK_GUI_LON, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
            );
-      GP.SPAN(getWeatherState(), GP_CENTER, "syncWeather", UI_INFO_COLOR); //описание
+      GP.SPAN(weatherGetState(), GP_CENTER, "extWeather", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.BUTTON("weatherUpdate", LANG_PAGE_NETWORK_GUI_UPDATE, "", (!weatherGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%", (boolean)(!weatherGetRunStatus() || !wifiGetConnectStatus()));
       GP.BLOCK_END();
 
-      GP.UPDATE_CLICK("syncWeather", "weatherUpdate");
+      GP.UPDATE_CLICK("extWeather", "weatherUpdate");
     }
 
     static boolean failureWarn = true; //флаг отображения предупреждения об сбоях
@@ -1299,9 +1294,9 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
       GP.SPAN(String(LANG_PAGE_UPDATE_WARN_ERR) + "<small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
     }
     else {
-      GP.SPAN(LANG_PAGE_UPDATE_WAIT, GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
-      GP.SPAN(LANG_PAGE_UPDATE_WARN_PWR, GP_CENTER, "syncWarn", GP_RED); //описание
-      GP.UPDATE("syncUpdate,syncWarn");
+      GP.SPAN(LANG_PAGE_UPDATE_WAIT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN(LANG_PAGE_UPDATE_WARN_PWR, GP_CENTER, "extWarn", GP_RED); //описание
+      GP.UPDATE("extUpdate,extWarn");
     }
   }
   GP.HR(UI_LINE_COLOR);
@@ -1979,40 +1974,6 @@ void action() {
   }
   /**************************************************************************/
   if (ui.update()) {
-    if (ui.updateSub("sync")) {
-      if (ui.update("syncStatus")) { //если было обновление
-        ui.answer(ntpGetState());
-      }
-      if (ui.update("syncWeather")) { //если было обновление
-        ui.answer(getWeatherState());
-      }
-
-      if (ui.update("syncUpdate")) { //если было обновление
-        ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? getUpdaterState() : LANG_PAGE_RELOAD_WAIT));
-      }
-      if (ui.update("syncReboot") && !busRebootState()) { //если было обновление
-        ui.answer((busRebootFail()) ? " " : LANG_PAGE_RELOAD_END);
-      }
-      if (ui.update("syncWarn") && !updaterState() && !busRebootState()) { //если было обновление
-        ui.answer((busRebootFail()) ? LANG_PAGE_RELOAD_ERR : " ");
-      }
-
-      if (ui.update("syncNetwork")) { //если было обновление
-        ui.answer(wifiGetConnectState());
-      }
-      if (ui.update("syncConnect") && wifiGetConnectStatus()) { //если было обновление
-        ui.answer(1);
-      }
-      if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
-        ui.answer(1);
-        wifiResetScanCompleteStatus();
-      }
-
-      if (ui.update("syncAging")) { //если было обновление
-        ui.answer(rtc_aging);
-      }
-    }
-    //--------------------------------------------------------------------
     if (ui.updateSub("bar")) {
       if (ui.update("barTime")) { //если было обновление
         ui.answer(encodeTime(mainTime));
@@ -2058,7 +2019,35 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.updateSub("ext")) {
-      if (ui.update("extReload") && (alarm.reload >= 2)) { //если было обновление
+      if (ui.update("extUpdate")) { //если было обновление
+        ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? getUpdaterState() : LANG_PAGE_RELOAD_WAIT));
+      }
+      if (ui.update("extReboot") && !busRebootState()) { //если было обновление
+        ui.answer((busRebootFail()) ? " " : LANG_PAGE_RELOAD_END);
+      }
+      if (ui.update("extWarn") && !updaterState() && !busRebootState()) { //если было обновление
+        ui.answer((busRebootFail()) ? LANG_PAGE_RELOAD_ERR : " ");
+      }
+
+      if (ui.update("extNtp")) { //если было обновление
+        ui.answer(ntpGetState());
+      }
+      if (ui.update("extWeather")) { //если было обновление
+        ui.answer(weatherGetState());
+      }
+
+      if (ui.update("extNetwork")) { //если было обновление
+        ui.answer(wifiGetConnectState());
+      }
+      if (ui.update("extConnect") && wifiGetConnectStatus()) { //если было обновление
+        ui.answer(1);
+      }
+      if (ui.update("extScan") && wifiGetScanCompleteStatus()) { //если было обновление
+        ui.answer(1);
+        wifiResetScanCompleteStatus();
+      }
+
+      if (ui.update("extAlarm") && (alarm.reload >= 2)) { //если было обновление
         ui.answer(1);
         alarm.reload = 0;
       }

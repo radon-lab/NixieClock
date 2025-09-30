@@ -21,13 +21,12 @@ function EVclick(arg,r=null,s=null){if(!arg.name)arg.name=arg.id;var v;
 if(arg.type=='number'){
 if(arg.hasAttribute('min')&&Number(arg.value)<=Number(arg.min))arg.value=arg.min;
 if(arg.hasAttribute('max')&&Number(arg.value)>=Number(arg.max))arg.value=arg.max;}
-if(arg.type=='checkbox')v=arg.checked?'1':'0';
-else if(arg.type=='button'||arg.value==undefined)v=(s!=null)?s:'';
-else v=arg.value;
+if(arg.name){if(arg.type=='checkbox')v=arg.checked?'1':'0';
+else if(arg.type=='button'||arg.value==undefined)v=(s!=null)?s:'';else v=arg.value;
 if(_clkRelList.includes(arg.name))r=1;
 if(_clkCloseList.includes(arg.name))popupClose();
 EVsend('/GP_click?'+arg.name+'='+encodeURIComponent(v),r);
-if(_clkUpdList){for(var key in _clkUpdList){if(key.includes(arg.name))EVupdate(_clkUpdList[key]);}}}
+if(_clkUpdList){for(var key in _clkUpdList){if(key.includes(arg.name))EVupdate(_clkUpdList[key]);}}}}
 function EVclickId(btn,tar,r){EVsend('/GP_click?'+btn+'='+encodeURIComponent(getEl(tar).value),r);}
 function EVchange(arg){arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';
 const _output=getEl(arg.id+'_val');const _range=_output.name.split(',');if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}
