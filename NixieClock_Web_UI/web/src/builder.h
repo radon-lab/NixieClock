@@ -1840,7 +1840,7 @@ struct Builder {
     *_GPP += F("' placeholder='");
     *_GPP += place;
     *_GPP += F("' onchange='EVclick(this)'");
-    if (en) *_GPP += F(" onkeypress='return((event.which>31)&&(event.which<127))'");
+    if (en) *_GPP += F(" oninput='textEn(this)'");
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
