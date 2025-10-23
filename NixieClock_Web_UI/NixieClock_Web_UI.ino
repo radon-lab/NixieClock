@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_043 бета от 30.09.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_044 бета от 23.10.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -224,69 +224,7 @@ void build(void) {
   GP.PAGE_ZOOM("90%", "370px");
   GP.PAGE_BLOCK_BEGIN(500);
 
-  if (updaterState()) {
-    PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
-
-    GP.BLOCK_MIDDLE_BEGIN();
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    if (!updaterFlash()) {
-      GP.SPAN(getUpdaterState(), GP_CENTER, "extUpdate", GP_YELLOW); //описание
-    }
-    else {
-      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
-      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "extWarn", GP_RED); //описание
-      GP.UPDATE("extUpdate,extWarn", 300);
-    }
-    GP.BLOCK_END();
-    GP.HR(UI_LINE_COLOR);
-    GP.BOX_BEGIN(GP_CENTER);
-    GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
-    GP.BOX_END();
-    GP.BLOCK_END();
-    GP.BLOCK_END();
-  }
-  else if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
-    PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
-
-    GP.BLOCK_MIDDLE_BEGIN();
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
-    GP.BREAK();
-    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_C + String(deviceInformation[HARDWARE_VERSION], HEX));
-    GP.BREAK();
-    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(HW_VERSION, HEX));
-    GP.BLOCK_END();
-    if (otaUpdate) {
-      GP.HR(UI_LINE_COLOR);
-      GP.BOX_BEGIN(GP_CENTER);
-      GP.BUTTON_MINI_LINK("/ota_update", LANG_PAGE_COMPATIBILITY_UPDATE, UI_BUTTON_COLOR);
-      GP.BOX_END();
-    }
-    GP.BLOCK_END();
-    GP.BLOCK_END();
-
-    passSetOtaState();
-  }
-  else if (busRebootState()) {
-    PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
-
-    GP.BLOCK_MIDDLE_BEGIN();
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
-    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "extWarn", GP_RED); //описание
-    GP.BLOCK_END();
-    GP.HR(UI_LINE_COLOR);
-    GP.BOX_BEGIN(GP_CENTER);
-    GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
-    GP.BOX_END();
-    GP.UPDATE("extReboot,extWarn");
-    GP.BLOCK_END();
-    GP.BLOCK_END();
-  }
-  else {
+  if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowReloadInfo()) {
     //обновления блоков
     String updateList;
     updateList.reserve(500);
@@ -307,7 +245,6 @@ void build(void) {
     if (ui.uri("/connection")) GP.UI_LINK("/connection", LANG_PAGE_MENU_LINK_NETWORK);
     else if (ui.uri("/manual")) GP.UI_LINK("/manual", LANG_PAGE_MENU_LINK_NETWORK);
     else GP.UI_LINK("/network", LANG_PAGE_MENU_LINK_NETWORK);
-
 
     //ссылки часов
     GP.UI_LINKS_BEGIN("extGroup");
@@ -1279,33 +1216,37 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
   GP.PAGE_ZOOM("90%", "370px");
   GP.PAGE_BLOCK_BEGIN(500);
 
-  GP.PAGE_TITLE(LANG_PAGE_UPDATE_TITLE);
+  if (!webShowUpdateState()) {
+    PAGE_TITLE_NAME(LANG_PAGE_UPDATE_TITLE);
 
-  GP.BLOCK_MIDDLE_BEGIN();
+    GP.BLOCK_MIDDLE_BEGIN();
 
-  if (!UpdateEnd) {
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_UPL, UI_BLOCK_COLOR);
-    webShowUpdateInfo();
-    webShowUpdateUI();
-  }
-  else {
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_WEB, UI_BLOCK_COLOR);
-    if (UpdateError.length()) {
-      GP.SPAN(String(LANG_PAGE_UPDATE_WARN_ERR) + "<small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+    if (!UpdateEnd) {
+      GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_UPL, UI_BLOCK_COLOR);
+      webShowUpdateInfo();
+      webShowUpdateUI();
     }
     else {
-      GP.SPAN(LANG_PAGE_UPDATE_WAIT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
-      GP.SPAN(LANG_PAGE_UPDATE_WARN_PWR, GP_CENTER, "extWarn", GP_RED); //описание
-      GP.UPDATE("extUpdate,extWarn");
+      GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_WEB, UI_BLOCK_COLOR);
+      GP.BLOCK_OFFSET_BEGIN();
+      if (UpdateError.length()) {
+        GP.SPAN(String(LANG_PAGE_UPDATE_WARN_ERR) + "<small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+      }
+      else {
+        GP.SPAN(LANG_PAGE_UPDATE_WAIT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
+        GP.SPAN(LANG_PAGE_UPDATE_WARN_PWR, GP_CENTER, "extWarn", GP_RED); //описание
+        GP.UPDATE("extUpdate,extWarn");
+      }
+      GP.BLOCK_END();
     }
-  }
-  GP.HR(UI_LINE_COLOR);
-  GP.BOX_BEGIN(GP_CENTER);
-  GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_GUI_HOME, UI_BUTTON_COLOR);
-  GP.BOX_END();
-  GP.BLOCK_END();
+    GP.HR(UI_LINE_COLOR);
+    GP.BOX_BEGIN(GP_CENTER);
+    GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_GUI_HOME, UI_BUTTON_COLOR);
+    GP.BOX_END();
+    GP.BLOCK_END();
 
-  GP.BLOCK_END();
+    GP.BLOCK_END();
+  }
 
   GP.PAGE_BLOCK_END();
   GP.BUILD_END();
@@ -1354,6 +1295,85 @@ void webShowUpdateAuth(void) {
     M_BOX(GP_CENTER, GP.TEXT("", "", LANG_PAGE_UPDATE_GUI_PASS, "", 0, "", true); GP.BUTTON_MINI("", LANG_PAGE_UPDATE_GUI_LOGIN, "", GP_GRAY, "200px!important", true););
     GP.SPAN(String((passGetCheckError()) ? LANG_PAGE_UPDATE_WARN_PASS : "") + LANG_PAGE_UPDATE_WARN_TIME, GP_CENTER, "", GP_RED); //описание
   }
+}
+//--------------------------------------------------------------------
+boolean webShowUpdateState(void) {
+  if (updaterState()) {
+    PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
+
+    GP.BLOCK_MIDDLE_BEGIN();
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    if (!updaterFlash()) {
+      GP.SPAN(getUpdaterState(), GP_CENTER, "extUpdate", GP_YELLOW); //описание
+    }
+    else {
+      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "extWarn", GP_RED); //описание
+      GP.UPDATE("extUpdate,extWarn", 300);
+    }
+    GP.BLOCK_END();
+    GP.HR(UI_LINE_COLOR);
+    GP.BOX_BEGIN(GP_CENTER);
+    GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
+    GP.BOX_END();
+    GP.BLOCK_END();
+    GP.BLOCK_END();
+
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean webShowHardwareInfo(void) {
+  if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
+    PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
+
+    GP.BLOCK_MIDDLE_BEGIN();
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
+    GP.BREAK();
+    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_C + String(deviceInformation[HARDWARE_VERSION], HEX));
+    GP.BREAK();
+    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(HW_VERSION, HEX));
+    GP.BLOCK_END();
+    if (otaUpdate) {
+      GP.HR(UI_LINE_COLOR);
+      GP.BOX_BEGIN(GP_CENTER);
+      GP.BUTTON_MINI_LINK("/ota_update", LANG_PAGE_COMPATIBILITY_UPDATE, UI_BUTTON_COLOR);
+      GP.BOX_END();
+    }
+    GP.BLOCK_END();
+    GP.BLOCK_END();
+
+    passSetOtaState();
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean webShowReloadInfo(void) {
+  if (busRebootState()) {
+    PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
+
+    GP.BLOCK_MIDDLE_BEGIN();
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
+    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "extWarn", GP_RED); //описание
+    GP.BLOCK_END();
+    GP.HR(UI_LINE_COLOR);
+    GP.BOX_BEGIN(GP_CENTER);
+    GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
+    GP.BOX_END();
+    GP.UPDATE("extReboot,extWarn");
+    GP.BLOCK_END();
+    GP.BLOCK_END();
+
+    return true;
+  }
+  return false;
 }
 //--------------------------------------------------------------------
 void action() {
