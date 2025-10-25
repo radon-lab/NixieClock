@@ -7,13 +7,6 @@
 #include "TimeTicker.h"
 #include "parsers.h"
 
-#define GP_DEBUG_EN
-#ifdef GP_DEBUG_EN
-#define GP_DEBUG(x) Serial.println(x)
-#else
-#define GP_DEBUG(x)
-#endif
-
 // ============================= CLASS ===========================
 class GyverPortalMod : public TimeTicker, public ArgParser {
   public:
@@ -47,7 +40,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
     }
 
     // ========================= СИСТЕМА =========================
-    // запустить портал. Можно передать имя MDNS (оставь пустым "" если MDNS не нужен) и порт
+    // запустить портал, можно передать имя MDNS (оставь пустым "" если MDNS не нужен) и порт
     void start(const char* mdns = "", uint16_t port = 80) {
       _gp_mdns = mdns;
       _gp_unix_tmr = 0;
@@ -82,35 +75,43 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 
         _showPage = 0;
         _uri = server.uri();
+
         if (_uri.startsWith(F("/GP_click"))) {              // клик
           _clickF = 1;
           checkList();
           server.send(200);
-        } else if (_uri.startsWith(F("/GP_press"))) {       // нажатие
+        }
+#ifndef GP_NO_PRESS
+        else if (_uri.startsWith(F("/GP_press"))) {       // нажатие
           _holdF = server.arg(0)[0] - '0';
           //_clickF = 1;
           if (_holdF == 1) _hold = server.argName(0);
           else _hold = "";
           server.send(200);
-        } else if (_uri.startsWith(F("/hotspot-detect.html"))) {    // AP
-          _showPage = 1;
-
-#ifdef GP_NO_DOWNLOAD
-        } else if (_uri.startsWith(F("/favicon.ico"))) {    // иконка
-          server.send(200);
-          return;
+        }
 #endif
-
-        } else if (_uri.startsWith(F("/GP_ping"))) {        // пинг
+        else if (_uri.startsWith(F("/hotspot-detect.html"))) {    // AP
+          _showPage = 1;
+        }
+#ifdef GP_NO_DOWNLOAD
+        else if (_uri.startsWith(F("/favicon.ico"))) {    // иконка
           server.send(200);
           return;
-        } else if (_uri.startsWith(F("/GP_SCRIPT.js"))) {   // скрипты
+        }
+#endif
+        else if (_uri.startsWith(F("/GP_ping"))) {        // пинг
+          server.send(200);
+          return;
+        }
+        else if (_uri.startsWith(F("/GP_SCRIPT.js"))) {   // скрипты
           sendFile_P(GP_JS_TOP, "text/javascript");
           return;
-        } else if (_uri.startsWith(F("/GP_STYLE.css"))) {   // стили
+        }
+        else if (_uri.startsWith(F("/GP_STYLE.css"))) {   // стили
           sendFile_P(_gp_style, "text/css");
           return;
-        } else if (_uri.startsWith(F("/GP_update"))) {      // апдейт
+        }
+        else if (_uri.startsWith(F("/GP_update"))) {      // апдейт
           String name = server.argName(0);        // тут будет список имён
           String answ;                            // строка с ответом
           _answPtr = &answ;                       // указатель на неё
@@ -133,41 +134,47 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
           _answPtr = nullptr;
           _updPtr = nullptr;
           return;
-        } else if (_uri.startsWith(F("/GP_time"))) {    // время
+        }
+        else if (_uri.startsWith(F("/GP_time"))) {    // время
           setUnix(server.arg(0).toInt());
           setGMT(server.arg(1).toInt());
           _gp_unix_tmr = millis();
           server.send(200);
           return;
-        } else if (_uri.startsWith(F("/GP_delete"))) {  // удаление
+        }
+        else if (_uri.startsWith(F("/GP_delete"))) {  // удаление
           if (_autoDel && _fs) {
 #if defined(FS_H)
             _fs->remove(server.argName(0));
 #endif
           } else _delF = 1;
           _showPage = 1;
-        } else if (_uri.startsWith(F("/GP_rename"))) {  // переименовать
+        }
+        else if (_uri.startsWith(F("/GP_rename"))) {  // переименовать
           if (_autoRen && _fs) {
 #if defined(FS_H)
             _fs->rename(server.argName(0), server.arg(0));
 #endif
           } else _renF = 1;
           _showPage = 1;
-        } else if (_uri.startsWith(F("/GP_upload"))) {
+        }
+        else if (_uri.startsWith(F("/GP_upload"))) {
           server.send(200, "text/html", F("<meta http-equiv='refresh' content='0; url=/'/>"));
           return;
-
+        }
 #if defined(FS_H) && !defined(GP_NO_DOWNLOAD)
-        } else if (downOn && !server.args() && _uri[0] == '/' && _uri.indexOf('.') > 0) {   // файл
+
+        else if (downOn && !server.args() && _uri[0] == '/' && _uri.indexOf('.') > 0) {   // файл
           if (_autoD && _fs) sendFile(_fs->open(_uri, "r"));  // авто скачивание
           else _fileDF = 1;                                   // ручное скачивание (в action)
+        }
 #endif
-
-        } else if (server.argName(0).equals(F("GP_form"))) {    // форма
+        else if (server.argName(0).equals(F("GP_form"))) {    // форма
           _showPage = 1;
           _formF = 1;
           checkList();
-        } else {                                                // любой другой запрос
+        }
+        else {                                                // любой другой запрос
           _showPage = 1;
           _reqF = 1;
         }
@@ -379,7 +386,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
     }
 
     // ======================= ТИКЕР =======================
-    // тикер портала. Вернёт true, если портал запущен
+    // тикер портала, вернёт true, если портал запущен
     bool tick() {
       if (!_active) return 0;
 
@@ -433,7 +440,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
       _autoRen = m;
     }
 
-    // имя (путь) файла для переименования. Начинается с '/'
+    // имя (путь) файла для переименования, начинается с '/'
     String renamePath() {
       return renameFile() ? server.argName(0) : _GP_empty_str;
     }
@@ -671,7 +678,6 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
       return getBool();
     }
 
-
     // ArgParser virtual
     int args() {
       return server.args();
@@ -689,7 +695,6 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 
     // ======================= PRIVATE =======================
   private:
-
     void checkList() {
       if (!list.idx) return;
       for (int i = 0; i < list.idx; i++) {
@@ -699,7 +704,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
             case T_STRING:  *(String*)list.vals[i] = getString(list.names[i]);      break;
             case T_TIME:    *(GPtime*)list.vals[i] = getTime(list.names[i]);        break;
             case T_DATE:    *(GPdate*)list.vals[i] = getDate(list.names[i]);        break;
-            case T_CHECK:   *(bool*)list.vals[i] = getBool(list.names[i]);         break;
+            case T_CHECK:   *(bool*)list.vals[i] = getBool(list.names[i]);          break;
             case T_BYTE:    *(int8_t*)list.vals[i] = (int8_t)getInt(list.names[i]); break;
             case T_INT:     *(long*)list.vals[i] = getInt(list.names[i]);           break;
             case T_FLOAT:   *(float*)list.vals[i] = getFloat(list.names[i]);        break;

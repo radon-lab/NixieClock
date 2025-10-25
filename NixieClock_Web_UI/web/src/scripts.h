@@ -59,7 +59,7 @@ case'_prompt':{let res=prompt(item.value,resp);if(res)EVsend('/GP_click?'+item.i
 case'_confirm':{let res=confirm(val);EVsend('/GP_click?'+item.id+'='+(res?'1':'0'),res?_clkRelList.includes(item.id):0);}break;
 case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
-case'checkbox': case'radio':item.checked=Number(resp);break;
+case'checkbox':case'radio':item.checked=Number(resp);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
 case'select':item.max=Number(resp);selectUpdate(item);break;
 case undefined:switch(item.title){
@@ -84,6 +84,7 @@ p.type=p.type=='text'?'password':'text';
 arg.style.color=p.type=='text'?'#bbb':'#13161a';}
 function getEl(id){return document.getElementById(id);}
 function getPop(id){return getEl(id).innerHTML;}
+function swUpd(id,val){id=id.split(',');for(let i=0;i<id.length;i++){getEl(id[i]).checked=val;}}
 function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';}
 function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}

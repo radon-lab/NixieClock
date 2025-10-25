@@ -18,8 +18,6 @@
 // Настройки в скетч
 //#define GP_OTA_NAME F("My_sketch.ino")    // имя бинарника скетча чтобы случайно не загрузить другой
 //#define GP_OTA_FS_NAME F("My_sketch")    	// имя бинарника файловой системы чтобы случайно не загрузить другой
-//#define GP_OTA_FILES                      // использовать файлы стилей и скриптов
-//#define GP_OTA_LIGHT                      // светлая тема
 
 // Error Codes
 //esp32
@@ -57,10 +55,10 @@
   UPDATE_ERROR_OOM                (14)
 */
 //Module codes
-#define CUSTOM_UPDATE_ERROR_TYPE_FILE		(252)
-#define CUSTOM_UPDATE_ERROR_NAME_FILE		(253)
+#define CUSTOM_UPDATE_ERROR_TYPE_FILE		  (252)
+#define CUSTOM_UPDATE_ERROR_NAME_FILE		  (253)
 #define CUSTOM_UPDATE_ERROR_FS_NAME_FILE	(254)
-#define CUSTOM_UPDATE_ERROR_ABORTED			(255)
+#define CUSTOM_UPDATE_ERROR_ABORTED			  (255)
 
 class CustomOTAUpdate {
   public:
@@ -168,11 +166,7 @@ class CustomOTAUpdate {
       _OTAerrorCode = nullptr;
     }
 
-    /* Возращает ошибку текстом
-
-      default (English)
-      либо своим, если подключина функция в "attachErrorCode"
-    */
+    // Возращает ошибку текстом, либо своим, если подключина функция в "attachErrorCode"
     String error() {
       if (_OTAerrorCode)
         return _OTAerrorCode(_errCode);
@@ -190,7 +184,7 @@ class CustomOTAUpdate {
       return _errCode != UPDATE_ERROR_OK;
     }
 
-    // Возращает ошибку текстом
+    // Возращает ошибку текстом (English)
     String getErrorString() {
       String out;
       switch (_errCode) {
@@ -271,7 +265,7 @@ class CustomOTAUpdate {
               break;*/
 #endif
         case CUSTOM_UPDATE_ERROR_TYPE_FILE:
-          out = F("file is not .bin or .bin.gz");
+          out = F("File is not .bin or .bin.gz");
           break;
         case CUSTOM_UPDATE_ERROR_NAME_FILE:
           out = F("File name error");
@@ -312,7 +306,8 @@ class CustomOTAUpdate {
       if (hasError()) {
         _UpdateEnd = false;
         if (_OTAerror) _OTAerror(error());
-      } else {
+      }
+      else {
         if (_OTAbeforeRestart) _OTAbeforeRestart();
         delay(100);
         ESP.restart();
@@ -378,7 +373,8 @@ class CustomOTAUpdate {
             _setError(Update.getError());
             return;
           }
-        } else { /* upload.name == "firmware" */
+        }
+        else {
 #ifdef GP_OTA_NAME
           if (!upload.filename.startsWith(GP_OTA_NAME)) {
             _setError(CUSTOM_UPDATE_ERROR_NAME_FILE);
@@ -394,18 +390,21 @@ class CustomOTAUpdate {
 #ifdef ESP8266
         WiFiUDP::stopAll();
 #endif
-      } else if (upload.status == UPLOAD_FILE_WRITE) {
+      }
+      else if (upload.status == UPLOAD_FILE_WRITE) {
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
           _setError(Update.getError());
           return;
         }
-      } else if (upload.status == UPLOAD_FILE_END) {
+      }
+      else if (upload.status == UPLOAD_FILE_END) {
         if (!Update.end(true)) {
           _setError(Update.getError());
         }
         _UpdateEnd = true;
         return;
-      } else if (upload.status == UPLOAD_FILE_ABORTED) {
+      }
+      else if (upload.status == UPLOAD_FILE_ABORTED) {
         Update.end();
         _setError(CUSTOM_UPDATE_ERROR_ABORTED);
         if (_OTAabort) _OTAabort();

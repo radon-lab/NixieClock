@@ -350,6 +350,7 @@
 #define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучивать действия"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Голос озвучки"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Звук кнопок"
+#define LANG_PAGE_SETTINGS_GUI_TICK "Звук секунд"
 #define LANG_PAGE_SETTINGS_GUI_VOLUME "Громкость"
 
 //-------------------------------------------------------//
@@ -890,6 +891,7 @@
 #define LANG_PAGE_SETTINGS_GUI_ACTION "Voice actions"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Voice acting"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Buttons sound"
+#define LANG_PAGE_SETTINGS_GUI_TICK "Seconds sound"
 #define LANG_PAGE_SETTINGS_GUI_VOLUME "Volume"
 
 //-------------------------------------------------------//

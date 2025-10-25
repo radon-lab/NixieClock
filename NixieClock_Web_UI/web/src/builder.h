@@ -32,6 +32,11 @@ struct Builder {
     *_GPP += F("</script>\n");
   }
 
+  void floatDec(float val, uint16_t dec) {
+    if (!dec) *_GPP += (int)round(val);
+    else *_GPP += String(val, (uint16_t)dec);
+  }
+
   // ======================= БИЛДЕР =======================
   void BUILD_BEGIN(void) {
     PAGE_BEGIN();
@@ -1920,7 +1925,7 @@ struct Builder {
     *_GPP += "'>\n";
     send();
   }
-  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false) {
+  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
     if (st != GP_GREEN) {
       *_GPP += F("<style>#__");
       *_GPP += name;
@@ -1937,8 +1942,15 @@ struct Builder {
     *_GPP += "' ";
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='EVclick(this)'>\n"
-               "<span class='slider");
+    *_GPP += F("onclick='EVclick(this)");
+    if (sw_upd.length()) {
+      *_GPP += F(";swUpd(\"");
+      *_GPP += sw_upd;
+      *_GPP += F("\",");
+      *_GPP += sw_val;
+      *_GPP += ')';
+    }
+    *_GPP += F("'>\n<span class='slider");
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("' id='_");
     *_GPP += name;
@@ -1969,14 +1981,8 @@ struct Builder {
   }
 
   void TIME(const String& name, bool dis = false) {
-    *_GPP += F("<input step='1' type='time' name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this)'>\n");
-    send();
+    GPtime t;
+    TIME(name, t, dis);
   }
   void TIME(const String& name, GPtime t, bool dis = false) {
     *_GPP += F("<input step='1' type='time' name='");
@@ -1991,10 +1997,6 @@ struct Builder {
     send();
   }
 
-  void _FLOAT_DEC(float val, uint16_t dec) {
-    if (!dec) *_GPP += (int)round(val);
-    else *_GPP += String(val, (uint16_t)dec);
-  }
   void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, const String& lable = "", bool maxsz = 0) {
     if (maxsz) {
       *_GPP += F("<lable class='slMaxLable");
@@ -2040,7 +2042,7 @@ struct Builder {
     if (maxsz) *_GPP += F("slMaxValue");
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("'>");
-    _FLOAT_DEC(value, dec);
+    floatDec(value, dec);
     *_GPP += F("</output>\n");
     send();
   }
@@ -2087,18 +2089,18 @@ struct Builder {
       *_GPP += w;
     }
     *_GPP += F("' step='");
-    _FLOAT_DEC(step, dec);
+    floatDec(step, dec);
     *_GPP += F("' onkeyup='EVspinw(this)' onkeydown='EVspinw(this)' onchange='");
     if (!dec) *_GPP += F("EVspinc(this);");
     *_GPP += F("EVclick(this);EVspinw(this)' value='");
-    _FLOAT_DEC(value, dec);
+    floatDec(value, dec);
     if (!isnan(min)) {
       *_GPP += F("' min='");
-      _FLOAT_DEC(min, dec);
+      floatDec(min, dec);
     }
     if (!isnan(max)) {
       *_GPP += F("' max='");
-      _FLOAT_DEC(max, dec);
+      floatDec(max, dec);
     }
     *_GPP += F("' ");
     if (dis) *_GPP += F("disabled ");
@@ -2456,5 +2458,4 @@ struct Builder {
   void AREA_BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, tar, st, width, F("areaButton"), dis, rel);
   }
-
 };
