@@ -19,8 +19,8 @@
 //#define GP_OTA_NAME F("My_sketch.ino")    // имя бинарника скетча чтобы случайно не загрузить другой
 //#define GP_OTA_FS_NAME F("My_sketch")    	// имя бинарника файловой системы чтобы случайно не загрузить другой
 
-// Error Codes
-//esp32
+// Коды ошибок
+/*esp32*/
 /*
   UPDATE_ERROR_OK                 (0)
   UPDATE_ERROR_WRITE              (1)
@@ -36,7 +36,7 @@
   UPDATE_ERROR_BAD_ARGUMENT       (11)
   UPDATE_ERROR_ABORT              (12)
 */
-//esp8266
+/*esp8266*/
 /*
   UPDATE_ERROR_OK                 (0)
   UPDATE_ERROR_WRITE              (1)
@@ -91,11 +91,11 @@ class CustomOTAUpdate {
         _UploadBin(upload);
       });
       //------------------
-      _server->on(F("/GP_OTAupload"), HTTP_GET, [this]() {
+      _server->on(F("/EV_OTAupload"), HTTP_GET, [this]() {
         _JSback();
       });
       //------------------
-      _server->on(F("/GP_OTAupload"), HTTP_POST, [this]() {
+      _server->on(F("/EV_OTAupload"), HTTP_POST, [this]() {
         _JSback();
         _server->client().stop();
         _UpdateReload();
@@ -326,7 +326,7 @@ class CustomOTAUpdate {
       _server->send(200, "text/html");
 
       *_gp_uri = F("/ota_update");
-      _gp_s = _server;
+      _gp_server = _server;
       String page;
       _gp_bufsize = 500;
       page.reserve(_gp_bufsize);

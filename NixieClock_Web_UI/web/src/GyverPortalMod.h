@@ -31,7 +31,7 @@
 #define _GyverPortalMod_h
 #include <Arduino.h>
 
-#define GP_VERSION "3.7.1"
+#define GP_VERSION "3.7.2"
 #define GP_CACHE_PRD "max-age=86400"        // таймаут кеширования (умолч. 86400 - сутки)
 
 #ifndef GP_NO_DNS
@@ -55,10 +55,10 @@
 
 #ifdef ESP8266
 #include <ESP8266WebServer.h>
-ESP8266WebServer* _gp_s;
+ESP8266WebServer* _gp_server;
 #else
 #include <WebServer.h>
-WebServer* _gp_s;
+WebServer* _gp_server;
 #endif
 
 String* _GPP;
@@ -72,7 +72,7 @@ uint32_t _gp_local_unix = 0;
 const char* _gp_mdns = nullptr;
 const char* _gp_style = nullptr;
 
-String _GP_empty_str;
+String _gp_empty_str;
 
 #ifndef GP_NO_OTA
 #include "CustomOTA.h"

@@ -12,11 +12,11 @@ function EVhintLoad(min,max,func){func();getEl(min).addEventListener("change", f
 function EVsend(req,r=null,upd=null){var xhttp=new XMLHttpRequest();xhttp.open(upd?'GET':'POST',req,true);
 xhttp.send();xhttp.timeout=_tout;xhttp.onreadystatechange=function(){if(this.status||(++_err>=5)){onlShow(!this.status);_err=0;}if(this.status||upd){
 if(this.readyState==4&&this.status==200){if(r){if(r==1)location.reload();else location.href=r;}if(upd)EVapply(upd,this.responseText);}}}}
-function EVupdate(ids){ids=ids.replaceAll(' ','');EVsend('/GP_update?'+ids+'=',null,ids);}
-function EVdelete(url){if(!confirm('Delete '+url+'?'))return;EVsend('/GP_delete?'+url+'=',1);}
-function EVrename(url){res=prompt('Rename File',url);if(!res)return;EVsend('/GP_rename?'+url+'='+res,1);}
+function EVupdate(ids){ids=ids.replaceAll(' ','');EVsend('/EV_update?'+ids+'=',null,ids);}
+function EVdelete(url){if(!confirm('Delete '+url+'?'))return;EVsend('/EV_delete?'+url+'=',1);}
+function EVrename(url){res=prompt('Rename File',url);if(!res)return;EVsend('/EV_rename?'+url+'='+res,1);}
 function EVhint(id,txt){el=getEl(id);if(el.className=='_sw_c'){el=getEl('_'+id)}el.title=txt;}
-function EVpress(arg,dir){_pressId=(dir==1)?arg.name:null;if(arg.name)EVsend('/GP_press?'+arg.name+'='+dir);}
+function EVpress(arg,dir){_pressId=(dir==1)?arg.name:null;if(arg.name)EVsend('/EV_press?'+arg.name+'='+dir);}
 function EVclick(arg,r=null,s=null){if(!arg.name)arg.name=arg.id;var v;
 if(arg.type=='number'){
 if(arg.hasAttribute('min')&&Number(arg.value)<=Number(arg.min))arg.value=arg.min;
@@ -25,9 +25,9 @@ if(arg.name){if(arg.type=='checkbox')v=arg.checked?'1':'0';
 else if(arg.type=='button'||arg.value==undefined)v=(s!=null)?s:'';else v=arg.value;
 if(_clkRelList.includes(arg.name))r=1;
 if(_clkCloseList.includes(arg.name))popupClose();
-EVsend('/GP_click?'+arg.name+'='+encodeURIComponent(v),r);
+EVsend('/EV_click?'+arg.name+'='+encodeURIComponent(v),r);
 if(_clkUpdList){for(var key in _clkUpdList){if(key.includes(arg.name))EVupdate(_clkUpdList[key]);}}}}
-function EVclickId(btn,tar,r){EVsend('/GP_click?'+btn+'='+encodeURIComponent(getEl(tar).value),r);}
+function EVclickId(btn,tar,r){EVsend('/EV_click?'+btn+'='+encodeURIComponent(getEl(tar).value),r);}
 function EVchange(arg){arg.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';
 const _output=getEl(arg.id+'_val');const _range=_output.name.split(',');if((arg.value<=Number(arg.min))&&_range[0]){_output.value=_range[0];}
 else if((arg.value>=Number(arg.max))&&_range[1]){_output.value=_range[1];}else _output.value=arg.value;}
@@ -55,8 +55,8 @@ case'hidden':{var val=item.value?item.value:resp;
 switch(item.name){
 case'_reload':if(resp=='1')location.reload();break;
 case'_alert':alert(val);if(_clkRelList.includes(item.id))location.reload();break;
-case'_prompt':{let res=prompt(item.value,resp);if(res)EVsend('/GP_click?'+item.id+'='+res,_clkRelList.includes(item.id));}break;
-case'_confirm':{let res=confirm(val);EVsend('/GP_click?'+item.id+'='+(res?'1':'0'),res?_clkRelList.includes(item.id):0);}break;
+case'_prompt':{let res=prompt(item.value,resp);if(res)EVsend('/EV_click?'+item.id+'='+res,_clkRelList.includes(item.id));}break;
+case'_confirm':{let res=confirm(val);EVsend('/EV_click?'+item.id+'='+(res?'1':'0'),res?_clkRelList.includes(item.id):0);}break;
 case'_eval':eval(val);break;
 case'_title':document.title=resp;break;}}break;
 case'checkbox':case'radio':item.checked=Number(resp);break;

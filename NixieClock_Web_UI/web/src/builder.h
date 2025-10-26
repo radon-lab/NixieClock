@@ -7,7 +7,7 @@
 struct Builder {
   uint8_t _gp_nav_pos = 0;
   uint8_t _gp_nav_id = 0;
-  int _spinInt = 200;
+  int _spin_prd = 200;
 
   // время
   uint32_t _timeUpdPrd = 10 * 60 * 1000ul;
@@ -16,13 +16,13 @@ struct Builder {
   }
   void updateTime(void) {
     if (!_gp_unix_tmr || millis() - _gp_unix_tmr >= _timeUpdPrd) {
-      SEND(F("<script>EVsend('/GP_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
+      SEND(F("<script>EVsend('/EV_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
     }
   }
 
   // период изменения значения при удержании кнопки спиннера
   void setSpinnerPeriod(int prd) {
-    _spinInt = prd;
+    _spin_prd = prd;
   }
 
   // установить таймаут ожидания отправки килков и апдейтов
@@ -92,12 +92,12 @@ struct Builder {
   }
   void SEND_P(PGM_P s) {
     send(true);
-    _gp_s->sendContent_P(s);
+    _gp_server->sendContent_P(s);
   }
 
   void send(bool force = 0) {
     if ((int)_GPP->length() > (force ? 0 : _gp_bufsize)) {
-      _gp_s->sendContent(*_GPP);
+      _gp_server->sendContent(*_GPP);
       *_GPP = "";
     }
   }
@@ -333,7 +333,7 @@ struct Builder {
   void ONLINE_CHECK(int prd = 3000) {
     *_GPP += F("<script>setInterval(function(){if(!document.hidden){var xhttp=new XMLHttpRequest();xhttp.timeout=");
     *_GPP += prd;
-    *_GPP += F(";xhttp.open('GET','/GP_ping?',true);xhttp.send();\n"
+    *_GPP += F(";xhttp.open('GET','/EV_ping?',true);xhttp.send();\n"
                "xhttp.onreadystatechange=function(){onlShow(!this.status)}}},");
     *_GPP += prd;
     *_GPP += F(");</script>\n");
@@ -504,7 +504,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("' method='POST'>\n<input type='hidden' name='GP_form' value='");
+    *_GPP += F("' method='POST'>\n<input type='hidden' name='EV_form' value='");
     *_GPP += name;
     *_GPP += F("'>\n");
     send();
@@ -1147,7 +1147,7 @@ struct Builder {
       *_GPP += tab.count;
       *_GPP += F("\",this,\"block_");
       *_GPP += name;
-      *_GPP += F("\");EVsend(\"/GP_click?");
+      *_GPP += F("\");EVsend(\"/EV_click?");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += tab.count;
@@ -1180,7 +1180,7 @@ struct Builder {
       *_GPP += p.count;
       *_GPP += F("\",this,\"block_");
       *_GPP += name;
-      *_GPP += F("\");EVsend(\"/GP_click?");
+      *_GPP += F("\");EVsend(\"/EV_click?");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += p.count;
@@ -1267,7 +1267,7 @@ struct Builder {
   }
 
   // ======================= ФАЙЛЫ =======================
-  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_GREEN, const String& accept = "", const String& options = "", const String& action = "/GP_upload") {
+  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_GREEN, const String& accept = "", const String& options = "", const String& action = "/EV_upload") {
     *_GPP += F("<div id='");
     *_GPP += name;
     *_GPP += F("'><form action='");
@@ -1312,11 +1312,11 @@ struct Builder {
   }
 
   void OTA_FIRMWARE(const String& text = "OTA firmware", PGM_P st = GP_GREEN, bool page = 0) {
-    FILE_UPLOAD_RAW(F("firmware"), (!text.length()) ? "🔧" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/GP_OTAupload"));
+    FILE_UPLOAD_RAW(F("firmware"), (!text.length()) ? "🔧" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
   void OTA_FILESYSTEM(const String& text = "OTA filesystem", PGM_P st = GP_GREEN, bool page = 0) {
-    FILE_UPLOAD_RAW(F("filesystem"), (!text.length()) ? "💾" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/GP_OTAupload"));
+    FILE_UPLOAD_RAW(F("filesystem"), (!text.length()) ? "💾" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
   void IMAGE(const String& uri, const String& w = "") {
@@ -2067,7 +2067,7 @@ struct Builder {
     *_GPP += F("' max='");
     *_GPP += dec;
     *_GPP += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{EVspin(this);_spinF=1},");
-    *_GPP += 200;
+    *_GPP += _spin_prd;
     *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)EVspin(this);_spinF=0' value='");
     *_GPP += (step > 0) ? '+' : '-';
     *_GPP += F("' ");

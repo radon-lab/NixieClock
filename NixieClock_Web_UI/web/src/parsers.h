@@ -13,10 +13,10 @@ class ArgParser {
     virtual bool clickF() = 0;
 
     const String& arg() {                   // value from 0
-      return _argValPtr ? (*_argValPtr) : _GP_empty_str;
+      return _argValPtr ? (*_argValPtr) : _gp_empty_str;
     }
     const String& argName() {               // name from 0
-      return _argNamePtr ? (*_argNamePtr) : _GP_empty_str;
+      return _argNamePtr ? (*_argNamePtr) : _gp_empty_str;
     }
 
     // ==================== HOLD ===================
@@ -32,12 +32,12 @@ class ArgParser {
 
     // вернёт имя удерживаемой кнопки
     String holdName() {
-      return _hold.length() ? _hold : _GP_empty_str;
+      return _hold.length() ? _hold : _gp_empty_str;
     }
 
     // вернёт часть имени hold компонента, находящейся под номером idx после разделителя /
     String holdNameSub(int idx = 1) {
-      return _hold.length() ? (GPlistIdx(_hold, idx, '/')) : _GP_empty_str;
+      return _hold.length() ? (GPlistIdx(_hold, idx, '/')) : _gp_empty_str;
     }
 
     // вернёт true, если кнопка удерживается и имя компонента начинается с указанного
@@ -81,12 +81,12 @@ class ArgParser {
 
     // вернёт имя теукщего кликнутого компонента
     String clickName() {
-      return click() ? argName() : _GP_empty_str;
+      return click() ? argName() : _gp_empty_str;
     }
 
     // вернёт часть имени кликнутого компонента, находящейся под номером idx после разделителя /
     String clickNameSub(int idx = 1) {
-      return click() ? (GPlistIdx(argName(), idx, '/')) : _GP_empty_str;
+      return click() ? (GPlistIdx(argName(), idx, '/')) : _gp_empty_str;
     }
 
     // ===================== CLICK AUTO =====================
@@ -407,12 +407,12 @@ class ArgParser {
 
     // вернёт имя обновлённого компонента
     String updateName() {
-      return update() ? (*_updPtr) : _GP_empty_str;
+      return update() ? (*_updPtr) : _gp_empty_str;
     }
 
     // вернёт часть имени обновляемого компонента, находящейся под номером idx после разделителя /
     String updateNameSub(int idx = 1) {
-      return update() ? (GPlistIdx(*_updPtr, idx, '/')) : _GP_empty_str;
+      return update() ? (GPlistIdx(*_updPtr, idx, '/')) : _gp_empty_str;
     }
 
     String *_answPtr = nullptr;

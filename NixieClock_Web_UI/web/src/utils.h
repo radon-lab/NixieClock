@@ -6,7 +6,7 @@
 
 #define GP_PGM(name, val) static const char name[] PROGMEM = val
 #define GP_PGM_LIST(name, ...) const char* const name[] PROGMEM = {__VA_ARGS__};
-extern String _GP_empty_str;
+extern String _gp_empty_str;
 
 // ==================== COLORS =====================
 GP_PGM(GP_RED, "#bf1e1e");
@@ -475,7 +475,7 @@ String GPlistIdx(const String& li, int idx, char div) {
   while (1) {
     if (li[i] == div || !li[i]) {
       if (cnt == idx) return li.substring(p, i);
-      if (!li[i]) return _GP_empty_str;
+      if (!li[i]) return _gp_empty_str;
       cnt++;
       p = i + 1;
     }
