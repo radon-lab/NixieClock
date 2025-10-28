@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_048 бета от 25.10.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_049 бета от 28.10.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -285,10 +285,10 @@ void build(void) {
       GP.BLOCK_SHADOW_END();
     }
     if (wifiGetConnectStatus()) {
-      updateList += F(",bar_wifi");
+      updateList += F(",barWifi");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_WIFI, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_BAR("bar_wifi", wifiGetSignalStrength(), 0, 100, 1, UI_MENU_WIFI_COLOR);
+      GP.LINE_BAR("barWifi", wifiGetSignalStrength(), 0, 100, 1, UI_MENU_WIFI_COLOR);
       GP.BLOCK_SHADOW_END();
     }
 
@@ -1019,7 +1019,7 @@ void build(void) {
       GP.HR_TEXT(LANG_PAGE_INFO_HR_NETWORK, UI_LINE_COLOR, UI_HINT_COLOR);
 
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(wifiGetSignalStrength()) + '%', "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MODE, "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MODE, "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? LANG_PAGE_INFO_GUI_MODE_AP : (WiFi.getMode() == WIFI_STA ? LANG_PAGE_INFO_GUI_MODE_STA : LANG_PAGE_INFO_GUI_MODE_AP_STA), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MAC, "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
       if (wifiGetConnectStatus()) {
@@ -2040,7 +2040,7 @@ void action() {
         ui.answer(ntpGetSyncStatus());
       }
 
-      if (ui.update("bar_wifi")) { //если было обновление
+      if (ui.update("barWifi")) { //если было обновление
         ui.answer(wifiGetSignalStrength());
       }
     }
@@ -2247,148 +2247,6 @@ String StrLengthConstrain(String str, uint8_t size) {
   return str;
 }
 //--------------------------------------------------------------------
-boolean passGetCheckError(void) {
-  if (passState == 0x01) {
-    passState = 0x00;
-    return true;
-  }
-  else if (passState == 0x03) {
-    passState = 0x02;
-    return true;
-  }
-  return false;
-}
-//--------------------------------------------------------------------
-boolean passGetWriteTimeout(void) {
-  return ((passState & 0x02) && ((millis() - passTimer) < OTA_PASS_TIMEOUT));
-}
-//--------------------------------------------------------------------
-boolean passGetOtaState(void) {
-  if (OTA_PASS[0] == '\0') passSetOtaState();
-  return (passState >= 0xFC);
-}
-//--------------------------------------------------------------------
-void passSetOtaState(void) {
-  static boolean auth = false;
-
-  if (!auth) {
-    auth = true;
-    ui.uploadMode(true);
-    ui.uploadAuto(false);
-    ui.enableOTA();
-    ui.OTA.attachUpdateBuild(buildUpdate);
-  }
-
-  passState = 0xFC;
-}
-//--------------------------------------------------------------------
-void passCheckAttempt(const String& pass) {
-  static uint8_t attempt = 0;
-
-  if (((millis() - passTimer) >= OTA_PASS_TIMEOUT) || (attempt < OTA_PASS_ATTEMPT)) {
-    if (pass.compareTo(OTA_PASS)) {
-      if (attempt++ >= OTA_PASS_ATTEMPT) attempt = 0;
-      else if (attempt == OTA_PASS_ATTEMPT) passState = 0x03;
-      else passState = 0x01;
-    }
-    else passSetOtaState();
-    passTimer = millis();
-  }
-}
-//--------------------------------------------------------------------
-boolean checkFsData(const char** data, int8_t size) {
-  File file;
-  while (size > 0) {
-    size--;
-    file = LittleFS.open(data[size], "r");
-    if (!file) {
-      Serial.print(data[size]);
-      Serial.println F(" not found");
-      return false;
-    }
-    else file.close();
-  }
-  return true;
-}
-//--------------------------------------------------------------------
-void initFileSystemData(void) {
-  if (!LittleFS.begin()) Serial.println F("File system error");
-  else {
-    fsUpdate = true; //включаем обновление
-    Serial.println F("File system init");
-
-    if (checkFsData(climateFsData, 1)) {
-      climateLocal = true; //работаем локально
-      Serial.println F("Script file found");
-    }
-    if (checkFsData(alarmFsData, 3)) {
-      alarmSvgImage = true; //работаем локально
-      Serial.println F("Alarm svg files found");
-    }
-    if (checkFsData(timerFsData, 5)) {
-      timerSvgImage = true; //работаем локально
-      Serial.println F("Timer svg files found");
-    }
-    if (checkFsData(radioFsData, 6)) {
-      radioSvgImage = true; //работаем локально
-      Serial.println F("Radio svg files found");
-    }
-
-    if (LittleFS.remove("/update/firmware.hex")) Serial.println F("Clock update file remove"); //удаляем файл прошивки
-
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-    if ((fs_info.totalBytes - fs_info.usedBytes) >= 120000) {
-      clockUpdate = true; //включаем обновление
-      Serial.println F("Clock update enable");
-    }
-    else Serial.println F("Clock update disable, running out of memory");
-  }
-
-  if (ESP.getFreeSketchSpace() >= ESP.getSketchSize()) {
-    otaUpdate = true; //выключаем обновление
-    Serial.println F("OTA update enable");
-  }
-  else Serial.println F("OTA update disable, running out of memory");
-
-  if (OTA_PASS[0] != '\0') {
-    Serial.print F("Update is locked, pass: ");
-    Serial.println(OTA_PASS);
-  }
-}
-//--------------------------------------------------------------------
-void resetMainSettings(void) {
-  strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
-  settings.ntpHost[19] = '\0'; //устанавливаем последний символ
-
-  settings.groupFind = DEFAULT_GROUP_FOUND; //обнаружение устройств поблизости
-
-  settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
-  settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
-  settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
-  settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
-
-  strncpy(settings.nameDevice, DEFAULT_NAME, 20); //установить имя по умолчанию
-  settings.nameDevice[19] = '\0'; //устанавливаем последний символ
-
-  settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
-  settings.weatherLat = NAN; //установить широту по умолчанию
-  settings.weatherLon = NAN; //установить долготу по умолчанию
-
-  for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
-  settings.climateSend[0] = SENS_MAIN; //сбрасываем тип датчика
-  settings.climateSend[1] = SENS_WEATHER; //сбрасываем тип датчика
-  settings.climateBar = SENS_MAIN; //установить режим по умолчанию
-  settings.climateChart = SENS_MAIN; //установить режим по умолчанию
-  settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
-  settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
-  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
-  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
-  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
-  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
-  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
-}
-//--------------------------------------------------------------------
 void sensorSendData(uint8_t sens) {
   if (!deviceInformation[SENS_TEMP] && (settings.climateSend[0] == sens)) busSetCommand(WRITE_SENS_1_DATA, settings.climateSend[0]); //отправить данные
   if (settings.climateSend[1] == sens) busSetCommand(WRITE_SENS_2_DATA, settings.climateSend[1]); //отправить данные
@@ -2581,6 +2439,148 @@ void deviceUpdate(void) {
       sensorSendData(SENS_MAIN); //отправить данные
       break;
   }
+}
+//--------------------------------------------------------------------
+boolean passGetCheckError(void) {
+  if (passState == 0x01) {
+    passState = 0x00;
+    return true;
+  }
+  else if (passState == 0x03) {
+    passState = 0x02;
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean passGetWriteTimeout(void) {
+  return ((passState & 0x02) && ((millis() - passTimer) < OTA_PASS_TIMEOUT));
+}
+//--------------------------------------------------------------------
+boolean passGetOtaState(void) {
+  if (OTA_PASS[0] == '\0') passSetOtaState();
+  return (passState >= 0xFC);
+}
+//--------------------------------------------------------------------
+void passSetOtaState(void) {
+  static boolean auth = false;
+
+  if (!auth) {
+    auth = true;
+    ui.uploadMode(true);
+    ui.uploadAuto(false);
+    ui.enableOTA();
+    ui.OTA.attachUpdateBuild(buildUpdate);
+  }
+
+  passState = 0xFC;
+}
+//--------------------------------------------------------------------
+void passCheckAttempt(const String& pass) {
+  static uint8_t attempt = 0;
+
+  if (((millis() - passTimer) >= OTA_PASS_TIMEOUT) || (attempt < OTA_PASS_ATTEMPT)) {
+    if (pass.compareTo(OTA_PASS)) {
+      if (attempt++ >= OTA_PASS_ATTEMPT) attempt = 0;
+      else if (attempt == OTA_PASS_ATTEMPT) passState = 0x03;
+      else passState = 0x01;
+    }
+    else passSetOtaState();
+    passTimer = millis();
+  }
+}
+//--------------------------------------------------------------------
+boolean checkFsData(const char** data, int8_t size) {
+  File file;
+  while (size > 0) {
+    size--;
+    file = LittleFS.open(data[size], "r");
+    if (!file) {
+      Serial.print(data[size]);
+      Serial.println F(" not found");
+      return false;
+    }
+    else file.close();
+  }
+  return true;
+}
+//--------------------------------------------------------------------
+void initFileSystemData(void) {
+  if (!LittleFS.begin()) Serial.println F("File system error");
+  else {
+    fsUpdate = true; //включаем обновление
+    Serial.println F("File system init");
+
+    if (checkFsData(climateFsData, 1)) {
+      climateLocal = true; //работаем локально
+      Serial.println F("Script file found");
+    }
+    if (checkFsData(alarmFsData, 3)) {
+      alarmSvgImage = true; //работаем локально
+      Serial.println F("Alarm svg files found");
+    }
+    if (checkFsData(timerFsData, 5)) {
+      timerSvgImage = true; //работаем локально
+      Serial.println F("Timer svg files found");
+    }
+    if (checkFsData(radioFsData, 6)) {
+      radioSvgImage = true; //работаем локально
+      Serial.println F("Radio svg files found");
+    }
+
+    if (LittleFS.remove("/update/firmware.hex")) Serial.println F("Clock update file remove"); //удаляем файл прошивки
+
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    if ((fs_info.totalBytes - fs_info.usedBytes) >= 120000) {
+      clockUpdate = true; //включаем обновление
+      Serial.println F("Clock update enable");
+    }
+    else Serial.println F("Clock update disable, running out of memory");
+  }
+
+  if (ESP.getFreeSketchSpace() >= ESP.getSketchSize()) {
+    otaUpdate = true; //выключаем обновление
+    Serial.println F("OTA update enable");
+  }
+  else Serial.println F("OTA update disable, running out of memory");
+
+  if (OTA_PASS[0] != '\0') {
+    Serial.print F("Update is locked, pass: ");
+    Serial.println(OTA_PASS);
+  }
+}
+//--------------------------------------------------------------------
+void resetMainSettings(void) {
+  strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
+  settings.ntpHost[19] = '\0'; //устанавливаем последний символ
+
+  settings.groupFind = DEFAULT_GROUP_FOUND; //обнаружение устройств поблизости
+
+  settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
+  settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
+  settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
+  settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
+
+  strncpy(settings.nameDevice, DEFAULT_NAME, 20); //установить имя по умолчанию
+  settings.nameDevice[19] = '\0'; //устанавливаем последний символ
+
+  settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
+  settings.weatherLat = NAN; //установить широту по умолчанию
+  settings.weatherLon = NAN; //установить долготу по умолчанию
+
+  for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
+  settings.climateSend[0] = SENS_MAIN; //сбрасываем тип датчика
+  settings.climateSend[1] = SENS_WEATHER; //сбрасываем тип датчика
+  settings.climateBar = SENS_MAIN; //установить режим по умолчанию
+  settings.climateChart = SENS_MAIN; //установить режим по умолчанию
+  settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
+  settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
+  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
+  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
+  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
+  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
+  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
 }
 //--------------------------------------------------------------------
 void setup() {
