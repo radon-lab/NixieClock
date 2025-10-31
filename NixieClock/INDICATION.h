@@ -4,6 +4,14 @@
 #define DOTS_ALL (DOTS_NUM) //всего разделительных точек
 #endif
 
+//перечисления неоновых точек
+enum {
+  DOT_NULL, //неоновые лампы выключены
+  DOT_LEFT, //левая неоновая лампа
+  DOT_RIGHT, //правая неоновая лампа
+  DOT_ALL //две неоновые лампы
+};
+
 uint8_t indi_dot_l; //буфер левых точек индикаторов
 uint8_t indi_dot_r; //буфер правых точек индикаторов
 volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
@@ -24,14 +32,6 @@ struct animData {
 
 const uint8_t _anim_set[] PROGMEM = {FLIP_ANIM_RANDOM}; //массив случайных режимов
 
-//перечисления неоновых точек
-enum {
-  DOT_NULL, //неоновые лампы выключены
-  DOT_LEFT, //левая неоновая лампа
-  DOT_RIGHT, //правая неоновая лампа
-  DOT_ALL //две неоновые лампы
-};
-
 #if INDI_MODE == 1
 #include "DYNAMICx2.h"
 #else
@@ -46,29 +46,6 @@ boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //у
 boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //увеличение яркости точек
 #endif
 
-//-----------------------------------Динамическая подсветка---------------------------------------
-#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
-ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
-{
-  __asm__ __volatile__ (
-    "SBI %[_BACKL_PORT], %[_BACKL_BIT] \n\t" //HIGH на выход пина
-    "RETI                              \n\t" //выход из прерывания
-    :
-    : [_BACKL_PORT]"I"(_SFR_IO_ADDR(BACKL_PORT)),
-    [_BACKL_BIT]"I"(BACKL_BIT)
-  );
-}
-ISR(TIMER2_COMPA_vect, ISR_NAKED) //прерывание подсветки
-{
-  __asm__ __volatile__ (
-    "CBI %[_BACKL_PORT], %[_BACKL_BIT] \n\t" //LOW на выход пина
-    "RETI                              \n\t" //выход из прерывания
-    :
-    : [_BACKL_PORT]"I"(_SFR_IO_ADDR(BACKL_PORT)),
-    [_BACKL_BIT]"I"(BACKL_BIT)
-  );
-}
-#endif
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
@@ -313,7 +290,7 @@ void animClearBuff(void) //очистка буфера анимации
 {
   for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
 }
-//---------------------------------Анимация смены яркости цифр---------------------------------------
+//--------------------------------Анимация смены яркости цифр---------------------------------------
 void animBright(uint8_t pwm) //анимация смены яркости цифр
 {
   if (pwm > 30) pwm = 30;
@@ -326,6 +303,23 @@ void animBright(uint8_t pwm) //анимация смены яркости циф
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
+}
+//--------------------------------Установка неоновых точек------------------------------------------
+void neonDotSet(uint8_t _dot) //установка неоновых точек
+{
+  indi_buf[0] = INDI_NULL; //запрещаем включать точки
+  switch (_dot) {
+    case DOT_LEFT: indi_buf[0] |= 0x80; break; //включаем левую точку
+    case DOT_RIGHT: indi_buf[0] |= 0x40; break; //включаем правую точку
+    case DOT_ALL: indi_buf[0] |= 0xC0; break; //включаем обе точки
+  }
+}
+//----------------------------Установка яркости неоновых точек--------------------------------------
+void neonDotSetBright(uint8_t _pwm) //установка яркости неоновых точек
+{
+  if (_pwm > 250) _pwm = 250;
+  dot_dimm = _pwm;
+  indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
 }
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
@@ -341,23 +335,6 @@ inline uint8_t dotGetBright(void) //получить яркость точек
   return OCR1B; //возвращаем яркость
 #endif
 #endif
-}
-//-----------------------------------Установка неоновых точек------------------------------------
-void neonDotSet(uint8_t _dot) //установка неоновых точек
-{
-  indi_buf[0] = INDI_NULL; //запрещаем включать точки
-  switch (_dot) {
-    case DOT_LEFT: indi_buf[0] |= 0x80; break; //включаем левую точку
-    case DOT_RIGHT: indi_buf[0] |= 0x40; break; //включаем правую точку
-    case DOT_ALL: indi_buf[0] |= 0xC0; break; //включаем обе точки
-  }
-}
-//------------------------------Установка яркости неоновых точек---------------------------------
-void neonDotSetBright(uint8_t _pwm) //установка яркости неоновых точек
-{
-  if (_pwm > 250) _pwm = 250;
-  dot_dimm = _pwm;
-  indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
 }
 //---------------------------------Установка яркости точек---------------------------------------
 void dotSetBright(uint8_t _pwm) //установка яркости точек
@@ -443,46 +420,3 @@ boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode)
   return 0;
 }
 #endif
-//-------------------------------Получить яркости подсветки---------------------------------------
-inline uint8_t backGetBright(void) //получить яркости подсветки
-{
-  return OCR2A;
-}
-//------------------------------Установка яркости подсветки---------------------------------------
-void backlSetBright(uint8_t pwm) //установка яркости подсветки
-{
-  OCR2A = pwm; //устанавливаем яркость точек
-#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
-  if (pwm) TIMSK2 |= (0x01 << OCIE2A | 0x01 << TOIE2); //включаем таймер
-  else {
-    TIMSK2 &= ~(0x01 << OCIE2A | 0x01 << TOIE2); //выключаем таймер
-    BACKL_CLEAR; //выключили подсветку
-  }
-#elif BACKL_TYPE == 1
-  if (pwm) TCCR2A |= (0x01 << COM2A1); //подключаем D11
-  else {
-    TCCR2A &= ~(0x01 << COM2A1); //отключаем D11
-    BACKL_CLEAR; //выключили подсветку
-  }
-#endif
-}
-//-----------------------------------Уменьшение яркости------------------------------------------
-boolean backlDecBright(uint8_t _step, uint8_t _min)
-{
-  if (((int16_t)backGetBright() - _step) > _min) backlSetBright(backGetBright() - _step);
-  else {
-    backlSetBright(_min);
-    return 1;
-  }
-  return 0;
-}
-//-----------------------------------Увеличение яркости------------------------------------------
-boolean backlIncBright(uint8_t _step, uint8_t _max)
-{
-  if (((uint16_t)backGetBright() + _step) < _max) backlSetBright(backGetBright() + _step);
-  else {
-    backlSetBright(_max);
-    return 1;
-  }
-  return 0;
-}
