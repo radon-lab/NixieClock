@@ -179,7 +179,7 @@ uint8_t busCheck(void) //проверка статуса шины
         if (status & 0x01) { //если флаг установлен
           switch (i) { //выбираем действие
 #if DS3231_ENABLE
-            case BUS_EXT_COMMAND_SEND_TIME: sendTime(); break; //отправить время в RTC
+            case BUS_EXT_COMMAND_SEND_TIME: rtcSendTime(); break; //отправить время в RTC
 #endif
 #if RADIO_ENABLE
             case BUS_EXT_COMMAND_RADIO_VOL: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;

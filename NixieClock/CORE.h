@@ -316,8 +316,6 @@ uint8_t mainTask = INIT_PROGRAM; //переключатель подпрогра
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
 #define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
 
-#define MS_PERIOD (uint8_t)(US_PERIOD / 1000) //период тика таймера в целых мс
-
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN(((uint16_t)LIGHT_MAX - 2) + (LIGHT_MAX >> 5), 100, 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
@@ -354,7 +352,6 @@ enum {
   TICK_OVF_ERROR,      //0012 - переполнение тиков времени
   INDI_ERROR           //0013 - сбой работы динамической индикации
 };
-void systemTask(void); //процедура системной задачи
 
 //-----------------Таймеры------------------
 enum {
@@ -590,17 +587,12 @@ uint8_t memoryUpdate;
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
 
-void buzz_pulse(uint16_t freq, uint16_t time); //генерация частоты бузера
+void buzzPulse(uint16_t freq, uint16_t time); //генерация частоты бузера
 void melodyStop(void); //остановка воспроизведения мелодии
 void playerStop(void); //остановка воспроизведения трека
 
-//-----------------------------Прерывание от RTC--------------------------------
-#if SQW_PORT_ENABLE
-ISR(INT0_vect) //внешнее прерывание на пине INT0 - считаем секунды с RTC
-{
-  tick_sec++; //прибавляем секунду
-}
-#endif
+void systemTask(void); //процедура системной задачи
+
 //-----------------------------Установка ошибки---------------------------------
 void SET_ERROR(uint8_t err) //установка ошибки
 {
@@ -911,6 +903,26 @@ void analogUpdate(void) //обработка аналоговых входов
     }
   }
 }
+//----------------Обработка обратной связи преобразователя-------------------------
+void feedbackUpdate(void) //обработка обратной связи преобразователя
+{
+  if (ACSR & (0x01 << ACI)) { //если изменилось состояние на входе
+    ACSR |= (0x01 << ACI); //сбрасываем флаг прерывания
+#if CONV_PIN == 9
+    if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
+    else {
+      TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
+      CONV_OFF; //выключаем пин преобразователя
+    }
+#elif CONV_PIN == 10
+    if (ACSR & (0x01 << ACO)) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
+    else {
+      TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
+      CONV_OFF; //выключаем пин преобразователя
+    }
+#endif
+  }
+}
 //----------------------Чтение напряжения питания----------------------------------
 void checkVCC(void) //чтение напряжения питания
 {
@@ -1064,7 +1076,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
-        if (mainSettings.baseSound) buzz_pulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+        if (mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
         melodyStop(); //сброс воспроизведения мелодии
 #endif
         switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса

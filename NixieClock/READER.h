@@ -145,11 +145,11 @@ boolean get_fat(void)
 
     if (fs.fatType == FS_FAT32) {
       buffer.readStart = ((uint16_t)reader.dataCluster % 128) * 4; //новый кластер
-      setReadSector(fs.fatBase + reader.dataCluster / 128, BUFFER_READ_FAT);
+      cardSetReadSector(fs.fatBase + reader.dataCluster / 128, BUFFER_READ_FAT);
     }
     else {
       buffer.readStart = ((uint16_t)reader.dataCluster % 256) * 2; //новый кластер
-      setReadSector(fs.fatBase + reader.dataCluster / 256, BUFFER_READ_FAT);
+      cardSetReadSector(fs.fatBase + reader.dataCluster / 256, BUFFER_READ_FAT);
     }
 
     reader.returnState = reader.playerState;
@@ -174,11 +174,11 @@ boolean get_root(void)
 //-----------------------Проверка файловой системы--------------------------
 uint8_t check_fs(uint32_t _sector)
 {
-  if (waitReadBlock(_sector, FATFS_BOOT_RECORD, 2)) return 3; //чтение загрузочной записи
+  if (cardWaitReadBlock(_sector, FATFS_BOOT_RECORD, 2)) return 3; //чтение загрузочной записи
   if (get_uint16_t(buffer.readData) != 0xAA55) return 2; //чтение подписи
 
-  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_16, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT16
-  if (!waitReadBlock(_sector, FATFS_FILE_SYS_TYPE_32, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT32
+  if (!cardWaitReadBlock(_sector, FATFS_FILE_SYS_TYPE_16, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT16
+  if (!cardWaitReadBlock(_sector, FATFS_FILE_SYS_TYPE_32, 2) && get_uint16_t(buffer.readData) == 0x4146) return 0; //проверка на файловую систему FAT32
 
   return 1; //возвращаем ошибку
 }
@@ -193,7 +193,7 @@ uint8_t cardMount(void)
 
   uint8_t format = check_fs(base_sector); //поиск файловой системы FAT
   if (format == 1) { //если файловая система FAT не обнаружена
-    if (waitReadBlock(base_sector, FATFS_MBR_TABLE, 16)) return RES_DISK_ERROR; //ищем в первой файловой записи
+    if (cardWaitReadBlock(base_sector, FATFS_MBR_TABLE, 16)) return RES_DISK_ERROR; //ищем в первой файловой записи
     else if (buffer.readData[4]) { //если запись обнаружена
       base_sector = get_uint32_t(buffer.readData + 8); //устанавливаем новый сектор
       format = check_fs(base_sector); //поиск файловой системы FAT
@@ -201,7 +201,7 @@ uint8_t cardMount(void)
   }
   if (format) return RES_NO_FILESYSTEM; //если файловая система FAT не обнаружена
 
-  if (waitReadBlock(base_sector, 13, 36)) return RES_DISK_ERROR; //инициализация файловой системы
+  if (cardWaitReadBlock(base_sector, 13, 36)) return RES_DISK_ERROR; //инициализация файловой системы
 
   fat_size = get_uint16_t(buffer.readData + FATFS_TABLE_16); //находим количество секторов таблицы
   if (!fat_size) fat_size = get_uint32_t(buffer.readData + FATFS_TABLE_32);
@@ -270,7 +270,7 @@ void readerUpdate(void)
   static uint8_t lableBuff[3];
   static uint8_t fileBuff;
 
-  bufferUpdate();
+  cardBufferUpdate();
 
   if (buffer.readState == BUFFER_READY || reader.playerState == READER_DATA_WAIT) {
     switch (reader.playerState) {
@@ -281,7 +281,7 @@ void readerUpdate(void)
           reader.dataCluster = fs.rootBase;
           if (fs.fatType == FS_FAT32) reader.dataSector = get_sector(reader.dataCluster);
           else reader.dataSector = reader.dataCluster;
-          setReadSector(reader.dataSector);
+          cardSetReadSector(reader.dataSector);
           get_file_name(lableBuff, reader.playerFolder, 2);
         }
         else reader.playerState = READER_IDLE;
@@ -294,10 +294,10 @@ void readerUpdate(void)
           reader.dataCluster = get_cluster(buffer.readData + fileBuff);
           reader.dataSector = get_sector(reader.dataCluster);
           reader.playerState = READER_TRACK_WAIT;
-          setReadSector(reader.dataSector);
+          cardSetReadSector(reader.dataSector);
           get_file_name(lableBuff, reader.playerTrack, 3);
         }
-        else if (get_root()) setReadSector(++reader.dataSector);
+        else if (get_root()) cardSetReadSector(++reader.dataSector);
         break;
 
       case READER_TRACK_WAIT:
@@ -308,9 +308,9 @@ void readerUpdate(void)
           reader.dataCluster = get_cluster(buffer.readData + fileBuff);
           reader.dataSector = get_sector(reader.dataCluster);
           reader.playerState = READER_DATA_WAIT;
-          setReadSector(reader.dataSector, BUFFER_READ_DATA);
+          cardSetReadSector(reader.dataSector, BUFFER_READ_DATA);
         }
-        else if (get_fat()) setReadSector(++reader.dataSector);
+        else if (get_fat()) cardSetReadSector(++reader.dataSector);
         break;
 
       case READER_DATA_WAIT:
@@ -353,7 +353,7 @@ void readerUpdate(void)
             buffer.readSize = reader.dataSize;
             reader.dataSize = 0;
           }
-          if (get_fat()) setReadSector(++reader.dataSector, BUFFER_READ_DATA);
+          if (get_fat()) cardSetReadSector(++reader.dataSector, BUFFER_READ_DATA);
         }
         else reader.playerState = READER_SOUND_END;
         break;
@@ -376,7 +376,7 @@ void readerUpdate(void)
         else {
           reader.dataSector = get_sector(reader.dataCluster); //новый сектор
           reader.playerState = reader.returnState;
-          setReadSector(reader.dataSector, (reader.returnState == READER_SOUND_WAIT) ? BUFFER_READ_DATA : BUFFER_READ_FILE);
+          cardSetReadSector(reader.dataSector, (reader.returnState == READER_SOUND_WAIT) ? BUFFER_READ_DATA : BUFFER_READ_FILE);
         }
         break;
     }

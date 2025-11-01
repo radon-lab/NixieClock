@@ -47,7 +47,7 @@ ISR(TIMER2_COMPB_vect) //прерывание сигнала для пищалк
 }
 #endif
 //--------------------------------Генерация частот бузера----------------------------------------------
-void buzz_pulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
+void buzzPulse(uint16_t freq, uint16_t time) //генерация частоты бузера (частота 10..10000, длительность мс.)
 {
   TIMSK2 &= ~(0x01 << OCIE2B); //выключаем таймер
   BUZZ_OFF; //выключаем бузер
@@ -77,7 +77,7 @@ void melodyStop(void) //остановка воспроизведения мел
 void melodyUpdate(void) //воспроизведение мелодии
 {
   if (sound.replay && !_timer_ms[TMR_PLAYER]) { //если пришло время
-    buzz_pulse(pgm_read_word(sound.link + sound.semp), pgm_read_word(sound.link + sound.semp + 2)); //запускаем звук с задоной частотой и временем
+    buzzPulse(pgm_read_word(sound.link + sound.semp), pgm_read_word(sound.link + sound.semp + 2)); //запускаем звук с задоной частотой и временем
     _timer_ms[TMR_PLAYER] = pgm_read_word(sound.link + sound.semp + 4); //устанавливаем паузу перед воспроизведением нового звука
     if ((sound.semp += 6) >= sound.size) { //переключаем на следующий семпл
       if (sound.replay == REPLAY_ONCE) melodyStop(); //если повтор выключен то остановка воспроизведения мелодии

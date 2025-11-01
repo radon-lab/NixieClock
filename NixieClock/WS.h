@@ -16,7 +16,7 @@ enum {
 };
 
 //---------------------------------Передача массива данных на шину-------------------------------------
-void ledWrite(uint8_t* data, uint8_t size) {
+void wsLedWrite(uint8_t* data, uint8_t size) {
   __asm__ __volatile__ (
     "CBI %[PORT], %[PIN]  \n\t" //LOW на выход пина
     "LDI r19, 230         \n\t" //счетчик сигнала reset(50мкс)
@@ -64,7 +64,7 @@ void ledWrite(uint8_t* data, uint8_t size) {
   );
 }
 //-----------------------------------Отрисовка светодиодов------------------------------------------
-void showLeds(void)
+void wsBacklShowLeds(void)
 {
   if (ledUpdate) { //если что-то изменилось
     ledUpdate = 0; //сбрасываем флаг обновления
@@ -113,17 +113,17 @@ void showLeds(void)
       }
     }
 
-    ledWrite(ledBuff, sizeof(ledBuff));
+    wsLedWrite(ledBuff, sizeof(ledBuff));
   }
 }
 //--------------------------------------Очистка светодиодов-----------------------------------------
-void clrLeds(void)
+void wsBacklClearLeds(void)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LEDS_NUM; f++) ledBright[f] = 0;
 }
 //---------------------------------Установка цвета в формате HV-------------------------------------
-void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
+void wsBacklSetLedHue(uint8_t _led, uint8_t _color, boolean _mode)
 {
   if (_led < LEDS_NUM) {
     ledUpdate = 1; //устанавливаем флаг обновления
@@ -132,14 +132,14 @@ void setLedHue(uint8_t _led, uint8_t _color, boolean _mode)
   }
 }
 //---------------------------------Установка цвета в формате HV-------------------------------------
-void setLedHue(uint8_t _color, boolean _mode)
+void wsBacklSetLedHue(uint8_t _color, boolean _mode)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   if (_mode == WHITE_OFF && _color >= 253) _color = 0;
   for (uint8_t f = 0; f < LEDS_NUM; f++) ledColor[f] = _color;
 }
 //---------------------------Установка цвета подсветки меню в формате HV----------------------------
-void setBacklHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
+void wsBacklSetMultipleHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LEDS_NUM; f++) {
@@ -151,7 +151,7 @@ void setBacklHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_
   }
 }
 //--------------------------------------Уменьшение яркости------------------------------------------
-void decLedsBright(uint8_t _led, uint8_t _step)
+void wsBacklDecLedsBright(uint8_t _led, uint8_t _step)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LEDS_NUM; f++) {
@@ -162,7 +162,7 @@ void decLedsBright(uint8_t _led, uint8_t _step)
   }
 }
 //--------------------------------------Уменьшение яркости------------------------------------------
-boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
+boolean wsBacklDecLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   if (_led < LEDS_NUM) {
@@ -175,7 +175,7 @@ boolean decLedBright(uint8_t _led, uint8_t _step, uint8_t _min)
   return 0;
 }
 //--------------------------------------Увеличение яркости------------------------------------------
-boolean incLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
+boolean wsBacklIncLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   if (_led < LEDS_NUM) {
@@ -188,7 +188,7 @@ boolean incLedBright(uint8_t _led, uint8_t _step, uint8_t _max)
   return 0;
 }
 //--------------------------------------Уменьшение яркости------------------------------------------
-boolean decLedBright(uint8_t _step, uint8_t _min)
+boolean wsBacklDecLedBright(uint8_t _step, uint8_t _min)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   if (((int16_t)ledBright[0] - _step) > _min) {
@@ -202,7 +202,7 @@ boolean decLedBright(uint8_t _step, uint8_t _min)
   return 0;
 }
 //--------------------------------------Увеличение яркости------------------------------------------
-boolean incLedBright(uint8_t _step, uint8_t _max)
+boolean wsBacklIncLedBright(uint8_t _step, uint8_t _max)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   if (((uint16_t)ledBright[0] + _step) < _max) {
@@ -216,7 +216,7 @@ boolean incLedBright(uint8_t _step, uint8_t _max)
   return 0;
 }
 //--------------------------------------Установка яркости------------------------------------------
-void setLedBright(uint8_t _led, uint8_t _brt)
+void wsBacklSetLedBright(uint8_t _led, uint8_t _brt)
 {
   if (_led < LEDS_NUM) {
     ledUpdate = 1; //устанавливаем флаг обновления
@@ -224,13 +224,13 @@ void setLedBright(uint8_t _led, uint8_t _brt)
   }
 }
 //--------------------------------------Установка яркости------------------------------------------
-void setLedBright(uint8_t _brt)
+void wsBacklSetLedBright(uint8_t _brt)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LEDS_NUM; f++) ledBright[f] = _brt;
 }
 //--------------------------Установка яркости только во включенные диоды---------------------------
-void setOnLedBright(uint8_t _brt)
+void wsBacklSetOnLedBright(uint8_t _brt)
 {
   for (uint8_t f = 0; f < LEDS_NUM; f++) {
     if (ledBright[f]) {
