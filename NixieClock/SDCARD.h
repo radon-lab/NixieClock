@@ -1,4 +1,4 @@
-struct BUFFER {
+struct cardBufferData {
   uint8_t cardType; //тип карты памяти
   uint8_t readMode; //режим чтения
   uint8_t readState; //состояние обработчика чтения
@@ -6,11 +6,14 @@ struct BUFFER {
   uint16_t readSize; //байт к прочтению сектора
   uint32_t readSector; //текущий сектор чтения
   uint8_t readData[DAC_BUFF_SIZE]; //буфер карты памяти
+} buffer;
+
+struct cardOutputData {
   uint8_t dacVolume; //громкость трека
   uint8_t dacSampl; //частота дискретизации
   uint8_t dacStart; //начало буфера чтения
   uint8_t dacEnd; //конец буфера чтения
-} buffer;
+} output;
 
 enum {
   BUFFER_READY,
@@ -88,13 +91,13 @@ uint8_t cardSendCommand(uint8_t _command, uint32_t _data)
   return answer; //возвращаем ответ
 }
 //-------------------------Запись в буфер ЦАП-------------------------
-boolean cardBufferWriteData(void)
+boolean cardOutputWriteData(void)
 {
-  uint8_t buff = buffer.dacEnd + 1;
+  uint8_t buff = output.dacEnd + 1;
   if (buff >= DAC_BUFF_SIZE) buff = 0;
-  if (buff != buffer.dacStart) {
-    buffer.dacEnd = buff;
-    buffer.readData[buffer.dacEnd] = readSPI(); //читаем данные в буфер
+  if (buff != output.dacStart) {
+    output.dacEnd = buff;
+    buffer.readData[output.dacEnd] = readSPI(); //читаем данные в буфер
     return 1;
   }
   return 0;
@@ -171,7 +174,7 @@ void cardBufferUpdate(void)
       for (uint8_t i = 0; i < DAC_READ_DEPTH; i++) {
         if (readByte < 512) {
           if (readByte < buffer.readSize) {
-            if (cardBufferWriteData()) readByte++; //читаем данные в буфер
+            if (cardOutputWriteData()) readByte++; //читаем данные в буфер
             else break;
           }
           else {

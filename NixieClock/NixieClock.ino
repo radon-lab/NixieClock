@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_051 бета от 01.11.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_052 бета от 03.11.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -817,8 +817,8 @@ uint8_t alarmWarn(void) //тревога будильника
   if (!alarms.radio) {
 #endif
 #if PLAYER_TYPE
-    playerStop(); //сброс позиции мелодии
-    playerSetVolNow(cur_vol); //установка громкости
+    playerStop(); //остановить воспроизведение
+    playerSetVolNow(cur_vol); //установить громкость
 #else
     melodyPlay(alarms.sound, SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
 #endif
