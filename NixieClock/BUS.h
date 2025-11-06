@@ -577,7 +577,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
 #if PLAYER_TYPE
               playerSetVoice(mainSettings.voiceSound);
-              if (!player.playbackMute) {
+              if (!playerMuteStatus()) {
                 bus.status |= (0x01 << BUS_COMMAND_UPDATE);
                 playerStop(); //сброс воспроизведения плеера
                 playerSetVolNow(bus.buffer[0]);

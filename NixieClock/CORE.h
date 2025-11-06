@@ -587,6 +587,9 @@ uint8_t memoryUpdate;
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
 
+inline boolean irGetReadyStatus(void); //получить статус готовности IR приемника
+inline uint16_t irGetCommand(void); //получить текущую команду IR приемника
+
 void buzzPulse(uint16_t freq, uint16_t time); //генерация частоты бузера
 void melodyStop(void); //остановка воспроизведения мелодии
 void playerStop(void); //остановка воспроизведения трека
@@ -1097,10 +1100,9 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
   }
 
 #if IR_PORT_ENABLE
-  if (irState == IR_READY) { //если пришла команда и управление ИК не заблокировано
-    irState = 0; //сбрасываем флаг готовности
+  if (irGetReadyStatus()) { //если пришла команда и управление ИК не заблокировано
     for (uint8_t button = 0; button < (KEY_MAX_ITEMS - 1); button++) { //ищем номер кнопки
-      if (irCommand == debugSettings.irButtons[button]) { //если команда совпала
+      if (irGetCommand() == debugSettings.irButtons[button]) { //если команда совпала
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else

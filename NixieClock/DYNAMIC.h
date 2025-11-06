@@ -9,28 +9,12 @@
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 #endif
 
-//Типы плат часов
-#if (BOARD_TYPE == 0) //IN-12 (индикаторы стоят правильно)
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(7), ID(3), ID(6), ID(4), ID(1), ID(9), ID(8), ID(0), ID(5), ID(2), ID(10)}; //маска дешифратора платы in12 (цифры нормальные)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
-#elif (BOARD_TYPE == 1) //IN-12 turned (индикаторы перевёрнуты)
-enum {INDI_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(2), ID(8), ID(1), ID(9), ID(6), ID(4), ID(3), ID(5), ID(0), ID(7), ID(10)}; //маска дешифратора платы in12 turned (цифры вверх ногами)(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 6, 2, 7, 5, 0, 4, 9, 8, 3}; //порядок катодов in12
-#elif (BOARD_TYPE == 2) //IN-14 (обычная и neon dot)
-enum {INDI_POS, ANODE_4_POS, ANODE_3_POS, ANODE_2_POS, ANODE_1_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-const uint8_t digitMask[] = {ID(9), ID(8), ID(0), ID(5), ID(4), ID(7), ID(3), ID(6), ID(2), ID(1), ID(10)}; //маска дешифратора платы in14(цифра "10" - это пустой символ, должен быть всегда в конце)
-const uint8_t cathodeMask[] = {1, 0, 2, 9, 3, 8, 4, 7, 5, 6}; //порядок катодов in14
-#else
 enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
 #if INDI_PORT_TYPE
 const uint8_t regMask[] = {((SECS_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << SECL_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
 #endif
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
-const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
-#endif
 
+#include "BOARDS.h"
 #include "CORE.h"
 
 //----------------------------------Динамическая индикация---------------------------------------

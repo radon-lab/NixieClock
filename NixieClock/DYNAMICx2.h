@@ -5,9 +5,8 @@
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок индикации ламп
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
-const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
 
+#include "BOARDS.h"
 #include "CORE.h"
 
 //----------------------------------Динамическая индикация---------------------------------------

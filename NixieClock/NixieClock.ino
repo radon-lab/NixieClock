@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_052 бета от 03.11.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_053 бета от 06.11.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2620,11 +2620,10 @@ void debugMenu(void) //отладка
       switch (cur_mode) {
 #if IR_PORT_ENABLE
         case DEB_IR_BUTTONS: //програмирование кнопок
-          if (irState == (IR_READY | IR_DISABLE)) { //если управление ИК заблокировано и пришла новая команда
+          if (irGetDebugStatus()) { //если управление ИК заблокировано и пришла новая команда
             indiClr(3); //очистка индикатора
-            indiPrintNum((uint8_t)irCommand, 0, 3, 0); //выводим код кнопки пульта
-            debugSettings.irButtons[cur_button] = irCommand; //записываем команду в массив
-            irState = IR_DISABLE; //сбросили флаг готовности
+            indiPrintNum((uint8_t)irGetCommand(), 0, 3, 0); //выводим код кнопки пульта
+            debugSettings.irButtons[cur_button] = irGetCommand(); //записываем команду в массив
             _timer_ms[TMR_MS] = DEBUG_IR_BUTTONS_TIME; //установили таймер
           }
           else if (!_timer_ms[TMR_MS]) {
@@ -2796,8 +2795,8 @@ void debugMenu(void) //отладка
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               _timer_ms[TMR_MS] = 0; //сбросили таймер
-              irState = IR_DISABLE; //установили флаг запрета
               cur_button = 0; //сбросили номер текущей кнопки
+              irSetDebugMode(); //перевести IR приемник в режим отладки
               break;
 #endif
 #if LIGHT_SENS_ENABLE
@@ -2816,7 +2815,7 @@ void debugMenu(void) //отладка
             case DEB_AGING_CORRECT: rtcWriteAging(debugSettings.aging); break; //запись коррекции хода
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
-              irState = 0; //сбросили состояние
+              irResetStatus(); //сбросить статус IR приемника
               break;
 #endif
 #if LIGHT_SENS_ENABLE
