@@ -183,7 +183,7 @@ struct Builder {
   }
 
   void UI_LINKS_BEGIN(const String& id) {
-    *_GPP += F("<div title='_link' id='");
+    *_GPP += F("<div class='_link' id='");
     *_GPP += id;
     *_GPP += F("' style='display:none'>");
     send();
@@ -237,7 +237,7 @@ struct Builder {
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
                "fill='#f00' class='offlImg'></path></svg></div>\n"
-               "<div title='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
+               "<div class='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
   }
 
   void THEME(PGM_P style) {
@@ -468,7 +468,7 @@ struct Builder {
   }
 
   void POPUP_BEGIN(const String& id, const String& width = "") {
-    *_GPP += F("<div title='_popup' id='");
+    *_GPP += F("<div class='_popup' id='");
     *_GPP += id;
     *_GPP += F("' style='display:none'>\n<div class='popupBlock'");
     if (width.length()) {
@@ -952,10 +952,19 @@ struct Builder {
 
   // ======================= ИНДИКАТОРЫ =======================
 
-  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
-    *_GPP += F("<input type='range' name='");
-    *_GPP += name;
+  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
+    *_GPP += F("<div class='lineBar");
     *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("_dsp' style='background-image:linear-gradient(");
+    *_GPP += FPSTR(st);
+    *_GPP += ',';
+    *_GPP += FPSTR(st);
+    *_GPP += F(");background-size:");
+    *_GPP += map(value, min, max, 0, 100);
+    *_GPP += F("% 100%'></div>\n");
+    
+    *_GPP += F("<input type='hidden' name='_line' id='");
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += value;
@@ -963,17 +972,7 @@ struct Builder {
     *_GPP += min;
     *_GPP += F("' max='");
     *_GPP += max;
-    *_GPP += F("' step='");
-    *_GPP += step;
-    *_GPP += F("' class='lineBar' style='background-image:linear-gradient(");
-    *_GPP += FPSTR(st);
-    *_GPP += ',';
-    *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:");
-    *_GPP += map(value, min, max, 0, 100);
-    *_GPP += F("% 100%' disabled>\n<output style='display:none' id='");
-    *_GPP += name;
-    *_GPP += F("_val'></output>\n");
+    *_GPP += F("'>\n");
     send();
   }
 
@@ -1863,7 +1862,7 @@ struct Builder {
   }
 
   void PASS(const String& name, const String& place = "", const String& value = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool eye = 0) {
-    *_GPP += F("<div class='inlBlock'><input type='password' class='pass' name='");
+    *_GPP += F("<div class='inlpass'><input type='password' class='pass' name='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
@@ -1999,15 +1998,25 @@ struct Builder {
 
   void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, const String& lable = "", bool maxsz = 0) {
     if (maxsz) {
-      *_GPP += F("<lable class='slMaxLable");
+      *_GPP += F("<lable class='rangeLable");
       if (dis) *_GPP += F(" dsbl");
       *_GPP += F("'>");
       *_GPP += lable;
       *_GPP += F("</lable>\n");
     }
-    *_GPP += F("<input type='range' name='");
-    *_GPP += name;
+
+    *_GPP += F("<div class='range");
+    if (maxsz) *_GPP += F(" rangeLarge");
+    if (dis) *_GPP += F(" dsbl");
     *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("_dsp' style='background-image:linear-gradient(");
+    *_GPP += FPSTR(st);
+    *_GPP += ',';
+    *_GPP += FPSTR(st);
+    *_GPP += F(");background-size:0% 100%'></div>\n");
+
+    *_GPP += F("<input type='hidden' name='_range' class='range_inp' id='");
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += value;
@@ -2017,17 +2026,9 @@ struct Builder {
     *_GPP += max;
     *_GPP += F("' step='");
     *_GPP += step;
-    *_GPP += F("' style='background-image:linear-gradient(");
-    *_GPP += FPSTR(st);
-    *_GPP += ',';
-    *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:0% 100%'");
-    if (maxsz) *_GPP += F(" class='slMaxInput'");
-    if (oninp) *_GPP += F(" oninput='EVchange(this);EVclick(this)'");
-    else *_GPP += F(" onchange='EVclick(this)' oninput='EVchange(this)'");
-    if (dis) *_GPP += F(" disabled");
-    *_GPP += ">\n";
-    *_GPP += F("<output align='center' id='");
+    *_GPP += '\'';
+    if (oninp) *_GPP += F(" checked");
+    *_GPP += F(">\n<output align='center' id='");
     *_GPP += name;
     *_GPP += F("_val' name='");
     *_GPP += min_lable;
@@ -2039,7 +2040,7 @@ struct Builder {
       *_GPP += F(";");
     }
     *_GPP += F("' class='");
-    if (maxsz) *_GPP += F("slMaxValue");
+    if (maxsz) *_GPP += F("rangeValue");
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("'>");
     floatDec(value, dec);
