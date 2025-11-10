@@ -221,7 +221,7 @@ void build(void) {
 
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
 
-  GP.PAGE_ZOOM("90%", "450px");
+  GP.PAGE_ZOOM("90%", "400px");
   GP.PAGE_BLOCK_BEGIN(500);
 
   if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowReloadInfo()) {
