@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_057 бета от 10.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_059 бета от 11.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -221,7 +221,7 @@ void build(void) {
 
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
 
-  GP.PAGE_ZOOM("90%", "400px");
+  GP.PAGE_ZOOM("90%", "390px");
   GP.PAGE_BLOCK_BEGIN(500);
 
   if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowReloadInfo()) {
@@ -1225,7 +1225,7 @@ void build(void) {
 void buildUpdate(bool UpdateEnd, const String& UpdateError) {
   GP.BUILD_BEGIN(GP_DEFAULT_THEME);
 
-  GP.PAGE_ZOOM("90%", "400px");
+  GP.PAGE_ZOOM("90%", "390px");
   GP.PAGE_BLOCK_BEGIN(500);
 
   if (!webShowUpdateState()) {

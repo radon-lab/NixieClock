@@ -914,21 +914,6 @@ struct Builder {
     send();
   }
 
-  void LED_COLOR(const String& name, PGM_P st = GP_RED) {
-    *_GPP += F("<div name='led_");
-    *_GPP += name;
-    *_GPP += F("' id='led_");
-    *_GPP += name;
-    *_GPP += F("' class='ledc'></div>\n");
-
-    *_GPP += F("<script>ledColor('");
-    *_GPP += name;
-    *_GPP += F("','");
-    *_GPP += FPSTR(st);
-    *_GPP += F("');</script>\n");
-    send();
-  }
-
   void LED_RED(const String& name, bool state = 0) {
     *_GPP += F("<input class='led red' type='radio' disabled ");
     if (state) *_GPP += F("checked ");
@@ -950,6 +935,20 @@ struct Builder {
     send();
   }
 
+  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
+    *_GPP += F("<div id='");
+    *_GPP += name;
+    *_GPP += F("' class='ledc");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("' style='box-shadow:0px 0px 10px 2px '");
+      *_GPP += FPSTR(st);
+      *_GPP += F("background-color:");
+      *_GPP += FPSTR(st);
+    }
+    *_GPP += F("'></div>\n");
+    send();
+  }
+
   // ======================= ИНДИКАТОРЫ =======================
 
   void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
@@ -963,7 +962,7 @@ struct Builder {
     *_GPP += F(");background-size:");
     *_GPP += map(value, min, max, 0, 100);
     *_GPP += F("% 100%'></div>\n");
-    
+
     *_GPP += F("<input type='hidden' name='_line' id='");
     *_GPP += name;
     *_GPP += F("' value='");
@@ -993,9 +992,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += '\'';
     if (state) *_GPP += F(" checked");
-    *_GPP += F(" disabled><span></span></label>\n<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += F(" disabled><span></span></label>\n");
     send();
   }
 
@@ -1095,10 +1092,7 @@ struct Builder {
     if (dis) *_GPP += F("disabled ");
     *_GPP += F("onclick='EVclick(this)' style='height:");
     *_GPP += size;
-    *_GPP += F("px;'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += F("px;'><span></span></label>\n");
     send();
   }
 
@@ -1918,10 +1912,7 @@ struct Builder {
     *_GPP += "' ";
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='EVclick(this)'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += "'>\n";
+    *_GPP += F("onclick='EVclick(this)'><span></span></label>\n");
     send();
   }
   void SWITCH(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
@@ -1953,10 +1944,7 @@ struct Builder {
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("' id='_");
     *_GPP += name;
-    *_GPP += F("'></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += F("'></span></label>\n");
     send();
   }
 

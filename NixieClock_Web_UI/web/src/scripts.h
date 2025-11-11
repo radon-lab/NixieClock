@@ -33,6 +33,7 @@ case'select-one':document.querySelector('#'+item.id).value=resp;break;
 case undefined:switch(item.className){
 case'_popup':if(resp=='1')popupOpen(item.innerHTML,item.id);else if(resp=='-1')popupClose();break;
 case'_link':linkUpdate(item.id,resp);break;
+case'ledc':ledColor(item.id,resp);break;
 default:item.innerHTML=resp;break;}break;
 default:item.value=resp;break;}
 switch(item.type){
@@ -90,7 +91,7 @@ function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
 function lineChange(arg,val=null){if(val!=null)arg.value=limit(val,arg.min,arg.max);const dsp=getEl(arg.id+'_dsp');dsp.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';}
-function ledColor(id,cl){let el=getEl('led_'+id);if(el){if(cl){el.style.boxShadow='0px 0px 10px 2px '+cl;el.style.backgroundColor=cl;}else el.removeAttribute('style');}}
+function ledColor(id,c){let el=getEl('led_'+id);if(el){if(c){el.style.boxShadow='0px 0px 10px 2px '+c;el.style.backgroundColor=c;}else el.removeAttribute('style');}}
 function textEn(arg){arg.value=arg.value.replace(/[^\w\s\-\_\(\)\.\"\']/g,'');}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
@@ -117,7 +118,7 @@ function steplim(n,step){n=Number(n);step=Number(step);if(step>=0.01){let val=n;
 function rangeActiv(arg){let el=getEl(arg.id+'_dsp');if(!el.classList.contains('dsbl')){el.addEventListener('touchstart',rangeStart,{passive:true});el.addEventListener('mousedown',rangeStart,{passive:true});}}
 function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');const lim=out.name.split(',');if((arg.value<=Number(arg.min))&&lim[0]){out.value=lim[0];}
 else if((arg.value>=Number(arg.max))&&lim[1]){out.value=lim[1];}else out.value=Number(arg.value);}
-function rangeClick(pos,fs=null){let val=(limit(Math.round(pos-_rangePos),0,_rangeWidth)/(_rangeWidth/Number(_rangeId.max-_rangeId.min)))+Number(_rangeId.min);
+function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_rangeId.min);let val=(limit(Math.round((pos-_rangePos)+(step/2)),0,_rangeWidth)/step)+Number(_rangeId.min);
 val=steplim(val,_rangeId.step);if(Number(_rangeId.value)!=val){rangeChange(_rangeId,val);if(_rangeId.checked)fs=1;}if(fs)EVclickVal(_rangeId);}
 function rangeStop(){delEv('touchend',rangeEvent);delEv('touchcancel',rangeEvent);delEv('touchmove',rangeEvent);delEv('mousemove',rangeEvent);delEv('mouseup',rangeEvent);_rangeId=null;_rangeFocus=0;}
 function rangeStart(ev){_rangeFocus=0;if((ev.type=='touchstart')||((ev.type=='mousedown')&&(ev.which==1))){
