@@ -116,8 +116,9 @@ var _rangeId=null,_rangeFocus=0,_rangeWidth=0,_rangePos=0,_rangeX=0,_rangeY=0;
 function limit(n,min,max){n=Number(n);min=Number(min);max=Number(max);return(n>max)?max:(n<min)?min:n;}
 function steplim(n,step){n=Number(n);step=Number(step);if(step>=0.01){let val=n;while(n>=step)n-=step;return(val-n).toFixed(2);}else return n.toFixed(2);}
 function rangeActiv(arg){let el=getEl(arg.id+'_dsp');if(!el.classList.contains('dsbl')){el.addEventListener('touchstart',rangeStart,{passive:true});el.addEventListener('mousedown',rangeStart,{passive:true});}}
-function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');const lim=out.name.split(',');if((arg.value<=Number(arg.min))&&lim[0]){out.value=lim[0];}
-else if((arg.value>=Number(arg.max))&&lim[1]){out.value=lim[1];}else out.value=Number(arg.value);}
+function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');if(arg.placeholder){const col=arg.placeholder.split(',');const block=document.createElement('div');block.className='ledr';
+let pos=arg.value-Number(arg.min);if(col.length>pos){block.style.backgroundColor=col[pos];}out.innerHTML=block.outerHTML;}
+else{const lim=out.name.split(',');if((arg.value<=Number(arg.min))&&lim[0]){out.value=lim[0];}else if((arg.value>=Number(arg.max))&&lim[1]){out.value=lim[1];}else out.value=Number(arg.value);}}
 function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_rangeId.min);let val=(limit(Math.round((pos-_rangePos)+(step/2)),0,_rangeWidth)/step)+Number(_rangeId.min);
 val=steplim(val,_rangeId.step);if(Number(_rangeId.value)!=val){rangeChange(_rangeId,val);if(_rangeId.checked)fs=1;}if(fs)EVclickVal(_rangeId);}
 function rangeStop(){delEv('touchend',rangeEvent);delEv('touchcancel',rangeEvent);delEv('touchmove',rangeEvent);delEv('mousemove',rangeEvent);delEv('mouseup',rangeEvent);_rangeId=null;_rangeFocus=0;}

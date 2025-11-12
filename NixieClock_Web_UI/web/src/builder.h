@@ -1984,7 +1984,7 @@ struct Builder {
     send();
   }
 
-  void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, const String& lable = "", bool maxsz = 0) {
+  void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, bool maxsz = 0, const String& lable = "", const String& color = "") {
     if (maxsz) {
       *_GPP += F("<lable class='rangeLable");
       if (dis) *_GPP += F(" dsbl");
@@ -2006,6 +2006,10 @@ struct Builder {
 
     *_GPP += F("<input type='hidden' name='_range' class='range_inp' id='");
     *_GPP += name;
+    if (color.length()) {
+      *_GPP += F("' placeholder='");
+      *_GPP += color;
+    }
     *_GPP += F("' value='");
     *_GPP += value;
     *_GPP += F("' min='");
@@ -2030,20 +2034,25 @@ struct Builder {
     *_GPP += F("' class='");
     if (maxsz) *_GPP += F("rangeValue");
     if (dis) *_GPP += F(" dsbl");
-    *_GPP += F("'>");
-    floatDec(value, dec);
-    *_GPP += F("</output>\n");
+    *_GPP += F("'></output>\n");
     send();
   }
-  void SLIDER_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1);
+  void SLIDER_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1);
   }
 
-  void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 0, lable, 1);
+  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
   }
-  void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1, lable, 1);
+  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
+  }
+
+  void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 0, 1, lable);
+  }
+  void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
   }
 
   void SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {

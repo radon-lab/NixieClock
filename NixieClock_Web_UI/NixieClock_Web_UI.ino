@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_059 бета от 11.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_060 бета от 12.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -84,6 +84,8 @@ uint32_t secondsTimer = 0; //таймер счета секундных инте
 #include "WEATHER.h"
 
 #include "WIFI.h"
+
+const char ledColorList[] = {"#FE0100,#E11E00,#C33C00,#A55A00,#877800,#699600,#4BB400,#2DD200,#0FF000,#00F00F,#00D22D,#00B44B,#009669,#007887,#005AA5,#003CC3,#001EE1,#0000FF,#1E00E1,#3C00C3,#5A00A5,#780087,#960069,#B4004B,#D2002D,#F0000F,#FE9A3B,#FECFA9,#FEFEFE"};
 
 const char *climateNamesMain[] = {LANG_CLIMATE_TEMP, LANG_CLIMATE_HUM};
 const char *climateNamesExt[] = {LANG_CLIMATE_PRESS};
@@ -373,7 +375,7 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
         GP.HR(UI_LINE_COLOR);
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_BACKL, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_C("setsColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_COLOR_C("setsColor", ledColorList, (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
         GP.HR(UI_LINE_COLOR);
         if (!deviceInformation[PLAYER_TYPE]) {
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
@@ -381,7 +383,7 @@ void build(void) {
         }
         else {
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
         }
         GP.BLOCK_END();
         GP.GRID_END();
@@ -470,7 +472,7 @@ void build(void) {
                 GP.SELECT_LIST("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0, (boolean)(deviceInformation[RADIO_ENABLE] && alarm_data[alarm.now][ALARM_DATA_RADIO]));
                 GP.SELECT_LIST("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)(!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]));
                );
-          M_BOX(GP_CENTER, GP.SLIDER_MAX(LANG_PAGE_ALARM_GUI_SOUND_VOLUME, LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO, LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX, "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
+          M_BOX(GP_CENTER, GP.SLIDER_MAX(LANG_PAGE_ALARM_GUI_SOUND_VOLUME, LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO, LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX, "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP_CENTER,
@@ -703,8 +705,8 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightDay, 5, 30, 1, 0, UI_SLIDER_COLOR););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightDay, 5, 30, 1, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, UI_SLIDER_COLOR););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR, "hint1");
       GP.HINT("hint1", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
@@ -730,12 +732,12 @@ void build(void) {
 
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_BRIGHT, UI_BLOCK_COLOR);
-      M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_C("setsColor", "", "", (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
+      M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_COLOR_C("setsColor", ledColorList, (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightNight", LANG_PAGE_SETTINGS_GUI_DISABLE, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightNight / 10, 0, 25, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsBacklBrightNight", LANG_PAGE_SETTINGS_GUI_DISABLE, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.backlBrightNight / 10, 0, 25, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[BACKL_TYPE]););
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_DOTS, UI_BLOCK_COLOR);
@@ -743,8 +745,8 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsDot", dotModeList(false), fastSettings.dotMode););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, 0, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] == 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, 0, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] == 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, UI_SLIDER_COLOR););
       GP.BLOCK_END();
       GP.GRID_END();
       GP.NAV_BLOCK_END();
@@ -759,7 +761,7 @@ void build(void) {
       else {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
-        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, 0, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
       }
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_HOUR, UI_LINE_COLOR, UI_HINT_COLOR, "hint3");
@@ -942,8 +944,8 @@ void build(void) {
               M_BOX(GP_RIGHT, GP.LABEL(LANG_PAGE_RADIO_GUI_POWER, "", UI_LABEL_COLOR); GP.SWITCH("radioPower", radioSettings.powerState, UI_RADIO_POWER_2_COLOR););
              );
       }
-      M_BOX(GP_CENTER, GP.SLIDER_MAX_C(LANG_PAGE_RADIO_GUI_VOLUME, LANG_PAGE_RADIO_GUI_MIN, LANG_PAGE_RADIO_GUI_MAX, "radioVol", radioSettings.volume, 0, 15, 1, 0, UI_RADIO_VOL_COLOR););
-      M_BOX(GP_CENTER, GP.SLIDER_MAX_C(LANG_PAGE_RADIO_GUI_FREQ, "", "", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, 1, UI_RADIO_FREQ_1_COLOR););
+      M_BOX(GP_CENTER, GP.SLIDER_MAX_C(LANG_PAGE_RADIO_GUI_VOLUME, LANG_PAGE_RADIO_GUI_MIN, LANG_PAGE_RADIO_GUI_MAX, "radioVol", radioSettings.volume, 0, 15, 1, UI_RADIO_VOL_COLOR););
+      M_BOX(GP_CENTER, GP.SLIDER_MAX_C(LANG_PAGE_RADIO_GUI_FREQ, "", "", "radioFreq", radioSettings.stationsFreq / 10.0, 87.5, 108, 0.1, UI_RADIO_FREQ_1_COLOR););
       GP.BLOCK_END();
 
       if (radioSvgImage) {
