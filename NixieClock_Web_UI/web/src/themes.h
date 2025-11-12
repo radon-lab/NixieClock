@@ -55,7 +55,7 @@ input:focus,select,textarea:focus{outline:none;}
 .ledn:after{width:20px;height:20px;border-radius:10px;top:-4px;left:-3px;position:relative;content:'';display:inline-block;background-color:#d00;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #f00;}
 .ledn:checked:after{background-color: #3c0;box-shadow:inset 0px 3px 0px 0px #fff7,0px 0px 10px 2px #4d0;}
 .ledc{width:20px;height:20px;border-radius:10px;display:inline-block;margin-bottom:-3px;background-color:#333;box-shadow:inset 0px 0px 5px 2px #0000005c;}
-.ledr{height:11px;background-color:#13161a;border-radius:15px;margin:3px 8px;box-shadow:0 0 3px 0 #13161a;}
+.ledr{height:11px;background-color:#13161a;border-radius:15px;margin:3px 8px;box-shadow:0 0 3px 0 #13161a,inset 0 0 3px 0 #13161a;}
 .microButton.microButton{padding:1px 7px;min-height:30px;height:auto;font-size:15px;width:auto;}
 .miniButton.miniButton{padding:1px 7px;min-height:40px;height:auto;font-size:20px;width:auto;}
 .areaButton{padding:1px 7px;min-height:30px;height:auto;width:auto;border-radius:8px;}
