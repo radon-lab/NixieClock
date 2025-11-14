@@ -2033,6 +2033,7 @@ struct Builder {
     }
     *_GPP += F("' class='");
     if (maxsz) *_GPP += F("rangeValue");
+    if (color.length()) *_GPP += F("rangeColor");
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("'></output>\n");
     send();
