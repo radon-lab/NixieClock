@@ -86,7 +86,7 @@ function delEv(ev,fn){document.body.removeEventListener(ev,fn,{passive:false});}
 function getEl(id){return document.getElementById(id);}
 function getPop(id){return getEl(id).innerHTML;}
 function swUpd(id,val){id=id.split(',');for(let i=0;i<id.length;i++){getEl(id[i]).checked=val;}}
-function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';}
+function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';document.body.style.overflow=flag?null:'hidden'}
 function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
