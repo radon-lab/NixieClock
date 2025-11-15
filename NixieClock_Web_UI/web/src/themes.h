@@ -4,14 +4,11 @@
 
 const char GP_DEFAULT_THEME[] PROGMEM = R"(
 :root{color-scheme:light dark;}
-html{scrollbar-width:none;overscroll-behavior:none;}
+html{overscroll-behavior:none;scrollbar-width:none;}
 html::-webkit-scrollbar{display:none;}
 body{font-family:Verdana;background:#13161a;color:#bbb;margin:0;height:100vh;width:100%;}
 body{-webkit-tap-highlight-color:transparent;}
-body::-webkit-scrollbar{width:8px;}
-body::-webkit-scrollbar-track{background-color:#0000;}
-body::-webkit-scrollbar-thumb{background-color:#556;border-radius:4px;}
-.mainblock{margin:auto;max-width:100%;overflow-x:hidden;padding:9px 8px;scrollbar-width:none;overscroll-behavior:none;}
+.mainblock{margin:auto;max-width:100%;overflow-x:hidden;padding:9px 8px;}
 #blockBack input[type=password],#blockBack input[type=text],#blockBack input[type=date],#blockBack input[type=time],#blockBack input[type=number],#blockBack input[type=select],#blockBack textarea,#blockBack select,#blockBack .slider{background:#13161a}
 #blockBack input:checked+.slider{background-color:#37a93c;}
 #blockBack .range{background:#13161a;background-repeat:no-repeat;}
