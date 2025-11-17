@@ -5,16 +5,22 @@
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок индикации ламп
 #include "boards.h"
 
+#define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
 #define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * ((LAMP_NUM / 2) + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+
+#define TIMER_START (255 - FREQ_TICK) //начальное значение таймера
+#define LAMP_MAX_STEP (LAMP_NUM / 2) //количиство ламп в группе
 
 #include "CORE.h"
 
 //----------------------------------Динамическая индикация---------------------------------------
-ISR(TIMER0_COMPA_vect) //динамическая индикация
+ISR(TIMER0_OVF_vect) //динамическая индикация
 {
-  TCNT0 = (255 - FREQ_TICK); //установили счетчик в начало
+#if TIMER_START
+  TCNT0 = TIMER_START; //установили счетчик в начало
+#endif
 
-  if (++indiState > (LAMP_NUM / 2)) { //переходим к следующему индикатору
+  if (++indiState > LAMP_MAX_STEP) { //переходим к следующему индикатору
 #if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
 #if DOTS_PORT_ENABLE
     indi_dot_pos = 0x01; //сбросили текущей номер точек индикаторов
@@ -29,10 +35,10 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   }
 
   REG_LATCH_ENABLE; //открыли защелку
-  SPDR = indi_buf[indiState] | (indi_buf[indiState + (LAMP_NUM / 2)] << 4); //загрузили данные
+  SPDR = indi_buf[indiState] | (indi_buf[indiState + LAMP_MAX_STEP] << 4); //загрузили данные
 
-  OCR0A = indi_dimm[indiState]; //устанавливаем яркость индикатора
-  OCR0B = indi_dimm[indiState + (LAMP_NUM / 2)]; //устанавливаем яркость индикатора
+  OCR0A = indi_dimm[indiState] + TIMER_START; //устанавливаем яркость индикатора
+  OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
 
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
@@ -52,12 +58,12 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
     }
   }
 
-  if (indi_buf[indiState + (LAMP_NUM / 2)] != INDI_NULL) {
+  if (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL) {
     switch (indiState) {
         //----------------------------------------------- ???
-#if INDI_SYMB_TYPE
-      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
-#endif
+        //#if INDI_SYMB_TYPE
+        //      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
+        //#endif
         //----------------------------------------------- ???
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_4_PIN); break;
@@ -71,14 +77,14 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   }
 
   //----------------------------------------------- ???
-#if DOTS_PORT_ENABLE
-#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
-#endif
-#if DOTS_TYPE != 1
-  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
-#endif
-#endif
+  //#if DOTS_PORT_ENABLE
+  //#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
+  //  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
+  //#endif
+  //#if DOTS_TYPE != 1
+  //  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
+  //#endif
+  //#endif
   //----------------------------------------------- ???
 
   tickCheck(); //проверка переполнения тиков
@@ -124,28 +130,30 @@ ISR(TIMER0_COMPB_vect) {
 //------------------------Проверка состояния динамической индикации-------------------------------
 void indiStateCheck(void) //проверка состояния динамической индикации
 {
-  if (TIMSK0 != ((0x01 << OCIE0B) | (0x01 << OCIE0A))) { //если настройка изменилась
-    TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //установили настройку
+  if (TIMSK0 != ((0x01 << OCIE0B) | (0x01 << OCIE0A) | (0x01 << TOIE0))) { //если настройка изменилась
+    TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A) | (0x01 << TOIE0); //установили настройку
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
-  if (OCR0B > LIGHT_MAX) { //если вышли за предел
-    OCR0B = LIGHT_MAX; //установили максимум
+#if TIMER_START
+  if (OCR0A < TIMER_START) { //если вышли за предел
+    OCR0A = TIMER_START; //установили максимум
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
+  if (OCR0B < TIMER_START) { //если вышли за предел
+    OCR0B = TIMER_START; //установили максимум
+    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+  }
+#endif
 }
 //------------------------Проверка состояния динамической индикации-------------------------------
 void indiCheck(void) //проверка состояния динамической индикации
 {
-  if (TCCR0A != (0x01 << WGM01)) { //если настройка изменилась
-    TCCR0A = (0x01 << WGM01); //установили настройку
+  if (TCCR0A != 0x00) { //если настройка изменилась
+    TCCR0A = 0x00; //установили настройку
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
   if (TCCR0B != (0x01 << CS02)) { //если настройка изменилась
     TCCR0B = (0x01 << CS02); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
-  }
-  if (OCR0A != FREQ_TICK) { //если вышли за предел
-    OCR0A = FREQ_TICK; //установили максимум
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
 }
@@ -192,18 +200,18 @@ void indiInit(void) //инициализация индикации
 
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем буферы
     indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
-    indi_dimm[i] = (LIGHT_MAX - 1); //устанавливаем максимальную яркость
+    indi_dimm[i] = LIGHT_MAX; //устанавливаем максимальную яркость
   }
 
-  OCR0A = OCR0B = (LIGHT_MAX - 1); //максимальная яркость
+  OCR0A = OCR0B = (LIGHT_MAX + TIMER_START); //максимальная яркость
 
-  TIMSK0 = 0; //отключаем прерывания
-  TCCR0A = (0x01 << WGM01); //режим CTC
+  TIMSK0 = 0x00; //отключаем прерывания
+  TCCR0A = 0x00; //обычный режим
   TCCR0B = (0x01 << CS02); //пределитель 256
 
   TCNT0 = 255; //установили счетчик в начало
-  TIFR0 |= (0x01 << OCF0B) | (0x01 << OCF0A); //сбрасываем флаги прерывания
-  TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //разрешаем прерывания
+  TIFR0 |= (0x01 << OCF0B) | (0x01 << OCF0A) | (0x01 << TOV0); //сбрасываем флаги прерывания
+  TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A) | (0x01 << TOIE0); //разрешаем прерывания
 
   sei(); //разрешаем прерывания глобально
 }

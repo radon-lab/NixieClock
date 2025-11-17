@@ -312,7 +312,7 @@ enum {
 };
 uint8_t mainTask = INIT_PROGRAM; //переключатель подпрограмм
 
-#define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * 16.0) //период тика таймера в мкс
+#define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * TIME_TICK) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
 #define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
 
@@ -686,7 +686,7 @@ void coreInit(void) //инициализация периферии ядра
 {
   cli(); //запрещаем прерывания глобально
 
-#if INDI_PORT_TYPE
+#if INDI_PORT_TYPE || (INDI_MODE == 1)
   DDRB |= 0x04; //установили D10 как выход
 
   SPSR = (0x01 << SPI2X); //включили удвоение скорости
