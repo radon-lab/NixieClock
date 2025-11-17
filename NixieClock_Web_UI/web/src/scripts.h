@@ -3,7 +3,7 @@
 // GP Scripts
 
 const char GP_JS_TOP[] PROGMEM = R"(
-var _tout=2000,_err=0;
+var _tout=2000,_zoom=1,_err=0;
 var _popupStack=[],_clkRelList=[],_clkCloseList=[],_clkUpdList={},_pressId=null,_spinInt=null,_spinF=0,_touch=0;
 document.title='GyverPortalMod';
 function EVsend(req,r=null,upd=null){var xhttp=new XMLHttpRequest();xhttp.open(upd?'GET':'POST',req,true);
@@ -83,11 +83,12 @@ p.type=p.type=='text'?'password':'text';
 arg.style.color=p.type=='text'?'#bbb':'#13161a';}
 function addEv(ev,fn){document.body.addEventListener(ev,fn,{passive:false});}
 function delEv(ev,fn){document.body.removeEventListener(ev,fn,{passive:false});}
+function setZoom(w,z){if(window.outerWidth<=w){_zoom=z/100;document.querySelector(':root').style.zoom=_zoom;}}
 function setOvf(f){document.body.style.overflow=f?null:'hidden';}
 function getEl(id){return document.getElementById(id);}
 function getPop(id){return getEl(id).innerHTML;}
 function swUpd(id,val){id=id.split(',');for(let i=0;i<id.length;i++){getEl(id[i]).checked=val;}}
-function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-250px':'0';setOvf(flag);}
+function sdbTgl(){let flag=getEl('dashOver').style.display=='block';getEl('dashOver').style.display=flag?'none':'block';getEl('dashSdb').style.left=flag?'-260px':'0';setOvf(flag);}
 function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
@@ -123,7 +124,7 @@ function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_range
 val=steplim(val,_rangeId.step);if(Number(_rangeId.value)!=val){rangeChange(_rangeId,val);if(_rangeId.checked)fs=1;}if(fs)EVclickVal(_rangeId);}
 function rangeStop(){delEv('touchend',rangeEvent);delEv('touchcancel',rangeEvent);delEv('touchmove',rangeEvent);delEv('mousemove',rangeEvent);delEv('mouseup',rangeEvent);_rangeId=null;_rangeFocus=0;}
 function rangeStart(ev){_rangeFocus=0;if((ev.type=='touchstart')||((ev.type=='mousedown')&&(ev.which==1))){
-_rangeId=getEl(this.id.replaceAll('_dsp',''));_rangeWidth=Math.round(this.offsetWidth);let rect=this.getBoundingClientRect();_rangePos=rect.left;
+_rangeId=getEl(this.id.replaceAll('_dsp',''));_rangeWidth=Math.round(this.offsetWidth)*_zoom;let rect=this.getBoundingClientRect();_rangePos=rect.left;
 if(ev.type=='touchstart'){_rangeFocus=1;_rangeX=ev.touches[0].clientX;_rangeY=ev.touches[0].clientY;addEv('touchend',rangeEvent);addEv('touchcancel',rangeEvent);addEv('touchmove',rangeEvent);}
 else{_rangeFocus=2;_rangeX=ev.clientX;addEv('mouseup',rangeEvent);addEv('mousemove',rangeEvent);}}}
 function rangeEvent(ev){if(ev.cancelable==true)ev.preventDefault();switch(ev.type){

@@ -29,7 +29,7 @@ struct Builder {
   void setTimeout(int tout) {
     *_GPP += F("<script>_tout=");
     *_GPP += tout;
-    *_GPP += F("</script>\n");
+    *_GPP += F(";</script>\n");
   }
 
   void floatDec(float val, uint16_t dec) {
@@ -63,17 +63,13 @@ struct Builder {
     PAGE_END();
   }
 
-  void PAGE_ZOOM(const String& zoom, const String& width = "") {
-    *_GPP += F("<style>");
-    if (width.length()) {
-      *_GPP += F("@media (max-width:");
-      *_GPP += width;
-      *_GPP += F("){");
-    }
-    *_GPP += F(":root{zoom:");
+  void PAGE_ZOOM(int zoom, int width = 0) {
+    *_GPP += F("<script>");
+    *_GPP += F("setZoom(");
+    *_GPP += width;
+    *_GPP += ',';
     *_GPP += zoom;
-    if (width.length()) *_GPP += "}";
-    *_GPP += F("}</style>\n");
+    *_GPP += F(");</script>\n");
   }
 
   void PAGE_TITLE(const String& text = "", const String& name = "") {
@@ -81,7 +77,7 @@ struct Builder {
     if (text.length()) {
       *_GPP += F("<script>document.title='");
       *_GPP += text;
-      *_GPP += F("'</script>\n");
+      *_GPP += F("';</script>\n");
     }
   }
 
@@ -295,8 +291,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("','");
     *_GPP += txt;
-    *_GPP += F("')");
-    *_GPP += F("</script>\n");
+    *_GPP += F("');</script>\n");
     send();
   }
 
