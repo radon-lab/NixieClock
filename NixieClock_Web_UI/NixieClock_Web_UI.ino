@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_064 бета от 17.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_067 бета от 19.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 

@@ -1,10 +1,3 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<svg fill="#000000" width="800px" height="800px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" transform="rotate(270)">
-<g id="SVGRepo_bgCarrier" stroke-width="0"/>
-<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-<g id="SVGRepo_iconCarrier">
-<title>ionicons-v5-b</title>
-<path d="M464,256c0-114.87-93.13-208-208-208S48,141.13,48,256s93.13,208,208,208S464,370.87,464,256ZM212,330.14V181.86a16,16,0,0,1,26.23-12.29l89.09,74.13a16,16,0,0,1,0,24.6l-89.09,74.13A16,16,0,0,1,212,330.14Z"/>
-</g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="50px" height="50px" version="1.1" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 27.74 27.74">
+    <path fill="black" d="M13.87 0c-7.66,0 -13.87,6.21 -13.87,13.87 0,7.66 6.21,13.87 13.87,13.87 7.66,0 13.87,-6.21 13.87,-13.87 0,-7.66 -6.21,-13.87 -13.87,-13.87zm4.94 16.8l-9.88 0c-0.59,0 -1.07,-0.47 -1.07,-1.06 0,-0.25 0.09,-0.49 0.25,-0.69l4.94 -5.94c0.2,-0.24 0.5,-0.38 0.82,-0.38 0.32,0 0.62,0.14 0.82,0.38l4.94 5.94c0.16,0.2 0.25,0.44 0.25,0.69 0,0.59 -0.48,1.06 -1.07,1.06l0 0z"/>
+</svg>

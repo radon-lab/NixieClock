@@ -83,7 +83,7 @@ p.type=p.type=='text'?'password':'text';
 arg.style.color=p.type=='text'?'#bbb':'#13161a';}
 function addEv(ev,fn){document.body.addEventListener(ev,fn,{passive:false});}
 function delEv(ev,fn){document.body.removeEventListener(ev,fn,{passive:false});}
-function setZoom(w,z){if(window.outerWidth<=w){_zoom=z/100;document.querySelector(':root').style.zoom=_zoom;}}
+function setZoom(w,z){if(window.innerWidth<=w){_zoom=z/100;document.querySelector(':root').style.zoom=_zoom;}}
 function setOvf(f){document.body.style.overflow=f?null:'hidden';}
 function getEl(id){return document.getElementById(id);}
 function getPop(id){return getEl(id).innerHTML;}
