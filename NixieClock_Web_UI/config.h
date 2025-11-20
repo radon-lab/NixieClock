@@ -74,9 +74,9 @@
 #define UI_ALARM_DEL_COLOR GP_RED //цвет кнопки удалить будильник
 #define UI_ALARM_SET_COLOR "#e67b09" //цвет кнопки настроить будильник
 #define UI_ALARM_BACK_COLOR GP_BLUE //цвет кнопки выйти из настроек будильника
-#define UI_ALARM_TIME_COLOR GP_DEFAULT //цвет времени будильника
-#define UI_ALARM_INFO_COLOR GP_DEFAULT //цвет состояния будильника
-#define UI_ALARM_BLOCK_COLOR GP_GRAY //цвет блока информации о будильнике
+#define UI_ALARM_TIME_COLOR "#bbb" //цвет времени будильника
+#define UI_ALARM_INFO_COLOR "#bbb" //цвет состояния будильника
+#define UI_ALARM_BLOCK_COLOR "#2a2d35" //цвет блока информации о будильнике
 #define UI_ALARM_WEEK_1_COLOR GP_BLUE //цвет будних дней в настройке будильника
 #define UI_ALARM_WEEK_2_COLOR GP_RED //цвет выходных дней в настройке будильника
 
@@ -88,9 +88,9 @@
 #define UI_RADIO_FREQ_2_COLOR "#e67b09" //цвет кнопок настройки частоты радио
 #define UI_RADIO_CHANNEL_COLOR "#e67b09" //цвет кнопок выбора канала радио
 
-#define UI_TIMER_BLOCK_COLOR GP_GRAY //цвет блока информации о таймере/секундомере
-#define UI_TIMER_TIME_COLOR GP_DEFAULT //цвет времени таймера/секундомера
-#define UI_TIMER_INFO_COLOR GP_DEFAULT //цвет состояния таймера/секундомера
+#define UI_TIMER_BLOCK_COLOR "#2a2d35" //цвет блока информации о таймере/секундомере
+#define UI_TIMER_TIME_COLOR "#bbb" //цвет времени таймера/секундомера
+#define UI_TIMER_INFO_COLOR "#bbb" //цвет состояния таймера/секундомера
 #define UI_TIMER_SET_COLOR "#e67b09" //цвет кнопок настройки таймера/секундомера
 #define UI_TIMER_CTRL_COLOR "#e67b09" //цвет кнопок управления таймером/секундомером
 
@@ -108,4 +108,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.9_067" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9_068" //версия прошивки модуля esp

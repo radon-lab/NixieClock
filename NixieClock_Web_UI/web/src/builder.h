@@ -604,25 +604,26 @@ struct Builder {
       if (text.length()) *_GPP += F(" blockTab");
       if (type == GP_THIN) *_GPP += F(" thinBlock");
     }
-    *_GPP += "'";
+    *_GPP += '\'';
     if (type == GP_TAB) *_GPP += F(" id='blockBack'");
 
-    if (width.length()) {
-      *_GPP += F(" style='max-width:");
-      *_GPP += width;
-      *_GPP += "'";
-    }
+    *_GPP += F(" style='");
     if (type == GP_THIN && st != GP_DEFAULT) {
-      *_GPP += F(" style='border:2px solid");
+      *_GPP += F("border:2px solid ");
       *_GPP += FPSTR(st);
-      *_GPP += "'";
+      *_GPP += ';';
     }
     if (bg != GP_DEFAULT) {
-      *_GPP += F(" style='background:");
+      *_GPP += F("background:");
       *_GPP += FPSTR(bg);
-      *_GPP += "'";
+      *_GPP += ';';
     }
-    *_GPP += ">\n";
+    if (width.length()) {
+      *_GPP += F("max-width:");
+      *_GPP += width;
+      *_GPP += ';';
+    }
+    *_GPP += F("'>\n");
 
     if (text.length()) {
       if (type == GP_DIV || type == GP_DIV_RAW) {
@@ -633,27 +634,27 @@ struct Builder {
         if (st != GP_DEFAULT) {
           *_GPP += F(" style='background:");
           *_GPP += FPSTR(st);
-          *_GPP += "'";
+          *_GPP += '\'';
         }
-        *_GPP += ">";
+        *_GPP += '>';
         *_GPP += text;
         *_GPP += F("</div>\n");
       } else if (type == GP_THIN) {
         *_GPP += F("<div class='blockHeader thinTab'>");
-        *_GPP += F("<span class='thinText'");
+        *_GPP += F("<span class='thinText' style='");
         if (st != GP_DEFAULT) {
-          *_GPP += F(" style='color:");
+          *_GPP += F("color:");
           *_GPP += FPSTR(st);
-          *_GPP += "'";
+          *_GPP += ';';
         }
         if (bg != GP_DEFAULT) {
-          *_GPP += F(" style='background:linear-gradient(0deg,");
+          *_GPP += F("background:linear-gradient(0deg,");
           *_GPP += FPSTR(bg);
           *_GPP += F(" 0%,");
           *_GPP += FPSTR(bg);
-          *_GPP += F(" 53%,#00000000 53%,#00000000 100%)'");
+          *_GPP += F(" 53%,#00000000 53%,#00000000 100%);");
         }
-        *_GPP += ">";
+        *_GPP += F("'>");
         *_GPP += text;
         *_GPP += F("</span></div>\n");
       }
@@ -1284,7 +1285,7 @@ struct Builder {
     }
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getPop('uploadAnim'));setTimeout(popupClose,30000);EVsubmId('");
+    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getPop('uploadAnim'));setTimeout(popupClose,60000);EVsubmId('");
     *_GPP += name;
     *_GPP += F("_form');\"/></div>\n"
                "</form></div>\n");
@@ -1888,8 +1889,8 @@ struct Builder {
   }
 
   // ======================= НАСТРОЙКА =======================
-  void CHECK(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false) {
-    if (st != GP_GREEN) {
+  void CHECK(const String& name, bool state = 0, PGM_P st = GP_DEFAULT, bool dis = false) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("<style>#__");
       *_GPP += name;
       *_GPP += F(" input:checked+span::before{border-color:");
@@ -1910,8 +1911,8 @@ struct Builder {
     *_GPP += F("onclick='EVclick(this)'><span></span></label>\n");
     send();
   }
-  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
-    if (st != GP_GREEN) {
+  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_DEFAULT, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("<style>#__");
       *_GPP += name;
       *_GPP += F(" input:checked+.slider{background-color:");

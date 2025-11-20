@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_067 бета от 19.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_068 бета от 20.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -201,7 +201,7 @@ void PAGE_TITLE_NAME(const String& title) {
 }
 //--------------------------------------------------------------------
 void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean rl = false, boolean al = false) {
-  GP.POPUP_BEGIN(id, "350px");
+  GP.POPUP_BEGIN(id, "370px");
   GP.BLOCK_BEGIN(GP_THIN, "", title, UI_BLOCK_COLOR);
   GP.SPAN(desc, GP_LEFT, "", UI_LABEL_COLOR);
   if (sign.length()) GP.SPAN(sign, GP_LEFT, id + "Text", GP_RED, 13);
@@ -394,6 +394,7 @@ void build(void) {
         updateList += F(",extAlarm");
         GP.RELOAD("extAlarm");
 
+        GP.GRID_BEGIN();
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_ALARM_BLOCK, UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
           PAGE_TITLE_NAME(LANG_PAGE_ALARM_TITLE);
@@ -453,15 +454,16 @@ void build(void) {
 
           uint8_t alarmDays = alarm_data[alarm.now][ALARM_DATA_DAYS];
           GP.TR(GP_CENTER);
-          String alarmDaysList;
-          alarmDaysList.reserve(15);
+          String alarmDaysId;
+          alarmDaysId.reserve(15);
           for (uint8_t i = 1; i < 8; i++) {
             GP.TD(GP_CENTER);
             alarmDays >>= 1;
-            alarmDaysList = F(",alarmDay/");
-            alarmDaysList += i;
-            GP.CHECK(alarmDaysList, (boolean)(alarmDays & 0x01));
-            updateList += alarmDaysList;
+            alarmDaysId = F("alarmDay/");
+            alarmDaysId += i;
+            GP.CHECK(alarmDaysId, (boolean)(alarmDays & 0x01));
+            updateList += ',';
+            updateList += alarmDaysId;
           }
           GP.TABLE_END();
           GP.BLOCK_END();
@@ -515,7 +517,7 @@ void build(void) {
               if (++nowWeekDay > 7) nowWeekDay = 1;
             }
 
-            String alarmStatus = " ";
+            String alarmStatus = "";
 
             if (alarmMode == 4) {
               for (uint8_t dw = 0; dw < 7; dw++) {
@@ -532,6 +534,7 @@ void build(void) {
             }
 
             if (alarmMode) {
+              alarmStatus += F(" | <wbr>");
               alarmStatus += LANG_ALARM_AFTER;
               uint8_t _time = alarmTimeNext / 1440;
               if (_time) {
@@ -550,16 +553,20 @@ void build(void) {
               }
             }
 
-            GP.BLOCK_BEGIN(GP_THIN, "", "", UI_ALARM_BLOCK_COLOR);
+            GP.BLOCK_BEGIN(GP_THIN, "90%;padding:5px 5px 5px 15px;border-width:4px;border-radius:25px", "", UI_ALARM_BLOCK_COLOR);
             lableList = F("alarmSet/");
             lableList += i;
+            GP.BOX_BEGIN();
+            M_BLOCK(GP_DIV_RAW, "100%;width:100%;margin-bottom:8px", M_BOX(GP_LEFT, GP.LABEL(alarmTime, "", UI_ALARM_TIME_COLOR, 40, 1);); M_BOX(GP_LEFT, GP.LABEL_W(alarmStatus, "", UI_ALARM_INFO_COLOR, 0, GP_LEFT, 14, 1, 1);););
+            GP.BOX_BEGIN(GP_RIGHT, "100%;width:60px");
             if (alarmSvgImage) {
-              M_BOX(GP.LABEL(alarmTime, "", UI_ALARM_TIME_COLOR, 40, 1); GP.ICON_FILE_BUTTON(lableList, alarmFsData[1], 40, UI_ALARM_SET_COLOR););
+              GP.ICON_FILE_BUTTON(lableList, alarmFsData[1], 30, UI_ALARM_SET_COLOR);
             }
             else {
-              M_BOX(GP.LABEL(alarmTime, "", UI_ALARM_TIME_COLOR, 40, 1); GP.BUTTON_MINI(lableList, " ≡ ", "", UI_ALARM_SET_COLOR, ""););
+              GP.BUTTON_MINI(lableList, " ≡ ", "", UI_ALARM_SET_COLOR, "");
             }
-            M_BOX(GP_LEFT, GP.BOLD(alarmStatus, "", UI_ALARM_INFO_COLOR););
+            GP.BOX_END();
+            GP.BOX_END();
             GP.BLOCK_END();
             if (i) reloadList += ',';
             reloadList += lableList;
@@ -583,19 +590,21 @@ void build(void) {
               M_BOX(GP_CENTER, GP.BUTTON("alarmDis", "✖", "", UI_ALARM_DIS_COLOR, "80px;font-weight:bold"););
             }
           }
+          GP.BREAK();
           GP.RELOAD_CLICK(reloadList);
         }
         GP.BLOCK_END();
+        GP.GRID_END();
       }
 
       if (!alarm.set || !deviceInformation[ALARM_TYPE]) { //если не режим настройки будильника
         if (deviceInformation[TIMER_ENABLE] && deviceInformation[EXT_BTN_ENABLE]) {
-          updateList += F(",mainTimer,mainTimerState");
+          updateList += F(",timerTime,timerState");
 
+          GP.GRID_BEGIN();
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_TIMER_BLOCK, UI_BLOCK_COLOR);
 
-          GP.BLOCK_BEGIN(GP_DIV_RAW , "280px");
-          GP.BLOCK_BEGIN(GP_THIN, "", "", UI_TIMER_BLOCK_COLOR);
+          GP.BLOCK_BEGIN(GP_THIN, "280px;border-width:4px;border-radius:25px", "", UI_TIMER_BLOCK_COLOR);
           GP.LABEL(getTimerState(), "timerState", UI_TIMER_INFO_COLOR, 0, 1);
 
           GP.TABLE_BEGIN("15%,15%,15%", GP_ALS(GP_CENTER, GP_CENTER, GP_CENTER), "200px");
@@ -621,13 +630,12 @@ void build(void) {
           }
           GP.TABLE_END();
           GP.BLOCK_END();
-          GP.BLOCK_END();
 
           if (timerSvgImage) {
-            M_BOX(GP_CENTER,
-                  GP.ICON_FILE_BUTTON("timerControl/0", timerFsData[0], 60, UI_TIMER_CTRL_COLOR);
+            M_BOX(GP_JUSTIFY, "254px",
+                  GP.ICON_FILE_BUTTON("timerControl/0", timerFsData[0], 50, UI_TIMER_CTRL_COLOR);
                   GP.ICON_FILE_BUTTON("timerControl/1", timerFsData[1], 60, UI_TIMER_CTRL_COLOR);
-                  GP.ICON_FILE_BUTTON("timerControl/2", timerFsData[2], 60, UI_TIMER_CTRL_COLOR);
+                  GP.ICON_FILE_BUTTON("timerControl/2", timerFsData[2], 50, UI_TIMER_CTRL_COLOR);
                  );
           }
           else {
@@ -637,10 +645,12 @@ void build(void) {
                   GP.BUTTON_MINI("timerControl/2", "⠀⠀||⠀⠀", "", UI_TIMER_CTRL_COLOR);
                  );
           }
+          GP.BREAK();
           GP.BLOCK_END();
+          GP.GRID_END();
 
           GP.UPDATE_CLICK("timerTime", "timerHour/0,timerHour/1,timerHour/2,timerHour/3,timerHour/4,timerHour/5");
-          GP.UPDATE_CLICK("timerTime,mainTimerState", "timerControl/0,timerControl/1,timerControl/2");
+          GP.UPDATE_CLICK("timerTime,timerState", "timerControl/0,timerControl/1,timerControl/2");
         }
       }
     }

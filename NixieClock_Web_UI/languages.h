@@ -76,9 +76,9 @@
 #define LANG_ALARM_DAYS_6 "Сб"
 #define LANG_ALARM_DAYS_7 "Вс"
 
-#define LANG_ALARM_AFTER " | Через "
-#define LANG_ALARM_DAY "д "
-#define LANG_ALARM_HOUR "ч "
+#define LANG_ALARM_AFTER "Через⠀"
+#define LANG_ALARM_DAY "д⠀"
+#define LANG_ALARM_HOUR "ч⠀"
 #define LANG_ALARM_MINS "мин"
 
 //-------------------------------------------------------//
@@ -620,9 +620,9 @@
 #define LANG_ALARM_DAYS_6 "Sa"
 #define LANG_ALARM_DAYS_7 "Su"
 
-#define LANG_ALARM_AFTER " | After "
-#define LANG_ALARM_DAY "d "
-#define LANG_ALARM_HOUR "h "
+#define LANG_ALARM_AFTER "After⠀"
+#define LANG_ALARM_DAY "d⠀"
+#define LANG_ALARM_HOUR "h⠀"
 #define LANG_ALARM_MINS "min"
 
 //-------------------------------------------------------//

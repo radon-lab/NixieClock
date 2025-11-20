@@ -107,7 +107,7 @@ embed{width:90%;border-radius:5px;background:white;}
 input[type=number]{-moz-appearance:textfield;}
 input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=date]:focus,input[type=time]:focus{border:2px solid #666}
 input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disabled,input[type=password]:disabled,input[type=date]:disabled,input[type=time]:disabled,input[type=color]:disabled,input[type=button]:disabled,button:disabled{filter:brightness(0.6);cursor:default;box-shadow:none;}
-.dsbl.dsbl{filter:brightness(0.6);cursor:default;}
+.dsbl.dsbl{filter:brightness(0.6);cursor:default;box-shadow:none;}
 .pass.pass{width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlpass{display:inline-block;position:relative}
@@ -136,7 +136,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .i_btn:hover{filter:brightness(0.8);}
 .check_c>input{margin:4px -27px 6px -2px;opacity:0;}
 .check_c>span::before{content:'';border-radius:8px;padding:4px 12px;color:#bbb;background-color:#2a2d35;border:1px solid #444;border-radius:0.25em;cursor:pointer;}
-.check_c>input:checked+span::before{border-color:#e67b09;background-color:#e67b09;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='m12.82,3l-6.6,6.6l-3,-3-1.9,1.9l5,5.00687l8.5,-8.5-1.9,-1.9z' fill='%23fff'/%3e%3c/svg%3e");}
+.check_c>input:checked+span::before{border-color:#2a2d35;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='m12.82,3l-6.6,6.6l-3,-3-1.9,1.9l5,5.00687l8.5,-8.5-1.9,-1.9z' fill='%23bbb'/%3e%3c/svg%3e");}
 .check_c>input:disabled+span::before{background-color:#e9ecef;}
 .check_c>input:hover+span::before{filter:brightness(0.85);}
 .lineled{display:block;height:30px;margin-top:-13px;}
