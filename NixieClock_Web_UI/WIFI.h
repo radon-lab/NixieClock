@@ -184,7 +184,7 @@ void wifiUpdate(void) {
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
       ntpStop(); //остановили ntp
-      groupStop(); //остановить обнаружение устройств поблизости
+      groupLocal(); //остановить обнаружение устройств поблизости
       weatherDisconnect(); //отключились от сервера погоды
       WiFi.disconnect(); //отключаемся от точки доступа
       Serial.println F("Wifi disconnecting...");
@@ -201,7 +201,7 @@ void wifiUpdate(void) {
 
         ntpStart(); //запустить ntp
         weatherCheck(); //запросить прогноз погоды
-        if (settings.groupFind) groupStart(); //запустить обнаружение устройств поблизости
+        groupStart(settings.groupFind); //запустить обнаружение устройств поблизости
 
 #if STATUS_LED == 1
         digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
@@ -233,7 +233,7 @@ void wifiUpdate(void) {
           }
           wifi_station_disconnect(); //отключаемся от точки доступа
           ntpStop(); //остановить ntp
-          groupStop(); //остановить обнаружение устройств поблизости
+          groupLocal(); //остановить обнаружение устройств поблизости
           weatherDisconnect(); //отключились от сервера погоды
         }
         break;

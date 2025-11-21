@@ -127,7 +127,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .sbsel.sbsel{color:#13161a;}
 .page{margin-top:40px;margin-left:0px;overflow-x:hidden;transition:margin-left .2s;}
 .ui_block{display:none;padding:2px 5px;max-width:1000px;opacity:0;transition-duration:.4s;}
-.ui_load{display:flex;align-items:center;justify-content:center;opacity:0;margin-top:50vh;animation:delay .5s forwards;}
+.ui_load{display:flex;align-items:center;justify-content:center;opacity:0;margin-top:50vh;transform:translateY(-20px);animation:delay .5s forwards;}
 .ui_load>span{height:20px;width:20px;margin:5px;border-radius:25px;background-color:#4CAF50;animation:load 1s linear infinite;}
 .ui_load>span:nth-child(1){animation-delay:.2s;}
 .ui_load>span:nth-child(2){animation-delay:.1s;}
@@ -144,7 +144,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .lineled>span::before{border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}
 .lineled>input:checked+span::before{background-image:none;}
 .selBlock{border:2px solid #3c4048;max-width:300px;padding:10px}
-.selItem.selItem{background:#2a2d35;color:#bbb;font-size:16px;height:30px;width:99%;max-width:100%;margin:2px;padding:0 10px;white-space:normal;cursor:pointer;}
+.selItem.selItem{background:#2a2d35;color:#bbb;font-size:15px;height:32px;width:99%;max-width:100%;margin:2px;padding:0 10px;white-space:normal;cursor:pointer;}
 .selActive.selActive{background:#4CAF50;color:#13161a;}
 .vr{border:1px solid #3c4048;height:50px;margin:0 10px;}
 .rad{margin:3px 3px;appearance:none;cursor:pointer;}
@@ -165,7 +165,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 @keyframes offline{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media screen and (max-width:450px){.mainblock{padding:9px 0 9px 0;}}
-@media screen and (max-width:1000px){.page{margin-top:35px;}.offlAnim{top:-5px;}}
+@media screen and (max-width:1000px){.page{margin-top:35px;}.offlAnim{top:-5px;}.ui_load{transform:translateY(-40px);}}
 @media screen and (max-width:1100px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}
 @media(min-width:1000px){
 .burgbtn{display:none!important;}

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_068 бета от 20.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_069 бета от 21.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1796,10 +1796,8 @@ void action() {
         }
 
         if (ui.clickBool("extDeviceGroup", settings.groupFind)) {
-          if (wifiGetConnectStatus()) {
-            if (settings.groupFind) groupStart(); //запустили обнаружение устройств поблизости
-            else groupStop(); //остановить обнаружение устройств поблизости
-          }
+          if (settings.groupFind) groupStart(wifiGetConnectStatus()); //запустили обнаружение устройств поблизости
+          else groupLocal(); //остановить обнаружение устройств поблизости
           memorySaveSettings(); //обновить данные в памяти
         }
       }
@@ -2652,11 +2650,11 @@ void setup() {
   ui.downloadAuto(true);
   ui.uploadMode(false);
 
-  //запутили обнаружение устройств поблизости
-  if (settings.groupFind) groupStart();
-
   //остановили ntp
   ntpStop();
+
+  //запутили обнаружение устройств поблизости
+  groupStart(false);
 
   //запутили поиск беспроводного датчика
   wirelessStart();

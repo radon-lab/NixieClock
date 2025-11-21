@@ -5,12 +5,13 @@
 #define GROUP_WAIT_TIME 7000 //время ожидания обновления группы(1000..60000)(мс)
 #define GROUP_UPDATE_TIME 1000 //время между попытками обновления группы(100..2000)(мс)
 
-#define GROUP_SEND_CMD 0xAA //команда отправки ответа на запрос(0xCC)
+#define GROUP_ANSWER_CMD 0xAA //команда отправки ответа на запрос(0xCC)
 #define GROUP_UPDATE_CMD 0xCC //команда обновления списка устройств(0xCC)
 #define GROUP_SEARCH_CMD 0xEE //команда поиска устройств(0xEE)
 
 enum {
   GROUP_STOPPED, //сервис не запущен
+  GROUP_LOCAL, //сервис в локальном режиме
   GROUP_READY, //ожидание подключения к локальной сети
   GROUP_UPDATE_WAIT, //ожидание поиска часов в локальной сети
   GROUP_UPDATE_START, //начало поиска часов в локальной сети
@@ -174,27 +175,36 @@ void groupReload(void) {
   groupEncodePacket(wifiGetBroadcastIP(), GROUP_UPDATE_CMD);
 }
 //--------------------------------------------------------------------
-void groupStart(void) {
+void groupReady(void) {
+  if (group_status == GROUP_LOCAL) {
+    group_check = ui.online();
+    group_status = GROUP_READY;
+  }
+}
+void groupLocal(void) {
   if (group_status != GROUP_STOPPED) {
-    groupSearch();
-    groupReload();
+    group_time = 0;
+    group_list = "";
+    group_update = true;
+    group_status = GROUP_LOCAL;
+  }
+}
+//--------------------------------------------------------------------
+void groupStart(boolean search) {
+  if (group_status != GROUP_STOPPED) {
+    if (search) {
+      groupReady();
+      groupSearch();
+      groupReload();
+    }
   }
   else if (group.begin(GROUP_LOCAL_PORT)) {
-    group_check = ui.online();
-    group_update = true;
     group_time = 0;
     group_list = "";
-    group_status = GROUP_READY;
+    group_update = true;
+    group_status = GROUP_LOCAL;
   }
   else group_status = GROUP_STOPPED;
-}
-void groupStop(void) {
-  if (group_status != GROUP_STOPPED) {
-    group_status = GROUP_READY;
-    group_update = true;
-    group_time = 0;
-    group_list = "";
-  }
 }
 //--------------------------------------------------------------------
 void groupUpdate(void) {
@@ -202,46 +212,49 @@ void groupUpdate(void) {
     if (group.parsePacket() == GROUP_PACKET_SIZE) {
       if (group.remotePort() == GROUP_LOCAL_PORT) {
         if (group.read(group_packet, GROUP_PACKET_SIZE) == GROUP_PACKET_SIZE) {
+          if ((group_status == GROUP_LOCAL) && wifiGetConnectStatus()) return;
           switch (groupDecodePacket()) {
-            case GROUP_SEND_CMD: groupAddBuffer(group.remoteIP(), (char*)group_packet); break;
-            case GROUP_SEARCH_CMD: groupEncodePacket(group.remoteIP(), GROUP_SEND_CMD); break;
+            case GROUP_ANSWER_CMD: groupAddBuffer(group.remoteIP(), (char*)group_packet); break;
+            case GROUP_SEARCH_CMD: groupEncodePacket(group.remoteIP(), GROUP_ANSWER_CMD); break;
             case GROUP_UPDATE_CMD: groupSearch(); break;
           }
         }
       }
     }
 
-    if (group_check != ui.online()) {
-      group_check = ui.online();
-      if (group_check) groupSearch();
-    }
-
-    if (group_time && ((millis() - group_timer) >= group_time)) {
-      group_timer = millis();
-
-      if (group_status > GROUP_UPDATE_END) {
-        group_status = GROUP_UPDATE_WAIT;
-        if (group_buffer[0] != '\0') {
-          groupAddBuffer(WiFi.localIP(), settings.nameDevice);
-          groupSortBuffer();
-        }
-        if (!group_list.equals(group_buffer)) {
-          group_list = group_buffer;
-          group_update = true;
-        }
-        group_buffer = "";
-
-        if (!group_check) group_time = 0;
-        else group_time = GROUP_WAIT_TIME;
-
-        return;
-      }
-      else {
-        group_status++;
-        group_time = GROUP_UPDATE_TIME;
+    if (group_status != GROUP_LOCAL) {
+      if (group_check != ui.online()) {
+        group_check = ui.online();
+        if (group_check) groupSearch();
       }
 
-      groupEncodePacket(wifiGetBroadcastIP(), GROUP_SEARCH_CMD);
+      if (group_time && ((millis() - group_timer) >= group_time)) {
+        group_timer = millis();
+
+        if (group_status > GROUP_UPDATE_END) {
+          group_status = GROUP_UPDATE_WAIT;
+          if (group_buffer[0] != '\0') {
+            groupAddBuffer(WiFi.localIP(), settings.nameDevice);
+            groupSortBuffer();
+          }
+          if (!group_list.equals(group_buffer)) {
+            group_list = group_buffer;
+            group_update = true;
+          }
+          group_buffer = "";
+
+          if (!group_check) group_time = 0;
+          else group_time = GROUP_WAIT_TIME;
+
+          return;
+        }
+        else {
+          group_status++;
+          group_time = GROUP_UPDATE_TIME;
+        }
+
+        groupEncodePacket(wifiGetBroadcastIP(), GROUP_SEARCH_CMD);
+      }
     }
   }
 }
