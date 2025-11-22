@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_069 бета от 21.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_070 бета от 22.11.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2641,7 +2641,7 @@ void setup() {
   wifiStartAP();
 
   //подключаем конструктор и запускаем веб интерфейс
-  ui.setBufferSize(5000);
+  ui.setBufferSize(1500);
   ui.attachBuild(build);
   ui.attach(action);
   ui.start();

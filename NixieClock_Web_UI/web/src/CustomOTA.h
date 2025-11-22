@@ -329,7 +329,7 @@ class CustomOTAUpdate {
       _gp_server = _server;
       String page;
       _gp_bufsize = 500;
-      page.reserve(_gp_bufsize);
+      page.reserve(_gp_bufsize + 500);
       _GPP = &page;
       if (_OTAbuild) _OTAbuild(_UpdateEnd, hasError() ? error() :  "");
       _GPP = nullptr;

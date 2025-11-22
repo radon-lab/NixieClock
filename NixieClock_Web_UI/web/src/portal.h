@@ -595,7 +595,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
         _gp_server = &server;
         _gp_uri = &_uri;
         String page;
-        page.reserve(_bufsize + 200);
+        page.reserve(_bufsize + 1000);
         _gp_bufsize = _bufsize;
         _GPP = &page;
         if (_build) _build();

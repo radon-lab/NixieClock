@@ -508,7 +508,7 @@
 #define LANG_PAGE_NETWORK_TIME_MODE_2 ",Каждые 2 часа,Каждые 3 часа"
 #define LANG_PAGE_NETWORK_WEATHER_MODE ",- По координатам -"
 
-#define LANG_PAGE_NETWORK_GUI_SYNC "Синхронизировать сейчас"
+#define LANG_PAGE_NETWORK_GUI_SYNC "Синхронизировать"
 #define LANG_PAGE_NETWORK_GUI_UPDATE "Обновить погоду"
 #define LANG_PAGE_NETWORK_GUI_CANCEL "Отмена"
 #define LANG_PAGE_NETWORK_GUI_CONNECT "Подключиться"
@@ -1052,7 +1052,7 @@
 #define LANG_PAGE_NETWORK_TIME_MODE_2 ",Every 2 hours,Every 3 hours"
 #define LANG_PAGE_NETWORK_WEATHER_MODE ",- By coordinates -"
 
-#define LANG_PAGE_NETWORK_GUI_SYNC "Sync now"
+#define LANG_PAGE_NETWORK_GUI_SYNC "Synchronize"
 #define LANG_PAGE_NETWORK_GUI_UPDATE "Update weather"
 #define LANG_PAGE_NETWORK_GUI_CANCEL "Cancel"
 #define LANG_PAGE_NETWORK_GUI_CONNECT "Connect"
