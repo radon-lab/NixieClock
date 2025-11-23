@@ -51,6 +51,22 @@ String wifiGetConnectState(void) {
   return str;
 }
 //--------------------------------------------------------------------
+String wifiGetCurrentMode(void) {
+  String str;
+  str.reserve(30);
+
+  if (WiFi.getMode() == WIFI_AP) str = F(LANG_PAGE_INFO_GUI_MODE_AP);
+  else if (WiFi.getMode() == WIFI_STA) str = F(LANG_PAGE_INFO_GUI_MODE_STA);
+  else str = F(LANG_PAGE_INFO_GUI_MODE_AP_STA);
+
+  switch (WiFi.getPhyMode()) {
+    case WIFI_PHY_MODE_11B: str += F("_11B"); break;
+    case WIFI_PHY_MODE_11G: str += F("_11G"); break;
+    case WIFI_PHY_MODE_11N: str += F("_11N"); break;
+  }
+  return str;
+}
+//--------------------------------------------------------------------
 IPAddress wifiGetBroadcastIP(void) {
   struct ip_info data;
   wifi_get_ip_info(STATION_IF, &data);
@@ -143,6 +159,7 @@ void wifiReadSettings(void) {
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
   Serial.println F("");
 
 #if WIFI_OUTPUT_POWER
