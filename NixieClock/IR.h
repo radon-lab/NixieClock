@@ -15,6 +15,14 @@ enum {
   IR_REPEAT //повтор последней команды
 };
 
+#if IR_PIN < 8
+#define IR_PCINT PCINT2_vect
+#elif IR_PIN < 14
+#define IR_PCINT PCINT0_vect
+#elif INDI_MODE != 0
+#define IR_PCINT PCINT1_vect
+#endif
+
 //------------------------------Инициализация IR приемника------------------------------
 void irInit(void) //инициализация IR приемника
 {
@@ -72,11 +80,7 @@ ISR(TIMER2_OVF_vect) //счетчик времени IR приемника
   if (!++ir_time) TIMSK2 &= ~(0x01 << TOIE2); //если таймаут то выключаем таймер
 }
 //----------------------------Обработка сигнала IR приемника----------------------------
-#if IR_PIN < 8
-ISR(PCINT2_vect) //обработка сигнала IR приемника
-#else
-ISR(PCINT0_vect) //обработка сигнала IR приемника
-#endif
+ISR(IR_PCINT) //обработка сигнала IR приемника
 {
   static uint8_t _bit; //текущий бит
   static uint8_t _byte; //текущий байт

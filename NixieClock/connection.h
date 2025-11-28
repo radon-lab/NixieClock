@@ -80,6 +80,13 @@
 
 #define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
+#if INDI_MODE != 0
+#define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : ((pin) < 14) ? PCMSK0 : PCMSK1))
+#define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : ((pin) < 14) ? PCIE0 : PCIE1))
+
+#define DECODE_PORT(pin) (((pin) < 8) ? PORTD : (((pin) < 14) ? PORTB : PORTC))
+#define DECODE_BIT(pin) (((pin) < 8) ? pin : (((pin) < 14) ? ((pin) - 8) : ((pin) - 14)))
+#else
 #define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : PCMSK0)
 #define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : PCIE0)
 
@@ -90,10 +97,11 @@
 #define DECODE_PORT(pin) (((pin) < 8) ? PORTD : PORTB)
 #define DECODE_BIT(pin) (((pin) < 8) ? (pin) : ((pin) - 8))
 #endif
-
-#define ANODE_OFF 0x00 //выключенный анод
+#endif
 
 //Оптопары(аноды ламп)
+#define ANODE_OFF        (0x00) //выключенный анод
+
 #define ANODE_CLEAR(pin) (BIT_CLEAR(DECODE_PORT(pin), DECODE_BIT(pin)))
 #define ANODE_SET(pin)   (BIT_SET(DECODE_PORT(pin), DECODE_BIT(pin)))
 #define ANODE_OUT(pin)   (BIT_SET(DDR_REG(DECODE_PORT(pin)), DECODE_BIT(pin)))

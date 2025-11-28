@@ -42,11 +42,11 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
-#if SECS_DOT == 1
-      case INDI_0_POS: DOT_1_SET; break;
-#elif SECS_DOT == 2
-      case INDI_0_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
+        //----------------------------------------------- ???
+#if INDI_SYMB_TYPE
+      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
 #endif
+        //----------------------------------------------- ???
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_1_PIN); break;
       case INDI_2_POS: ANODE_SET(ANODE_2_PIN); break;
@@ -60,11 +60,11 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 
   if (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL) {
     switch (indiState) {
-        //----------------------------------------------- ???
-        //#if INDI_SYMB_TYPE
-        //      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
-        //#endif
-        //----------------------------------------------- ???
+#if SECS_DOT == 1
+      case INDI_0_POS: DOT_1_SET; break;
+#elif SECS_DOT == 2
+      case INDI_0_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
+#endif
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_4_PIN); break;
       case INDI_2_POS: ANODE_SET(ANODE_5_PIN); break;
@@ -95,11 +95,11 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 }
 ISR(TIMER0_COMPA_vect) {
   switch (indiState) {
-#if SECS_DOT == 1
-    case INDI_0_POS: DOT_1_CLEAR; break;
-#elif SECS_DOT == 2
-    case INDI_0_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
+      //----------------------------------------------- ???
+#if INDI_SYMB_TYPE
+    case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
 #endif
+      //----------------------------------------------- ???
 #if LAMP_NUM > 4
     case INDI_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
     case INDI_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
@@ -112,11 +112,11 @@ ISR(TIMER0_COMPA_vect) {
 }
 ISR(TIMER0_COMPB_vect) {
   switch (indiState) {
-      //----------------------------------------------- ???
-#if INDI_SYMB_TYPE
-    case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
+#if SECS_DOT == 1
+    case INDI_0_POS: DOT_1_CLEAR; break;
+#elif SECS_DOT == 2
+    case INDI_0_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
 #endif
-      //----------------------------------------------- ???
 #if LAMP_NUM > 4
     case INDI_1_POS: ANODE_CLEAR(ANODE_4_PIN); break;
     case INDI_2_POS: ANODE_CLEAR(ANODE_5_PIN); break;

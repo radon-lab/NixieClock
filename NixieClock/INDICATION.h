@@ -92,21 +92,26 @@ uint8_t indiGet(uint8_t indi) //получить состояние индика
 {
   return indi_buf[indi + 1]; //возвращаем содержимое ячейки буфера
 }
-//------------------------------Установка яркости индикатора--------------------------------------
-void indiSetBright(uint8_t pwm, uint8_t indi) //установка яркости индикатора
+//---------------------------------Получить запонение шим-----------------------------------------
+uint8_t indiGetPwm(uint8_t bri) //получить запонение шим
 {
-  if (pwm > 30) pwm = 30;
-  indi_dimm[indi + 1] = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
+  if (bri > 30) bri = 30;
+  bri = (uint8_t)((INDI_LIGHT_MAX * bri) >> 8);
+  return bri ? bri : (bri + 1); //возвращаем запонение шим
+}
+//------------------------------Установка яркости индикатора--------------------------------------
+void indiSetBright(uint8_t bri, uint8_t indi) //установка яркости индикатора
+{
+  indi_dimm[indi + 1] = indiGetPwm(bri);
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
 }
 //--------------------------------Установка общей яркости-----------------------------------------
-void indiSetBright(uint8_t pwm, uint8_t start, uint8_t end) //установка общей яркости
+void indiSetBright(uint8_t bri, uint8_t start, uint8_t end) //установка общей яркости
 {
-  if (pwm > 30) pwm = 30;
-  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
-  for (uint8_t i = start; i < end; i++) indi_dimm[i + 1] = pwm;
+  bri = indiGetPwm(bri);
+  for (uint8_t i = start; i < end; i++) indi_dimm[i + 1] = bri;
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
@@ -134,15 +139,28 @@ uint8_t indiGetSymb(void) //получить состояние индикато
   return indi_buf[0]; //возвращаем содержимое ячейки буфера
 }
 //---------------------------Установка яркости индикатора символов---------------------------------
-void indiSetSymbBright(uint8_t pwm) //установка яркости индикатора символов
+void indiSetSymbBright(uint8_t bri) //установка яркости индикатора символов
 {
-  if (pwm > 30) pwm = 30;
-  indi_dimm[0] = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
+  indi_dimm[0] = indiGetPwm(bri);
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
 }
 #endif
+//-------------------------------------Вывод чисел-----------------------------------------------
+void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //вывод чисел
+{
+  printNum(_num, indi_buf, _indi, _length, _filler); //печать чисел
+#if GEN_ENABLE
+  indiChangePwm(); //установка нового значения шим линейного регулирования
+#endif
+}
+//---------------------------------Вывод аргументов меню------------------------------------------
+void indiPrintMenuData(boolean blink, boolean state, uint8_t arg1, uint8_t pos1, uint8_t arg2, uint8_t pos2) //вывод аргументов меню
+{
+  if (!blink || state) indiPrintNum(arg1, pos1, (pos1 & 0x01) ? 1 : 2, 0); //вывод первого аргумента
+  if (!blink || !state) indiPrintNum(arg2, pos2, (pos2 & 0x01) ? 1 : 2, 0); //вывод второго аргумента
+}
 //-------------------------Установка левой разделительной точки------------------------------------
 void indiSetDotL(uint8_t dot) //установка левой разделительной точки
 {
@@ -253,57 +271,6 @@ boolean indiGetDots(void) //состояние разделительных то
 {
   return indi_dot_l | indi_dot_r;
 }
-//-------------------------------------Вывод чисел-----------------------------------------------
-void indiPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //вывод чисел
-{
-  printNum(_num, indi_buf, _indi, _length, _filler); //печать чисел
-#if GEN_ENABLE
-  indiChangePwm(); //установка нового значения шим линейного регулирования
-#endif
-}
-//---------------------------------Вывод аргументов меню------------------------------------------
-void indiPrintMenuData(boolean blink, boolean state, uint8_t arg1, uint8_t pos1, uint8_t arg2, uint8_t pos2) //вывод аргументов меню
-{
-  if (!blink || state) indiPrintNum(arg1, pos1, (pos1 & 0x01) ? 1 : 2, 0); //вывод первого аргумента
-  if (!blink || !state) indiPrintNum(arg2, pos2, (pos2 & 0x01) ? 1 : 2, 0); //вывод второго аргумента
-}
-//-----------------------------Запись чисел в буфер анимации----------------------------------------
-void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //запись чисел в буфер анимации
-{
-  printNum(_num, (anim.flipBuffer + 5), _indi, _length, _filler); //печать чисел
-}
-//-------------------------------Отрисовка буфера анимации-----------------------------------------
-void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
-{
-  for (uint8_t i = 0; i < _max; i++) {
-    if ((uint8_t)_indi < LAMP_NUM) { //если число в поле индикатора
-      indi_buf[_indi + 1] = anim.flipBuffer[i + _step]; //устанавливаем новое число
-    }
-    _indi++;
-  }
-#if GEN_ENABLE
-  indiChangePwm(); //установка нового значения шим линейного регулирования
-#endif
-}
-//--------------------------------Очистка буфера анимации-------------------------------------------
-void animClearBuff(void) //очистка буфера анимации
-{
-  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
-}
-//--------------------------------Анимация смены яркости цифр---------------------------------------
-void animBright(uint8_t pwm) //анимация смены яркости цифр
-{
-  if (pwm > 30) pwm = 30;
-  pwm = (uint8_t)((INDI_LIGHT_MAX * pwm) >> 8);
-  for (uint8_t i = 0; i < LAMP_NUM; i++) {
-    if (anim.flipBuffer[i] != anim.flipBuffer[i + 6]) { //если не достигли конца анимации разряда
-      indi_dimm[i + 1] = pwm;
-    }
-  }
-#if GEN_ENABLE
-  indiChangePwm(); //установка нового значения шим линейного регулирования
-#endif
-}
 //--------------------------------Установка неоновых точек------------------------------------------
 void neonDotSet(uint8_t _dot) //установка неоновых точек
 {
@@ -319,7 +286,8 @@ void neonDotSetBright(uint8_t _pwm) //установка яркости неон
 {
   if (_pwm > 250) _pwm = 250;
   dot_dimm = _pwm;
-  indi_dimm[0] = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8); //устанавливаем яркость точек
+  _pwm = (uint8_t)((DOT_LIGHT_MAX * _pwm) >> 8);
+  indi_dimm[0] = _pwm ? _pwm : (_pwm + 1); //устанавливаем яркость точек
 }
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
@@ -420,3 +388,39 @@ boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode)
   return 0;
 }
 #endif
+//-----------------------------Запись чисел в буфер анимации----------------------------------------
+void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //запись чисел в буфер анимации
+{
+  printNum(_num, (anim.flipBuffer + 5), _indi, _length, _filler); //печать чисел
+}
+//-------------------------------Отрисовка буфера анимации-----------------------------------------
+void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
+{
+  for (uint8_t i = 0; i < _max; i++) {
+    if ((uint8_t)_indi < LAMP_NUM) { //если число в поле индикатора
+      indi_buf[_indi + 1] = anim.flipBuffer[i + _step]; //устанавливаем новое число
+    }
+    _indi++;
+  }
+#if GEN_ENABLE
+  indiChangePwm(); //установка нового значения шим линейного регулирования
+#endif
+}
+//--------------------------------Очистка буфера анимации-------------------------------------------
+void animClearBuff(void) //очистка буфера анимации
+{
+  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
+}
+//--------------------------------Анимация смены яркости цифр---------------------------------------
+void animBright(uint8_t bri) //анимация смены яркости цифр
+{
+  bri = indiGetPwm(bri);
+  for (uint8_t i = 0; i < LAMP_NUM; i++) {
+    if (anim.flipBuffer[i] != anim.flipBuffer[i + 6]) { //если не достигли конца анимации разряда
+      indi_dimm[i + 1] = bri;
+    }
+  }
+#if GEN_ENABLE
+  indiChangePwm(); //установка нового значения шим линейного регулирования
+#endif
+}
