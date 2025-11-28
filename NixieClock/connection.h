@@ -69,8 +69,8 @@
 //    PORTC (0 - A0 | 1 - A1 | 2 - A2 | 3 - A3 | 4 - A4 | 5 - A5)
 //    PORTE (0 - GND(3) | 1 - VCC(6) | 2 - A6 | 3 - A7)
 
-#define DDR_REG(portx)  (*(&portx - 1))
-#define PIN_REG(portx)  (*(&portx - 2))
+#define DDR_REG(portx) (*(&portx - 1))
+#define PIN_REG(portx) (*(&portx - 2))
 #define BIT_READ_INV(value, bit) (((value) ^ (0x01 << (bit))) & (0x01 << (bit)))
 #define BIT_READ(value, bit) ((value) & (0x01 << (bit)))
 #define BIT_INV(value, bit) ((value) ^= (0x01 << (bit)))
@@ -81,8 +81,8 @@
 #define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 #if INDI_MODE != 0
-#define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : ((pin) < 14) ? PCMSK0 : PCMSK1))
-#define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : ((pin) < 14) ? PCIE0 : PCIE1))
+#define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : (((pin) < 14) ? PCMSK0 : PCMSK1))
+#define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : (((pin) < 14) ? PCIE0 : PCIE1))
 
 #define DECODE_PORT(pin) (((pin) < 8) ? PORTD : (((pin) < 14) ? PORTB : PORTC))
 #define DECODE_BIT(pin) (((pin) < 8) ? pin : (((pin) < 14) ? ((pin) - 8) : ((pin) - 14)))
