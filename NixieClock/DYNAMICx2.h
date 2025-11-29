@@ -1,17 +1,20 @@
+#define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
+#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * ((LAMP_NUM / 2) + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+
+#include "IO.h"
+#include "CORE.h"
+
 #define _BIT(value, bit) (((value) >> (bit)) & 0x01)
 #define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 
-enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок индикации ламп
-#include "boards.h"
+const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
+const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
 
-#define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
-#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * ((LAMP_NUM / 2) + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок индикации ламп
 
 #define TIMER_START (255 - FREQ_TICK) //начальное значение таймера
 #define LAMP_MAX_STEP (LAMP_NUM / 2) //количиство ламп в группе
-
-#include "CORE.h"
 
 const uint8_t indi_dots_l_pin[2] = {DOTSL_PIN};
 #define INDI_DOTSL_0 (indi_dots_l_pin[0])

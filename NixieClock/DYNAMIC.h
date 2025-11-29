@@ -1,24 +1,28 @@
-#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
-
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
-#include "boards.h"
-
-#if INDI_PORT_TYPE
-const uint8_t regMask[] = {((SECS_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << SECL_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
-#endif
-
 #define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
 #define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
 
+#include "IO.h"
 #include "CORE.h"
+
+#define _BIT(value, bit) (((value) >> (bit)) & 0x01)
+#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
+#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
+#define INDI_ANODE_OFF 0x00 //выключенный анод
+
+const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
+const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
+
+enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+
+#if INDI_PORT_TYPE
+const uint8_t regMask[] = {((SECS_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << SECL_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+#endif
 
 //----------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_COMPA_vect) //динамическая индикация
 {
 #if INDI_PORT_TYPE
-  uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : ANODE_OFF; //включаем индикатор если не пустой символ
+  uint8_t temp = (indi_buf[indiState] != INDI_NULL) ? regMask[indiState] : INDI_ANODE_OFF; //включаем индикатор если не пустой символ
 #if DOTS_PORT_ENABLE == 2
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   if (indi_dot_r & indi_dot_pos) temp |= (0x01 << DOTSR_PIN); //включаем правые точки

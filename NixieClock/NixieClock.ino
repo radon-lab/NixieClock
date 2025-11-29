@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_075 бета от 29.11.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_078 бета от 29.11.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -14,6 +14,7 @@
 #include "userConfig.h"
 #include "connection.h"
 #include "config.h"
+#include "boards.h"
 
 //----------------Периферия----------------
 #include "EEPROM.h"

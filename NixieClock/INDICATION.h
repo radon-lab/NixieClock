@@ -22,6 +22,12 @@ uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
 volatile uint8_t indiState; //текущей номер отрисовки индикатора
 
+#if INDI_MODE == 1
+#include "DYNAMICx2.h"
+#else
+#include "DYNAMIC.h"
+#endif
+
 //переменные работы с анимациями
 struct animData {
 #if LAMP_NUM > 4
@@ -32,12 +38,6 @@ struct animData {
 } anim;
 
 const uint8_t _anim_set[] PROGMEM = {FLIP_ANIM_RANDOM}; //массив случайных режимов
-
-#if INDI_MODE == 1
-#include "DYNAMICx2.h"
-#else
-#include "DYNAMIC.h"
-#endif
 
 void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //установка общей яркости
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
