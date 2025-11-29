@@ -13,36 +13,73 @@ enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок инди
 
 #include "CORE.h"
 
+const uint8_t indi_dots_l_pin[2] = {DOTSL_PIN};
+#define INDI_DOTSL_0 (indi_dots_l_pin[0])
+#define INDI_DOTSL_1 (indi_dots_l_pin[1])
+
+const uint8_t indi_dots_r_pin[2] = {DOTSR_PIN};
+#define INDI_DOTSR_0 (indi_dots_r_pin[0])
+#define INDI_DOTSR_1 (indi_dots_r_pin[1])
+
+#if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
+#if LAMP_NUM > 4
+#define INDI_DOTS_START 0x09
+#define INDI_DOTS0_MASK
+#define INDI_DOTS1_MASK
+#else
+#define INDI_DOTS_START 0x05
+#endif
+#define INDI_POS_START 0x00
+#else
+#if LAMP_NUM > 4
+#define INDI_DOTS_START 0x12
+#else
+#define INDI_DOTS_START 0x0A
+#endif
+#define INDI_POS_START 0x01
+#endif
+
+#if LAMP_NUM > 4
+#define INDI_DOTS0_MASK 0x0E
+#define INDI_DOTS1_MASK 0x70
+#else
+#define INDI_DOTS0_MASK 0x06
+#define INDI_DOTS1_MASK 0x18
+#endif
+
 //----------------------------------Динамическая индикация---------------------------------------
 ISR(TIMER0_OVF_vect) //динамическая индикация
 {
   TCNT0 = TIMER_START; //установили счетчик в начало
+  
+#if DOTS_PORT_ENABLE
+  indi_dot_pos <<= 1; //сместили текущей номер точек индикаторов
+#endif
 
   if (++indiState > LAMP_MAX_STEP) { //переходим к следующему индикатору
-#if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
 #if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x01; //сбросили текущей номер точек индикаторов
+    indi_dot_pos = INDI_DOTS_START; //сбросили текущей номер точек индикаторов
 #endif
-    indiState = 0; //сбросили позицию индикатора
-#else
-#if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x02; //сбросили текущей номер точек индикаторов
-#endif
-    indiState = 1; //сбросили позицию индикатора
-#endif
+    indiState = INDI_POS_START; //сбросили позицию индикатора
   }
 
   REG_LATCH_ENABLE; //открыли защелку
   SPDR = indi_buf[indiState] | (indi_buf[indiState + LAMP_MAX_STEP] << 4); //загрузили данные
 
   OCR0A = indi_dimm[indiState] + TIMER_START; //устанавливаем яркость индикатора
-  OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
+  if (indiState) OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
 
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
         //----------------------------------------------- ???
 #if INDI_SYMB_TYPE
       case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
+#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
+#if SECS_DOT == 1
+      case INDI_0_POS: SECS_DOT_SET(SECL_PIN); break;
+#elif SECS_DOT == 2
+      case INDI_0_POS: if (indi_buf[indiState] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indiState] & 0x40) SECS_DOT_SET(SECR_PIN); break;
+#endif
 #endif
         //----------------------------------------------- ???
 #if LAMP_NUM > 4
@@ -56,13 +93,8 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
     }
   }
 
-  if (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL) {
+  if (indiState && (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL)) {
     switch (indiState) {
-#if SECS_DOT == 1
-      case INDI_0_POS: DOT_1_SET; break;
-#elif SECS_DOT == 2
-      case INDI_0_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
-#endif
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_4_PIN); break;
       case INDI_2_POS: ANODE_SET(ANODE_5_PIN); break;
@@ -75,14 +107,16 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   }
 
   //----------------------------------------------- ???
-  //#if DOTS_PORT_ENABLE
-  //#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  //  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
-  //#endif
-  //#if DOTS_TYPE != 1
-  //  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
-  //#endif
-  //#endif
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
+  if (indi_dot_r & (indi_dot_pos & INDI_DOTS0_MASK)) INDI_DOT_SET(INDI_DOTSR_0); //включаем правые точки
+  if (indi_dot_r & (indi_dot_pos & INDI_DOTS1_MASK)) INDI_DOT_SET(INDI_DOTSR_1); //включаем правые точки
+#endif
+#if DOTS_TYPE != 1
+  if (indi_dot_l & (indi_dot_pos & INDI_DOTS0_MASK)) INDI_DOT_SET(INDI_DOTSL_0); //включаем левые точки
+  if (indi_dot_l & (indi_dot_pos & INDI_DOTS1_MASK)) INDI_DOT_SET(INDI_DOTSL_1); //включаем левые точки
+#endif
+#endif
   //----------------------------------------------- ???
 
   tickCheck(); //проверка переполнения тиков
@@ -96,6 +130,12 @@ ISR(TIMER0_COMPA_vect) {
       //----------------------------------------------- ???
 #if INDI_SYMB_TYPE
     case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
+#elif !INDI_SYMB_TYPE
+#if SECS_DOT == 1
+    case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); break;
+#elif SECS_DOT == 2
+    case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); SECS_DOT_CLEAR(SECR_PIN); break;
+#endif
 #endif
       //----------------------------------------------- ???
 #if LAMP_NUM > 4
@@ -107,14 +147,20 @@ ISR(TIMER0_COMPA_vect) {
     case INDI_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
 #endif
   }
+
+  //----------------------------------------------- ???
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
+  INDI_DOT_CLEAR(INDI_DOTSR_0); //выключаем правые точки
+#endif
+#if DOTS_TYPE != 1
+  INDI_DOT_CLEAR(INDI_DOTSL_0); //выключаем левые точки
+#endif
+#endif
+  //----------------------------------------------- ???
 }
 ISR(TIMER0_COMPB_vect) {
   switch (indiState) {
-#if SECS_DOT == 1
-    case INDI_0_POS: DOT_1_CLEAR; break;
-#elif SECS_DOT == 2
-    case INDI_0_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
-#endif
 #if LAMP_NUM > 4
     case INDI_1_POS: ANODE_CLEAR(ANODE_4_PIN); break;
     case INDI_2_POS: ANODE_CLEAR(ANODE_5_PIN); break;
@@ -124,6 +170,17 @@ ISR(TIMER0_COMPB_vect) {
     case INDI_2_POS: ANODE_CLEAR(ANODE_4_PIN); break;
 #endif
   }
+
+  //----------------------------------------------- ???
+#if DOTS_PORT_ENABLE
+#if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
+  INDI_DOT_CLEAR(INDI_DOTSR_1); //выключаем правые точки
+#endif
+#if DOTS_TYPE != 1
+  INDI_DOT_CLEAR(INDI_DOTSL_1); //выключаем левые точки
+#endif
+#endif
+  //----------------------------------------------- ???
 }
 //------------------------Проверка состояния динамической индикации-------------------------------
 void indiStateCheck(void) //проверка состояния динамической индикации
@@ -157,20 +214,24 @@ void indiCheck(void) //проверка состояния динамическ�
 void indiPortInit(void) //инициализация портов индикации
 {
 #if (SECS_DOT != 3)
-  DOT_1_INIT; //инициализация секундных точек
+  SECS_DOT_INIT(SECL_PIN); //инициализация секундных точек
 #endif
 #if (SECS_DOT == 2)
-  DOT_2_INIT; //инициализация секундных точек
+  SECS_DOT_INIT(SECR_PIN); //инициализация секундных точек
 #endif
 
+#if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
+  INDI_DOT_INIT(INDI_DOTSR_0); //инициализация правых разделительных точек в индикаторах
+  INDI_DOT_INIT(INDI_DOTSR_1); //инициализация правых разделительных точек в индикаторах
 #endif
 #if (DOTS_TYPE != 1)
-  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
+  INDI_DOT_INIT(INDI_DOTSL_0); //инициализация левых разделительных точек в индикаторах
+  INDI_DOT_INIT(INDI_DOTSL_1); //инициализация левых разделительных точек в индикаторах
+#endif
 #endif
 
-#if (INDI_SYMB_TYPE == 1)
+#if INDI_SYMB_TYPE
   ANODE_INIT(ANODE_0_PIN); //инициализация анода 0
 #endif
 

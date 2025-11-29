@@ -12,11 +12,12 @@ enum {
   DOT_ALL //две неоновые лампы
 };
 
+uint8_t dot_dimm; //яркость секундной точки
+
 uint8_t indi_dot_l; //буфер левых точек индикаторов
 uint8_t indi_dot_r; //буфер правых точек индикаторов
-volatile uint8_t indi_dot_pos = 0x01; //текущей номер точек индикаторов
+volatile uint8_t indi_dot_pos; //текущей номер точек индикаторов
 
-uint8_t dot_dimm; //яркость секундной точки
 uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
 volatile uint8_t indiState; //текущей номер отрисовки индикатора
@@ -323,14 +324,14 @@ void dotSetBright(uint8_t _pwm) //установка яркости точек
   if (_pwm) TCCR1A |= (0x01 << COM1A1); //подключаем D9
   else {
     TCCR1A &= ~(0x01 << COM1A1); //отключаем D9
-    DOT_1_CLEAR; //выключили точки
+    SECS_DOT_CLEAR(SECL_PIN); //выключили точки
   }
 #elif SECL_PIN == 10
   OCR1B = _pwm; //устанавливаем яркость точек
   if (_pwm) TCCR1A |= (0x01 << COM1B1); //подключаем D10
   else {
     TCCR1A &= ~(0x01 << COM1B1); //отключаем D10
-    DOT_1_CLEAR; //выключили точки
+    SECS_DOT_CLEAR(SECL_PIN); //выключили точки
   }
 #endif
 #endif

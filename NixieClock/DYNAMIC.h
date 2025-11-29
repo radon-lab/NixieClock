@@ -54,9 +54,9 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
       case INDI_POS: ANODE_SET(ANODE_0_PIN); break;
 #elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
 #if SECS_DOT == 1
-      case INDI_POS: DOT_1_SET; break;
+      case INDI_POS: SECS_DOT_SET(SECL_PIN); break;
 #elif SECS_DOT == 2
-      case INDI_POS: if (indi_buf[indiState] & 0x80) DOT_1_SET; if (indi_buf[indiState] & 0x40) DOT_2_SET; break;
+      case INDI_POS: if (indi_buf[indiState] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indiState] & 0x40) SECS_DOT_SET(SECR_PIN); break;
 #endif
 #endif
 #if !INDI_PORT_TYPE
@@ -75,10 +75,10 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 
 #if DOTS_PORT_ENABLE == 1
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  if (indi_dot_r & indi_dot_pos) INDI_DOTR_ON; //включаем правые точки
+  if (indi_dot_r & indi_dot_pos) INDI_DOT_SET(DOTSR_PIN); //включаем правые точки
 #endif
 #if DOTS_TYPE != 1
-  if (indi_dot_l & indi_dot_pos) INDI_DOTL_ON; //включаем левые точки
+  if (indi_dot_l & indi_dot_pos) INDI_DOT_SET(DOTSL_PIN); //включаем левые точки
 #endif
 #endif
 
@@ -98,11 +98,11 @@ ISR(TIMER0_COMPB_vect) {
   if (!indiState) ANODE_CLEAR(ANODE_0_PIN); //выключили символ
 #elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
 #if (SECS_DOT == 1)
-  if (!indiState) DOT_1_CLEAR; //выключили точки
+  if (!indiState) SECS_DOT_CLEAR(SECL_PIN); //выключили точки
 #elif (SECS_DOT == 2)
   if (!indiState) {
-    DOT_1_CLEAR; //выключили точки
-    DOT_2_CLEAR; //выключили точки
+    SECS_DOT_CLEAR(SECL_PIN); //выключили точки
+    SECS_DOT_CLEAR(SECR_PIN); //выключили точки
   }
 #endif
 #endif
@@ -112,9 +112,9 @@ ISR(TIMER0_COMPB_vect) {
     case INDI_POS: ANODE_CLEAR(ANODE_0_PIN); break;
 #elif !INDI_SYMB_TYPE
 #if SECS_DOT == 1
-    case INDI_POS: DOT_1_CLEAR; break;
+    case INDI_POS: SECS_DOT_CLEAR(SECL_PIN); break;
 #elif SECS_DOT == 2
-    case INDI_POS: DOT_1_CLEAR; DOT_2_CLEAR; break;
+    case INDI_POS: SECS_DOT_CLEAR(SECL_PIN); SECS_DOT_CLEAR(SECR_PIN); break;
 #endif
 #endif
     case ANODE_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
@@ -131,10 +131,10 @@ ISR(TIMER0_COMPB_vect) {
 #if DOTS_PORT_ENABLE
 #if DOTS_PORT_ENABLE == 1
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_OFF; //выключаем правые точки
+  INDI_DOT_CLEAR(DOTSR_PIN); //выключаем правые точки
 #endif
 #if DOTS_TYPE != 1
-  INDI_DOTL_OFF; //выключаем левые точки
+  INDI_DOT_CLEAR(DOTSL_PIN); //выключаем левые точки
 #endif
 #endif
   indi_dot_pos <<= 1; //сместили текущей номер точек индикаторов
@@ -193,17 +193,17 @@ void indiPortInit(void) //инициализация портов индикац
   PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
   DDRC |= 0x0F; //устанавливаем катоды как выходы
 #if (SECS_DOT != 3) && !INDI_DOT_TYPE
-  DOT_1_INIT; //инициализация секундных точек
+  SECS_DOT_INIT(SECL_PIN); //инициализация секундных точек
 #endif
 #if (SECS_DOT == 2) && !INDI_DOT_TYPE
-  DOT_2_INIT; //инициализация секундных точек
+  SECS_DOT_INIT(SECR_PIN); //инициализация секундных точек
 #endif
 #if DOTS_PORT_ENABLE == 1
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
-  INDI_DOTR_INIT; //инициализация правых разделительных точек в индикаторах
+  INDI_DOT_INIT(DOTSR_PIN); //инициализация правых разделительных точек в индикаторах
 #endif
 #if DOTS_TYPE != 1
-  INDI_DOTL_INIT; //инициализация левых разделительных точек в индикаторах
+  INDI_DOT_INIT(DOTSL_PIN); //инициализация левых разделительных точек в индикаторах
 #endif
 #endif
 #if (INDI_SYMB_TYPE == 1)
