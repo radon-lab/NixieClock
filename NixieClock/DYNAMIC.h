@@ -1,5 +1,5 @@
-#define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
-#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+#define TIME_TICK 16 //время одной единицы шага таймера(мкс)
+#define FREQ_TICK (uint8_t)(CONSTRAIN(1e6 / TIME_TICK / ((uint16_t)INDI_FREQ_ADG * (LAMP_NUM + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE))), 30 + INDI_DEAD_TIME, 255)) //расчет переполнения таймера динамической индикации
 
 #include "IO.h"
 #include "CORE.h"

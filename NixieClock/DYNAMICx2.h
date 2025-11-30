@@ -1,5 +1,5 @@
-#define TIME_TICK 16.0 //время одной единицы шага таймера(мкс)
-#define FREQ_TICK (uint8_t)(CONSTRAIN((1000.0 / ((uint16_t)INDI_FREQ_ADG * ((LAMP_NUM / 2) + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE)))) / 0.016, 125, 255)) //расчет переполнения таймера динамической индикации
+#define TIME_TICK 16 //время одной единицы шага таймера(мкс)
+#define FREQ_TICK (uint8_t)(CONSTRAIN(1e6 / TIME_TICK / ((uint16_t)INDI_FREQ_ADG * ((LAMP_NUM / 2) + (boolean)((SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE))), 60 + INDI_DEAD_TIME, 255)) //расчет переполнения таймера динамической индикации
 
 #include "IO.h"
 #include "CORE.h"
@@ -70,7 +70,7 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   SPDR = indi_buf[indiState] | (indi_buf[indiState + LAMP_MAX_STEP] << 4); //загрузили данные
 
   OCR0A = indi_dimm[indiState] + TIMER_START; //устанавливаем яркость индикатора
-  if (indiState) OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
+  OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
 
   if (indi_buf[indiState] != INDI_NULL) {
     switch (indiState) {
@@ -96,7 +96,7 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
     }
   }
 
-  if (indiState && (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL)) {
+  if (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL) {
     switch (indiState) {
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_4_PIN); break;
