@@ -9,6 +9,10 @@
 #define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
 #define INDI_ANODE_OFF 0x00 //выключенный анод
 
+#define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
+#define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN_MAX(((uint16_t)FREQ_TICK - 2) + (FREQ_TICK >> 5), 255)) //расчет максимального шага яркости для точек
+#define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
+
 const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
 const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
 

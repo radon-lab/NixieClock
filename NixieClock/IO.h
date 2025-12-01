@@ -12,7 +12,8 @@
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
 #define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
 
-#define CONSTRAIN(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+#define CONSTRAIN(value, min, max) (((value) > (max)) ? (max) : (((value) < (min)) ? (min) : (value)))
+#define CONSTRAIN_MAX(value, max) (((value) > (max)) ? (max) : (value))
 
 #if INDI_MODE != 0
 #define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : (((pin) < 14) ? PCMSK0 : PCMSK1))
