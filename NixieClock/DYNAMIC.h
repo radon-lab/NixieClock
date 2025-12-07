@@ -13,10 +13,10 @@
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN_MAX(((uint16_t)FREQ_TICK - 2) + (FREQ_TICK >> 5), 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
-const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
+const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы
+const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок анодов ламп(точки всегда должны быть первыми)(только для прямого подключения к микроконтроллеру)
+enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок индикации ламп
 
 #if INDI_PORT_TYPE
 const uint8_t regMask[] = {((SECS_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << SECL_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
@@ -174,8 +174,8 @@ void indiStateCheck(void) //проверка состояния динамиче
     TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //установили настройку
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
-  if (OCR0B > LIGHT_MAX) { //если вышли за предел
-    OCR0B = LIGHT_MAX; //установили максимум
+  if (OCR0B >= FREQ_TICK) { //если вышли за предел
+    OCR0B = (FREQ_TICK - 1); //установили максимум
     SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
   }
 }
@@ -241,17 +241,17 @@ void indiInit(void) //инициализация индикации
 
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем буферы
     indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
-    indi_dimm[i] = (LIGHT_MAX - 1); //устанавливаем максимальную яркость
+    indi_dimm[i] = 0x00; //устанавливаем минимальную яркость
   }
 
-  OCR0A = FREQ_TICK; //максимальная частота
-  OCR0B = (LIGHT_MAX - 1); //максимальная яркость
+  OCR0A = FREQ_TICK; //настройка частоты
+  OCR0B = 0x00; //минимальная яркость
 
-  TIMSK0 = 0; //отключаем прерывания
+  TIMSK0 = 0x00; //отключаем прерывания
   TCCR0A = (0x01 << WGM01); //режим CTC
   TCCR0B = (0x01 << CS02); //пределитель 256
 
-  TCNT0 = 0; //установили счетчик в начало
+  TCNT0 = 0x00; //установили счетчик в начало
   TIFR0 |= (0x01 << OCF0B) | (0x01 << OCF0A); //сбрасываем флаги прерывания
   TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //разрешаем прерывания
 

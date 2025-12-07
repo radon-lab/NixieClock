@@ -12,8 +12,8 @@
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN_MAX(((uint16_t)FREQ_TICK - 2) + (FREQ_TICK >> 5), 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы(другие платы)
-const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов(другие платы)
+const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы
+const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS}; //порядок индикации ламп
 
@@ -264,10 +264,10 @@ void indiInit(void) //инициализация индикации
 
   for (uint8_t i = 0; i < (LAMP_NUM + 1); i++) { //инициализируем буферы
     indi_buf[i] = INDI_NULL; //очищаем буфер пустыми символами
-    indi_dimm[i] = LIGHT_MAX; //устанавливаем максимальную яркость
+    indi_dimm[i] = 0x00; //устанавливаем минимальную яркость
   }
 
-  OCR0A = OCR0B = (LIGHT_MAX + TIMER_START); //максимальная яркость
+  OCR0A = OCR0B = TIMER_START; //минимальная яркость
 
   TIMSK0 = 0x00; //отключаем прерывания
   TCCR0A = 0x00; //обычный режим
