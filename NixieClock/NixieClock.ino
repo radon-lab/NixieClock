@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_082 бета от 07.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_085 бета от 08.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -19,6 +19,7 @@
 //----------------Периферия----------------
 #include "EEPROM.h"
 #include "INDICATION.h"
+#include "DECATRON.h"
 #include "PLAYER.h"
 #include "SOUND.h"
 #include "WIRE.h"
@@ -177,6 +178,10 @@ void INIT_SYSTEM(void) //инициализация
 #if GEN_ENABLE && (GEN_FEEDBACK == 2)
   FB_INIT; //инициализация обратной связи
   ACSR = (0x01 << ACBG); //включаем компаратор
+#endif
+
+#if DECATRON_ENABLE
+  decatronInit(); //инициализация декатрона
 #endif
 
   indiPortInit(); //инициализация портов индикаторов
@@ -516,6 +521,16 @@ void systemTask(void) //системная задача
         else buzzPulse(SECS_EVEN_SOUND_FREQ, SECS_EVEN_SOUND_TIME); //щелчок пищалкой
       }
     }
+#endif
+
+#if DECATRON_ENABLE
+    static uint8_t _position_0 = 0;
+    if (++_position_0 >= DECATRON_DOTS_NUM) _position_0 = 0;
+
+    uint8_t _position_1 = _position_0 + 4;
+    if (_position_1 >= DECATRON_DOTS_NUM) _position_1 -= DECATRON_DOTS_NUM;
+
+    decatronSetLine(_position_0, _position_1); //установка позиции декатрона
 #endif
 
     RESET_WDT; //сбрасываем таймер WDT

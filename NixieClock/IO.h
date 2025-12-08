@@ -56,6 +56,13 @@
 
 #define INDI_DOT_INIT(pin)  INDI_DOT_CLEAR(pin); INDI_DOT_OUT(pin)
 
+//Управление декатроном
+#define DECATRON_CLEAR(pin) (BIT_CLEAR(DECODE_PORT(pin), DECODE_BIT(pin)))
+#define DECATRON_SET(pin)   (BIT_SET(DECODE_PORT(pin), DECODE_BIT(pin)))
+#define DECATRON_OUT(pin)   (BIT_SET(DDR_REG(DECODE_PORT(pin)), DECODE_BIT(pin)))
+
+#define DECATRON_INIT(pin)  DECATRON_CLEAR(pin); DECATRON_OUT(pin)
+
 //Пин DATA сдвигового регистра
 #define REG_DATA_BIT   DECODE_BIT(REG_DATA_PIN)
 #define REG_DATA_PORT  DECODE_PORT(REG_DATA_PIN)

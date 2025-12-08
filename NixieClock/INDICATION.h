@@ -20,12 +20,12 @@ volatile uint8_t indi_dot_pos; //текущей номер точек индик
 
 uint8_t indi_buf[7]; //буфер индикаторов
 uint8_t indi_dimm[7]; //яркость индикаторов
-volatile uint8_t indiState; //текущей номер отрисовки индикатора
+volatile uint8_t indi_state; //текущей номер отрисовки индикатора
 
-#if INDI_MODE == 1
-#include "DYNAMICx2.h"
-#else
+#if INDI_MODE == 0
 #include "DYNAMIC.h"
+#elif INDI_MODE == 1
+#include "DYNAMICx2.h"
 #endif
 
 //переменные работы с анимациями

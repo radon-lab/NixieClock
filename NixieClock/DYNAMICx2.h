@@ -63,21 +63,21 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   indi_dot_pos <<= 1; //сместили текущей номер точек индикаторов
 #endif
 
-  if (++indiState > LAMP_MAX_STEP) { //переходим к следующему индикатору
+  if (++indi_state > LAMP_MAX_STEP) { //переходим к следующему индикатору
 #if DOTS_PORT_ENABLE
     indi_dot_pos = INDI_DOTS_START; //сбросили текущей номер точек индикаторов
 #endif
-    indiState = INDI_POS_START; //сбросили позицию индикатора
+    indi_state = INDI_POS_START; //сбросили позицию индикатора
   }
 
   REG_LATCH_ENABLE; //открыли защелку
-  SPDR = indi_buf[indiState] | (indi_buf[indiState + LAMP_MAX_STEP] << 4); //загрузили данные
+  SPDR = indi_buf[indi_state] | (indi_buf[indi_state + LAMP_MAX_STEP] << 4); //загрузили данные
 
-  OCR0A = indi_dimm[indiState] + TIMER_START; //устанавливаем яркость индикатора
-  OCR0B = indi_dimm[indiState + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
+  OCR0A = indi_dimm[indi_state] + TIMER_START; //устанавливаем яркость индикатора
+  OCR0B = indi_dimm[indi_state + LAMP_MAX_STEP] + TIMER_START; //устанавливаем яркость индикатора
 
-  if (indi_buf[indiState] != INDI_NULL) {
-    switch (indiState) {
+  if (indi_buf[indi_state] != INDI_NULL) {
+    switch (indi_state) {
         //----------------------------------------------- ???
 #if INDI_SYMB_TYPE
       case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
@@ -85,7 +85,7 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 #if SECS_DOT == 1
       case INDI_0_POS: SECS_DOT_SET(SECL_PIN); break;
 #elif SECS_DOT == 2
-      case INDI_0_POS: if (indi_buf[indiState] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indiState] & 0x40) SECS_DOT_SET(SECR_PIN); break;
+      case INDI_0_POS: if (indi_buf[indi_state] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indi_state] & 0x40) SECS_DOT_SET(SECR_PIN); break;
 #endif
 #endif
         //----------------------------------------------- ???
@@ -100,8 +100,8 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
     }
   }
 
-  if (indi_buf[indiState + LAMP_MAX_STEP] != INDI_NULL) {
-    switch (indiState) {
+  if (indi_buf[indi_state + LAMP_MAX_STEP] != INDI_NULL) {
+    switch (indi_state) {
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_4_PIN); break;
       case INDI_2_POS: ANODE_SET(ANODE_5_PIN); break;
@@ -133,7 +133,7 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   REG_LATCH_DISABLE; //закрыли защелку
 }
 ISR(TIMER0_COMPA_vect) {
-  switch (indiState) {
+  switch (indi_state) {
       //----------------------------------------------- ???
 #if INDI_SYMB_TYPE
     case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
@@ -167,7 +167,7 @@ ISR(TIMER0_COMPA_vect) {
   //----------------------------------------------- ???
 }
 ISR(TIMER0_COMPB_vect) {
-  switch (indiState) {
+  switch (indi_state) {
 #if LAMP_NUM > 4
     case INDI_1_POS: ANODE_CLEAR(ANODE_4_PIN); break;
     case INDI_2_POS: ANODE_CLEAR(ANODE_5_PIN); break;

@@ -1,5 +1,5 @@
 //-----------------------------------Динамическая подсветка---------------------------------------
-#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE
+#if (BACKL_TYPE == 2) && !IR_PORT_ENABLE && !DECATRON_ENABLE
 ISR(TIMER2_OVF_vect, ISR_NAKED) //прерывание подсветки
 {
   __asm__ __volatile__ (
