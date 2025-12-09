@@ -1,9 +1,9 @@
 uint8_t decatron_start; //начальная позиция декатрона
 uint8_t decatron_end; //конечная позиция декатрона
 
-uint8_t decatron_step; //текущий шаг декатрона
-uint8_t decatron_pos; //текущая позиция декатрона
-boolean decatron_dir; //напрвление движения декатрона
+volatile uint8_t decatron_step; //текущий шаг декатрона
+volatile uint8_t decatron_pos; //текущая позиция декатрона
+volatile boolean decatron_dir; //напрвление движения декатрона
 
 //-----------------------------Прерывание декатрона--------------------------------------
 #if DECATRON_ENABLE
@@ -67,6 +67,9 @@ void decatronSetLine(uint8_t start, uint8_t end) //установка позиц
 {
   if (start >= DECATRON_DOTS_NUM) start = (DECATRON_DOTS_NUM - 1);
   if (end >= DECATRON_DOTS_NUM) end = (DECATRON_DOTS_NUM - 1);
+
+  TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
+
   decatron_start = start;
   decatron_end = end;
 
@@ -75,8 +78,17 @@ void decatronSetLine(uint8_t start, uint8_t end) //установка позиц
     decatron_pos = 0; //сбросили позицию
     decatron_dir = 0; //сбросили направление
     DECATRON_SET(DECATRON_K0_PIN);
-    OCR2A = TCNT2; //устанавливаем COMB в начало
+    OCR2A = TCNT2; //устанавливаем COMA в начало
     TIFR2 |= (0x01 << OCF2A); //сбрасываем флаг прерывания
+  }
+
+  if (decatron_pos > decatron_start) {
+    if ((decatron_pos - decatron_start) > 15) decatron_dir = 1;
+    else decatron_dir = 0;
+  }
+  else {
+    if ((decatron_start - decatron_pos) > 15) decatron_dir = 0;
+    else decatron_dir = 1;
   }
 
   TIMSK2 |= (0x01 << OCIE2A); //запускаем таймер
