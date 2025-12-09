@@ -59,7 +59,6 @@ void decatronInit(void) //инициализация декатрона
   DECATRON_INIT(DECATRON_K0_PIN);
   DECATRON_INIT(DECATRON_PK1_PIN);
   DECATRON_INIT(DECATRON_PK2_PIN);
-  TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
   decatron_pos = 255;
 }
 //--------------------------Установка позиции декатрона----------------------------------

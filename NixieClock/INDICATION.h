@@ -28,6 +28,8 @@ volatile uint8_t indi_state; //текущей номер отрисовки ин
 #include "DYNAMICx2.h"
 #endif
 
+#include "DECATRON.h"
+
 //переменные работы с анимациями
 struct animData {
 #if LAMP_NUM > 4
