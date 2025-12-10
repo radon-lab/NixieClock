@@ -1,11 +1,11 @@
-#define DECATRON_DOTS_NUM 30 //количество точек в декатроне(1..255)
+#define DECATRON_DOTS_NUM 30 //количество точек в декатроне(1..254)
 
 uint8_t decatron_start; //начальная позиция декатрона
 uint8_t decatron_end; //конечная позиция декатрона
 
 volatile uint8_t decatron_step; //текущий шаг декатрона
 volatile uint8_t decatron_pos; //текущая позиция декатрона
-volatile boolean decatron_dir; //напрвление перемещения точки декатрона
+volatile boolean decatron_dir; //направление перемещения точки декатрона
 
 //-----------------------------Прерывание декатрона--------------------------------------
 #if SECS_DOT == 4
@@ -19,7 +19,7 @@ ISR(TIMER2_COMPA_vect) //прерывание декатрона
       else decatron_pos = (DECATRON_DOTS_NUM - 1);
     }
     else { //иначе завершаем перемещение
-      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили напрвление
+      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
       else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
     }
   }
@@ -31,7 +31,7 @@ ISR(TIMER2_COMPA_vect) //прерывание декатрона
       else decatron_pos = 0;
     }
     else { //иначе завершаем перемещение
-      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили напрвление
+      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
       else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
     }
   }
