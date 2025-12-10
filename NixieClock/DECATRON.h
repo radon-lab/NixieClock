@@ -36,33 +36,31 @@ ISR(TIMER2_COMPA_vect) //прерывание декатрона
     }
   }
 
-  if (!decatron_pos) {
-    DECATRON_SET(DECATRON_K0_PIN);
-    DECATRON_CLEAR(DECATRON_K1_PIN);
-    DECATRON_CLEAR(DECATRON_PK1_PIN);
-    DECATRON_CLEAR(DECATRON_PK2_PIN);
-  }
-  else {
-    switch (decatron_step) {
-      case 0:
+  switch (decatron_step) {
+    case 0:
+      if (!decatron_pos) {
+        DECATRON_SET(DECATRON_K0_PIN);
+        DECATRON_CLEAR(DECATRON_K1_PIN);
+      }
+      else {
         DECATRON_SET(DECATRON_K1_PIN);
         DECATRON_CLEAR(DECATRON_K0_PIN);
-        DECATRON_CLEAR(DECATRON_PK1_PIN);
-        DECATRON_CLEAR(DECATRON_PK2_PIN);
-        break;
-      case 1:
-        DECATRON_SET(DECATRON_PK2_PIN);
-        DECATRON_CLEAR(DECATRON_K0_PIN);
-        DECATRON_CLEAR(DECATRON_K1_PIN);
-        DECATRON_CLEAR(DECATRON_PK1_PIN);
-        break;
-      case 2:
-        DECATRON_SET(DECATRON_PK1_PIN);
-        DECATRON_CLEAR(DECATRON_K0_PIN);
-        DECATRON_CLEAR(DECATRON_K1_PIN);
-        DECATRON_CLEAR(DECATRON_PK2_PIN);
-        break;
-    }
+      }
+      DECATRON_CLEAR(DECATRON_PK1_PIN);
+      DECATRON_CLEAR(DECATRON_PK2_PIN);
+      break;
+    case 1:
+      DECATRON_SET(DECATRON_PK1_PIN);
+      DECATRON_CLEAR(DECATRON_K0_PIN);
+      DECATRON_CLEAR(DECATRON_K1_PIN);
+      DECATRON_CLEAR(DECATRON_PK2_PIN);
+      break;
+    case 2:
+      DECATRON_SET(DECATRON_PK2_PIN);
+      DECATRON_CLEAR(DECATRON_K0_PIN);
+      DECATRON_CLEAR(DECATRON_K1_PIN);
+      DECATRON_CLEAR(DECATRON_PK1_PIN);
+      break;
   }
 }
 #endif
