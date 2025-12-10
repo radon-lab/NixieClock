@@ -17,7 +17,8 @@
 #define ANODE_6_PIN 8 //пин анода 6(СС)(0..13)(pin D)
 
 //Декатрон
-#define DECATRON_K0_PIN 3  //пин нулевого катода декатрона(К0..К9)(0..13)(pin D)
+#define DECATRON_K0_PIN 3  //пин нулевого катода декатрона(К0)(0..13)(pin D)
+#define DECATRON_K1_PIN 2  //пин основных катодов декатрона(К1..К9)(0..13)(pin D)
 #define DECATRON_PK1_PIN 4 //пин первого подкатода декатрона(ПК1)(0..13)(pin D)
 #define DECATRON_PK2_PIN 5 //пин второго подкатода декатрона(ПК2)(0..13)(pin D)
 

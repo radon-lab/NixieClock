@@ -200,7 +200,7 @@ void indiPortInit(void) //инициализация портов индикац
 {
   PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
   DDRC |= 0x0F; //устанавливаем катоды как выходы
-#if (SECS_DOT != 3) && !INDI_DOT_TYPE
+#if (SECS_DOT < 3) && !INDI_DOT_TYPE
   SECS_DOT_INIT(SECL_PIN); //инициализация секундных точек
 #endif
 #if (SECS_DOT == 2) && !INDI_DOT_TYPE
@@ -214,7 +214,7 @@ void indiPortInit(void) //инициализация портов индикац
   INDI_DOT_INIT(DOTSL_PIN); //инициализация левых разделительных точек в индикаторах
 #endif
 #endif
-#if (INDI_SYMB_TYPE == 1)
+#if INDI_SYMB_TYPE == 1
   ANODE_INIT(ANODE_0_PIN); //инициализация анода 0
 #endif
 #if !INDI_PORT_TYPE

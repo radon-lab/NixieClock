@@ -45,7 +45,7 @@ void indiSetBright(uint8_t pwm, uint8_t start = 0, uint8_t end = LAMP_NUM); //у
 void indiPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
 void animPrintNum(uint16_t num, int8_t indi, uint8_t length = 0, uint8_t filler = ' '); //отрисовка чисел
 #if SECS_DOT == 2
-boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //умегьшение яркости точек
+boolean dotDecBright(uint8_t _step, uint8_t _min, uint8_t _mode = DOT_ALL); //уменьшение яркости точек
 boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //увеличение яркости точек
 #endif
 
@@ -295,7 +295,9 @@ void neonDotSetBright(uint8_t _pwm) //установка яркости неон
 //----------------------------------Получить яркость точек---------------------------------------
 inline uint8_t dotGetBright(void) //получить яркость точек
 {
-#if (SECS_DOT == 3) && DOTS_PORT_ENABLE
+#if SECS_DOT == 4
+  return decatronGetState();
+#elif (SECS_DOT == 3) && DOTS_PORT_ENABLE
   return indi_dot_l | indi_dot_r; //возвращаем состояние точек
 #elif SECS_DOT
   return dot_dimm; //возвращаем яркость
@@ -310,7 +312,10 @@ inline uint8_t dotGetBright(void) //получить яркость точек
 //---------------------------------Установка яркости точек---------------------------------------
 void dotSetBright(uint8_t _pwm) //установка яркости точек
 {
-#if (SECS_DOT == 3) && DOTS_PORT_ENABLE
+#if SECS_DOT == 4
+  if (_pwm) decatronSetDot(15); //установка точки декатрона
+  else decatronDisable(); //отключение декатрона
+#elif (SECS_DOT == 3) && DOTS_PORT_ENABLE
   if (_pwm) indiSetDotsMain(DOT_ALL); //установка разделительных точек
   else indiClrDots(); //очистка разделительных точек
 #elif SECS_DOT == 2

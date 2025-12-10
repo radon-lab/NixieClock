@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_087 бета от 09.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_088 бета от 10.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -179,7 +179,7 @@ void INIT_SYSTEM(void) //инициализация
   ACSR = (0x01 << ACBG); //включаем компаратор
 #endif
 
-#if DECATRON_ENABLE
+#if SECS_DOT == 4
   decatronInit(); //инициализация декатрона
 #endif
 
@@ -509,7 +509,7 @@ void systemTask(void) //системная задача
       changeBright(); //установка текущей яркости
     }
 
-#if (SECS_DOT != 3) && DOTS_PORT_ENABLE && (ESP_ENABLE || DEFAULT_DOT_EXT_MODE)
+#if (SECS_DOT != 3) && (SECS_DOT != 4) && DOTS_PORT_ENABLE && (ESP_ENABLE || DEFAULT_DOT_EXT_MODE)
     dotFlash(); //мигание точек
 #endif
 
@@ -520,16 +520,6 @@ void systemTask(void) //системная задача
         else buzzPulse(SECS_EVEN_SOUND_FREQ, SECS_EVEN_SOUND_TIME); //щелчок пищалкой
       }
     }
-#endif
-
-#if DECATRON_ENABLE
-    static uint8_t _position_0 = 0;
-    if (++_position_0 >= DECATRON_DOTS_NUM) _position_0 = 0;
-
-    uint8_t _position_1 = _position_0 + 4;
-    if (_position_1 >= DECATRON_DOTS_NUM) _position_1 -= DECATRON_DOTS_NUM;
-
-    decatronSetLine(_position_0, _position_1); //установка позиции декатрона
 #endif
 
     RESET_WDT; //сбрасываем таймер WDT
@@ -1211,7 +1201,7 @@ void changeBright(void) //установка яркости от времени 
 
   switch (light_state) {
     case 0: //дневной режим
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
       dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
 #else
       dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
@@ -1224,7 +1214,7 @@ void changeBright(void) //установка яркости от времени 
       break;
 #if LIGHT_SENS_ENABLE || ESP_ENABLE
     case 1: //промежуточный режим
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
       dot.maxBright = dot.menuBright = getMidBright(mainSettings.dotBright[TIME_NIGHT], mainSettings.dotBright[TIME_DAY]); //установка максимальной яркости точек
 #else
       dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
@@ -1253,7 +1243,7 @@ void changeBright(void) //установка яркости от времени 
       switch (dotGetMode()) { //мигание точек
         case DOT_OFF: dotSetBright(0); break; //точки выключены
         case DOT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
         case DOT_MAIN_PULS: //плавное мигание
 #if SECS_DOT == 2
         case DOT_MAIN_TURN_PULS:
@@ -1274,9 +1264,12 @@ void changeBright(void) //установка яркости от времени 
           break;
 #endif
         default:
-#if SECS_DOT != 3
+#if (SECS_DOT != 3) && (SECS_DOT != 4)
           if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
           else if (dotGetBright()) dotSetBright(dot.maxBright); //установка яркости точек
+#endif
+#if SECS_DOT == 4
+          if (!dot.maxBright) decatronDisable(); //отключение декатрона
 #endif
 #if DOTS_PORT_ENABLE
           if (!dot.maxBright) indiClrDots(); //очистка разделителных точек
@@ -1536,7 +1529,7 @@ void dotEffect(void) //анимации точек
           }
           else _timer_ms[TMR_DOT] = DOT_MAIN_DOOBLE_TIME; //установили таймер
           break;
-#if SECS_DOT != 3
+#if (SECS_DOT != 3) && (SECS_DOT != 4)
         case DOT_MAIN_PULS:
           if (!dot.drive) {
             if (dotIncBright(dot.brightStep, dot.maxBright)) dot.drive = 1; //сменили направление
@@ -1719,7 +1712,7 @@ void dotEffect(void) //анимации точек
     }
   }
 }
-#if (SECS_DOT != 3) && DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) && DOTS_PORT_ENABLE) && (SECS_DOT != 4)
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
 {
@@ -1770,7 +1763,7 @@ void dotReset(uint8_t state) //сброс анимации точек
 #if DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
     dotSetBright(0); //выключаем секундные точки
 #endif
     _timer_ms[TMR_DOT] = 0; //сбросили таймер
@@ -1880,7 +1873,7 @@ void burnIndi(uint8_t mode, boolean demo) //антиотравление инд�
     indiClrDots(); //выключаем разделительные точки
 #endif
 #endif
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
     dotSetBright(0); //выключаем секундные точки
 #endif
   }
@@ -2337,6 +2330,9 @@ void setDotTemp(boolean set) {
     neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
     neonDotSet(DOT_LEFT); //включаем неоновую точку
   }
+#elif SECS_DOT == 4
+  if (!set) decatronDisable(); //отключение декатрона
+  else decatronSetDot(15); //установка позиции декатрона
 #else
   if (!set) dotSetBright(0); //выключаем точки
   else dotSetBright(dot.menuBright); //включаем точки
@@ -2381,6 +2377,9 @@ void setDotDate(boolean set) {
     neonDotSet(DOT_LEFT); //установка разделительной точки
   }
 #endif
+#elif SECS_DOT == 4
+  if (!set) decatronDisable(); //отключение декатрона
+  else decatronSetDot(0); //установка позиции декатрона
 #else
   if (!set) dotSetBright(0); //выключаем точки
   else dotSetBright(dot.menuBright); //включаем точки
@@ -2489,7 +2488,7 @@ void testSystem(void) //проверка системы
   ledBacklSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
 #endif
   indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
   dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
 #endif
 
@@ -3917,7 +3916,7 @@ uint8_t settings_main(void) //настроки основные
               break;
 #endif
             case SET_DOT_BRIGHT:
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
               indiPrintMenuData(blink_data, cur_indi, mainSettings.dotBright[TIME_NIGHT] / 10, 0, mainSettings.dotBright[TIME_DAY] / 10, 2); //вывод яркости точек ночь/день
 #else
               if (!blink_data) indiPrintNum((boolean)mainSettings.dotBright[TIME_NIGHT], 3); //вывод яркости ночь
@@ -3956,14 +3955,14 @@ uint8_t settings_main(void) //настроки основные
             case SET_BTN_SOUND:
               wsBacklSetMultipleHue((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
-#if (SECS_DOT == 3) && DOTS_PORT_ENABLE
+#if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4)
             case SET_DOT_BRIGHT:
 #endif
 #if !PLAYER_TYPE
             case SET_GLITCH_MODE:
             case SET_BTN_SOUND:
 #endif
-#if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || !PLAYER_TYPE
+#if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4) || !PLAYER_TYPE
               wsBacklSetMultipleHue(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
@@ -4064,7 +4063,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
 #endif
               case SET_DOT_BRIGHT: //яркость точек
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
                 switch (cur_indi) {
                   case 0: if (mainSettings.dotBright[TIME_NIGHT] > 0) mainSettings.dotBright[TIME_NIGHT] -= 10; break;
                   case 1: if (mainSettings.dotBright[TIME_DAY] > 10) mainSettings.dotBright[TIME_DAY] -= 10; break;
@@ -4196,7 +4195,7 @@ uint8_t settings_main(void) //настроки основные
                 break;
 #endif
               case SET_DOT_BRIGHT: //яркость точек
-#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
                 switch (cur_indi) {
                   case 0: if (mainSettings.dotBright[TIME_NIGHT] < 250) mainSettings.dotBright[TIME_NIGHT] += 10; break;
                   case 1: if (mainSettings.dotBright[TIME_DAY] < 250) mainSettings.dotBright[TIME_DAY] += 10; break;
@@ -4783,8 +4782,11 @@ uint8_t radioMenu(void) //радиоприемник
 
         if (!radio.seekRun) { //если не идет поиск
 #if (RADIO_STATUS_DOT_TYPE != 3)
-#if ((RADIO_STATUS_DOT_TYPE == 1) && (SECS_DOT < 3)) || !DOTS_PORT_ENABLE
-#if SECS_DOT == 2
+#if ((RADIO_STATUS_DOT_TYPE == 1) && (SECS_DOT != 3)) || !DOTS_PORT_ENABLE
+#if SECS_DOT == 4
+          if (getStationStatusRDA()) decatronSetLine(28, 2); //установка позиции декатрона
+          else decatronDisable(); //отключение декатрона
+#elif SECS_DOT == 2
           neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
           if (getStationStatusRDA()) neonDotSet(DOT_RIGHT); //включаем разделительную точку
           else neonDotSet(DOT_NULL); //выключаем разделительную точку

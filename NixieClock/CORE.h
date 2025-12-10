@@ -122,7 +122,7 @@ enum {
   DOT_STATIC, //статичная
   DOT_MAIN_BLINK, //мигание раз в секунду
   DOT_MAIN_DOOBLE_BLINK, //мигание два раза в секунду
-#if SECS_DOT != 3
+#if (SECS_DOT != 3) && (SECS_DOT != 4)
   DOT_MAIN_PULS, //плавно мигает
 #endif
 #if SECS_DOT == 2
