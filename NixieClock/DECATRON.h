@@ -3,6 +3,7 @@
 uint8_t decatron_start; //начальная позиция декатрона
 uint8_t decatron_end; //конечная позиция декатрона
 
+volatile uint8_t decatron_wait; //таймер ожидания запуска декатрона
 volatile uint8_t decatron_step; //текущий шаг декатрона
 volatile uint8_t decatron_pos; //текущая позиция декатрона
 volatile boolean decatron_dir; //направление перемещения точки декатрона
@@ -11,57 +12,60 @@ volatile boolean decatron_dir; //направление перемещения �
 #if SECS_DOT == 4
 ISR(TIMER2_COMPA_vect) //прерывание декатрона
 {
-  if (!decatron_dir) { //если перемещаемся назад
-    if (decatron_pos != decatron_start) { //если не дошли до заданной точки
-      if (decatron_step > 0) decatron_step--;
-      else decatron_step = 2;
-      if (decatron_pos > 0) decatron_pos--;
-      else decatron_pos = (DECATRON_DOTS_NUM - 1);
+  if (!decatron_wait) { //если декатрон уже запущен
+    if (!decatron_dir) { //если перемещаемся назад
+      if (decatron_pos != decatron_start) { //если не дошли до заданной точки
+        if (decatron_step > 0) decatron_step--;
+        else decatron_step = 2;
+        if (decatron_pos > 0) decatron_pos--;
+        else decatron_pos = (DECATRON_DOTS_NUM - 1);
+      }
+      else { //иначе завершаем перемещение
+        if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
+        else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
+      }
     }
-    else { //иначе завершаем перемещение
-      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
-      else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
+    else { //иначе перемещаемся вперед
+      if (decatron_pos != decatron_end) { //если не дошли до заданной точки
+        if (decatron_step < 2) decatron_step++;
+        else decatron_step = 0;
+        if (decatron_pos < (DECATRON_DOTS_NUM - 1)) decatron_pos++;
+        else decatron_pos = 0;
+      }
+      else { //иначе завершаем перемещение
+        if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
+        else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
+      }
     }
-  }
-  else { //иначе перемещаемся вперед
-    if (decatron_pos != decatron_end) { //если не дошли до заданной точки
-      if (decatron_step < 2) decatron_step++;
-      else decatron_step = 0;
-      if (decatron_pos < (DECATRON_DOTS_NUM - 1)) decatron_pos++;
-      else decatron_pos = 0;
-    }
-    else { //иначе завершаем перемещение
-      if (decatron_start != decatron_end) decatron_dir = !decatron_dir; //сменили направление
-      else TIMSK2 &= ~(0x01 << OCIE2A); //выключаем таймер
-    }
-  }
 
-  switch (decatron_step) {
-    case 0:
-      if (!decatron_pos) {
-        DECATRON_SET(DECATRON_K0_PIN);
-        DECATRON_CLEAR(DECATRON_K1_PIN);
-      }
-      else {
-        DECATRON_SET(DECATRON_K1_PIN);
+    switch (decatron_step) {
+      case 0:
+        if (!decatron_pos) {
+          DECATRON_SET(DECATRON_K0_PIN);
+          DECATRON_CLEAR(DECATRON_K1_PIN);
+        }
+        else {
+          DECATRON_SET(DECATRON_K1_PIN);
+          DECATRON_CLEAR(DECATRON_K0_PIN);
+        }
+        DECATRON_CLEAR(DECATRON_PK1_PIN);
+        DECATRON_CLEAR(DECATRON_PK2_PIN);
+        break;
+      case 1:
+        DECATRON_SET(DECATRON_PK1_PIN);
         DECATRON_CLEAR(DECATRON_K0_PIN);
-      }
-      DECATRON_CLEAR(DECATRON_PK1_PIN);
-      DECATRON_CLEAR(DECATRON_PK2_PIN);
-      break;
-    case 1:
-      DECATRON_SET(DECATRON_PK1_PIN);
-      DECATRON_CLEAR(DECATRON_K0_PIN);
-      DECATRON_CLEAR(DECATRON_K1_PIN);
-      DECATRON_CLEAR(DECATRON_PK2_PIN);
-      break;
-    case 2:
-      DECATRON_SET(DECATRON_PK2_PIN);
-      DECATRON_CLEAR(DECATRON_K0_PIN);
-      DECATRON_CLEAR(DECATRON_K1_PIN);
-      DECATRON_CLEAR(DECATRON_PK1_PIN);
-      break;
+        DECATRON_CLEAR(DECATRON_K1_PIN);
+        DECATRON_CLEAR(DECATRON_PK2_PIN);
+        break;
+      case 2:
+        DECATRON_SET(DECATRON_PK2_PIN);
+        DECATRON_CLEAR(DECATRON_K0_PIN);
+        DECATRON_CLEAR(DECATRON_K1_PIN);
+        DECATRON_CLEAR(DECATRON_PK1_PIN);
+        break;
+    }
   }
+  else decatron_wait--; //иначе убавили таймер оджидания
 }
 #endif
 //----------------------------Инициализация декатрона------------------------------------
@@ -90,6 +94,7 @@ void decatronSetLine(uint8_t start, uint8_t end) //установка линии
   decatron_end = end;
 
   if (decatron_pos == 255) { //если декатрон выключен
+    decatron_wait = 4; //установили таймер ожидания
     decatron_step = 0; //сбросили шаг
     decatron_pos = 0; //сбросили позицию
     decatron_dir = 0; //сбросили направление

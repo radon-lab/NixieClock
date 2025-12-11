@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_088 бета от 10.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_090 бета от 11.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -352,7 +352,7 @@ void systemTask(void) //системная задача
   backlEffect(); //анимация светодиодов ws
   wsBacklShowLeds(); //отрисовка светодиодов ws
 #elif BACKL_TYPE
-  backlFlash(); //анимация подсветки led
+  backlEffect(); //анимация подсветки led
 #endif
 
   dotEffect(); //анимации точек
@@ -1345,10 +1345,10 @@ void changeBright(void) //установка яркости от времени 
 #endif
   }
 }
-#if BACKL_TYPE == 3
 //----------------------------------Анимация подсветки---------------------------------
 void backlEffect(void) //анимация подсветки
 {
+#if BACKL_TYPE == 3
   if (backl.maxBright) { //если подсветка не выключена
     if (!_timer_ms[TMR_BACKL]) { //если время пришло
       switch (fastSettings.backlMode) {
@@ -1483,11 +1483,7 @@ void backlEffect(void) //анимация подсветки
       }
     }
   }
-}
-#elif BACKL_TYPE
-//----------------------------------Мигание подсветки---------------------------------
-void backlFlash(void) //мигание подсветки
-{
+#elif BACKL_TYPE != 3
   if (backl.maxBright && fastSettings.backlMode == BACKL_PULS) {
     if (!_timer_ms[TMR_BACKL]) {
       _timer_ms[TMR_BACKL] = backl.mode_2_time;
@@ -1500,8 +1496,8 @@ void backlFlash(void) //мигание подсветки
       else if (ledBacklIncBright(backl.mode_2_step, backl.maxBright)) backl.drive = 1;
     }
   }
-}
 #endif
+}
 //-------------------------------Анимации точек------------------------------------
 void dotEffect(void) //анимации точек
 {
@@ -1712,10 +1708,10 @@ void dotEffect(void) //анимации точек
     }
   }
 }
-#if ((SECS_DOT != 3) && DOTS_PORT_ENABLE) && (SECS_DOT != 4)
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
 {
+#if ((SECS_DOT != 3) && DOTS_PORT_ENABLE) && (SECS_DOT != 4)
   static boolean state; //текущее состояние точек
 
   if (mainTask == MAIN_PROGRAM) { //если основная программа
@@ -1741,8 +1737,8 @@ void dotFlash(void) //мигание точек
       }
     }
   }
-}
 #endif
+}
 //---------------------------Получить анимацию точек-------------------------------
 uint8_t dotGetMode(void) //получить анимацию точек
 {
@@ -1754,6 +1750,78 @@ uint8_t dotGetMode(void) //получить анимацию точек
 #endif
   return fastSettings.dotMode;
 }
+//-----------------------------Установить разделяющую точку-----------------------------------
+void setDotTemp(boolean set) {
+#if DOTS_PORT_ENABLE && !SHOW_TEMP_DOT_DIV
+  if (!set) indiClrDots(); //выключаем разделительные точки
+  else {
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+    indiSetDotR(1); //включаем разделительную точку
+#else
+    indiSetDotL(2); //включаем разделительную точку
+#endif
+  }
+#elif SECS_DOT == 2
+  if (!set) neonDotSet(DOT_NULL); //выключаем разделительной точки
+  else {
+    neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
+    neonDotSet(DOT_LEFT); //включаем неоновую точку
+  }
+#elif SECS_DOT == 4
+  if (!set) decatronDisable(); //отключение декатрона
+  else decatronSetDot(15); //установка позиции декатрона
+#else
+  if (!set) dotSetBright(0); //выключаем точки
+  else dotSetBright(dot.menuBright); //включаем точки
+#endif
+}
+//-----------------------------Установить разделяющую точку-----------------------------------
+void setDotDate(boolean set) {
+#if DOTS_PORT_ENABLE && !SHOW_DATE_DOT_DIV
+#if SHOW_DATE_TYPE > 1
+#if DOTS_NUM > 4
+  if (!set) indiClrDots(); //выключаем разделительные точки
+  else {
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+    indiSetDotR(1); //включаем разделительную точку
+    indiSetDotR(3); //включаем разделительную точку
+#else
+    indiSetDotL(2); //включаем разделительную точку
+    indiSetDotL(4); //включаем разделительную точку
+#endif
+  }
+#elif SECS_DOT != 3
+  dotSetBright(dot.menuBright); //включаем точки
+#endif
+#else
+  if (!set) indiClrDots(); //выключаем разделительные точки
+  else {
+#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
+    indiSetDotR(1); //включаем разделительную точку
+#else
+    indiSetDotL(2); //включаем разделительную точку
+#endif
+  }
+#endif
+#elif SECS_DOT == 2
+#if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
+  if (!set) dotSetBright(0); //выключаем точки
+  else dotSetBright(dot.menuBright); //включаем точки
+#else
+  if (!set) neonDotSet(DOT_NULL); //выключаем разделительной точки
+  else {
+    neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
+    neonDotSet(DOT_LEFT); //установка разделительной точки
+  }
+#endif
+#elif SECS_DOT == 4
+  if (!set) decatronDisable(); //отключение декатрона
+  else decatronSetDot(0); //установка позиции декатрона
+#else
+  if (!set) dotSetBright(0); //выключаем точки
+  else dotSetBright(dot.menuBright); //включаем точки
+#endif
+}
 //-----------------------------Сброс анимации точек--------------------------------
 void dotReset(uint8_t state) //сброс анимации точек
 {
@@ -1763,7 +1831,7 @@ void dotReset(uint8_t state) //сброс анимации точек
 #if DOTS_PORT_ENABLE
     indiClrDots(); //выключаем разделительные точки
 #endif
-#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
+#if (SECS_DOT != 3) || !DOTS_PORT_ENABLE
     dotSetBright(0); //выключаем секундные точки
 #endif
     _timer_ms[TMR_DOT] = 0; //сбросили таймер
@@ -2312,78 +2380,6 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       }
     }
   }
-}
-//-----------------------------Установить разделяющую точку-----------------------------------
-void setDotTemp(boolean set) {
-#if DOTS_PORT_ENABLE && !SHOW_TEMP_DOT_DIV
-  if (!set) indiClrDots(); //выключаем разделительные точки
-  else {
-#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
-    indiSetDotR(1); //включаем разделительную точку
-#else
-    indiSetDotL(2); //включаем разделительную точку
-#endif
-  }
-#elif SECS_DOT == 2
-  if (!set) neonDotSet(DOT_NULL); //выключаем разделительной точки
-  else {
-    neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
-    neonDotSet(DOT_LEFT); //включаем неоновую точку
-  }
-#elif SECS_DOT == 4
-  if (!set) decatronDisable(); //отключение декатрона
-  else decatronSetDot(15); //установка позиции декатрона
-#else
-  if (!set) dotSetBright(0); //выключаем точки
-  else dotSetBright(dot.menuBright); //включаем точки
-#endif
-}
-//-----------------------------Установить разделяющую точку-----------------------------------
-void setDotDate(boolean set) {
-#if DOTS_PORT_ENABLE && !SHOW_DATE_DOT_DIV
-#if SHOW_DATE_TYPE > 1
-#if DOTS_NUM > 4
-  if (!set) indiClrDots(); //выключаем разделительные точки
-  else {
-#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
-    indiSetDotR(1); //включаем разделительную точку
-    indiSetDotR(3); //включаем разделительную точку
-#else
-    indiSetDotL(2); //включаем разделительную точку
-    indiSetDotL(4); //включаем разделительную точку
-#endif
-  }
-#elif SECS_DOT != 3
-  dotSetBright(dot.menuBright); //включаем точки
-#endif
-#else
-  if (!set) indiClrDots(); //выключаем разделительные точки
-  else {
-#if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
-    indiSetDotR(1); //включаем разделительную точку
-#else
-    indiSetDotL(2); //включаем разделительную точку
-#endif
-  }
-#endif
-#elif SECS_DOT == 2
-#if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
-  if (!set) dotSetBright(0); //выключаем точки
-  else dotSetBright(dot.menuBright); //включаем точки
-#else
-  if (!set) neonDotSet(DOT_NULL); //выключаем разделительной точки
-  else {
-    neonDotSetBright(dot.menuBright); //установка яркости неоновых точек
-    neonDotSet(DOT_LEFT); //установка разделительной точки
-  }
-#endif
-#elif SECS_DOT == 4
-  if (!set) decatronDisable(); //отключение декатрона
-  else decatronSetDot(0); //установка позиции декатрона
-#else
-  if (!set) dotSetBright(0); //выключаем точки
-  else dotSetBright(dot.menuBright); //включаем точки
-#endif
 }
 //------------------Проверка модуля часов реального времени-------------------------
 void checkRealTimeClock(void) //проверка модуля часов реального времени
