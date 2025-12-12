@@ -129,6 +129,12 @@ enum {
   DOT_MAIN_TURN_BLINK, //мигание неоновых ламп раз в секунду по очереди
   DOT_MAIN_TURN_PULS, //мигание неоновых ламп плавно по очереди
 #endif
+#if SECS_DOT == 4
+  DOT_DECATRON_METR,
+  DOT_DECATRON_STEPS,
+  DOT_DECATRON_TIMER,
+  DOT_DECATRON_SWAY,
+#endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
   DOT_RUNNING, //бегущая

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9_090 бета от 11.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9_091 бета от 12.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1562,6 +1562,40 @@ void dotEffect(void) //анимации точек
               break;
           }
           _timer_ms[TMR_DOT] = dot.brightTurnTime; //установили таймер
+          break;
+#endif
+#if SECS_DOT == 4
+        case DOT_DECATRON_METR:
+          if (RTC.s & 0x01) decatronSetLine(29, 1); //установка линии декатрона
+          else decatronSetLine(14, 16); //установка линии декатрона
+          dot.update = 1; //сбросили флаг обновления точек
+          break;
+        case DOT_DECATRON_STEPS:
+          dot.count = RTC.s >> 1;
+          dot.steps = dot.count + (RTC.s & 0x01);
+          if (dot.steps == 30) dot.steps = 0;
+          decatronSetLine(dot.count, dot.steps); //установка линии декатрона
+          dot.update = 1; //сбросили флаг обновления точек
+          break;
+        case DOT_DECATRON_TIMER:
+          if (!RTC.s) decatronDisable(); //отключение декатрона
+          else if (RTC.s <= 30) decatronSetLine(0, RTC.s - 1); //установка линии декатрона
+          else decatronSetLine(RTC.s - 30, 0); //установка линии декатрона
+          dot.update = 1; //сбросили флаг обновления точек
+          break;
+        case DOT_DECATRON_SWAY: {
+            static const uint8_t _time[] = {100, 75, 50, 25, 25, 25, 30, 40, 60, 70, 100};
+            if (RTC.s & 0x01) decatronSetLine(19 - dot.count, 22 - dot.count); //установка линии декатрона
+            else decatronSetLine(dot.count + 8, dot.count + 11); //установка линии декатрона
+            if (dot.count < 11) { //если анимация не завершена
+              _timer_ms[TMR_DOT] = _time[dot.count]; //установили таймер
+              dot.count++; //сместили шаг
+            }
+            else {
+              dot.count = 0; //сбросили шаги
+              dot.update = 1; //иначе сбросили флаг обновления точек
+            }
+          }
           break;
 #endif
 #if DOTS_PORT_ENABLE
