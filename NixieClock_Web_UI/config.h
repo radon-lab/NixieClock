@@ -48,11 +48,12 @@
 #define UI_SLIDER_COLOR "#e67b09" //цвет слайдеров веб интерфейса
 #define UI_BLOCK_COLOR "#e67b09" //цвет блока веб интерфейса
 #define UI_CHECK_COLOR "#e67b09" //цвет чекбоксов веб интерфейса
-#define UI_LABEL_COLOR "#e67b09" //цвет надписей веб интерфейса
+#define UI_LABEL_COLOR "#e9c46a" //цвет надписей веб интерфейса
 #define UI_LINE_COLOR "#e67b09" //цвет горизонтальных линий веб интерфейса
 #define UI_HINT_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 #define UI_INFO_COLOR "#07b379" //цвет информационных подсказок веб интерфейса
 #define UI_LINK_COLOR "#07b379" //цвет текста ссылки веб интерфейса
+#define UI_LOAD_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 
 #define UI_MENU_COLOR "#e67b09" //цвет меню веб интерфейса
 #define UI_MENU_NAME_COLOR GP_GRAY //цвет имени устройства в меню веб интерфейса
@@ -73,23 +74,23 @@
 #define UI_ALARM_DEL_COLOR GP_RED //цвет кнопки удалить будильник
 #define UI_ALARM_SET_COLOR "#e67b09" //цвет кнопки настроить будильник
 #define UI_ALARM_BACK_COLOR GP_BLUE //цвет кнопки выйти из настроек будильника
-#define UI_ALARM_TIME_COLOR GP_DEFAULT //цвет времени будильника
-#define UI_ALARM_INFO_COLOR GP_DEFAULT //цвет состояния будильника
-#define UI_ALARM_BLOCK_COLOR GP_GRAY //цвет блока информации о будильнике
+#define UI_ALARM_TIME_COLOR "#bbb" //цвет времени будильника
+#define UI_ALARM_INFO_COLOR "#bbb" //цвет состояния будильника
+#define UI_ALARM_BLOCK_COLOR "#2a2d35" //цвет блока информации о будильнике
 #define UI_ALARM_WEEK_1_COLOR GP_BLUE //цвет будних дней в настройке будильника
 #define UI_ALARM_WEEK_2_COLOR GP_RED //цвет выходных дней в настройке будильника
 
 #define UI_RADIO_POWER_1_COLOR GP_RED //цвет выключенной кнопки питания радио
 #define UI_RADIO_POWER_2_COLOR GP_GREEN //цвет включеной переключателя питания радио
-#define UI_RADIO_BACK_COLOR "#e67b09" //цвет кнопки переключения режима радио
+#define UI_RADIO_BACK_COLOR "#bf531e" //цвет кнопки переключения режима радио
 #define UI_RADIO_VOL_COLOR "#e67b09" //цвет слайдера настройки громкости радио
 #define UI_RADIO_FREQ_1_COLOR "#e67b09" //цвет слайдера настройки частоты радио
 #define UI_RADIO_FREQ_2_COLOR "#e67b09" //цвет кнопок настройки частоты радио
 #define UI_RADIO_CHANNEL_COLOR "#e67b09" //цвет кнопок выбора канала радио
 
-#define UI_TIMER_BLOCK_COLOR GP_GRAY //цвет блока информации о таймере/секундомере
-#define UI_TIMER_TIME_COLOR GP_DEFAULT //цвет времени таймера/секундомера
-#define UI_TIMER_INFO_COLOR GP_DEFAULT //цвет состояния таймера/секундомера
+#define UI_TIMER_BLOCK_COLOR "#2a2d35" //цвет блока информации о таймере/секундомере
+#define UI_TIMER_TIME_COLOR "#bbb" //цвет времени таймера/секундомера
+#define UI_TIMER_INFO_COLOR "#bbb" //цвет состояния таймера/секундомера
 #define UI_TIMER_SET_COLOR "#e67b09" //цвет кнопок настройки таймера/секундомера
 #define UI_TIMER_CTRL_COLOR "#e67b09" //цвет кнопок управления таймером/секундомером
 
@@ -107,4 +108,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.8" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.2.9" //версия прошивки модуля esp

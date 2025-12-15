@@ -74,7 +74,7 @@ struct Settings_1 {
   uint8_t timeSleepNight; //время режима сна
   uint8_t timeSleepDay;
   boolean timeFormat; //формат времени
-  boolean knockSound; //звук кнопок или озвучка
+  uint8_t baseSound; //звук кнопок или озвучка
   uint8_t hourSound; //тип озвучки смены часа
   uint8_t volumeSound; //громкость озвучки
   uint8_t voiceSound; //голос озвучки
@@ -200,7 +200,7 @@ enum {
   MAIN_TIME_SLEEP_N,
   MAIN_TIME_SLEEP_D,
   MAIN_TIME_FORMAT,
-  MAIN_KNOCK_SOUND,
+  MAIN_BASE_SOUND,
   MAIN_HOUR_SOUND,
   MAIN_VOLUME_SOUND,
   MAIN_VOICE_SOUND,
@@ -624,13 +624,13 @@ void busUpdate(void) {
           break;
         case WRITE_FAST_SET:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            switch (busReadBufferArg()) {
-              case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); busWriteBuffer(WRITE_TEST_MAIN_FLIP); break; //отправляем дополнительные натройки
-              case FAST_SECS_MODE: busWriteTwiRegByte(fastSettings.secsMode, BUS_WRITE_FAST_SET, 1); break; //отправляем дополнительные натройки
-              case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break; //отправляем дополнительные натройки
-              case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break; //отправляем дополнительные натройки
-              case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break; //отправляем дополнительные натройки
-              case FAST_NEON_DOT_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break; //отправляем дополнительные натройки
+            switch (busReadBufferArg()) { //отправляем дополнительные натройки
+              case FAST_FLIP_MODE: busWriteTwiRegByte(fastSettings.flipMode, BUS_WRITE_FAST_SET, 0); busWriteBuffer(WRITE_TEST_MAIN_FLIP); break;
+              case FAST_SECS_MODE: busWriteTwiRegByte(fastSettings.secsMode, BUS_WRITE_FAST_SET, 1); break;
+              case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break;
+              case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break;
+              case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break;
+              case FAST_NEON_DOT_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break;
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
@@ -654,7 +654,7 @@ void busUpdate(void) {
             mainSettings.timeSleepNight = twi_read_byte(TWI_ACK);
             mainSettings.timeSleepDay = twi_read_byte(TWI_ACK);
             mainSettings.timeFormat = twi_read_byte(TWI_ACK);
-            mainSettings.knockSound = twi_read_byte(TWI_ACK);
+            mainSettings.baseSound = twi_read_byte(TWI_ACK);
             mainSettings.hourSound = twi_read_byte(TWI_ACK);
             mainSettings.volumeSound = twi_read_byte(TWI_ACK);
             mainSettings.voiceSound = twi_read_byte(TWI_ACK);
@@ -672,30 +672,30 @@ void busUpdate(void) {
           break;
         case WRITE_MAIN_SET:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
-            switch (busReadBufferArg()) {
-              case MAIN_INDI_BRIGHT_N: busWriteTwiRegByte(mainSettings.indiBrightNight, BUS_WRITE_MAIN_SET, 0); break; //отправляем дополнительные натройки
-              case MAIN_INDI_BRIGHT_D: busWriteTwiRegByte(mainSettings.indiBrightDay, BUS_WRITE_MAIN_SET, 1); break; //отправляем дополнительные натройки
-              case MAIN_BACKL_BRIGHT_N: busWriteTwiRegByte(mainSettings.backlBrightNight, BUS_WRITE_MAIN_SET, 2); break; //отправляем дополнительные натройки
-              case MAIN_BACKL_BRIGHT_D: busWriteTwiRegByte(mainSettings.backlBrightDay, BUS_WRITE_MAIN_SET, 3); break; //отправляем дополнительные натройки
-              case MAIN_DOT_BRIGHT_N: busWriteTwiRegByte(mainSettings.dotBrightNight, BUS_WRITE_MAIN_SET, 4); break; //отправляем дополнительные натройки
-              case MAIN_DOT_BRIGHT_D: busWriteTwiRegByte(mainSettings.dotBrightDay, BUS_WRITE_MAIN_SET, 5); break; //отправляем дополнительные натройки
-              case MAIN_TIME_BRIGHT_S: busWriteTwiRegByte(mainSettings.timeBrightStart, BUS_WRITE_MAIN_SET, 6); break; //отправляем дополнительные натройки
-              case MAIN_TIME_BRIGHT_E: busWriteTwiRegByte(mainSettings.timeBrightEnd, BUS_WRITE_MAIN_SET, 7); break; //отправляем дополнительные натройки
-              case MAIN_TIME_HOUR_S: busWriteTwiRegByte(mainSettings.timeHourStart, BUS_WRITE_MAIN_SET, 8); break; //отправляем дополнительные натройки
-              case MAIN_TIME_HOUR_E: busWriteTwiRegByte(mainSettings.timeHourEnd, BUS_WRITE_MAIN_SET, 9); break; //отправляем дополнительные натройки
-              case MAIN_TIME_SLEEP_N: busWriteTwiRegByte(mainSettings.timeSleepNight, BUS_WRITE_MAIN_SET, 10); break; //отправляем дополнительные натройки
-              case MAIN_TIME_SLEEP_D: busWriteTwiRegByte(mainSettings.timeSleepDay, BUS_WRITE_MAIN_SET, 11); break; //отправляем дополнительные натройки
-              case MAIN_TIME_FORMAT: busWriteTwiRegByte(mainSettings.timeFormat, BUS_WRITE_MAIN_SET, 12); break; //отправляем дополнительные натройки
-              case MAIN_KNOCK_SOUND: busWriteTwiRegByte(mainSettings.knockSound, BUS_WRITE_MAIN_SET, 13); break; //отправляем дополнительные натройки
-              case MAIN_HOUR_SOUND: busWriteTwiRegByte(mainSettings.hourSound, BUS_WRITE_MAIN_SET, 14); break; //отправляем дополнительные натройки
-              case MAIN_VOLUME_SOUND: busWriteTwiRegByte(mainSettings.volumeSound, BUS_WRITE_MAIN_SET, 15); break; //отправляем дополнительные натройки
-              case MAIN_VOICE_SOUND: busWriteTwiRegByte(mainSettings.voiceSound, BUS_WRITE_MAIN_SET, 16); break; //отправляем дополнительные натройки
-              case MAIN_TEMP_CORRECT: busWriteTwiRegByte(mainSettings.tempCorrect, BUS_WRITE_MAIN_SET, 17); break; //отправляем дополнительные натройки
-              case MAIN_GLITCH_MODE: busWriteTwiRegByte(mainSettings.glitchMode, BUS_WRITE_MAIN_SET, 18); break; //отправляем дополнительные натройки
-              case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte((mainSettings.autoShowTime & 0x80) ? 0 : mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 19); busWriteBuffer(SET_SHOW_TIME); break; //отправляем дополнительные натройки
-              case MAIN_AUTO_SHOW_FLIP: busWriteTwiRegByte(mainSettings.autoShowFlip, BUS_WRITE_MAIN_SET, 20); break; //отправляем дополнительные натройки
-              case MAIN_BURN_MODE: busWriteTwiRegByte(mainSettings.burnMode, BUS_WRITE_MAIN_SET, 21); break; //отправляем дополнительные натройки
-              case MAIN_BURN_TIME: busWriteTwiRegByte(mainSettings.burnTime, BUS_WRITE_MAIN_SET, 22); break; //отправляем дополнительные натройки
+            switch (busReadBufferArg()) { //отправляем основные натройки
+              case MAIN_INDI_BRIGHT_N: busWriteTwiRegByte(mainSettings.indiBrightNight, BUS_WRITE_MAIN_SET, 0); break;
+              case MAIN_INDI_BRIGHT_D: busWriteTwiRegByte(mainSettings.indiBrightDay, BUS_WRITE_MAIN_SET, 1); break;
+              case MAIN_BACKL_BRIGHT_N: busWriteTwiRegByte(mainSettings.backlBrightNight, BUS_WRITE_MAIN_SET, 2); break;
+              case MAIN_BACKL_BRIGHT_D: busWriteTwiRegByte(mainSettings.backlBrightDay, BUS_WRITE_MAIN_SET, 3); break;
+              case MAIN_DOT_BRIGHT_N: busWriteTwiRegByte(mainSettings.dotBrightNight, BUS_WRITE_MAIN_SET, 4); break;
+              case MAIN_DOT_BRIGHT_D: busWriteTwiRegByte(mainSettings.dotBrightDay, BUS_WRITE_MAIN_SET, 5); break;
+              case MAIN_TIME_BRIGHT_S: busWriteTwiRegByte(mainSettings.timeBrightStart, BUS_WRITE_MAIN_SET, 6); break;
+              case MAIN_TIME_BRIGHT_E: busWriteTwiRegByte(mainSettings.timeBrightEnd, BUS_WRITE_MAIN_SET, 7); break;
+              case MAIN_TIME_HOUR_S: busWriteTwiRegByte(mainSettings.timeHourStart, BUS_WRITE_MAIN_SET, 8); break;
+              case MAIN_TIME_HOUR_E: busWriteTwiRegByte(mainSettings.timeHourEnd, BUS_WRITE_MAIN_SET, 9); break;
+              case MAIN_TIME_SLEEP_N: busWriteTwiRegByte(mainSettings.timeSleepNight, BUS_WRITE_MAIN_SET, 10); break;
+              case MAIN_TIME_SLEEP_D: busWriteTwiRegByte(mainSettings.timeSleepDay, BUS_WRITE_MAIN_SET, 11); break;
+              case MAIN_TIME_FORMAT: busWriteTwiRegByte(mainSettings.timeFormat, BUS_WRITE_MAIN_SET, 12); break;
+              case MAIN_BASE_SOUND: busWriteTwiRegByte(mainSettings.baseSound, BUS_WRITE_MAIN_SET, 13); break;
+              case MAIN_HOUR_SOUND: busWriteTwiRegByte(mainSettings.hourSound, BUS_WRITE_MAIN_SET, 14); break;
+              case MAIN_VOLUME_SOUND: busWriteTwiRegByte(mainSettings.volumeSound, BUS_WRITE_MAIN_SET, 15); break;
+              case MAIN_VOICE_SOUND: busWriteTwiRegByte(mainSettings.voiceSound, BUS_WRITE_MAIN_SET, 16); break;
+              case MAIN_TEMP_CORRECT: busWriteTwiRegByte(mainSettings.tempCorrect, BUS_WRITE_MAIN_SET, 17); break;
+              case MAIN_GLITCH_MODE: busWriteTwiRegByte(mainSettings.glitchMode, BUS_WRITE_MAIN_SET, 18); break;
+              case MAIN_AUTO_SHOW_TIME: busWriteTwiRegByte((mainSettings.autoShowTime & 0x80) ? 0 : mainSettings.autoShowTime, BUS_WRITE_MAIN_SET, 19); busWriteBuffer(SET_SHOW_TIME); break;
+              case MAIN_AUTO_SHOW_FLIP: busWriteTwiRegByte(mainSettings.autoShowFlip, BUS_WRITE_MAIN_SET, 20); break;
+              case MAIN_BURN_MODE: busWriteTwiRegByte(mainSettings.burnMode, BUS_WRITE_MAIN_SET, 21); break;
+              case MAIN_BURN_TIME: busWriteTwiRegByte(mainSettings.burnTime, BUS_WRITE_MAIN_SET, 22); break;
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд

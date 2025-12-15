@@ -86,7 +86,7 @@ uint8_t weatherGetAttempts(void) {
   return weather_attempts + 1;
 }
 //--------------------------------------------------------------------
-String getWeatherState(void) {
+String weatherGetState(void) {
   String str;
   str.reserve(100);
   

@@ -7,73 +7,77 @@
 struct Builder {
   uint8_t _gp_nav_pos = 0;
   uint8_t _gp_nav_id = 0;
-  int _spinInt = 200;
+  int _spin_prd = 200;
+
+  // время
+  uint32_t _timeUpdPrd = 10 * 60 * 1000ul;
+  void setTimeUpdatePeriod(uint32_t t) {
+    _timeUpdPrd = t;
+  }
+  void updateTime(void) {
+    if (!_gp_unix_tmr || millis() - _gp_unix_tmr >= _timeUpdPrd) {
+      SEND(F("<script>EVsend('/EV_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
+    }
+  }
 
   // период изменения значения при удержании кнопки спиннера
   void setSpinnerPeriod(int prd) {
-    _spinInt = prd;
+    _spin_prd = prd;
   }
 
   // установить таймаут ожидания отправки килков и апдейтов
   void setTimeout(int tout) {
-    JS_BEGIN();
-    *_GPP += F("_tout=");
+    *_GPP += F("<script>_tout=");
     *_GPP += tout;
-    JS_END();
+    *_GPP += F(";</script>\n");
+  }
+
+  void floatDec(float val, uint16_t dec) {
+    if (!dec) *_GPP += (int)round(val);
+    else *_GPP += String(val, (uint16_t)dec);
   }
 
   // ======================= БИЛДЕР =======================
-  void BUILD_BEGIN(int width = 350) {
+  void BUILD_BEGIN(void) {
     PAGE_BEGIN();
     JS_TOP();
-    PAGE_BLOCK_BEGIN(width);
   }
-  void BUILD_BEGIN(PGM_P style, int width = 350) {
+  void BUILD_BEGIN(PGM_P style) {
     PAGE_BEGIN();
     THEME(style);
     JS_TOP();
-    PAGE_BLOCK_BEGIN(width);
   }
 
-  void BUILD_BEGIN_FILE(int width = 350) {
+  void BUILD_BEGIN_FILE(void) {
     PAGE_BEGIN();
     JS_TOP_FILE();
-    PAGE_BLOCK_BEGIN(width);
   }
-  void BUILD_BEGIN_FILE(const String& style, int width = 350) {
+  void BUILD_BEGIN_FILE(const String& style) {
     PAGE_BEGIN();
     THEME_FILE(style);
     JS_TOP_FILE();
-    PAGE_BLOCK_BEGIN(width);
   }
 
-  void BUILD_END(const String& offline = "Offline") {
-    PAGE_BLOCK_END(offline);
+  void BUILD_END(void) {
     JS_BOTTOM();
     PAGE_END();
   }
 
-  void PAGE_ZOOM(const String& zoom, const String& width = "") {
-    *_GPP += F("<style type='text/css'>");
-    if (width.length()) {
-      *_GPP += F("@media (max-width:");
-      *_GPP += width;
-      *_GPP += F("){");
-    }
-    *_GPP += F(":root{zoom:");
+  void PAGE_ZOOM(int zoom, int width = 0) {
+    *_GPP += F("<script>");
+    *_GPP += F("setZoom(");
+    *_GPP += width;
+    *_GPP += ',';
     *_GPP += zoom;
-    if (width.length()) *_GPP += "}";
-    *_GPP += F("}</style>\n");
+    *_GPP += F(");</script>\n");
   }
 
   void PAGE_TITLE(const String& text = "", const String& name = "") {
     if (name.length()) HIDDEN(name, F("_title"), text);
     if (text.length()) {
-      JS_BEGIN();
-      *_GPP += F("document.title='");
+      *_GPP += F("<script>document.title='");
       *_GPP += text;
-      *_GPP += "'";
-      JS_END();
+      *_GPP += F("';</script>\n");
     }
   }
 
@@ -84,12 +88,12 @@ struct Builder {
   }
   void SEND_P(PGM_P s) {
     send(true);
-    _gp_s->sendContent_P(s);
+    _gp_server->sendContent_P(s);
   }
 
   void send(bool force = 0) {
     if ((int)_GPP->length() > (force ? 0 : _gp_bufsize)) {
-      _gp_s->sendContent(*_GPP);
+      _gp_server->sendContent(*_GPP);
       *_GPP = "";
     }
   }
@@ -110,7 +114,7 @@ struct Builder {
 
   void UI_MENU(const String& title, PGM_P st = GP_GREEN) {
     _ui_style = st;
-    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");      // force full width
+    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     *_GPP += title;
     *_GPP += F("</div></div>\n<nav class='sidebar' id='dashSdb'><div class='sblock'><div class='header header_s'>");
@@ -138,8 +142,15 @@ struct Builder {
     send();
   }
 
-  void UI_BODY(int w = 1000) {
-    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'><div class='ui_block'");
+  void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
+    *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n"
+               "<div class='ui_load'><span></span><span></span><span></span>");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("<style>.ui_load>span{background-color:");
+      *_GPP += FPSTR(st);
+      *_GPP += F("}</style>\n");
+    }
+    *_GPP += F("</div>\n<div class='ui_block'");
     if (w != 1000) {
       *_GPP += F(" style='max-width:");
       *_GPP += w;
@@ -148,7 +159,7 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void UI_END() {
+  void UI_END(void) {
     SEND(F("</div></div>\n"));
   }
 
@@ -164,41 +175,35 @@ struct Builder {
     *_GPP += ">";
     *_GPP += name;
     *_GPP += F("</a>\n");
+    send();
   }
 
-  void UI_LINKS_BEGIN(const String& host) {
-    *_GPP += F(
-               "<script>function linkUpdate(val){val=val.split(',');var block='';var data='';"
-               "for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');"
-               "if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';"
-               "block+=data[0];block+='\"';if(data[0]=='"
-             );
-    *_GPP += host;
-    *_GPP += F(
-               "')block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';"
-               "block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}"
-               "getEl('_link').innerHTML=block;"
-               "getEl('_link_block').style.display=block.length?'block':'none';}</script>"
-             );
-    *_GPP += F("<div id='_link_block' style='display:none'>");
+  void UI_LINKS_BEGIN(const String& id) {
+    *_GPP += F("<div class='_link' id='");
+    *_GPP += id;
+    *_GPP += F("' style='display:none'>");
     send();
   }
   void UI_LINKS_BLOCK(void) {
-    *_GPP += F("<div id='_link' class='sblock' style='padding:0'></div>");
-    send();
+    SEND(F("<div id='_link_block' class='sblock' style='padding:0'></div>"));
   }
-  void UI_LINKS_END(const String& links = "") {
-    *_GPP += F("</div>");
-    if (links.length()) {
-      *_GPP += F("<script>");
-      *_GPP += getUiLinksUpdate(links);
-      *_GPP += F("</script>");
+  void UI_LINKS_END(void) {
+    SEND(F("</div>"));
+  }
+  void UI_LINKS_SEND(const String& id, String list = "") {
+    if (list.length()) {
+      list.replace("\"", "\\\"");
+      *_GPP += F("<script>linkUpdate('");
+      *_GPP += id;
+      *_GPP += F("',\"");
+      *_GPP += list;
+      *_GPP += F("\");</script>");
+      send();
     }
-    send();
   }
 
   // ======================= СТРАНИЦА =======================
-  void PAGE_BEGIN() {
+  void PAGE_BEGIN(void) {
     _gp_nav_id = 0;
     SEND(F("<!DOCTYPE HTML><html><head>\n"
            "<meta charset='utf-8'>\n"
@@ -207,31 +212,28 @@ struct Builder {
            "<meta name='mobile-web-app-capable' content='yes'/>\n"
            "</head><body>\n"));
   }
-  void JS_TOP_FILE() {
-    SEND(F("<script src='/gp_data/scripts.js?=" GP_VERSION "'></script>\n"));
-    updateTime();
-  }
-  void JS_TOP() {
-    *_GPP += F("<script src='/GP_SCRIPT.js?v" GP_VERSION "=");
-    *_GPP += _gp_seed;
-    *_GPP += F("'></script>\n");
-    updateTime();
-  }
-  void JS_BOTTOM() {
-    SEND(F("<script>document.querySelectorAll('input[type=range]').forEach(x=>{GP_change(x)});\n"
-           "document.querySelectorAll('.spin_inp').forEach(x=>GP_spinw(x));\n"
-           "</script>\n"));
+  void PAGE_END(void) {
+    SEND(F("</body></html>"));
   }
 
-  // время
-  uint32_t _timeUpdPrd = 10 * 60 * 1000ul;
-  void setTimeUpdatePeriod(uint32_t t) {
-    _timeUpdPrd = t;
-  }
-  void updateTime() {
-    if (!_gp_unix_tmr || millis() - _gp_unix_tmr >= _timeUpdPrd) {
-      SEND(F("<script>GP_send('/GP_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
+  void PAGE_BLOCK_BEGIN(int width = 350) {
+    *_GPP += F("<div id='_popup' class='popup'></div>\n<div align='center' class='mainblock'");
+    if (width) {
+      *_GPP += F(" style='max-width:");
+      *_GPP += width;
+      *_GPP += F("px'");
     }
+    *_GPP += ">\n";
+    send();
+  }
+  void PAGE_BLOCK_END(void) {
+    *_GPP += F("</div>\n<div id='offlAnim' class='offlAnim'>");
+    *_GPP += F("<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
+               "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
+               "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
+               "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
+               "fill='#f00' class='offlImg'></path></svg></div>\n"
+               "<div class='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
   }
 
   void THEME(PGM_P style) {
@@ -248,23 +250,18 @@ struct Builder {
     send();
   }
 
-  void PAGE_BLOCK_BEGIN(int width = 350) {
-    *_GPP += F("<div align='center' class='mainblock'");
-    if (width) {
-      *_GPP += F(" style='max-width:");
-      *_GPP += width;
-      *_GPP += F("px'");
-    }
-    *_GPP += ">\n";
-    send();
+  void JS_TOP_FILE(void) {
+    SEND(F("<script src='/gp_data/scripts.js?=" GP_VERSION "'></script>\n"));
+    updateTime();
   }
-  void PAGE_BLOCK_END(const String& offline) {
-    *_GPP += F("</div>\n<div id='onlBlock' class='onlBlock'>");
-    *_GPP += offline;
-    *_GPP += F("</div>\n");
+  void JS_TOP(void) {
+    *_GPP += F("<script src='/GP_SCRIPT.js?v" GP_VERSION "=");
+    *_GPP += _gp_seed;
+    *_GPP += F("'></script>\n");
+    updateTime();
   }
-  void PAGE_END() {
-    SEND(F("</body></html>"));
+  void JS_BOTTOM(void) {
+    SEND(F("<script>pageUpdate();</script>\n"));
   }
 
   void SPOILER_BEGIN(const String& text, PGM_P st = GP_GREEN) {
@@ -285,48 +282,66 @@ struct Builder {
     *_GPP += F("'>\n");
     send();
   }
-  void SPOILER_END() {
+  void SPOILER_END(void) {
     SEND(F("</div></details>\n"));
   }
 
   void HINT(const String& name, const String& txt) {
-    JS_BEGIN();
-    *_GPP += F("GP_hint('");
+    *_GPP += F("<script>EVhint('");
     *_GPP += name;
     *_GPP += F("','");
     *_GPP += txt;
-    *_GPP += F("')");
-    JS_END();
+    *_GPP += F("');</script>\n");
     send();
   }
 
-  void JS_BEGIN() {
+  void HINT_BOX(const String& name, const String& min, const String& max, const String& txt) {
+    *_GPP += F("<div id='");
+    *_GPP += name;
+    *_GPP += F("' class='hintBlock'>");
+    *_GPP += txt;
+    *_GPP += F("</div>\n<script>function ");
+    *_GPP += name;
+    *_GPP += F("(){EVhintBox('");
+    *_GPP += min;
+    *_GPP += F("','");
+    *_GPP += max;
+    *_GPP += F("','");
+    *_GPP += name;
+    *_GPP += F("');}\nEVhintLoad('");
+    *_GPP += min;
+    *_GPP += F("','");
+    *_GPP += max;
+    *_GPP += F("',");
+    *_GPP += name;
+    *_GPP += F(");</script>\n");
+    send();
+  }
+
+  void JS_BEGIN(void) {
     *_GPP += F("<script>\n");
   }
-  void JS_END() {
+  void JS_END(void) {
     *_GPP += F("\n</script>\n");
   }
 
   void ONLINE_CHECK(int prd = 3000) {
-    JS_BEGIN();
-    *_GPP += F("setInterval(function(){if(!document.hidden){var xhttp=new XMLHttpRequest();xhttp.timeout=");
+    *_GPP += F("<script>setInterval(function(){if(!document.hidden){var xhttp=new XMLHttpRequest();xhttp.timeout=");
     *_GPP += prd;
-    *_GPP += F(";xhttp.open('GET','/GP_ping?',true);xhttp.send();\n"
+    *_GPP += F(";xhttp.open('GET','/EV_ping?',true);xhttp.send();\n"
                "xhttp.onreadystatechange=function(){onlShow(!this.status)}}},");
     *_GPP += prd;
-    *_GPP += F(");\n");
-    JS_END();
+    *_GPP += F(");</script>\n");
+    send();
   }
 
   // ======================= UPDATE =======================
   void UPDATE(const String& list, int prd = 1000) {
-    JS_BEGIN();
-    *_GPP += F("setInterval(function(){if(!document.hidden)GP_update('");
+    *_GPP += F("<script>setInterval(function(){if(!document.hidden)EVupdate('");
     *_GPP += list;
     *_GPP += F("')},");
     *_GPP += prd;
-    *_GPP += F(");");
-    JS_END();
+    *_GPP += F(");</script>\n");
     send();
   }
 
@@ -337,23 +352,19 @@ struct Builder {
 
   // список имён компонентов, изменение (клик) которых приведёт к перезагрузке страницы
   void RELOAD_CLICK(const String& list) {
-    JS_BEGIN();
-    *_GPP += F("_clkRelList='");
+    *_GPP += F("<script>_clkRelList=_clkRelList.concat('");
     *_GPP += list;
-    *_GPP += F("'.split(',');");
-    JS_END();
+    *_GPP += F("'.split(','));</script>\n");
     send();
   }
 
   // вызвать update у компонентов в списке list при клике по компонентам из списка names
   void UPDATE_CLICK(const String& list, const String& names) {
-    JS_BEGIN();
-    *_GPP += F("_clkUpdList['");
+    *_GPP += F("<script>_clkUpdList['");
     *_GPP += names;
     *_GPP += F("']='");
     *_GPP += list;
-    *_GPP += F("';");
-    JS_END();
+    *_GPP += F("';</script>\n");
     send();
   }
 
@@ -451,18 +462,49 @@ struct Builder {
     send();
   }
 
+  void POPUP_BEGIN(const String& id, const String& width = "") {
+    *_GPP += F("<div class='_popup' id='");
+    *_GPP += id;
+    *_GPP += F("' style='display:none'>\n<div class='popupBlock'");
+    if (width.length()) {
+      *_GPP += F(" style='width:");
+      *_GPP += width;
+      *_GPP += '\'';
+    }
+    *_GPP += '>';
+    send();
+  }
+  void POPUP_END(void) {
+    SEND(F("</div>\n</div>\n"));
+  }
+
+  // список имён компонентов, изменение (клик) которых приведёт к закрытию popup
+  void POPUP_CLOSE(const String& list) {
+    *_GPP += F("<script>_clkCloseList=_clkCloseList.concat('");
+    *_GPP += list;
+    *_GPP += F("'.split(','));</script>\n");
+    send();
+  }
+
+  void POPUP_OPEN(const String& id) {
+    *_GPP += F("<script>popupOpen(getPop('");
+    *_GPP += id;
+    *_GPP += F("'));</script>\n");
+    send();
+  }
+
   // ======================= ФОРМА =======================
   void FORM_BEGIN(const String& name) {
     *_GPP += F("<form action='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("' method='POST'>\n<input type='hidden' name='GP_form' value='");
+    *_GPP += F("' method='POST'>\n<input type='hidden' name='EV_form' value='");
     *_GPP += name;
     *_GPP += F("'>\n");
     send();
   }
-  void FORM_END() {
+  void FORM_END(void) {
     SEND(F("</form>\n"));
   }
   void SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
@@ -470,7 +512,6 @@ struct Builder {
     *_GPP += text;
     *_GPP += F("' style='background:");
     *_GPP += FPSTR(st);
-    *_GPP += F(";margin-top:10px;margin-bottom:0");
     if (cls.length()) {
       *_GPP += F("' class='");
       *_GPP += cls;
@@ -483,7 +524,7 @@ struct Builder {
   }
 
   void FORM_SEND(const String& text, const String& url = "", PGM_P st = GP_GREEN, const String& cls = "") {
-    *_GPP += F("<input type='button' onclick='GP_sendForm(this.parentNode.id,\"");
+    *_GPP += F("<input type='button' onclick='EVsendForm(this.parentNode.id,\"");
     *_GPP += url;
     *_GPP += F("\")' value='");
     *_GPP += text;
@@ -545,7 +586,7 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void GRID_END() {
+  void GRID_END(void) {
     BLOCK_END();
   }
   void GRID_RESPONSIVE(int width) {
@@ -555,7 +596,7 @@ struct Builder {
     send();
   }
 
-  void BLOCK_BEGIN(GPblock type, const String& width = "", const String& text = "", PGM_P st = GP_DEFAULT) {
+  void BLOCK_BEGIN(GPblock type, const String& width = "", const String& text = "", PGM_P st = GP_DEFAULT, PGM_P bg = GP_DEFAULT) {
     *_GPP += F("<div class='");
     if (type != GP_DIV_RAW) *_GPP += F("blockBase");
     if (type != GP_DIV && type != GP_DIV_RAW) {
@@ -563,20 +604,26 @@ struct Builder {
       if (text.length()) *_GPP += F(" blockTab");
       if (type == GP_THIN) *_GPP += F(" thinBlock");
     }
-    *_GPP += "'";
+    *_GPP += '\'';
     if (type == GP_TAB) *_GPP += F(" id='blockBack'");
 
-    if (width.length()) {
-      *_GPP += F(" style='max-width:");
-      *_GPP += width;
-      *_GPP += "'";
-    }
+    *_GPP += F(" style='");
     if (type == GP_THIN && st != GP_DEFAULT) {
-      *_GPP += F(" style='border:2px solid");
+      *_GPP += F("border:2px solid ");
       *_GPP += FPSTR(st);
-      *_GPP += "'";
+      *_GPP += ';';
     }
-    *_GPP += ">\n";
+    if (bg != GP_DEFAULT) {
+      *_GPP += F("background:");
+      *_GPP += FPSTR(bg);
+      *_GPP += ';';
+    }
+    if (width.length()) {
+      *_GPP += F("max-width:");
+      *_GPP += width;
+      *_GPP += ';';
+    }
+    *_GPP += F("'>\n");
 
     if (text.length()) {
       if (type == GP_DIV || type == GP_DIV_RAW) {
@@ -587,20 +634,27 @@ struct Builder {
         if (st != GP_DEFAULT) {
           *_GPP += F(" style='background:");
           *_GPP += FPSTR(st);
-          *_GPP += "'";
+          *_GPP += '\'';
         }
-        *_GPP += ">";
+        *_GPP += '>';
         *_GPP += text;
         *_GPP += F("</div>\n");
       } else if (type == GP_THIN) {
         *_GPP += F("<div class='blockHeader thinTab'>");
-        *_GPP += F("<span class='thinText'");
+        *_GPP += F("<span class='thinText' style='");
         if (st != GP_DEFAULT) {
-          *_GPP += F(" style='color:");
+          *_GPP += F("color:");
           *_GPP += FPSTR(st);
-          *_GPP += "'";
+          *_GPP += ';';
         }
-        *_GPP += ">";
+        if (bg != GP_DEFAULT) {
+          *_GPP += F("background:linear-gradient(0deg,");
+          *_GPP += FPSTR(bg);
+          *_GPP += F(" 0%,");
+          *_GPP += FPSTR(bg);
+          *_GPP += F(" 53%,#00000000 53%,#00000000 100%);");
+        }
+        *_GPP += F("'>");
         *_GPP += text;
         *_GPP += F("</span></div>\n");
       }
@@ -611,11 +665,17 @@ struct Builder {
   void BLOCK_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_TAB, width);
   }
-
-  void BLOCK_MIDDLE_BEGIN() {
-    SEND(F("<div style='height:90vh;display:flex;align-items:center'>\n<style>.block{width:500px;}</style>\n"));
+  void BLOCK_END(void) {
+    SEND(F("</div>\n"));
   }
-  void BLOCK_HIDE_BEGIN() {
+
+  void BLOCK_MIDDLE_BEGIN(void) {
+    SEND(F("<div class='blockMid'>\n<style>.block{width:500px;}</style>\n"));
+  }
+  void BLOCK_OFFSET_BEGIN(void) {
+    SEND(F("<div class='blockOfst'>\n"));
+  }
+  void BLOCK_HIDE_BEGIN(void) {
     SEND(F("<div style='overflow:hidden'>\n"));
   }
 
@@ -628,47 +688,75 @@ struct Builder {
   void BLOCK_THIN_TAB_BEGIN(const String& label, const String& width = "") {
     BLOCK_BEGIN(GP_THIN, width, label);
   }
-  void BLOCK_END() {
-    SEND(F("</div>\n"));
-  }
 
   void BLOCK_SHADOW_BEGIN(void) {
-    SEND(F("<div style='box-shadow:0 0 15px rgb(0 0 0 / 45%);border-radius:25px;margin:5px 10px 5px 10px;'>\n"));
+    SEND(F("<div class='blockSh'>\n"));
   }
   void BLOCK_SHADOW_END(void) {
     SEND(F("</div>\n"));
   }
 
   void BOX_BEGIN(GPalign al = GP_JUSTIFY, const String& w = "100%", bool top = 0) {
-    *_GPP += F("<div style='width:");
-    *_GPP += w;
-    *_GPP += F(";justify-content:");
+    *_GPP += F("<div style='justify-content:");
     *_GPP += FPSTR(GPgetAlignFlex(al));
     if (top) *_GPP += F(";align-items: flex-start");
+    if (w.length()) {
+      *_GPP += F(";max-width:");
+      *_GPP += w;
+    }
     *_GPP += F("' class='inliner'>\n");
     send();
   }
-  void VOID_BOX_BEGIN() {
+  void VOID_BOX_BEGIN(void) {
     SEND(F("<div>\n"));
   }
-  void CENTER_BOX_BEGIN() {
-    SEND(F("<div style='width:100%;justify-content:center;margin-top:8px;margin-bottom:-6px' class='inliner'>\n"));
+  void VOID_BOX(const String& w) {
+    if (w.length()) {
+      *_GPP += F("<div style='width:");
+      *_GPP += w;
+      *_GPP += F("'></div>\n");
+      send();
+    }
   }
-  void BOX_END() {
+  void BOX_END(void) {
     SEND(F("</div>\n"));
   }
 
   void FOOTER_BEGIN(void) {
-    SEND("<div style='flex-grow:1;display:block;padding:0px;'></div>\n<footer>");
+    SEND("<div class='blockSp'></div>\n<footer>");
   }
   void FOOTER_END(void) {
     SEND("</footer>");
   }
 
-  void BREAK() {
-    SEND(F("<br>\n"));
+  void BREAK(const String& h = "") {
+    *_GPP += F("<br");
+    if (h.length()) {
+      *_GPP += F(" style='line-height:");
+      *_GPP += h;
+      *_GPP += '\'';
+    }
+    *_GPP += F(">\n");
+    send();
   }
-  void HR() {
+
+  void VR(PGM_P st = GP_DEFAULT, int height = 0) {
+    *_GPP += F("<div class='vr' style='");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("border-color:");
+      *_GPP += FPSTR(st);
+      *_GPP += ';';
+    }
+    if (height) {
+      *_GPP += F("height:");
+      *_GPP += height;
+      *_GPP += F("px");
+    }
+    *_GPP += F("'></div>\n");
+    send();
+  }
+
+  void HR(void) {
     SEND(F("<hr>\n"));
   }
   void HR(PGM_P st) {
@@ -685,17 +773,19 @@ struct Builder {
     *_GPP += F("px'>\n");
     send();
   }
-  void HR_TEXT(const String& text, const String& name, PGM_P st_0, PGM_P st_1) {
-    *_GPP += F("<label id='");
+  void HR_TEXT(const String& text, PGM_P st_0, PGM_P st_1, const String& name = "", GPalign al = GP_RIGHT) {
+    *_GPP += F("<div style='justify-content:");
+    *_GPP += FPSTR(GPgetAlignFlex(al));
+    *_GPP += F(";height:35px' class='inliner'><div style='width:5%'></div><label id='");
     *_GPP += name;
     *_GPP += F("' class='thinText' style='color:");
     *_GPP += FPSTR(st_0);
     *_GPP += F("'>");
     *_GPP += text;
-    *_GPP += F("</label>\n");
+    *_GPP += F("</label><div style='width:5%'></div></div>\n");
     *_GPP += F("<hr style='border-color:");
     *_GPP += FPSTR(st_1);
-    *_GPP += F(";margin-top:-17px;padding-bottom:17px'>\n");
+    *_GPP += F(";margin-top:-18px;padding-bottom:12px'>\n");
     send();
   }
 
@@ -703,6 +793,7 @@ struct Builder {
   void TAG_RAW(const String& tag, const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0, PGM_P back = GP_DEFAULT, int width = 0, int align = GP_CENTER) {
     *_GPP += F("<");
     *_GPP += tag;
+    if (back != GP_DEFAULT) *_GPP += F(" class='display'");
     if (name.length()) {
       *_GPP += F(" id='");
       *_GPP += name;
@@ -732,7 +823,7 @@ struct Builder {
     if (bold) *_GPP += F("font-weight:bold;");
     if (wrap) *_GPP += F("white-space:normal;");
     if (width) {
-      *_GPP += F("min-width:");
+      *_GPP += F("width:");
       *_GPP += width;
       *_GPP += F("px;");
     }
@@ -744,9 +835,6 @@ struct Builder {
     send();
   }
 
-  void TITLE(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
-    TAG_RAW(F("h2"), val, name, st, size, bold);
-  }
   void LABEL(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0, bool wrap = 0) {
     TAG_RAW(F("label"), val, name, st, size, bold, wrap);
   }
@@ -761,29 +849,33 @@ struct Builder {
     *_GPP += F("px'>");
     *_GPP += val;
     *_GPP += F("</label>");
-  }
-  void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
-    TAG_RAW(F("label class='display'"), val, name, GP_DEFAULT, size, bold, 0, st);
-  }
-  void LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_GREEN, int size = 0, bool bold = 0) {
-    TAG_RAW(F("label class='display'"), val, name, GP_WHITE, size, bold, 0, st);
+    send();
   }
 
-  void SPAN(const String& text, GPalign al = GP_CENTER, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
-    if (al != GP_CENTER) {
-      *_GPP += F("<div style='text-align:");
-      *_GPP += FPSTR(GPgetAlign(al));
-      *_GPP += F("'>");
-    } else *_GPP += F("<div>");
-    TAG_RAW(F("span"), text, name, st, size, bold);
-    *_GPP += F("</div>\n");
-    send();
+  void LABEL_BLOCK(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("label"), val, name, GP_DEFAULT, size, bold, 0, st);
+  }
+  void LABEL_BLOCK_W(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("label"), val, name, GP_WHITE, size, bold, 0, st);
+  }
+
+  void TITLE(const String& val, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    TAG_RAW(F("h2"), val, name, st, size, bold);
   }
   void PLAIN(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
     TAG_RAW(F("p"), text, name, st);
   }
   void BOLD(const String& text, const String& name = "", PGM_P st = GP_DEFAULT) {
     TAG_RAW(F("strong"), text, name, st);
+  }
+
+  void SPAN(const String& text, GPalign al = GP_CENTER, const String& name = "", PGM_P st = GP_DEFAULT, int size = 0, bool bold = 0) {
+    *_GPP += F("<div style='text-align:");
+    *_GPP += FPSTR(GPgetAlign(al));
+    *_GPP += F("'>");
+    TAG_RAW(F("span"), text, name, st, size, bold);
+    *_GPP += F("</div>\n");
+    send();
   }
 
   // ======================= ЛЕДЫ =======================
@@ -818,22 +910,6 @@ struct Builder {
     send();
   }
 
-  void LED_COLOR(const String& name, PGM_P st = GP_RED) {
-    *_GPP += F("<div name='led_");
-    *_GPP += name;
-    *_GPP += F("' id='led_");
-    *_GPP += name;
-    *_GPP += F("' class='ledc'></div>\n");
-    JS_BEGIN();
-    *_GPP += F("ledColor('");
-    *_GPP += name;
-    *_GPP += F("','");
-    *_GPP += FPSTR(st);
-    *_GPP += F("')");
-    JS_END();
-  }
-
-  // устарело
   void LED_RED(const String& name, bool state = 0) {
     *_GPP += F("<input class='led red' type='radio' disabled ");
     if (state) *_GPP += F("checked ");
@@ -855,12 +931,35 @@ struct Builder {
     send();
   }
 
+  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
+    *_GPP += F("<div id='");
+    *_GPP += name;
+    *_GPP += F("' class='ledc");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("' style='box-shadow:0px 0px 10px 2px '");
+      *_GPP += FPSTR(st);
+      *_GPP += F("background-color:");
+      *_GPP += FPSTR(st);
+    }
+    *_GPP += F("'></div>\n");
+    send();
+  }
+
   // ======================= ИНДИКАТОРЫ =======================
 
-  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, int step = 1, PGM_P st = GP_GREEN) {
-    *_GPP += F("<input type='range' name='");
-    *_GPP += name;
+  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
+    *_GPP += F("<div class='lineBar");
     *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("_dsp' style='background-image:linear-gradient(");
+    *_GPP += FPSTR(st);
+    *_GPP += ',';
+    *_GPP += FPSTR(st);
+    *_GPP += F(");background-size:");
+    *_GPP += map(value, min, max, 0, 100);
+    *_GPP += F("% 100%'></div>\n");
+
+    *_GPP += F("<input type='hidden' name='_line' id='");
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += value;
@@ -868,17 +967,7 @@ struct Builder {
     *_GPP += min;
     *_GPP += F("' max='");
     *_GPP += max;
-    *_GPP += F("' step='");
-    *_GPP += step;
-    *_GPP += F("' style='filter:brightness(1);box-shadow:0 0 15px rgba(0, 0, 0, 0.7);background-color:#1a1a1a;background-image:linear-gradient(");
-    *_GPP += FPSTR(st);
-    *_GPP += ',';
-    *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:0% 100%;display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;cursor:default' onload='GP_change(this)' disabled>\n");
-
-    *_GPP += F("<output style='display:none' id='");
-    *_GPP += name;
-    *_GPP += F("_val'></output>\n");
+    *_GPP += F("'>\n");
     send();
   }
 
@@ -887,36 +976,24 @@ struct Builder {
     *_GPP += name;
     *_GPP += F(" input:checked+span::before{background-color:");
     *_GPP += FPSTR(st_1);
-    *_GPP += F(";background-image:none}\n");
-
-    *_GPP += F("#__");
+    *_GPP += F("}\n#__");
     *_GPP += name;
     *_GPP += F(" span::before{background-color:");
     *_GPP += FPSTR(st_0);
-    *_GPP += F(";border:none;display:inline-block;width:100px;height:0px;cursor:default;filter:brightness(1)!important;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)}\n");
-
-    *_GPP += F("#__");
+    *_GPP += F("}\n</style>\n<label id='__");
     *_GPP += name;
-    *_GPP += F(" input[type=checkbox]{cursor:default;margin-left:0px}</style>\n");
-
-    *_GPP += F("<label id='__");
-    *_GPP += name;
-    *_GPP += F("' class='check_c' style='display:block;height:30px;margin-top:-13px;cursor:default'><input type='checkbox' name='");
+    *_GPP += F("' class='check_c lineled'><input type='checkbox' name='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("disabled ");
-    *_GPP += F("onclick='GP_click(this)'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += '\'';
+    if (state) *_GPP += F(" checked");
+    *_GPP += F(" disabled><span></span></label>\n");
     send();
   }
 
   // ======================= ИКОНКИ =======================
-  void ICON_SUPPORT() {
+  void ICON_SUPPORT(void) {
     SEND(F("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>\n"));
   }
 
@@ -962,8 +1039,12 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' name='");
     *_GPP += name;
-    *_GPP += F("' onmousedown='if(!_touch)GP_press(this,1)' onmouseup='if(!_touch&&_pressId)GP_press(this,2)' onmouseleave='if(_pressId&&!_touch)GP_press(this,2);' "
-               "ontouchstart='_touch=1;GP_press(this,1)' ontouchend='GP_press(this,2)' onclick='GP_click(this)'>");
+#ifndef GP_NO_PRESS
+    *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' "
+               "ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)' onclick='EVclick(this)'>");
+#else
+    *_GPP += F("' onclick='EVclick(this)'>");
+#endif
     *_GPP += icon;
     *_GPP += F("</div>");
   }
@@ -1005,12 +1086,9 @@ struct Builder {
     *_GPP += "' ";
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='GP_click(this)' style='height:");
+    *_GPP += F("onclick='EVclick(this)' style='height:");
     *_GPP += size;
-    *_GPP += F("px;'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += F("px;'><span></span></label>\n");
     send();
   }
 
@@ -1028,7 +1106,7 @@ struct Builder {
     while (n.parse()) {
       u.parse();
       *_GPP += F("<li ");
-      if (_gp_uri->equals(u.str)) *_GPP += F("style='background:#2a2d35' ");
+      if (_gp_uri->equals(u.str)) *_GPP += F("class='navopen' ");
       *_GPP += F("onclick='location.href=\"");
       *_GPP += u.str;
       *_GPP += F("\";'>");
@@ -1039,21 +1117,26 @@ struct Builder {
     send();
   }
 
-  void NAV_TABS_M(const String& name, const String& list, int disp) {
+  void NAV_TABS_M(const String& name, const String& list, int disp, PGM_P st = GP_DEFAULT) {
+    if (st != GP_DEFAULT) {
+      *_GPP += F("<style>.navopen.navopen{background:");
+      *_GPP += st;
+      *_GPP += F(";color:#13161a;}</style>\n");
+    }
     *_GPP += F("<div class='navtab'><ul>\n");
     GP_parser tab(list);
     while (tab.parse()) {
       *_GPP += F("<li ");
-      if (tab.count == disp) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='");
       *_GPP += name;
-      *_GPP += F("' onclick='openTab(\"");
+      if (tab.count == disp) *_GPP += F(" navopen");
+      *_GPP += F("' onclick='EVopenTab(\"");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += tab.count;
       *_GPP += F("\",this,\"block_");
       *_GPP += name;
-      *_GPP += F("\");GP_send(\"/GP_click?");
+      *_GPP += F("\");EVsend(\"/EV_click?");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += tab.count;
@@ -1077,16 +1160,16 @@ struct Builder {
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
-      if (!p.count) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='");
       *_GPP += name;
-      *_GPP += F("' onclick='openTab(\"");
+      if (!p.count) *_GPP += F(" navopen");
+      *_GPP += F("' onclick='EVopenTab(\"");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += p.count;
       *_GPP += F("\",this,\"block_");
       *_GPP += name;
-      *_GPP += F("\");GP_send(\"/GP_click?");
+      *_GPP += F("\");EVsend(\"/EV_click?");
       *_GPP += name;
       *_GPP += '/';
       *_GPP += p.count;
@@ -1137,10 +1220,10 @@ struct Builder {
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
-      if (!p.count) *_GPP += F("style='background:#2a2d35' ");
       *_GPP += F("class='nt-");
       *_GPP += _gp_nav_id;
-      *_GPP += F("' onclick='openTab(\"ntab-");
+      if (!p.count) *_GPP += F(" navopen");
+      *_GPP += F("' onclick='EVopenTab(\"ntab-");
       *_GPP += _gp_nav_id;
       *_GPP += '/';
       *_GPP += p.count;
@@ -1154,7 +1237,7 @@ struct Builder {
     send();
   }
 
-  void NAV_BLOCK_BEGIN() {
+  void NAV_BLOCK_BEGIN(void) {
     *_GPP += F("<div class='navblock nb-");
     *_GPP += _gp_nav_id;
     *_GPP += F("' id='ntab-");
@@ -1168,12 +1251,12 @@ struct Builder {
     _gp_nav_pos++;
   }
 
-  void NAV_BLOCK_END() {
+  void NAV_BLOCK_END(void) {
     SEND(F("</div>\n"));
   }
 
   // ======================= ФАЙЛЫ =======================
-  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_GREEN, const String& accept = "", const String& options = "", const String& action = "/GP_upload") {
+  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_GREEN, const String& accept = "", const String& options = "", const String& action = "/EV_upload") {
     *_GPP += F("<div id='");
     *_GPP += name;
     *_GPP += F("'><form action='");
@@ -1181,7 +1264,7 @@ struct Builder {
     *_GPP += F("' method='POST' enctype='multipart/form-data' id='");
     *_GPP += name;
     *_GPP += F("_form' style='display:flex;justify-content:center;'>\n"
-               "<div id='ubtn' onclick='saveFile(\"");
+               "<div id='ubtn' onclick='EVsaveFile(\"");
     *_GPP += name;
     *_GPP += F("_inp\")'");
     if (st != GP_GREEN) {
@@ -1202,27 +1285,27 @@ struct Builder {
     }
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("_inp' type='file' onchange='GP_submId(\"");
+    *_GPP += F("_inp' type='file' onchange=\"popupOpen(getPop('uploadAnim'));setTimeout(popupClose,60000);EVsubmId('");
     *_GPP += name;
-    *_GPP += F("_form\")'/></div>\n"
+    *_GPP += F("_form');\"/></div>\n"
                "</form></div>\n");
     send();
   }
 
   void FILE_UPLOAD(const String& name, const String& text = "", const String& accept = "", PGM_P st = GP_GREEN) {
-    FILE_UPLOAD_RAW(name, "📄 " + text, st, accept, F("multiple "));
+    FILE_UPLOAD_RAW(name, (!text.length()) ? "📄" : text, st, accept, F("multiple "));
   }
 
   void FOLDER_UPLOAD(const String& name, const String& text = "", PGM_P st = GP_GREEN) {
-    FILE_UPLOAD_RAW(name, "📁 " + text, st, "", F("multiple webkitdirectory allowdirs "));
+    FILE_UPLOAD_RAW(name, (!text.length()) ? "📁" : text, st, "", F("multiple webkitdirectory allowdirs "));
   }
 
   void OTA_FIRMWARE(const String& text = "OTA firmware", PGM_P st = GP_GREEN, bool page = 0) {
-    FILE_UPLOAD_RAW(F("firmware"), "🧱 " + text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/GP_OTAupload"));
+    FILE_UPLOAD_RAW(F("firmware"), (!text.length()) ? "🔧" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
   void OTA_FILESYSTEM(const String& text = "OTA filesystem", PGM_P st = GP_GREEN, bool page = 0) {
-    FILE_UPLOAD_RAW(F("filesystem"), "💽 " + text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/GP_OTAupload"));
+    FILE_UPLOAD_RAW(F("filesystem"), (!text.length()) ? "💾" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
   void IMAGE(const String& uri, const String& w = "") {
@@ -1244,7 +1327,7 @@ struct Builder {
   void EMBED(const String& uri, const String& w = "100%", const String& h = "") {
     *_GPP += F("<embed src='");
     *_GPP += uri;
-    *_GPP += F("' style='width:90%;border-radius:5px;background:white;width:");
+    *_GPP += F("' style='width:");
     *_GPP += w;
     if (h.length()) {
       *_GPP += F(";height:");
@@ -1266,13 +1349,13 @@ struct Builder {
     *_GPP += String(size / 1000.0, 1);
     *_GPP += F(" kB]\n"
                "<td align='center'>\n"
-               "<span title='Rename' style='cursor:pointer' onclick='GP_rename(\"");
+               "<span title='Rename' style='cursor:pointer' onclick='EVrename(\"");
     *_GPP += fpath;
     *_GPP += F("\")'>📝</span>\n"
                "<a style='text-decoration:none' href='");
     *_GPP += fpath;
     *_GPP += F("' download><span title='Download'>📥</span></a>\n"
-               "<span title='Delete' style='cursor:pointer' onclick='GP_delete(\"");
+               "<span title='Delete' style='cursor:pointer' onclick='EVdelete(\"");
     *_GPP += fpath;
     *_GPP += F("\")'>❌</span>\n");
   }
@@ -1487,7 +1570,7 @@ struct Builder {
   }
 
   // ======================= КНОПКА =======================
-  void BUTTON_RAW(const String& name, const String& value, const String& tar, PGM_P st, const String& width = "", const String& cls = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_RAW(const String& name, const String& value, const String& tar, PGM_P st, const String& width = "", const String& cls = "", int num = -1, bool dis = 0, bool rel = 0) {
     *_GPP += F("<button type='button' ");
     if (cls.length()) {
       *_GPP += F("class='");
@@ -1509,17 +1592,29 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += F("' onmousedown='if(!_touch)GP_press(this,1)' onmouseup='if(!_touch&&_pressId)GP_press(this,2)' onmouseleave='if(_pressId&&!_touch)GP_press(this,2);' ");
-    if (!dis) *_GPP += F("ontouchstart='_touch=1;GP_press(this,1)' ontouchend='GP_press(this,2)' ");
+    if (num >= 0) {
+      *_GPP += '_';
+      *_GPP += num;
+    }
+#ifndef GP_NO_PRESS
+    *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' ");
+    if (!dis) *_GPP += F("ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)");
+#endif
     if (tar.length()) {
-      *_GPP += F("onclick=\"GP_clickid('");
+      *_GPP += F("' onclick=\"EVclickId('");
       *_GPP += name;
       *_GPP += F("','");
       *_GPP += tar;
-      *_GPP += F("')\"");
-    } else {
-      *_GPP += F("onclick='GP_click(this,");
+      *_GPP += F("',");
       *_GPP += rel;
+      *_GPP += F(")\"");
+    } else {
+      *_GPP += F("' onclick='EVclick(this,");
+      *_GPP += rel;
+      if (num >= 0) {
+        *_GPP += ',';
+        *_GPP += num;
+      }
       *_GPP += F(")'");
     }
     if (dis) *_GPP += F(" disabled");
@@ -1530,10 +1625,23 @@ struct Builder {
   }
 
   void BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
-    BUTTON_RAW(name, value, tar, st, width, "", dis, rel);
+    BUTTON_RAW(name, value, tar, st, width, "", -1, dis, rel);
   }
   void BUTTON_MINI(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
-    BUTTON_RAW(name, value, tar, st, width, F("miniButton"), dis, rel);
+    BUTTON_RAW(name, value, tar, st, width, F("miniButton"), -1, dis, rel);
+  }
+  void BUTTON_MICRO(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, tar, st, width, F("microButton"), -1, dis, rel);
+  }
+
+  void BUTTON_NUM(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, "", num, dis, rel);
+  }
+  void BUTTON_NUM_MINI(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, F("miniButton"), num, dis, rel);
+  }
+  void BUTTON_NUM_MICRO(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, "", st, width, F("microButton"), num, dis, rel);
   }
 
   // ======================= КНОПКА-ССЫЛКА =======================
@@ -1566,7 +1674,7 @@ struct Builder {
     *_GPP += value;
 
     if (name.length()) {
-      *_GPP += F("' onclick='GP_click(this,\"");
+      *_GPP += F("' onclick='EVclick(this,\"");
       *_GPP += url;
       *_GPP += F("\");'>\n");
     } else {
@@ -1581,6 +1689,9 @@ struct Builder {
   }
   void BUTTON_MINI_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
     BUTTON_LINK_RAW(url, value, st, width, F("miniButton"), name);
+  }
+  void BUTTON_MICRO_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
+    BUTTON_LINK_RAW(url, value, st, width, F("microButton"), name);
   }
 
   void TEXT_LINK(const String& url, const String& text, const String& id, PGM_P color) {
@@ -1637,6 +1748,9 @@ struct Builder {
   void BUTTON_MINI_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
     BUTTON_DOWNLOAD_RAW(url, value, st, width, F("miniButton"));
   }
+  void BUTTON_MICRO_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
+    BUTTON_DOWNLOAD_RAW(url, value, st, width, F("microButton"));
+  }
 
   // ========================= ВВОД ========================
   void NUMBER_RAW(const String& name, const String& place = "", const String& value = "", const String& minv = "", const String& maxv = "", const String& width = "", const String& pattern = "", bool dis = 0) {
@@ -1666,7 +1780,7 @@ struct Builder {
     }
     *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='GP_click(this)'");
+    *_GPP += F("' onchange='EVclick(this)'");
     if (dis) *_GPP += F(" disabled");
     *_GPP += ">\n";
     send();
@@ -1706,7 +1820,7 @@ struct Builder {
     NUMBER_RAW(name, place, (isnan(value) ? String("") : String(value, (uint16_t)dec)), "", "", width, "", dis);
   }
 
-  void TEXT(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+  void TEXT(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool en = false) {
     *_GPP += F("<input type='text' name='");
     *_GPP += name;
     *_GPP += F("' id='");
@@ -1719,7 +1833,8 @@ struct Builder {
     }
     *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='GP_click(this)'");
+    *_GPP += F("' onchange='EVclick(this)'");
+    if (en) *_GPP += F(" oninput='textEn(this)'");
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
@@ -1732,17 +1847,20 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
+  void TEXT_EN(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+    TEXT(name, place, value, width, maxlength, pattern, dis, true);
+  }
 
   void PASS(const String& name, const String& place = "", const String& value = "", int maxlength = 0, const String& pattern = "", bool dis = false, bool eye = 0) {
-    *_GPP += F("<div class='inlBlock'><input type='password' name='");
+    *_GPP += F("<div class='inlpass'><input type='password' class='pass' name='");
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += value;
-    *_GPP += F("' style='width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;' placeholder='");
+    *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='GP_click(this)'");
+    *_GPP += '\'';
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
@@ -1754,7 +1872,7 @@ struct Builder {
     }
     *_GPP += ">\n";
     if (eye) {
-      *_GPP += F("<span class='eyepass' style='margin-top:13px;' onclick='GP_eye(this)'>"
+      *_GPP += F("<span class='eyepass' style='margin-top:13px;' onclick='EVeye(this)'>"
                  "<svg viewBox='0 0 20 20' style='width:25px;height:25px;fill:currentcolor;'>"
                  "<path fill-rule='evenodd' d='M0 20V0zM20 0v20zm-7.204 6.143C11.889 5.734 10.953 5.5 10 5.5c-2.632 0-5.165 1.59-7.204 4.5.924 1.319 1.953 2.35 3.044 "
                  "3.1l1.583-1.584A2.993 2.993 0 0 1 10 7c.526 0 1.048.148 1.516.423zm4.381-2.259-4.6 4.6A2.993 2.993 0 0 1 10 13a3 3 0 0 1-1.516-.423l-4.6 4.6a.5.5 0 0 "
@@ -1771,8 +1889,8 @@ struct Builder {
   }
 
   // ======================= НАСТРОЙКА =======================
-  void CHECK(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false) {
-    if (st != GP_GREEN) {
+  void CHECK(const String& name, bool state = 0, PGM_P st = GP_DEFAULT, bool dis = false) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("<style>#__");
       *_GPP += name;
       *_GPP += F(" input:checked+span::before{border-color:");
@@ -1790,14 +1908,11 @@ struct Builder {
     *_GPP += "' ";
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='GP_click(this)'><span></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += "'>\n";
+    *_GPP += F("onclick='EVclick(this)'><span></span></label>\n");
     send();
   }
-  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_GREEN, bool dis = false) {
-    if (st != GP_GREEN) {
+  void SWITCH(const String& name, bool state = 0, PGM_P st = GP_DEFAULT, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("<style>#__");
       *_GPP += name;
       *_GPP += F(" input:checked+.slider{background-color:");
@@ -1813,13 +1928,19 @@ struct Builder {
     *_GPP += "' ";
     if (state) *_GPP += F("checked ");
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='GP_click(this)'>\n"
-               "<span class='slider' id='_");
+    *_GPP += F("onclick='EVclick(this)");
+    if (sw_upd.length()) {
+      *_GPP += F(";swUpd(\"");
+      *_GPP += sw_upd;
+      *_GPP += F("\",");
+      *_GPP += sw_val;
+      *_GPP += ')';
+    }
+    *_GPP += F("'>\n<span class='slider");
+    if (dis) *_GPP += F(" dsbl");
+    *_GPP += F("' id='_");
     *_GPP += name;
-    *_GPP += F("'></span></label>\n"
-               "<input type='hidden' value='0' name='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
+    *_GPP += F("'></span></label>\n");
     send();
   }
 
@@ -1838,19 +1959,13 @@ struct Builder {
     }
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this)'>\n");
+    *_GPP += F("onchange='EVclick(this)'>\n");
     send();
   }
 
   void TIME(const String& name, bool dis = false) {
-    *_GPP += F("<input step='1' type='time' name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this)'>\n");
-    send();
+    GPtime t;
+    TIME(name, t, dis);
   }
   void TIME(const String& name, GPtime t, bool dis = false) {
     *_GPP += F("<input step='1' type='time' name='");
@@ -1861,26 +1976,36 @@ struct Builder {
     *_GPP += t.encode();
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this)'>\n");
+    *_GPP += F("onchange='EVclick(this)'>\n");
     send();
   }
 
-  void _FLOAT_DEC(float val, uint16_t dec) {
-    if (!dec) *_GPP += (int)round(val);
-    else *_GPP += String(val, (uint16_t)dec);
-  }
-  void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, const String& lable = "", bool maxsz = 0) {
+  void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, bool maxsz = 0, const String& lable = "", const String& color = "") {
     if (maxsz) {
-      *_GPP += F("<lable style='color:#fff;position:relative;z-index:1;left:17px;bottom:1px;width:0px;pointer-events:none'");
-      if (dis) *_GPP += F(" class='dsbl'");
-      *_GPP += '>';
+      *_GPP += F("<lable class='rangeLable");
+      if (dis) *_GPP += F(" dsbl");
+      *_GPP += F("'>");
       *_GPP += lable;
       *_GPP += F("</lable>\n");
     }
-    *_GPP += F("<input type='range' name='");
-    *_GPP += name;
+
+    *_GPP += F("<div class='range");
+    if (maxsz) *_GPP += F(" rangeLarge");
+    if (dis) *_GPP += F(" dsbl");
     *_GPP += F("' id='");
     *_GPP += name;
+    *_GPP += F("_dsp' style='background-image:linear-gradient(");
+    *_GPP += FPSTR(st);
+    *_GPP += ',';
+    *_GPP += FPSTR(st);
+    *_GPP += F(");background-size:0% 100%'></div>\n");
+
+    *_GPP += F("<input type='hidden' name='_range' class='range_inp' id='");
+    *_GPP += name;
+    if (color.length()) {
+      *_GPP += F("' placeholder='");
+      *_GPP += color;
+    }
     *_GPP += F("' value='");
     *_GPP += value;
     *_GPP += F("' min='");
@@ -1889,45 +2014,42 @@ struct Builder {
     *_GPP += max;
     *_GPP += F("' step='");
     *_GPP += step;
-    *_GPP += F("' style='background-image:linear-gradient(");
-    *_GPP += FPSTR(st);
-    *_GPP += ',';
-    *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:0% 100%");
-    if (maxsz) *_GPP += F(");height:30px;width:100%;max-width:430px;margin:10px 4px;border-radius:20px;box-shadow:0 0 15px rgba(0, 0, 0, 0.7)");
-    *_GPP += F("' onload='GP_change(this)' ");
-    if (oninp) *_GPP += F("oninput='GP_change(this);GP_click(this)'");
-    else *_GPP += F("onchange='GP_click(this)' oninput='GP_change(this)'");
-    *_GPP += F(" onmousewheel='GP_wheel(this);GP_change(this);GP_click(this)' ");
-    if (dis) *_GPP += F("disabled");
-    *_GPP += ">\n";
-    *_GPP += F("<output align='center' id='");
+    *_GPP += '\'';
+    if (oninp) *_GPP += F(" checked");
+    *_GPP += F(">\n<output align='center' id='");
     *_GPP += name;
     *_GPP += F("_val' name='");
     *_GPP += min_lable;
     *_GPP += ',';
     *_GPP += max_lable;
-    if (maxsz) *_GPP += F("' style='position:relative;right:70px;margin-right:-55px;background:none;display:inline-flex;justify-content:end;pointer-events:none'");
-    else {
+    if (!maxsz) {
       *_GPP += F("' style='background:");
       *_GPP += FPSTR(st);
-      *_GPP += F(";'");
+      *_GPP += F(";");
     }
-    if (dis) *_GPP += F(" class='dsbl'");
-    *_GPP += F(">");
-    _FLOAT_DEC(value, dec);
-    *_GPP += F("</output>\n");
+    *_GPP += F("' class='");
+    if (maxsz) *_GPP += F("rangeValue");
+    if (color.length()) *_GPP += F("rangeColor");
+    if (dis) *_GPP += F(" dsbl");
+    *_GPP += F("'></output>\n");
     send();
   }
-  void SLIDER_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1);
+  void SLIDER_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1);
   }
 
-  void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 0, lable, 1);
+  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
   }
-  void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, uint8_t dec = 0, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, min_lable, max_lable, value, min, max, step, dec, st, dis, 1, lable, 1);
+  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
+  }
+
+  void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 0, 1, lable);
+  }
+  void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
   }
 
   void SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
@@ -1939,9 +2061,9 @@ struct Builder {
     *_GPP += step;
     *_GPP += F("' max='");
     *_GPP += dec;
-    *_GPP += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{GP_spin(this);_spinF=1},");
-    *_GPP += 200;
-    *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)GP_spin(this);_spinF=0' value='");
+    *_GPP += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{EVspin(this);_spinF=1},");
+    *_GPP += _spin_prd;
+    *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)EVspin(this);_spinF=0' value='");
     *_GPP += (step > 0) ? '+' : '-';
     *_GPP += F("' ");
     *_GPP += F(" style='background:");
@@ -1962,18 +2084,18 @@ struct Builder {
       *_GPP += w;
     }
     *_GPP += F("' step='");
-    _FLOAT_DEC(step, dec);
-    *_GPP += F("' onkeyup='GP_spinw(this)' onkeydown='GP_spinw(this)' onchange='");
-    if (!dec) *_GPP += F("GP_spinc(this);");
-    *_GPP += F("GP_click(this);GP_spinw(this)' value='");
-    _FLOAT_DEC(value, dec);
+    floatDec(step, dec);
+    *_GPP += F("' onkeyup='EVspinw(this)' onkeydown='EVspinw(this)' onchange='");
+    if (!dec) *_GPP += F("EVspinc(this);");
+    *_GPP += F("EVclick(this);EVspinw(this)' value='");
+    floatDec(value, dec);
     if (!isnan(min)) {
       *_GPP += F("' min='");
-      _FLOAT_DEC(min, dec);
+      floatDec(min, dec);
     }
     if (!isnan(max)) {
       *_GPP += F("' max='");
-      _FLOAT_DEC(max, dec);
+      floatDec(max, dec);
     }
     *_GPP += F("' ");
     if (dis) *_GPP += F("disabled ");
@@ -1982,15 +2104,6 @@ struct Builder {
     SPINNER_BTN(name, step, st, dec, dis);
     *_GPP += F("</div>\n");
     send();
-  }
-  void SPINNER_MID(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-left:-10px;margin-right:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
-  }
-  void SPINNER_LEFT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-left:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
-  }
-  void SPINNER_RIGHT(const String& name, float value = 0, float min = NAN, float max = NAN, float step = 1, uint16_t dec = 0, PGM_P st = GP_GREEN, const String& w = "", bool dis = 0) {
-    SEND("<div style='margin-right:-10px;'>\n"); SPINNER(name, value, min, max, step, dec, st, w, dis); SEND("</div>\n");
   }
 
   void COLOR(const String& name, uint32_t value = 0, bool dis = false) {
@@ -2003,7 +2116,7 @@ struct Builder {
     *_GPP += col.encode();
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this)'>\n");
+    *_GPP += F("onchange='EVclick(this)'>\n");
     send();
   }
   void COLOR(const String& name, GPcolor col, bool dis = false) {
@@ -2015,11 +2128,11 @@ struct Builder {
     *_GPP += col.encode();
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this)'>\n");
+    *_GPP += F("onchange='EVclick(this)'>\n");
     send();
   }
 
-  void RADIO(const String& name, int num, int val = -1, PGM_P st = GP_DEFAULT, bool dis = 0) {
+  void RADIO(const String& name, int num, const String& value = "", int val = -1, PGM_P st = GP_DEFAULT, bool dis = 0) {
     if (st != GP_DEFAULT) {
       *_GPP += F("<style>.rad_");
       *_GPP += name;
@@ -2032,7 +2145,7 @@ struct Builder {
       *_GPP += F("}</style>\n");
     }
 
-    *_GPP += F("<input class='rad rad_");
+    *_GPP += F("<div class='radBlock'><input class='rad rad_");
     *_GPP += name;
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("' type='radio' name='");
@@ -2043,10 +2156,22 @@ struct Builder {
     *_GPP += num;
     *_GPP += F("' value='");
     *_GPP += num;
-    *_GPP += F("' onchange='GP_click(this)'");
+    *_GPP += F("' onchange='EVclick(this)'");
     if (val == num) *_GPP += F(" checked");
     if (dis) *_GPP += F(" disabled");
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
+
+    if (value.length()) {
+      *_GPP += F("<label class='radLable' for='");
+      *_GPP += name;
+      *_GPP += '_';
+      *_GPP += num;
+      *_GPP += F("'>");
+      *_GPP += value;
+      *_GPP += F("</label>\n");
+    }
+    *_GPP += "</div>\n";
+
     send();
   }
 
@@ -2058,7 +2183,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this,");
+    *_GPP += F("onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
 
@@ -2089,7 +2214,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this,");
+    *_GPP += F("onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
     int idx = 0;
@@ -2118,7 +2243,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += "' ";
     if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='GP_click(this,");
+    *_GPP += F("onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
     int idx = 0;
@@ -2140,11 +2265,41 @@ struct Builder {
     send();
   }
 
+  void SELECT_LIST(const String& name, const String& list, int sel = 0, bool nums = 0, bool dis = 0, bool rel = 0) {
+    if (sel < 0) sel = 0;
+    *_GPP += F("<input type='select' name='");
+    *_GPP += name;
+    *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("' step='");
+    *_GPP += rel;
+    *_GPP += F("' min='");
+    *_GPP += nums;
+    *_GPP += F("' max='");
+    *_GPP += sel;
+    *_GPP += F("' placeholder='");
+    *_GPP += list;
+    *_GPP += F("' onclick='selectList(this)' readonly");
+    if (dis) *_GPP += F(" disabled\n");
+    *_GPP += F(">\n");
+    send();
+  }
+  void SELECT_LIST_STYLE(PGM_P st_1, PGM_P st_2 = GP_GREEN) {
+    *_GPP += F("<style>.selActive{background:");
+    *_GPP += FPSTR(st_1);
+    *_GPP += F("!important;}");
+    if (st_2 != GP_GREEN) {
+      *_GPP += F(".selBlock{border:2px solid ");
+      *_GPP += FPSTR(st_2);
+      *_GPP += F("!important;}");
+    }
+    *_GPP += F("</style>\n");
+  }
+
   // ======================= ГРАФИКИ =======================
   void PLOT_STOCK_BEGIN(boolean local = 0, boolean lang = 0) {
-    if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n");
-    else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n");
-    *_GPP += F("<script src='https://code.highcharts.com/modules/exporting.js'></script>\n");
+    if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n<script src='/gp_data/PLOT_STOCK_EXPORT.js'></script>\n");
+    else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n<script src='https://code.highcharts.com/modules/exporting.js'></script>\n");
     if (lang) *_GPP += F("<script>Highcharts.setOptions({lang:{contextButtonTitle:'Меню',viewFullscreen:'Во весь экран',exitFullscreen:'Свернуть',printChart:'Печать...',resetZoom:'Сбросить',resetZoomTitle:'Сбросить маштаб'}});</script>\n");
     send();
   }
@@ -2231,5 +2386,70 @@ struct Builder {
     }
     *_GPP += F("]});</script>\n");
     send();
+  }
+
+  // ======================= ВЫВОД ЛОГА =======================
+
+  void AREA_LOG(const String& name, int rows = 5, int size = 12, int prd = 1000, const String& w = "") {
+    *_GPP += F("<div class='inliner'><textarea name='_gplog' style='height:auto;");
+    *_GPP += F("font-size:");
+    *_GPP += size;
+    *_GPP += F("px;");
+    if (w.length()) {
+      *_GPP += F("width:");
+      *_GPP += w;
+    }
+    *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("' rows='");
+    *_GPP += rows;
+    *_GPP += F("' disabled></textarea></div>\n");
+
+    *_GPP += F("<script>EVupdate('");
+    *_GPP += name;
+    *_GPP += F("');\n");
+    *_GPP += F("setInterval(()=>EVupdate('");
+    *_GPP += name;
+    *_GPP += F("'),");
+    *_GPP += prd;
+    *_GPP += F(");</script>\n");
+    send();
+  }
+
+  void AREA_TEXT(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
+    *_GPP += F("<input type='text' class='areaText' name='");
+    *_GPP += name;
+    *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("' value='");
+    *_GPP += value;
+    if (width.length()) {
+      *_GPP += F("' style='width:");
+      *_GPP += width;
+    }
+    *_GPP += F("' placeholder='");
+    *_GPP += place;
+    *_GPP += F("' onchange='EVclick(this)'");
+    if (dis) *_GPP += F(" disabled");
+    if (maxlength) {
+      *_GPP += F(" maxlength=");
+      *_GPP += maxlength;
+    }
+    if (pattern.length()) {
+      *_GPP += F(" pattern=");
+      *_GPP += pattern;
+    }
+    *_GPP += ">\n";
+
+    if (dis) {
+      *_GPP += F("<script>setInterval(()=>textBlink('");
+      *_GPP += name;
+      *_GPP += F("'),500);</script>\n");
+    }
+    send();
+  }
+
+  void AREA_BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+    BUTTON_RAW(name, value, tar, st, width, F("areaButton"), dis, rel);
   }
 };

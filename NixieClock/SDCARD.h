@@ -1,4 +1,4 @@
-struct BUFFER {
+struct cardBufferData {
   uint8_t cardType; //тип карты памяти
   uint8_t readMode; //режим чтения
   uint8_t readState; //состояние обработчика чтения
@@ -6,11 +6,14 @@ struct BUFFER {
   uint16_t readSize; //байт к прочтению сектора
   uint32_t readSector; //текущий сектор чтения
   uint8_t readData[DAC_BUFF_SIZE]; //буфер карты памяти
+} buffer;
+
+struct cardOutputData {
   uint8_t dacVolume; //громкость трека
   uint8_t dacSampl; //частота дискретизации
   uint8_t dacStart; //начало буфера чтения
   uint8_t dacEnd; //конец буфера чтения
-} buffer;
+} output;
 
 enum {
   BUFFER_READY,
@@ -46,16 +49,16 @@ enum {
 
 #include "SPI.h"
 
-void setReadSector(uint32_t _sector, uint8_t _type = BUFFER_READ_FILE);
+void cardSetReadSector(uint32_t _sector, uint8_t _type = BUFFER_READ_FILE);
 
 //--------------------------Отправка команды----------------------------
-uint8_t cardSendCmd(uint8_t _command, uint32_t _data)
+uint8_t cardSendCommand(uint8_t _command, uint32_t _data)
 {
   uint8_t answer = 0; //ответ на команду
 
   if (_command & 0x80) { //если расширенная команда
     _command &= 0x7F; //убираем бит расширенной команды
-    answer = cardSendCmd(CMD55, 0); //отправляем команду 55
+    answer = cardSendCommand(CMD55, 0); //отправляем команду 55
     if (answer > 1) return answer; //выходим
   }
 
@@ -88,19 +91,19 @@ uint8_t cardSendCmd(uint8_t _command, uint32_t _data)
   return answer; //возвращаем ответ
 }
 //-------------------------Запись в буфер ЦАП-------------------------
-boolean bufferWriteData(void)
+boolean cardOutputWriteData(void)
 {
-  uint8_t buff = buffer.dacEnd + 1;
+  uint8_t buff = output.dacEnd + 1;
   if (buff >= DAC_BUFF_SIZE) buff = 0;
-  if (buff != buffer.dacStart) {
-    buffer.dacEnd = buff;
-    buffer.readData[buffer.dacEnd] = readSPI(); //читаем данные в буфер
+  if (buff != output.dacStart) {
+    output.dacEnd = buff;
+    buffer.readData[output.dacEnd] = readSPI(); //читаем данные в буфер
     return 1;
   }
   return 0;
 }
 //------------------Обновление данных буфера чтения--------------------
-void bufferUpdate(void)
+void cardBufferUpdate(void)
 {
   static uint16_t readByte;
   static uint16_t readWait;
@@ -123,7 +126,7 @@ void bufferUpdate(void)
       break;
     case BUFFER_INIT:
       if (!(buffer.cardType & CT_BLOCK)) buffer.readSector *= 512; //конвертируем сектор в байты
-      if (!cardSendCmd(CMD17, buffer.readSector)) {
+      if (!cardSendCommand(CMD17, buffer.readSector)) {
         readByte = 0;
         readWait = 40000;
         buffer.readState = BUFFER_WAIT;
@@ -171,7 +174,7 @@ void bufferUpdate(void)
       for (uint8_t i = 0; i < DAC_READ_DEPTH; i++) {
         if (readByte < 512) {
           if (readByte < buffer.readSize) {
-            if (bufferWriteData()) readByte++; //читаем данные в буфер
+            if (cardOutputWriteData()) readByte++; //читаем данные в буфер
             else break;
           }
           else {
@@ -209,14 +212,14 @@ void bufferUpdate(void)
   }
 }
 //-----------------------Установка чтения сектора--------------------------
-void setReadSector(uint32_t _sector, uint8_t _type)
+void cardSetReadSector(uint32_t _sector, uint8_t _type)
 {
   buffer.readSector = _sector;
   buffer.readMode = _type;
   buffer.readState = BUFFER_INIT;
 }
 //------------------------Прочитать блок данных----------------------------
-boolean waitReadBlock(uint32_t _sector, uint16_t _start, uint16_t _size)
+boolean cardWaitReadBlock(uint32_t _sector, uint16_t _start, uint16_t _size)
 {
   buffer.readSector = _sector;
   buffer.readSize = _size;
@@ -224,7 +227,7 @@ boolean waitReadBlock(uint32_t _sector, uint16_t _start, uint16_t _size)
   buffer.readMode = BUFFER_READ_BLOCK;
   buffer.readState = BUFFER_INIT;
 
-  while (buffer.readState > BUFFER_ERROR) bufferUpdate();
+  while (buffer.readState > BUFFER_ERROR) cardBufferUpdate();
 
   return buffer.readState;
 }
@@ -232,7 +235,7 @@ boolean waitReadBlock(uint32_t _sector, uint16_t _start, uint16_t _size)
 boolean cardWaitIdle(uint8_t _command, uint32_t _data)
 {
   for (uint16_t tmr = 10000; tmr; tmr--) {
-    if (!cardSendCmd(_command, _data)) return 1;
+    if (!cardSendCommand(_command, _data)) return 1;
     _delay_us(100);
   }
   return 0;
@@ -249,14 +252,14 @@ boolean cardInit(void)
   }
   SD_SCK_CLEAR; //очищаем пин SCK
 
-  if (cardSendCmd(CMD0, 0) == 1) { //если карта перешла в idle режим
+  if (cardSendCommand(CMD0, 0) == 1) { //если карта перешла в idle режим
     _delay_ms(150); //ждем
-    cardSendCmd(CMD59, 0); //отключаем проверку CRC
-    if (cardSendCmd(CMD8, 0x1AA) == 1) { //если карта версии SDv2
+    cardSendCommand(CMD59, 0); //отключаем проверку CRC
+    if (cardSendCommand(CMD8, 0x1AA) == 1) { //если карта версии SDv2
       for (uint8_t i = 0; i < 4; i++) buffer.readData[i] = readSPI(); //читаем ответ R7
       if (buffer.readData[2] == 0x01 && buffer.readData[3] == 0xAA) { //если карта работает в диапазоне 2.7в - 3.6в
         if (cardWaitIdle(ACMD41, 0x40000000)) { //ожидаем состояния idle
-          if (!cardSendCmd(CMD58, 0)) { //проверяем бит CCS в регистре OCR
+          if (!cardSendCommand(CMD58, 0)) { //проверяем бит CCS в регистре OCR
             for (uint8_t i = 0; i < 4; i++) buffer.readData[i] = readSPI(); //читаем ответ R7
             buffer.cardType = (buffer.readData[0] & 0x40) ? (CT_SD2 | CT_BLOCK) : CT_SD2;  //устанавливаем тип карты SD ver2 (с блочной адресаций или без)
           }
@@ -264,10 +267,10 @@ boolean cardInit(void)
       }
     }
     else {
-      if (cardSendCmd(ACMD41, 0) > 1) buffer.cardType = CT_MMC; //если карта версии MMC
+      if (cardSendCommand(ACMD41, 0) > 1) buffer.cardType = CT_MMC; //если карта версии MMC
       else buffer.cardType = CT_SD1; //иначе SD ver1
 
-      if (!cardWaitIdle((buffer.cardType == CT_SD1) ? ACMD41 : CMD1, 0) || cardSendCmd(CMD16, 512)) buffer.cardType = 0; //устанавливаем длинну блока 512 байт
+      if (!cardWaitIdle((buffer.cardType == CT_SD1) ? ACMD41 : CMD1, 0) || cardSendCommand(CMD16, 512)) buffer.cardType = 0; //устанавливаем длинну блока 512 байт
     }
   }
 
