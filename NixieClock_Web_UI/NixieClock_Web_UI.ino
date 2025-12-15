@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9_073 бета от 26.11.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9_092 бета от 15.12.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -123,30 +123,33 @@ String dotModeList(boolean alm) { //список режимов основных
   String str;
   str.reserve(500);
   str = F(LANG_DOTS_MODE_1);
-  if (deviceInformation[NEON_DOT] != 3) {
+  if (deviceInformation[NEON_DOT] < 3) {
     str += F(LANG_DOTS_MODE_2);
   }
   if (deviceInformation[NEON_DOT] == 2) {
     str += F(LANG_DOTS_MODE_3);
   }
-  if (deviceInformation[DOTS_PORT_ENABLE]) {
+  if (deviceInformation[NEON_DOT] == 4) {
     str += F(LANG_DOTS_MODE_4);
+  }
+  if (deviceInformation[DOTS_PORT_ENABLE]) {
+    str += F(LANG_DOTS_MODE_5);
     if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
-      str += F(LANG_DOTS_MODE_5);
+      str += F(LANG_DOTS_MODE_6);
     }
     if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
-      str += F(LANG_DOTS_MODE_6);
+      str += F(LANG_DOTS_MODE_7);
     }
   }
   if (alm) {
-    str += F(LANG_DOTS_MODE_7);
+    str += F(LANG_DOTS_MODE_8);
   }
   return str;
 }
 String neonDotModeList(void) { //список режимов неоновых разделительных точек
   String str;
   str.reserve(400);
-  if (deviceInformation[NEON_DOT] != 3) {
+  if (deviceInformation[NEON_DOT] < 3) {
     if (!deviceInformation[DOTS_PORT_ENABLE]) {
       str = F(LANG_INDI_DOTS_MODE_1);
     }
@@ -751,12 +754,12 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_DOTS, UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] == 3) || !deviceInformation[DOTS_PORT_ENABLE])););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] >= 3) || !deviceInformation[DOTS_PORT_ENABLE])););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsDot", dotModeList(false), fastSettings.dotMode););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] == 3)););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] == 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] == 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] == 3) ? 1 : 25, 1, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] >= 3)););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] >= 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] >= 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] >= 3) ? 1 : 25, 1, UI_SLIDER_COLOR););
       GP.BLOCK_END();
       GP.GRID_END();
       GP.NAV_BLOCK_END();
@@ -1684,7 +1687,7 @@ void action() {
       }
       if (ui.click("setsDotBrtNight")) {
         mainSettings.dotBrightNight = constrain(ui.getInt("setsDotBrtNight"), 0, 25);
-        if (deviceInformation[NEON_DOT] != 3) mainSettings.dotBrightNight *= 10;
+        if (deviceInformation[NEON_DOT] < 3) mainSettings.dotBrightNight *= 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
 

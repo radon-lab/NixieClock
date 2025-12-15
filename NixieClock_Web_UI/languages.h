@@ -107,11 +107,12 @@
 //-------------------------------------------------------//
 #define LANG_DOTS_MODE_1 "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"
 #define LANG_DOTS_MODE_2 ",Динамичные(плавно мигают)"
-#define LANG_DOTS_MODE_3 ",Неонки маятник(мигают раз в секунду),Неонки маятник(плавно мигают)"
-#define LANG_DOTS_MODE_4 ",Мигающие,Бегущие,Змейка,Резинка"
-#define LANG_DOTS_MODE_5 ",Одинарный маятник"
-#define LANG_DOTS_MODE_6 ",Двойной маятник"
-#define LANG_DOTS_MODE_7 ",Без реакции"
+#define LANG_DOTS_MODE_3 ",Маятник(мигают раз в секунду),Маятник(плавно мигают)"
+#define LANG_DOTS_MODE_4 ",Метроном,Шажки,Таймер,Часовой маятник"
+#define LANG_DOTS_MODE_5 ",Мигающие,Бегущие,Змейка,Резинка"
+#define LANG_DOTS_MODE_6 ",Одинарный маятник"
+#define LANG_DOTS_MODE_7 ",Двойной маятник"
+#define LANG_DOTS_MODE_8 ",Без реакции"
 
 //-------------------------------------------------------//
 #define LANG_INDI_DOTS_MODE_1 "Основной режим"
@@ -650,12 +651,13 @@
 
 //-------------------------------------------------------//
 #define LANG_DOTS_MODE_1 "Off,Static,Blink once per second,Blink twice per second"
-#define LANG_DOTS_MODE_2 ",Dynamic (blink smoothly)"
-#define LANG_DOTS_MODE_3 ",Neon pendulum (blink once per second),Neon pendulum (blink smoothly)"
-#define LANG_DOTS_MODE_4 ",Flashing,Running,Snake,Rubber"
-#define LANG_DOTS_MODE_5 ",Single pendulum"
-#define LANG_DOTS_MODE_6 ",Double pendulum"
-#define LANG_DOTS_MODE_7 ",Without reaction"
+#define LANG_DOTS_MODE_2 ",Dynamic(blink smoothly)"
+#define LANG_DOTS_MODE_3 ",Pendulum(blink once per second),Pendulum(blink smoothly)"
+#define LANG_DOTS_MODE_4 ",Metronome,Steps,Timer,Clock Pendulum"
+#define LANG_DOTS_MODE_5 ",Flashing,Running,Snake,Rubber"
+#define LANG_DOTS_MODE_6 ",Single pendulum"
+#define LANG_DOTS_MODE_7 ",Double pendulum"
+#define LANG_DOTS_MODE_8 ",Without reaction"
 
 //-------------------------------------------------------//
 #define LANG_INDI_DOTS_MODE_1 "Basic mode"
