@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 15.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 16.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -516,8 +516,10 @@ void systemTask(void) //системная задача
 #if !PLAYER_TYPE
     if (mainSettings.baseSound == 2) { //если звук включен
       if (mainTask == MAIN_PROGRAM) { //если в режиме часов
-        if (RTC.s & 0x01) buzzPulse(SECS_UNEVEN_SOUND_FREQ, SECS_UNEVEN_SOUND_TIME); //щелчок пищалкой
-        else buzzPulse(SECS_EVEN_SOUND_FREQ, SECS_EVEN_SOUND_TIME); //щелчок пищалкой
+        if (!melodyState()) { //если мелодия не воспроизводится
+          if (RTC.s & 0x01) buzzPulse(SECS_UNEVEN_SOUND_FREQ, SECS_UNEVEN_SOUND_TIME); //щелчок пищалкой
+          else buzzPulse(SECS_EVEN_SOUND_FREQ, SECS_EVEN_SOUND_TIME); //щелчок пищалкой
+        }
       }
     }
 #endif
