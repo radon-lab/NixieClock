@@ -84,11 +84,17 @@ void melodyStop(void) //остановка воспроизведения мел
 void melodyUpdate(void) //воспроизведение мелодии
 {
   if (sound.replay && !_timer_ms[TMR_PLAYER]) { //если пришло время
-    buzzPulse(pgm_read_word(sound.link + sound.semp), pgm_read_word(sound.link + sound.semp + 2)); //запускаем звук с задоной частотой и временем
-    _timer_ms[TMR_PLAYER] = pgm_read_word(sound.link + sound.semp + 4); //устанавливаем паузу перед воспроизведением нового звука
-    if ((sound.semp += 6) >= sound.size) { //переключаем на следующий семпл
-      if (sound.replay == REPLAY_ONCE) melodyStop(); //если повтор выключен то остановка воспроизведения мелодии
+    if (sound.semp >= sound.size) { //усли семплы закончились
+      if (sound.replay == REPLAY_ONCE) { //если повтор выключен
+        melodyStop(); //останавливаем воспроизведение мелодии
+        return; //выходим
+      }
       sound.semp = 0; //сбросили семпл
     }
+    
+    buzzPulse(pgm_read_word(sound.link + sound.semp), pgm_read_word(sound.link + sound.semp + 2)); //запускаем звук с задоной частотой и временем
+    _timer_ms[TMR_PLAYER] = pgm_read_word(sound.link + sound.semp + 4); //устанавливаем паузу перед воспроизведением нового звука
+    
+    sound.semp += 6; //переключаем на следующий семпл
   }
 }
