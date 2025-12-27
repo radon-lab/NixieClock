@@ -1245,26 +1245,6 @@ void changeBright(void) //установка яркости от времени 
       switch (dotGetMode()) { //мигание точек
         case DOT_OFF: dotSetBright(0); break; //точки выключены
         case DOT_STATIC: dotSetBright(dot.maxBright); break; //точки включены
-#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
-        case DOT_MAIN_PULS: //плавное мигание
-#if SECS_DOT == 2
-        case DOT_MAIN_TURN_PULS:
-#endif
-          if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
-#if DOT_PULS_TIME || ((SECS_DOT == 2) && DOT_PULS_TURN_TIME)
-          else { //иначе пересчитываем шаги
-#if DOT_PULS_TIME
-            dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
-            dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
-#endif
-#if (SECS_DOT == 2) && DOT_PULS_TURN_TIME
-            dot.brightTurnStep = setBrightStep(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт шага яркости точки
-            dot.brightTurnTime = setBrightTime(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт шага яркости точки
-#endif
-          }
-#endif
-          break;
-#endif
         default:
 #if (SECS_DOT != 3) && (SECS_DOT != 4)
           if (!dot.maxBright) dotSetBright(0); //если яркость не установлена
@@ -1278,6 +1258,19 @@ void changeBright(void) //установка яркости от времени 
 #endif
           break;
       }
+
+#if (SECS_DOT == 0) || (SECS_DOT == 1) || (SECS_DOT == 2)
+      if (dot.maxBright) { //пересчитываем шаги
+#if (SECS_DOT == 0) || (SECS_DOT == 1)
+        dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
+        dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт периода шага яркости точки
+#endif
+#if SECS_DOT == 2
+        dot.brightTurnStep = setBrightStep(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт шага яркости точки
+        dot.brightTurnTime = setBrightTime(dot.maxBright * 2, DOT_PULS_TURN_STEP_TIME, DOT_PULS_TURN_TIME); //расчёт периода шага яркости точки
+#endif
+      }
+#endif
     }
 #if SECS_DOT < 2
     else if (dotGetBright()) dotSetBright(dot.menuBright); //установка яркости точек в меню
@@ -1325,13 +1318,13 @@ void changeBright(void) //установка яркости от времени 
         backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
         uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
 
-        backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+        backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт периода шага яркости
         backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_TYPE == 3
         backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
         if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт периода шага яркости
         backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
 #endif
       }
@@ -1747,7 +1740,7 @@ void dotEffect(void) //анимации точек
 //--------------------------------Мигание точек------------------------------------
 void dotFlash(void) //мигание точек
 {
-#if ((SECS_DOT != 3) && DOTS_PORT_ENABLE) && (SECS_DOT != 4)
+#if (SECS_DOT != 3) && (SECS_DOT != 4) && DOTS_PORT_ENABLE
   static boolean state; //текущее состояние точек
 
   if (mainTask == MAIN_PROGRAM) { //если основная программа
@@ -5821,12 +5814,21 @@ void changeFastSetSecs(void) //сменить режим анимации сек
 //-------------------------Сменить режим анимации точек быстрых настроек----------------------------
 void changeFastSetDot(void) //сменить режим анимации точек быстрых настроек
 {
+#if BTN_EASY_MAIN_MODE
+  if (!dot.maxBright) return; //выходим если точки выключены
+#endif
   if (++fastSettings.dotMode >= DOT_EFFECT_NUM) fastSettings.dotMode = 0;
+#if BTN_EASY_MAIN_MODE
+  dotReset(ANIM_RESET_CHANGE); //сброс анимации точек
+  if (dotGetMode() == DOT_STATIC) dotSetBright(dot.maxBright); //точки включены
+#endif
 }
 //-------------------------Сменить режим анимации подсветки быстрых настроек----------------------------
 void changeFastSetBackl(void) //сменить режим анимации подсветки быстрых настроек
 {
 #if BTN_EASY_MAIN_MODE && (BACKL_TYPE == 3)
+  if (!backl.maxBright) return; //выходим если точки выключены
+
   switch (fastSettings.backlMode) {
     case BACKL_STATIC:
     case BACKL_PULS:
@@ -5838,8 +5840,11 @@ void changeFastSetBackl(void) //сменить режим анимации по�
         else fastSettings.backlColor = 253;
       }
       else fastSettings.backlColor++;
-      if (fastSettings.backlColor) return;
-      else wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+
+      if (fastSettings.backlColor) { //если не начальный цвет
+        wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+        return; //выходим
+      }
       break;
   }
 #endif
@@ -5906,7 +5911,7 @@ uint8_t getFastSetData(uint8_t pos) //получить значение быст
 uint8_t fastSetSwitch(void) //переключение быстрых настроек
 {
   uint8_t show = 1; //флаг запуска анимации
-  uint8_t mode = FAST_DOT_MODE; //режим быстрой настройки
+  uint8_t mode = FAST_FLIP_MODE; //режим быстрой настройки
 
   while (1) {
     if (show) {
@@ -5960,7 +5965,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
     if (!_timer_ms[TMR_MS]) break; //выходим
 
     switch (buttonState()) {
-      case SET_KEY_PRESS: //клик средней кнопкой
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (mode != FAST_DOT_MODE) {
           show = 1; //запустить анимацию
           mode = FAST_DOT_MODE; //демострация текущего режима работы
@@ -5998,7 +6003,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
 #endif
 #endif
 
-      case RIGHT_KEY_PRESS: //клик правой кнопкой
+      case SET_KEY_PRESS: //клик средней кнопкой
 #if (LAMP_NUM > 4) && !BTN_ADD_TYPE
         if ((mode != FAST_FLIP_MODE) && (mode != FAST_SECS_MODE)) {
 #else
@@ -6013,25 +6018,24 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
 #if (LAMP_NUM > 4)
 #if BTN_ADD_TYPE
       case ADD_KEY_PRESS: //клик доп кнопкой
-        if (mode != FAST_SECS_MODE) {
-          show = 1; //запустить анимацию
-          mode = FAST_SECS_MODE; //демострация текущего режима работы
-        }
-        else show = 2; //изменить и отобразить данные
-        break;
 #else
-      case RIGHT_KEY_HOLD: //удержание правой кнопки
+      case SET_KEY_HOLD: //удержание правой кнопки
+#endif
         if (mode != FAST_SECS_MODE) {
           show = 1; //запустить анимацию
           mode = FAST_SECS_MODE; //демострация текущего режима работы
         }
-        break;
+#if BTN_ADD_TYPE
+        else show = 2; //изменить и отобразить данные
 #endif
+        break;
 #endif
     }
   }
+  
   if (mode == FAST_FLIP_MODE) animShow = ANIM_DEMO; //демонстрация анимации цифр
   setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+  
   return MAIN_PROGRAM; //выходим
 }
 //-----------------------------Главный экран------------------------------------------------
@@ -6139,7 +6143,6 @@ uint8_t mainScreen(void) //главный экран
         if (indi.sleepMode) sleepReset(); //сброс режима сна
         changeFastSetDot(); //сменить режим анимации точек быстрых настроек
         setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
-        dotReset(ANIM_RESET_CHANGE); //установили тип сброса анимации
         break;
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки

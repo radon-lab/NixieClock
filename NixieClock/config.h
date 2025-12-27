@@ -138,7 +138,7 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define PLAYER_START_VOL 7           //громкость плеера при запуске(0..15)
 #define PLAYER_MAX_BUFFER 10         //максимальное количество ячеек в буфере воспроизведения(1..25)
 #define PLAYER_COMMAND_WAIT 200      //ожидание перед отправкой новой команды(50..300)(мс)
-#define PLAYER_RESET_WAIT 1500       //ожидание инициализации плеера(1000..2000)(мс)
+#define PLAYER_RESET_WAIT 1500       //ожидание до перезагрузки плеера(1000..2000)(мс)
 #define PLAYER_START_WAIT 500        //ожидание инициализации плеера(500..1000)(мс)
 #define PLAYER_BUSY_WAIT 200         //ожидание сигнала занятости плеера(50..300)(мс)
 #define PLAYER_BUSY_ERROR 1500       //ожидание изменения сигнала занятости плеера(1000..3000)(мс)
