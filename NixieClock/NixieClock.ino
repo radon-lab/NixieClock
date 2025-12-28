@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 27.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 28.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -948,7 +948,7 @@ uint8_t alarmWarn(void) //тревога будильника
   return INIT_PROGRAM;
 }
 //-------------------Установить флаг обновления данных в памяти---------------------
-void setUpdateMemory(uint8_t mask) //установить флаг обновления данных в памяти
+void saveMemoryBlock(uint8_t mask) //установить флаг обновления данных в памяти
 {
   memoryUpdate |= mask; //установили флаг
 #if ESP_ENABLE
@@ -3871,7 +3871,7 @@ uint8_t settings_main(void) //настроки основные
     if (!indi.update) { //если установлен флаг
       indi.update = 1; //сбрасываем флаг
       if (++time_out >= SETTINGS_TIMEOUT) {
-        setUpdateMemory(CELL(MEM_UPDATE_MAIN_SET)); //записываем основные настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_MAIN_SET)); //записываем основные настройки в память
         animShow = ANIM_MAIN; //установили флаг анимации
         return MAIN_PROGRAM;
       }
@@ -4383,7 +4383,7 @@ uint8_t settings_main(void) //настроки основные
         break;
 
       case SET_KEY_HOLD: //удержание средней кнопки
-        setUpdateMemory(CELL(MEM_UPDATE_MAIN_SET)); //записываем основные настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_MAIN_SET)); //записываем основные настройки в память
         return MAIN_PROGRAM;
     }
   }
@@ -4434,7 +4434,7 @@ void radioPowerSwitch(void) //переключить питание радиоп
 //--------------------------Поиск радиостанции в памяти---------------------------------
 void radioSearchStation(void) //поиск радиостанции в памяти
 {
-  setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET)); //записываем настройки радио в память
+  saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET)); //записываем настройки радио в память
   for (uint8_t i = 0; i < RADIO_MAX_STATIONS; i++) { //ищем среди всех ячеек
     if (radioSettings.stationsSave[i] == radioSettings.stationsFreq) { //если частота совпадает с радиостанцией
       radioSettings.stationNum = i; //установили номер радиостанции
@@ -4446,7 +4446,7 @@ void radioSearchStation(void) //поиск радиостанции в памя�
 //-----------------------Переключить радиостанцию в памяти------------------------------
 void radioSwitchStation(boolean _sta) //переключить радиостанцию в памяти
 {
-  setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET)); //записываем настройки радио в память
+  saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET)); //записываем настройки радио в память
   if (radioSettings.stationNum & 0x80) { //если установлен флаг ячейки
     radioSettings.stationNum &= 0x7F; //сбросили флаг
     radioSettings.stationsFreq = radioSettings.stationsSave[radioSettings.stationNum]; //прочитали частоту
@@ -4582,7 +4582,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
           case VOL_UP_KEY_PRESS: //прибавить громкость
 #endif
             if (radioSettings.volume < MAIN_MAX_VOL) {
-              setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET));
+              saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET));
               setVolumeRDA(++radioSettings.volume); //прибавитиь громкость
             }
             break;
@@ -4591,7 +4591,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
           case VOL_DOWN_KEY_PRESS: //убавить громкость
 #endif
             if (radioSettings.volume > MAIN_MIN_VOL) {
-              setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET));
+              saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET));
               setVolumeRDA(--radioSettings.volume); //убавить громкость
             }
             break;
@@ -4620,7 +4620,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
               radioSettings.stationNum = _state - STATION_CELL_0_PRESS; //установили номер ячейки
               radioSettings.stationsFreq = radioSettings.stationsSave[radioSettings.stationNum]; //прочитали частоту
               setFreqRDA(radioSettings.stationsFreq); //установили частоту
-              setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET));
+              saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET));
             }
             break;
 #endif
@@ -4725,7 +4725,7 @@ boolean radioMenuSettings(void) //меню настроек радио
       case ADD_KEY_PRESS: //клик дополнительной кнопкой
         radioSettings.stationsSave[_station] = radioSettings.stationsFreq; //сохранили радиостанцию
         radioSettings.stationNum = _station; //установили номер радиостанции
-        setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET));
+        saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET));
         return 0; //выходим
 
       case SET_KEY_PRESS: //клик средней кнопкой
@@ -4733,7 +4733,7 @@ boolean radioMenuSettings(void) //меню настроек радио
 
       case ADD_KEY_HOLD: //удержание дополнительной кнопкой
         radioSettings.stationsSave[_station] = 0; //сбросили радиостанцию
-        setUpdateMemory(CELL(MEM_UPDATE_RADIO_SET));
+        saveMemoryBlock(CELL(MEM_UPDATE_RADIO_SET));
         _state = 0;
         _timer_ms[TMR_MS] = 0; //сбросили таймер
         break;
@@ -6034,7 +6034,7 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
   }
   
   if (mode == FAST_FLIP_MODE) animShow = ANIM_DEMO; //демонстрация анимации цифр
-  setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+  saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
   
   return MAIN_PROGRAM; //выходим
 }
@@ -6130,7 +6130,7 @@ uint8_t mainScreen(void) //главный экран
       case LEFT_KEY_PRESS: //клик левой кнопкой
         if (indi.sleepMode) sleepReset(); //сброс режима сна
         changeFastSetBackl(); //сменить режим анимации подсветки быстрых настроек
-        setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
         break;
 #endif
 
@@ -6142,7 +6142,7 @@ uint8_t mainScreen(void) //главный экран
       case RIGHT_KEY_PRESS: //клик правой кнопкой
         if (indi.sleepMode) sleepReset(); //сброс режима сна
         changeFastSetDot(); //сменить режим анимации точек быстрых настроек
-        setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
         break;
 
       case RIGHT_KEY_HOLD: //удержание правой кнопки
@@ -6150,7 +6150,7 @@ uint8_t mainScreen(void) //главный экран
 
       case SET_KEY_PRESS: //клик средней кнопкой
         changeFastSetFlip(); //сменить режим анимации минут быстрых настроек
-        setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
         animShow = ANIM_DEMO; //демонстрация анимации цифр
         return MAIN_PROGRAM; //перезапуск основной программы
 
@@ -6163,7 +6163,7 @@ uint8_t mainScreen(void) //главный экран
 #endif
 #if LAMP_NUM > 4
         changeFastSetSecs(); //сменить режим анимации секунд быстрых настроек
-        setUpdateMemory(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
+        saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
         changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
         return MAIN_PROGRAM; //перезапуск основной программы
 #else
