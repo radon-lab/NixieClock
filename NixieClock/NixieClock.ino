@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 28.12.25
+  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 29.12.25
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1807,10 +1807,9 @@ void setDotTemp(boolean set) {
 //-----------------------------Установить разделяющую точку-----------------------------------
 void setDotDate(boolean set) {
 #if DOTS_PORT_ENABLE && !SHOW_DATE_DOT_DIV
-#if SHOW_DATE_TYPE > 1
-#if DOTS_NUM > 4
   if (!set) indiClrDots(); //выключаем разделительные точки
   else {
+#if (SHOW_DATE_TYPE > 1) && (DOTS_NUM > 4)
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
     indiSetDotR(1); //включаем разделительную точку
     indiSetDotR(3); //включаем разделительную точку
@@ -1818,20 +1817,14 @@ void setDotDate(boolean set) {
     indiSetDotL(2); //включаем разделительную точку
     indiSetDotL(4); //включаем разделительную точку
 #endif
-  }
-#elif SECS_DOT != 3
-  dotSetBright(dot.menuBright); //включаем точки
-#endif
 #else
-  if (!set) indiClrDots(); //выключаем разделительные точки
-  else {
 #if (DOTS_TYPE == 1) || ((DOTS_DIV == 1) && (DOTS_TYPE == 2))
     indiSetDotR(1); //включаем разделительную точку
 #else
     indiSetDotL(2); //включаем разделительную точку
 #endif
-  }
 #endif
+  }
 #elif SECS_DOT == 2
 #if (SHOW_DATE_TYPE > 1) && (LAMP_NUM > 4)
   if (!set) dotSetBright(0); //выключаем точки
@@ -6032,10 +6025,10 @@ uint8_t fastSetSwitch(void) //переключение быстрых настр
 #endif
     }
   }
-  
+
   if (mode == FAST_FLIP_MODE) animShow = ANIM_DEMO; //демонстрация анимации цифр
   saveMemoryBlock(CELL(MEM_UPDATE_FAST_SET)); //записываем настройки в память
-  
+
   return MAIN_PROGRAM; //выходим
 }
 //-----------------------------Главный экран------------------------------------------------
