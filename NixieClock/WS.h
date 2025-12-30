@@ -138,8 +138,8 @@ void wsBacklSetLedHue(uint8_t _color, boolean _mode)
   if (_mode == WHITE_OFF && _color >= 253) _color = 0;
   for (uint8_t f = 0; f < LEDS_NUM; f++) ledColor[f] = _color;
 }
-//---------------------------Установка цвета подсветки меню в формате HV----------------------------
-void wsBacklSetMultipleHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
+//------------------------------Установка двух цветов в формате HV----------------------------------
+void wsBacklSetMultiHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_main)
 {
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t f = 0; f < LEDS_NUM; f++) {
