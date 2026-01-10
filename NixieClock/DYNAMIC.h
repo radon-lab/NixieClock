@@ -16,10 +16,18 @@
 const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы
 const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 
-enum {INDI_POS, ANODE_1_POS, ANODE_2_POS, ANODE_3_POS, ANODE_4_POS, ANODE_5_POS, ANODE_6_POS}; //порядок индикации ламп
+enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS, INDI_4_POS, INDI_5_POS, INDI_6_POS}; //порядок индикации ламп
 
 #if INDI_PORT_TYPE
-const uint8_t regMask[] = {((SECS_DOT == 1) && INDI_DOT_TYPE) ? (0x01 << SECL_PIN) : ((INDI_SYMB_TYPE == 2) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+const uint8_t regMask[] = {(INDI_DOT_TYPE && (SECS_DOT == 1)) ? (0x01 << SECL_PIN) : (((INDI_SYMB_TYPE == 2) && (SECS_DOT != 1) && (SECS_DOT != 2)) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+#endif
+
+#if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
+#define INDI_DOTS_START 0x01
+#define INDI_POS_START 0x00
+#else
+#define INDI_DOTS_START 0x02
+#define INDI_POS_START 0x01
 #endif
 
 //----------------------------------Динамическая индикация---------------------------------------
@@ -36,7 +44,7 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #endif
 #endif
 
-#if (SECS_DOT == 2) && INDI_DOT_TYPE
+#if INDI_DOT_TYPE && (SECS_DOT == 2)
   if (!indi_state) {
     if (indi_buf[indi_state] & 0x80) temp |= (0x01 << SECL_PIN); //включили точки
     if (indi_buf[indi_state] & 0x40) temp |= (0x01 << SECR_PIN); //включили точки
@@ -48,33 +56,35 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
 #endif
 
   OCR0B = indi_dimm[indi_state]; //устанавливаем яркость индикатора
-  
+
 #if WIRE_PULL && !ESP_ENABLE
   PORTC = indi_buf[indi_state] | 0x30; //отправляем в дешефратор буфер индикатора и устанавливаем подтяжку
 #else
   PORTC = indi_buf[indi_state]; //отправляем в дешефратор буфер индикатора
 #endif
 
-#if INDI_PORT_TYPE || (INDI_SYMB_TYPE == 1) || (!INDI_DOT_TYPE && !INDI_SYMB_TYPE)
+#if !INDI_PORT_TYPE || (!INDI_DOT_TYPE && ((SECS_DOT == 1) || (SECS_DOT == 2))) || ((INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2))
   if (indi_buf[indi_state] != INDI_NULL) {
     switch (indi_state) {
-#if (INDI_SYMB_TYPE == 1)
-      case INDI_POS: ANODE_SET(ANODE_0_PIN); break;
-#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
+#if !INDI_DOT_TYPE
 #if SECS_DOT == 1
-      case INDI_POS: SECS_DOT_SET(SECL_PIN); break;
+      case INDI_0_POS: SECS_DOT_SET(SECL_PIN); break;
 #elif SECS_DOT == 2
-      case INDI_POS: if (indi_buf[indi_state] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indi_state] & 0x40) SECS_DOT_SET(SECR_PIN); break;
+      case INDI_0_POS: if (indi_buf[indi_state] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indi_state] & 0x40) SECS_DOT_SET(SECR_PIN); break;
 #endif
 #endif
+#if (INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2)
+      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
+#endif
+
 #if !INDI_PORT_TYPE
-      case ANODE_1_POS: ANODE_SET(ANODE_1_PIN); break;
-      case ANODE_2_POS: ANODE_SET(ANODE_2_PIN); break;
-      case ANODE_3_POS: ANODE_SET(ANODE_3_PIN); break;
-      case ANODE_4_POS: ANODE_SET(ANODE_4_PIN); break;
+      case INDI_1_POS: ANODE_SET(ANODE_1_PIN); break;
+      case INDI_2_POS: ANODE_SET(ANODE_2_PIN); break;
+      case INDI_3_POS: ANODE_SET(ANODE_3_PIN); break;
+      case INDI_4_POS: ANODE_SET(ANODE_4_PIN); break;
 #if LAMP_NUM > 4
-      case ANODE_5_POS: ANODE_SET(ANODE_5_PIN); break;
-      case ANODE_6_POS: ANODE_SET(ANODE_6_PIN); break;
+      case INDI_5_POS: ANODE_SET(ANODE_5_PIN); break;
+      case INDI_6_POS: ANODE_SET(ANODE_6_PIN); break;
 #endif
 #endif
     }
@@ -98,13 +108,12 @@ ISR(TIMER0_COMPA_vect) //динамическая индикация
   REG_LATCH_DISABLE; //закрыли защелку
 #endif
 }
+//-----------------------------------------------
 ISR(TIMER0_COMPB_vect) {
 #if INDI_PORT_TYPE
   REG_LATCH_ENABLE; //открыли защелку
   SPDR = 0x00; //загрузили данные
-#if (INDI_SYMB_TYPE == 1)
-  if (!indi_state) ANODE_CLEAR(ANODE_0_PIN); //выключили символ
-#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
+#if !INDI_DOT_TYPE
 #if (SECS_DOT == 1)
   if (!indi_state) SECS_DOT_CLEAR(SECL_PIN); //выключили точки
 #elif (SECS_DOT == 2)
@@ -114,24 +123,33 @@ ISR(TIMER0_COMPB_vect) {
   }
 #endif
 #endif
-#else
+#if (INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2)
+  if (!indi_state) ANODE_CLEAR(ANODE_0_PIN); //выключили символ
+#endif
+#endif
+
+#if !INDI_PORT_TYPE || (!INDI_DOT_TYPE && ((SECS_DOT == 1) || (SECS_DOT == 2))) || ((INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2))
   switch (indi_state) {
-#if (INDI_SYMB_TYPE == 1)
-    case INDI_POS: ANODE_CLEAR(ANODE_0_PIN); break;
-#elif !INDI_SYMB_TYPE
+#if !INDI_DOT_TYPE
 #if SECS_DOT == 1
-    case INDI_POS: SECS_DOT_CLEAR(SECL_PIN); break;
+    case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); break;
 #elif SECS_DOT == 2
-    case INDI_POS: SECS_DOT_CLEAR(SECL_PIN); SECS_DOT_CLEAR(SECR_PIN); break;
+    case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); SECS_DOT_CLEAR(SECR_PIN); break;
 #endif
 #endif
-    case ANODE_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
-    case ANODE_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
-    case ANODE_3_POS: ANODE_CLEAR(ANODE_3_PIN); break;
-    case ANODE_4_POS: ANODE_CLEAR(ANODE_4_PIN); break;
+#if (INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2)
+    case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
+#endif
+
+#if !INDI_PORT_TYPE
+    case INDI_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
+    case INDI_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
+    case INDI_3_POS: ANODE_CLEAR(ANODE_3_PIN); break;
+    case INDI_4_POS: ANODE_CLEAR(ANODE_4_PIN); break;
 #if LAMP_NUM > 4
-    case ANODE_5_POS: ANODE_CLEAR(ANODE_5_PIN); break;
-    case ANODE_6_POS: ANODE_CLEAR(ANODE_6_PIN); break;
+    case INDI_5_POS: ANODE_CLEAR(ANODE_5_PIN); break;
+    case INDI_6_POS: ANODE_CLEAR(ANODE_6_PIN); break;
+#endif
 #endif
   }
 #endif
@@ -149,17 +167,10 @@ ISR(TIMER0_COMPB_vect) {
 #endif
 
   if (++indi_state > LAMP_NUM) { //переходим к следующему индикатору
-#if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
 #if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x01; //сбросили текущей номер точек индикаторов
+    indi_dot_pos = INDI_DOTS_START; //сбросили текущей номер точек индикаторов
 #endif
-    indi_state = 0; //сбросили позицию индикатора
-#else
-#if DOTS_PORT_ENABLE
-    indi_dot_pos = 0x02; //сбросили текущей номер точек индикаторов
-#endif
-    indi_state = 1; //сбросили позицию индикатора
-#endif
+    indi_state = INDI_POS_START; //сбросили позицию индикатора
   }
 
 #if INDI_PORT_TYPE
@@ -200,12 +211,16 @@ void indiPortInit(void) //инициализация портов индикац
 {
   PORTC |= 0x0F; //устанавливаем высокие уровни на катоды
   DDRC |= 0x0F; //устанавливаем катоды как выходы
-#if (SECS_DOT < 3) && !INDI_DOT_TYPE
+
+#if !INDI_DOT_TYPE
+#if SECS_DOT < 3
   SECS_DOT_INIT(SECL_PIN); //инициализация секундных точек
 #endif
-#if (SECS_DOT == 2) && !INDI_DOT_TYPE
+#if SECS_DOT == 2
   SECS_DOT_INIT(SECR_PIN); //инициализация секундных точек
 #endif
+#endif
+
 #if DOTS_PORT_ENABLE == 1
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   INDI_DOT_INIT(DOTSR_PIN); //инициализация правых разделительных точек в индикаторах
@@ -214,9 +229,11 @@ void indiPortInit(void) //инициализация портов индикац
   INDI_DOT_INIT(DOTSL_PIN); //инициализация левых разделительных точек в индикаторах
 #endif
 #endif
-#if INDI_SYMB_TYPE == 1
+
+#if (INDI_SYMB_TYPE == 1) && (SECS_DOT != 1) && (SECS_DOT != 2)
   ANODE_INIT(ANODE_0_PIN); //инициализация анода 0
 #endif
+
 #if !INDI_PORT_TYPE
   ANODE_INIT(ANODE_1_PIN); //инициализация анода 1
   ANODE_INIT(ANODE_2_PIN); //инициализация анода 2

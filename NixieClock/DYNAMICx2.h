@@ -31,8 +31,6 @@ const uint8_t indi_dots_r_pin[2] = {DOTSR_PIN};
 #if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
 #if LAMP_NUM > 4
 #define INDI_DOTS_START 0x09
-#define INDI_DOTS0_MASK
-#define INDI_DOTS1_MASK
 #else
 #define INDI_DOTS_START 0x05
 #endif
@@ -78,17 +76,14 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
 
   if (indi_buf[indi_state] != INDI_NULL) {
     switch (indi_state) {
-        //----------------------------------------------- ???
-#if INDI_SYMB_TYPE
-      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
-#elif !INDI_DOT_TYPE && !INDI_SYMB_TYPE
 #if SECS_DOT == 1
       case INDI_0_POS: SECS_DOT_SET(SECL_PIN); break;
 #elif SECS_DOT == 2
       case INDI_0_POS: if (indi_buf[indi_state] & 0x80) SECS_DOT_SET(SECL_PIN); if (indi_buf[indi_state] & 0x40) SECS_DOT_SET(SECR_PIN); break;
+#elif INDI_SYMB_TYPE == 1
+      case INDI_0_POS: ANODE_SET(ANODE_0_PIN); break;
 #endif
-#endif
-        //----------------------------------------------- ???
+
 #if LAMP_NUM > 4
       case INDI_1_POS: ANODE_SET(ANODE_1_PIN); break;
       case INDI_2_POS: ANODE_SET(ANODE_2_PIN); break;
@@ -113,7 +108,6 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
     }
   }
 
-  //----------------------------------------------- ???
 #if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   if (indi_dot_r & (indi_dot_pos & INDI_DOTS0_MASK)) INDI_DOT_SET(INDI_DOTSR_0); //включаем правые точки
@@ -124,7 +118,6 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   if (indi_dot_l & (indi_dot_pos & INDI_DOTS1_MASK)) INDI_DOT_SET(INDI_DOTSL_1); //включаем левые точки
 #endif
 #endif
-  //----------------------------------------------- ???
 
   tickCheck(); //проверка переполнения тиков
   stackCheck(); //проверка переполнения стека
@@ -132,19 +125,17 @@ ISR(TIMER0_OVF_vect) //динамическая индикация
   while (!(SPSR & (0x01 << SPIF))); //ждем отправки
   REG_LATCH_DISABLE; //закрыли защелку
 }
+//-----------------------------------------------
 ISR(TIMER0_COMPA_vect) {
   switch (indi_state) {
-      //----------------------------------------------- ???
-#if INDI_SYMB_TYPE
-    case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
-#elif !INDI_SYMB_TYPE
 #if SECS_DOT == 1
     case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); break;
 #elif SECS_DOT == 2
     case INDI_0_POS: SECS_DOT_CLEAR(SECL_PIN); SECS_DOT_CLEAR(SECR_PIN); break;
+#elif INDI_SYMB_TYPE == 1
+    case INDI_0_POS: ANODE_CLEAR(ANODE_0_PIN); break;
 #endif
-#endif
-      //----------------------------------------------- ???
+
 #if LAMP_NUM > 4
     case INDI_1_POS: ANODE_CLEAR(ANODE_1_PIN); break;
     case INDI_2_POS: ANODE_CLEAR(ANODE_2_PIN); break;
@@ -155,7 +146,6 @@ ISR(TIMER0_COMPA_vect) {
 #endif
   }
 
-  //----------------------------------------------- ???
 #if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   INDI_DOT_CLEAR(INDI_DOTSR_0); //выключаем правые точки
@@ -164,8 +154,8 @@ ISR(TIMER0_COMPA_vect) {
   INDI_DOT_CLEAR(INDI_DOTSL_0); //выключаем левые точки
 #endif
 #endif
-  //----------------------------------------------- ???
 }
+//-----------------------------------------------
 ISR(TIMER0_COMPB_vect) {
   switch (indi_state) {
 #if LAMP_NUM > 4
@@ -178,7 +168,6 @@ ISR(TIMER0_COMPB_vect) {
 #endif
   }
 
-  //----------------------------------------------- ???
 #if DOTS_PORT_ENABLE
 #if (DOTS_TYPE == 1) || (DOTS_TYPE == 2)
   INDI_DOT_CLEAR(INDI_DOTSR_1); //выключаем правые точки
@@ -187,7 +176,6 @@ ISR(TIMER0_COMPB_vect) {
   INDI_DOT_CLEAR(INDI_DOTSL_1); //выключаем левые точки
 #endif
 #endif
-  //----------------------------------------------- ???
 }
 //------------------------Проверка состояния динамической индикации-------------------------------
 void indiStateCheck(void) //проверка состояния динамической индикации
