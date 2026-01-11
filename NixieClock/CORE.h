@@ -515,7 +515,7 @@ struct Settings_1 {
   uint8_t autoShowTime = DEFAULT_AUTO_SHOW_TIME; //интервал времени автопоказа
   uint8_t autoShowFlip = DEFAULT_AUTO_SHOW_ANIM; //режим анимации автопоказа
   uint8_t burnMode = DEFAULT_BURN_MODE; //режим антиотравления индикаторов
-  uint8_t burnTime = BURN_PERIOD; //интервал антиотравления индикаторов
+  uint8_t burnTime = DEFAULT_BURN_PERIOD; //интервал антиотравления индикаторов
 } mainSettings;
 
 struct Settings_2 { //быстрые настройки
@@ -540,8 +540,8 @@ struct Settings_4 { //расширенные настройки
   uint8_t alarmTime = ALARM_TIMEOUT;
   uint8_t alarmWaitTime = ALARM_WAIT_TIME;
   uint8_t alarmSoundTime = ALARM_SOUND_TIME;
-  uint8_t alarmDotOn = ((!ALARM_ON_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_ON_BLINK_DOT));
-  uint8_t alarmDotWait = ((!ALARM_WAIT_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_WAIT_BLINK_DOT));
+  uint8_t alarmDotOn = ((!ALARM_ON_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_ON_BLINK_DOT - 1));
+  uint8_t alarmDotWait = ((!ALARM_WAIT_BLINK_DOT) ? (DOT_EFFECT_NUM) : (ALARM_WAIT_BLINK_DOT - 1));
   uint8_t tempCorrectSensor = SHOW_TEMP_CORRECT_MODE;
   uint8_t tempMainSensor = SHOW_TEMP_MAIN_SENS;
   uint8_t tempHourSensor = HOUR_SOUND_MAIN_SENS;
