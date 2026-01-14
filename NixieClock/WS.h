@@ -4,9 +4,9 @@ boolean ledUpdate = 0; //флаг отрисовки светодиодов
 uint8_t ledColor[LEDS_NUM]; //массив цветов
 uint8_t ledBright[LEDS_NUM]; //массив яркости
 
-const uint8_t ledWhiteTable[][3] = { //таблица оттенков белого GRB
-  155, 255, 60,  //2400
-  208, 255, 170, //4100
+const uint8_t ledWhiteTable[][3] = { //таблица оттенков белого RGB
+  255, 155, 60,  //2400
+  255, 208, 170, //4100
   255, 255, 255  //6500
 };
 
@@ -89,26 +89,46 @@ void wsBacklShowLeds(void)
         else pallet = 0;
         switch (count) {
           case 0:
+#if BACKL_COLORS
+            *ledLink++ = ledBright[f] - pallet;
+            *ledLink++ = pallet;
+#else
             *ledLink++ = pallet;
             *ledLink++ = ledBright[f] - pallet;
+#endif
             *ledLink++ = 0;
             break;
           case 1:
+#if BACKL_COLORS
+            *ledLink++ = 0;
+            *ledLink++ = ledBright[f] - pallet;
+#else
             *ledLink++ = ledBright[f] - pallet;
             *ledLink++ = 0;
+#endif
             *ledLink++ = pallet;
             break;
           case 2:
+#if BACKL_COLORS
+            *ledLink++ = pallet;
+            *ledLink++ = 0;
+#else
             *ledLink++ = 0;
             *ledLink++ = pallet;
+#endif
             *ledLink++ = ledBright[f] - pallet;
             break;
         }
       }
       else {
         pallet -= 253;
+#if BACKL_COLORS
         *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][0]) >> 8);
         *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][1]) >> 8);
+#else
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][1]) >> 8);
+        *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][0]) >> 8);
+#endif
         *ledLink++ = (uint8_t)((ledBright[f] * ledWhiteTable[pallet][2]) >> 8);
       }
     }
