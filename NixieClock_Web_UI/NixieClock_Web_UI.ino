@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 27.12.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 17.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1124,6 +1124,7 @@ void build(void) {
       GP.HR_TEXT(LANG_PAGE_INFO_HR_CONTROL, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_RESET, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("resetButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
       M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_REBOOT, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("rebootButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
+      GP.VOID_BOX("0;height:8px");
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
@@ -1246,7 +1247,7 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
   if (!webShowUpdateState()) {
     PAGE_TITLE_NAME(LANG_PAGE_UPDATE_TITLE);
 
-    GP.BLOCK_MIDDLE_BEGIN();
+    GP.PAGE_MIDDLE_ALIGN();
 
     if (!UpdateEnd) {
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_BLOCK_UPL, UI_BLOCK_COLOR);
@@ -1270,8 +1271,6 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
     GP.BOX_BEGIN(GP_CENTER);
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_GUI_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
-    GP.BLOCK_END();
-
     GP.BLOCK_END();
   }
 
@@ -1310,6 +1309,7 @@ void webShowUpdateUI(void) {
   if (fsUpdate) {
     M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FS_ESP, "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("📼", UI_BUTTON_COLOR, true););
   }
+  GP.VOID_BOX("0;height:10px");
 }
 void webShowUpdateAuth(void) {
   GP.HR_TEXT(LANG_PAGE_UPDATE_HR_AUTH, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
@@ -1328,7 +1328,8 @@ boolean webShowUpdateState(void) {
   if (updaterState()) {
     PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
 
-    GP.BLOCK_MIDDLE_BEGIN();
+    GP.PAGE_MIDDLE_ALIGN();
+    
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     if (!updaterFlash()) {
@@ -1345,7 +1346,6 @@ boolean webShowUpdateState(void) {
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.BLOCK_END();
-    GP.BLOCK_END();
 
     return true;
   }
@@ -1356,7 +1356,8 @@ boolean webShowHardwareInfo(void) {
   if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
     PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
 
-    GP.BLOCK_MIDDLE_BEGIN();
+    GP.PAGE_MIDDLE_ALIGN();
+    
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
@@ -1372,7 +1373,6 @@ boolean webShowHardwareInfo(void) {
       GP.BOX_END();
     }
     GP.BLOCK_END();
-    GP.BLOCK_END();
 
     passSetOtaState();
     return true;
@@ -1384,7 +1384,8 @@ boolean webShowReloadInfo(void) {
   if (busRebootState()) {
     PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
 
-    GP.BLOCK_MIDDLE_BEGIN();
+    GP.PAGE_MIDDLE_ALIGN();
+    
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
@@ -1395,7 +1396,6 @@ boolean webShowReloadInfo(void) {
     GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
     GP.BOX_END();
     GP.UPDATE("extReboot,extWarn");
-    GP.BLOCK_END();
     GP.BLOCK_END();
 
     return true;
