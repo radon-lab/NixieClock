@@ -7,7 +7,11 @@ uint32_t wifi_interval = 0; //интервал переподключения к
 String wifi_scan_list = "Нет сетей"; //список найденых wifi сетей
 
 //--------------------------------------------------------------------
-String wifiGetApSSID(void) {
+uint8_t wifiGetSignal(void) {
+  return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
+}
+//--------------------------------------------------------------------
+String wifiGetLocalSSID(void) {
   String str;
   str.reserve(70);
   if (settings.ssid[0]) str = settings.ssid;
@@ -15,7 +19,7 @@ String wifiGetApSSID(void) {
   return str;
 }
 //--------------------------------------------------------------------
-String wifiGetApIP(void) {
+String wifiGetLocalIP(void) {
   String str;
   str.reserve(30);
   if (wifi_status == WL_CONNECTED) str = WiFi.localIP().toString();
@@ -33,6 +37,22 @@ String wifiGetConnectState(void) {
     else str = F("Подключение к сети...");
   }
   else str = F("Некорректное имя сети");
+  return str;
+}
+//--------------------------------------------------------------------
+String wifiGetCurrentMode(void) {
+  String str;
+  str.reserve(30);
+
+  if (WiFi.getMode() == WIFI_AP) str = F("AP");
+  else if (WiFi.getMode() == WIFI_STA) str = F("STA");
+  else str = F("AP_STA");
+
+  switch (WiFi.getPhyMode()) {
+    case WIFI_PHY_MODE_11B: str += F("_11B"); break;
+    case WIFI_PHY_MODE_11G: str += F("_11G"); break;
+    case WIFI_PHY_MODE_11N: str += F("_11N"); break;
+  }
   return str;
 }
 //--------------------------------------------------------------------
@@ -98,6 +118,7 @@ void wifiScanResult(int networksFound) {
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
 
   //настраиваем точку доступа
   IPAddress local(AP_IP);
@@ -129,6 +150,11 @@ void wifiStartAP(void) {
 
   //начинаем поиск сетей
   WiFi.scanNetworksAsync(wifiScanResult);
+}
+//--------------------------------------------------------------------
+void wifiStartSTA(void) {
+  WiFi.mode(WIFI_STA);
+  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
 }
 //--------------------------------------------------------------------
 boolean wifiUpdate(void) {
