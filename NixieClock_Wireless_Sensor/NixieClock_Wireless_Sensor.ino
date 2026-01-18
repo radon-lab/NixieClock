@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 17.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 18.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -146,7 +146,7 @@ void build(void) {
   GP.HR(UI_BAR_LINE_COLOR);
 
   if (ui.uri("/")) { //информация о системе
-    GP.PAGE_TITLE("Об устройстве");
+    GP.PAGE_TITLE("Информация");
 
     updateList += F(",infSignal,infPower,infUptime");
 
@@ -154,7 +154,7 @@ void build(void) {
     sensorsList.reserve(150);
     sensorsList = "";
 
-    GP.BLOCK_BEGIN(GP_THIN, "", "Информация о датчике", UI_BLOCK_COLOR);
+    GP.BLOCK_BEGIN(GP_THIN, "", "Датчик температуры", UI_BLOCK_COLOR);
     for (uint8_t i = 0; i < SENS_MAX; i++) {
       if (settings.sensor & (0x01 << i)) {
         if (sensorsList[0] != '\0') sensorsList += '+';
@@ -300,14 +300,14 @@ void build(void) {
         addrSend = settings.send[i];
         if (addrSend) {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", addrSend.toString(), "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
-            GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "135px", false, true);
+            GP.TEXT("", "IP адрес", addrSend.toString() + " [x" + settings.attempt[i] + ']', "90%;max-width:408px", 20, "", true);
+            GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "auto;min-width:110px", false, true);
           );
         }
         else {
           M_BOX(
             M_BOX(GP_LEFT, GP.TEXT("extSendIp", "IP адрес", "", "", 15); GP.NUMBER("extSendAttempt", "Попыток", INT32_MAX, "", false););
-            GP.BUTTON_MINI("extSendAdd", "Добавить", "", UI_BUTTON_COLOR, "135px", false, true);
+            GP.BUTTON_MINI("extSendAdd", "Добавить", "", UI_BUTTON_COLOR, "auto;min-width:110px", false, true);
           );
           buffSendIp[0] = '\0';
           buffSendAttempt = 1;

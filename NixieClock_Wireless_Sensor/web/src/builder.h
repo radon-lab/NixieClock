@@ -1098,7 +1098,7 @@ struct Builder {
 
   // ======================= НАВИГАЦИЯ =======================
   void NAV_BAR_LINKS(const String& urls, const String& names, int width = 0, PGM_P st = GP_GREEN) {
-    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{bottom:75px;}}.mainblock{padding-bottom:95px;}</style>\n");
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{bottom:68px;}}.mainblock{padding-bottom:95px;}</style>\n");
     *_GPP += F("<div class='navfixed'><div class='navtab navbar' ");
     if (width) {
       *_GPP += F("style='max-width:");
