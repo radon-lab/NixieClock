@@ -6,7 +6,7 @@ const char GP_DEFAULT_THEME[] PROGMEM = R"(
 :root{color-scheme:light dark;}
 html{overscroll-behavior:none;scrollbar-width:none;}
 html::-webkit-scrollbar{display:none;}
-body{font-family:Verdana;background:#13161a;color:#bbb;margin:0;height:100vh;width:100%;}
+body{font-family:Verdana;background:#13161a;color:#bbb;margin:0;height:100vh;height:100dvh;width:100%;}
 body{-webkit-tap-highlight-color:transparent;}
 .mainblock{margin:auto;padding:9px 8px;max-width:100%;overflow-x:hidden;}
 #blockBack input[type=password],#blockBack input[type=text],#blockBack input[type=date],#blockBack input[type=time],#blockBack input[type=number],#blockBack input[type=select],#blockBack textarea,#blockBack select,#blockBack .slider{background:#13161a}
