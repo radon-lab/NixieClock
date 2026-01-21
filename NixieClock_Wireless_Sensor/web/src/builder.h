@@ -2041,7 +2041,7 @@ struct Builder {
     *_GPP += F("<input type='hidden' name='_range' class='range_inp' id='");
     *_GPP += name;
     if (color.length()) {
-      *_GPP += F("' placeholder='");
+      *_GPP += F("' data-color='");
       *_GPP += color;
     }
     *_GPP += F("' value='");
@@ -2076,18 +2076,18 @@ struct Builder {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1);
   }
 
-  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
-  }
-  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
-  }
-
   void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 0, 1, lable);
   }
   void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
+  }
+  
+  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 10, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
+  }
+  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 10, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
   }
 
   void SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
@@ -2315,7 +2315,7 @@ struct Builder {
     *_GPP += nums;
     *_GPP += F("' max='");
     *_GPP += sel;
-    *_GPP += F("' placeholder='");
+    *_GPP += F("' data-list='");
     *_GPP += list;
     *_GPP += F("' onclick='selectList(this)' readonly");
     if (dis) *_GPP += F(" disabled\n");

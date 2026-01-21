@@ -107,13 +107,13 @@ _popupStack.shift();if(_popupStack.length>0){let pop=getEl(_popupStack[0]);popup
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
-function selectUpdate(arg){let val=arg.placeholder.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
-function selectClick(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
-function selectList(arg){arg.blur();const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.placeholder.split(',');
+function selectUpdate(arg){let val=arg.dataset.list.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
+function selectChoice(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
+function selectList(arg){arg.blur();const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.dataset.list.split(',');
 for(let i=0;i<val.length;i++){const item=document.createElement('input');item.className='selItem';item.id='_sel_'+i;item.name=arg.id;item.type='button';item.max=i;
-item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectClick(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
+item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectChoice(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
-const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectClick(event.target)');}
+const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectChoice(event.target)');}
 function pageUpdate(){document.querySelectorAll('.range_inp').forEach(x=>{rangeActiv(x);rangeChange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));document.querySelectorAll('input[type=select]').forEach(x=>selectUpdate(x));
 let el=document.querySelector('.ui_block');if(el!=null){document.querySelector('.ui_load').remove();el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}}
 
@@ -121,7 +121,7 @@ var _rangeId=null,_rangeFocus=0,_rangeWidth=0,_rangePos=0,_rangeX=0,_rangeY=0;
 function limit(n,min,max){n=Number(n);min=Number(min);max=Number(max);return(n>max)?max:(n<min)?min:n;}
 function steplim(n,step){n=Number(n);step=Number(step);if(step>=0.01){let val=n;while(n>=step)n-=step;return(val-n).toFixed(2);}else return n.toFixed(2);}
 function rangeActiv(arg){let el=getEl(arg.id+'_dsp');if(!el.classList.contains('dsbl')){el.addEventListener('touchstart',rangeStart,{passive:true});el.addEventListener('mousedown',rangeStart,{passive:true});}}
-function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');if(arg.placeholder){const col=arg.placeholder.split(',');let pos=arg.value-Number(arg.min);out.style.backgroundColor=(col.length>pos)?col[pos]:'#2a2d35';}
+function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');if(arg.dataset.color){const col=arg.dataset.color.split(',');let pos=arg.value-Number(arg.min);out.style.backgroundColor=(col.length>pos)?col[pos]:'#2a2d35';}
 else{const lim=out.name.split(',');if((arg.value<=Number(arg.min))&&lim[0]){out.value=lim[0];}else if((arg.value>=Number(arg.max))&&lim[1]){out.value=lim[1];}else out.value=Number(arg.value);}}
 function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_rangeId.min);let val=(limit(Math.round((pos-_rangePos)+(step/2)),0,_rangeWidth)/step)+Number(_rangeId.min);
 val=steplim(val,_rangeId.step);if(Number(_rangeId.value)!=val){rangeChange(_rangeId,val);if(_rangeId.checked)fs=1;}if(fs)EVclickVal(_rangeId);}
