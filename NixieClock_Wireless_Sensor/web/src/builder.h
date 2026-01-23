@@ -128,7 +128,7 @@ struct Builder {
   }
   void UI_MENU(const String& title, const String& name, PGM_P st_1 = GP_GREEN, PGM_P st_2 = GP_GRAY) {
     _ui_style = st_1;
-    *_GPP += F("<style>.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     if (name.length()) *_GPP += name;
     else *_GPP += title;
