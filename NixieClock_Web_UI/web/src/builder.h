@@ -599,7 +599,7 @@ struct Builder {
   void GRID_RESPONSIVE(int width) {
     *_GPP += F("<style type='text/css'>@media screen and (max-width:");
     *_GPP += width;
-    *_GPP += F("px){\n.grid{display:block;}\n#grid .block{margin:20px 5px;width:unset;}}</style>\n");
+    *_GPP += F("px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}</style>\n");
     send();
   }
 
@@ -1105,7 +1105,7 @@ struct Builder {
       *_GPP += width;
       *_GPP += F("px'");
     }
-    *_GPP += F("><ul id='navbar' onWheel='barScroll(this,event)'>\n");
+    *_GPP += F("><ul id='_nav' onWheel='barScroll(this,event)'>\n");
     GP_parser n(names);
     GP_parser u(urls);
     while (n.parse()) {
@@ -1138,20 +1138,22 @@ struct Builder {
       *_GPP += FPSTR(st);
       *_GPP += "'";
     }
-    *_GPP += "><ul>\n";
+    *_GPP += "><ul id='_nav' onWheel='barScroll(this,event)'>\n";
     GP_parser n(names);
     GP_parser u(urls);
     while (n.parse()) {
       u.parse();
       *_GPP += F("<li ");
       if (_gp_uri->equals(u.str)) *_GPP += F("class='navopen' ");
-      *_GPP += F("onclick='location.href=\"");
+      *_GPP += F("onclick='saveNav();location.href=\"");
       *_GPP += u.str;
       *_GPP += F("\";'>");
       *_GPP += n.str;
       *_GPP += F("</li>\n");
     }
     *_GPP += F("</ul></div>\n");
+
+    *_GPP += F("<script>restoreNav();</script>\n");
     send();
   }
 
@@ -1161,7 +1163,7 @@ struct Builder {
       *_GPP += st;
       *_GPP += F(";color:#13161a;}</style>\n");
     }
-    *_GPP += F("<div class='navtab'><ul>\n");
+    *_GPP += F("<div class='navtab'><ul onWheel='barScroll(this,event)'>\n");
     GP_parser tab(list);
     while (tab.parse()) {
       *_GPP += F("<li ");
@@ -1194,7 +1196,7 @@ struct Builder {
       *_GPP += FPSTR(st);
       *_GPP += '\'';
     }
-    *_GPP += ">\n";
+    *_GPP += " onWheel='barScroll(this,event)'>\n";
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
@@ -1212,6 +1214,36 @@ struct Builder {
       *_GPP += '/';
       *_GPP += p.count;
       *_GPP += F("=\");'>");
+      *_GPP += p.str;
+      *_GPP += F("</li>\n");
+    }
+    *_GPP += F("</ul></div>\n");
+    send();
+  }
+
+  void NAV_TABS(const String& list, PGM_P st = GP_DEFAULT) {
+    _gp_nav_id++;
+    _gp_nav_pos = 0;
+    *_GPP += F("<div class='navtab'><ul ");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("style='background:");
+      *_GPP += FPSTR(st);
+      *_GPP += '\'';
+    }
+    *_GPP += " onWheel='barScroll(this,event)'>\n";
+    GP_parser p(list);
+    while (p.parse()) {
+      *_GPP += F("<li ");
+      *_GPP += F("class='nt-");
+      *_GPP += _gp_nav_id;
+      if (!p.count) *_GPP += F(" navopen");
+      *_GPP += F("' onclick='EVopenTab(\"ntab-");
+      *_GPP += _gp_nav_id;
+      *_GPP += '/';
+      *_GPP += p.count;
+      *_GPP += F("\",this,\"nb-");
+      *_GPP += _gp_nav_id;
+      *_GPP += F("\")'>");
       *_GPP += p.str;
       *_GPP += F("</li>\n");
     }
@@ -1242,36 +1274,6 @@ struct Builder {
     *_GPP += "' ";
     if (!pos) *_GPP += F("style='display:block'");
     *_GPP += ">\n";
-    send();
-  }
-
-  void NAV_TABS(const String& list, PGM_P st = GP_DEFAULT) {
-    _gp_nav_id++;
-    _gp_nav_pos = 0;
-    *_GPP += F("<div class='navtab'><ul ");
-    if (st != GP_DEFAULT) {
-      *_GPP += F("style='background:");
-      *_GPP += FPSTR(st);
-      *_GPP += '\'';
-    }
-    *_GPP += ">\n";
-    GP_parser p(list);
-    while (p.parse()) {
-      *_GPP += F("<li ");
-      *_GPP += F("class='nt-");
-      *_GPP += _gp_nav_id;
-      if (!p.count) *_GPP += F(" navopen");
-      *_GPP += F("' onclick='EVopenTab(\"ntab-");
-      *_GPP += _gp_nav_id;
-      *_GPP += '/';
-      *_GPP += p.count;
-      *_GPP += F("\",this,\"nb-");
-      *_GPP += _gp_nav_id;
-      *_GPP += F("\")'>");
-      *_GPP += p.str;
-      *_GPP += F("</li>\n");
-    }
-    *_GPP += F("</ul></div>\n");
     send();
   }
 
@@ -2082,7 +2084,7 @@ struct Builder {
   void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
   }
-  
+
   void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 10, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
   }

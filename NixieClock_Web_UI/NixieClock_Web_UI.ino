@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 17.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 24.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -228,6 +228,8 @@ void build(void) {
 
   GP.PAGE_ZOOM(90, 390);
   GP.PAGE_BLOCK_BEGIN(500);
+
+  GP.GRID_RESPONSIVE(1100);
 
   if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowReloadInfo()) {
     //обновления блоков

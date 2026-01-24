@@ -81,8 +81,8 @@ var e=new Event('change');num.dispatchEvent(e);}
 function EVeye(arg){var p=arg.previousElementSibling;
 p.type=p.type=='text'?'password':'text';
 arg.style.color=p.type=='text'?'#bbb':'#13161a';}
-function saveNav(){window.sessionStorage.setItem('navbarPos',getEl('navbar').scrollLeft);}
-function restoreNav(){getEl('navbar').scrollLeft=window.sessionStorage.getItem('navbarPos')||0;}
+function saveNav(){window.sessionStorage.setItem('navpos',getEl('_nav').scrollLeft);}
+function restoreNav(){getEl('_nav').scrollLeft=window.sessionStorage.getItem('navpos')||0;}
 function addEv(ev,fn){document.body.addEventListener(ev,fn,{passive:false});}
 function delEv(ev,fn){document.body.removeEventListener(ev,fn,{passive:false});}
 function setZoom(w,z){function zm(ev){_zoom=(ev.matches)?(z/100):1;document.querySelector(':root').style.zoom=_zoom;}const m=window.matchMedia('(max-width:'+w+'px)');zm(m);m.addListener(zm);}

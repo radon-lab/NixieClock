@@ -19,8 +19,8 @@ hr{width:95%;margin:5px 0;border:none;border-top:2px solid #394048;}
 h2{margin:8px 0;}
 span{font-size:16px;}
 label{white-space:nowrap;font-size:20px;margin:0 5px;}
-.grid{display:flex;justify-content:space-between;}
-#grid .block{width:100%;margin:15px 10px;}
+.grid{display:flex;justify-content:space-between;margin-top:20px;margin-bottom:20px;}
+#grid .block{width:100%;margin:0 10px;}
 .blockBase{padding:5px 10px;margin:20px 10px;}
 .block{border-radius:20px;background-color:#2a2d35;box-shadow:#00000073 0 0 10px;}
 .blockShadow{margin:5px 10px;border-radius:15px;box-shadow:#00000052 0px 5px 10px 3px;}
@@ -42,7 +42,7 @@ input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}
 input[type=number],input[type=text],input[type=password],input[type=time],input[type=date],input[type=select],select,textarea{text-align:center;appearance:none;}
 input[type=number],input[type=text],input[type=password],input[type=select],select,textarea{display:inline-block;border-radius:10px;box-sizing:border-box;cursor:auto;}
-input[type=select],select{min-width:130px;width:200px;cursor:pointer;}
+input[type=select],select{min-width:130px;cursor:pointer;}
 input[type=select]:disabled,select:disabled{filter:brightness(0.6);cursor:default;}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:#13161a;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
@@ -79,21 +79,22 @@ output{display:inline-block;height:17px;margin:12px 5px 12px 0;padding:1.5px 3px
 .rangeColor{height:15px;padding:0;background-color:#2a2d35;border:3px solid #2a2d35;}
 .rangeValue{display:inline-flex;justify-content:end;position:relative;right:70px;margin-right:-55px;background:none;color:#fff;pointer-events:none;}
 .lineBar{display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;border-radius:5px;box-shadow:#000000b3 0 0 15px;background-repeat:no-repeat;background-color:#1a1a1a;}
-.display{display:inline-block;margin:2px 3px;padding:0.1em 0.2em;border-radius:5px;font-size:18px;color:#000;background:#37a93c;}
+.display{display:inline-block;margin:2px 3px;padding:0.1em 0.3em;border-radius:8px;font-size:18px;color:#000;background:#37a93c;}
 #ubtn{padding:0 10px;min-width:34px;height:40px;font-size:25px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:25px;color:#13161a;cursor:pointer;text-align:center;vertical-align:middle;line-height:160%;}
 #ubtn:hover{filter:brightness(0.9);}
 #ubtnclr{height:0;width:0;overflow:hidden;}
-.navtab>ul{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;list-style-type:none;margin:15px 0 5px 0;padding:0;overflow:hidden;border-radius:5px;background:none;}
-.navtab>ul>li{display:block;align-items:center;width:40%;margin:5px;padding:8px 12px;border-radius:25px;cursor:pointer;color:#bbb;background:#13161a;box-shadow:#00000073 0 0 15px;}
+.navtab{margin:20px 8px;padding:2px;max-width:95%;border-radius:20px;background:#2a2d35;box-shadow:#00000073 0 0 10px;}
+.navtab>ul{display:flex;flex-wrap:nowrap;justify-content:space-around;margin:0;padding:0;border-radius:20px;overscroll-behavior:contain;overflow-x:auto;scrollbar-width:none;background:none;}
+.navtab>ul::-webkit-scrollbar{display:none;}
+.navtab>ul>li{display:flex;justify-content:center;align-items:center;width:100%;min-width:90px;margin:0;padding:8px 12px;border-radius:0;cursor:pointer;overflow:hidden;background:#13161a;}
 .navtab>ul>li:hover{filter:brightness(0.9);}
-.navblock{display:none;padding:0;}
-.navopen.navopen{background:#2a2d35;color:#fff;}
-.navbar{margin:15px 8px;padding:2px;border-radius:35px;background:#2a2d35;box-shadow:#00000073 0 0 10px;transition-duration:.3s;}
-.navbar>ul{height:55px;margin:0;border-radius:35px;flex-wrap:nowrap;overscroll-behavior:contain;overflow-x:auto;scrollbar-width:none;justify-content:space-around;}
-.navbar>ul::-webkit-scrollbar{display:none;}
+.navtab>ul>li:not(:last-child){margin-right:2px;}
+.navbar{margin:15px 8px;padding:2px;border-radius:35px;transition-duration:.3s;}
+.navbar>ul{height:55px;border-radius:35px;}
 .navbar>ul>li{display:flex;justify-content:center;min-width:90px;margin:0;border-radius:0;overflow:hidden;box-shadow:none;}
-.navbar>ul>li:not(:last-child){margin-right:2px;}
+.navblock{display:none;padding:0;}
 .navfixed{position:fixed;bottom:0;left:0;z-index:3;width:100%;}
+.navopen.navopen{background:#2a2d35;color:#fff;}
 i{padding:5px 7px;vertical-align:middle;}
 img.colorpick-eyedropper-input-trigger{display:none;}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
@@ -150,8 +151,8 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .lineled>input:checked+span::before{background-image:none;}
 .selBlock{border:2px solid #3c4048;max-width:300px;padding:10px}
 .selItem.selItem{height:32px;width:100%;margin:0;padding:0 10px;border-radius:0;background:#2a2d35;color:#bbb;font-size:15px;white-space:normal;cursor:pointer;}
-.selItem:first-child{border-radius:15px 15px 0 0;}
-.selItem:last-child{border-radius:0 0 15px 15px;}
+.selItem:first-child{border-top-left-radius:15px;border-top-right-radius:15px;}
+.selItem:last-child{border-bottom-left-radius:15px;border-bottom-right-radius:15px;}
 .selItem:not(:last-child){margin-bottom:3px;}
 .selActive.selActive{background:#4CAF50;color:#13161a;}
 .vr{border:1px solid #3c4048;height:50px;margin:0 10px;}
@@ -174,7 +175,6 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media screen and (max-width:450px){.mainblock{padding:9px 0 9px 0;}}
 @media screen and (max-width:1000px){.page{margin-top:35px;}.ui_load{transform:translateY(-40px);}.navbar{max-width:100%!important;}}
-@media screen and (max-width:1100px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}
 @media(min-width:1000px){
 .navbar{max-width:50%;margin:30px 8px;}
 .navbar>ul{height:40px;}
