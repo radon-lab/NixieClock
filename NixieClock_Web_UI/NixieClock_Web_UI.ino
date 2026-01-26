@@ -1026,6 +1026,7 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FRAG, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FREE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
 
+      GP.BREAK();
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_ALL, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFlashChipSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FULL, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getSketchSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FREE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
@@ -1058,6 +1059,7 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CORE, "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_GP, "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
 
+      GP.BREAK();
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ESP, "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VERSION, "", UI_INFO_COLOR););
       if (deviceInformation[HARDWARE_VERSION]) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CLOCK, "", UI_LABEL_COLOR); GP.LABEL(getClockFirmwareVersion(), "", UI_INFO_COLOR););
