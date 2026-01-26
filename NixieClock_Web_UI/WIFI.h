@@ -162,7 +162,7 @@ void wifiReadSettings(void) {
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
+  WiFi.setPhyMode(WIFI_PHY_MODE);
   Serial.println F("");
 
 #if WIFI_OUTPUT_POWER

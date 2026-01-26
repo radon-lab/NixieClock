@@ -28,6 +28,7 @@
 #define AP_PASS "1234567890" //пароль точки доступа(минимум 8 символов)("" - открытая сеть)
 #define AP_CHANNEL 5 //канал точки доступа(1..13)
 
+#define WIFI_PHY_MODE WIFI_PHY_MODE_11G //режим работы wifi(WIFI_PHY_MODE_11B | WIFI_PHY_MODE_11G | WIFI_PHY_MODE_11N)
 #define WIFI_OUTPUT_POWER 0 //максимальная мощность передачи wifi сигнала(0 - по умолчанию)(0.25..20.5)(шаг - 0.25)(дБм)
 
 #define STATUS_LED 1 //тип работы индикации состояния(0 - выключить | 1 - состояние wifi | 2 - индикация работы)
