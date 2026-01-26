@@ -610,13 +610,14 @@ struct Builder {
       *_GPP += F(" block");
       if (text.length()) *_GPP += F(" blockTab");
       if (type == GP_THIN) *_GPP += F(" thinBlock");
+      if (type == GP_THIN_BOLD) *_GPP += F(" thinBlock thinBold");
     }
     *_GPP += '\'';
     if (type == GP_TAB) *_GPP += F(" id='blockBack'");
 
     *_GPP += F(" style='");
-    if (type == GP_THIN && st != GP_DEFAULT) {
-      *_GPP += F("border:2px solid ");
+    if ((type == GP_THIN || type == GP_THIN_BOLD) && st != GP_DEFAULT) {
+      *_GPP += F("border-color:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
     }
@@ -685,6 +686,10 @@ struct Builder {
 
   void BLOCK_TAB_BEGIN(const String& label, const String& width = "", PGM_P st = GP_DEFAULT) {
     BLOCK_BEGIN(GP_TAB, width, label, st);
+  }
+
+  void BLOCK_THIN_BOLD(const String& width = "", PGM_P st = GP_DEFAULT, PGM_P bg = GP_DEFAULT) {
+    BLOCK_BEGIN(GP_THIN_BOLD, width, "", st, bg);
   }
   void BLOCK_THIN_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_THIN, width);

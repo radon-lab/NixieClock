@@ -30,6 +30,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 .blockHeader{padding:4px;margin:0 -10px 10px -10px;border-radius:10px 10px 0 0;color:#13161a;font-size:22px;text-align:center;background-color:#4caf50;}
 .chartBlock{margin:3px;width:90%;border-radius:10px;}
 .thinBlock{background:#13161a;border:2px solid #3c4048;}
+.thinBold{padding:5px 5px 5px 15px;border-width:4px;border-radius:25px;}
 .thinText{padding:0 7px;font-size:20px;white-space:nowrap;background:linear-gradient(0deg,#13161a 0,#13161a 54%,#13161a94 55%,#00000000 60%);}
 .thinTab{display:block;padding:4px 0 0 25px;margin:-20px -10px 5px -10px;border:none;text-align:left;color:#9c9ea1;background:none;}
 .inliner{display:flex;flex-direction:row;align-content:center;flex-wrap:nowrap;align-items:center;width:100%;}
@@ -45,7 +46,7 @@ input[type=number],input[type=text],input[type=password],input[type=select],sele
 input[type=select],select{min-width:130px;cursor:pointer;}
 input[type=select]:disabled,select:disabled{filter:brightness(0.6);cursor:default;}
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:#13161a;cursor:pointer;}
-input[type=submit]:hover,input[type=button]:hover,button:hover{filter:brightness(0.95);}
+input[type=submit]:hover,input[type=button]:hover,button:hover,.i_btn:hover{filter:brightness(0.93);}
 input[type=submit]:active,input[type=button]:active,button:active{box-shadow:inset 0 1px 6px #0007;}
 textarea{text-align:left;resize:none;overflow:hidden;max-width:100%;width:100%;box-sizing:unset;}
 textarea::-webkit-scrollbar{width:6px;}
@@ -138,8 +139,8 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .ui_load>span:nth-child(1){animation-delay:.2s;}
 .ui_load>span:nth-child(2){animation-delay:.1s;}
 .i_mask{width:35px;height:35px;vertical-align:middle;display:inline-block;background-color:#fff;margin:5px 7px;}
-.i_btn{width:fit-content;cursor:pointer}
-.i_btn:hover{filter:brightness(0.8);}
+.i_btn{width:fit-content;cursor:pointer;}
+.i_btn:active{filter:brightness(0.8);}
 .check_c>input{margin:4px -27px 6px -2px;opacity:0;}
 .check_c>span::before{content:'';border-radius:8px;padding:4px 12px;color:#bbb;background-color:#2a2d35;border:1px solid #444;border-radius:0.25em;cursor:pointer;}
 .check_c>input:checked+span::before{border-color:#2a2d35;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='m12.82,3l-6.6,6.6l-3,-3-1.9,1.9l5,5.00687l8.5,-8.5-1.9,-1.9z' fill='%23bbb'/%3e%3c/svg%3e");}

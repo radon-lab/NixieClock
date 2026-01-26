@@ -436,7 +436,7 @@ void build(void) {
                 M_BOX(GP_LEFT, GP.SELECT_LIST("alarmMode", LANG_PAGE_ALARM_GUI_MODE, alarm_data[alarm.now][ALARM_DATA_MODE]););
                );
 
-          GP.HR_TEXT(LANG_PAGE_ALARM_GUI_DAYS, UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.HR_TEXT(LANG_PAGE_ALARM_GUI_DAYS, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
           GP.BLOCK_BEGIN(GP_DIV_RAW, "430px;margin:10px 0px");
           GP.TABLE_BORDER(false);
           GP.TABLE_BEGIN("50px,50px,50px,50px,50px,50px,50px");
@@ -472,7 +472,7 @@ void build(void) {
           GP.TABLE_END();
           GP.BLOCK_END();
 
-          GP.HR_TEXT(LANG_PAGE_ALARM_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.HR_TEXT(LANG_PAGE_ALARM_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
           GP.BLOCK_OFFSET_BEGIN();
           M_BOX(GP_CENTER, GP.SELECT_LIST("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? LANG_PAGE_ALARM_GUI_SOUND_TYPE_2 : LANG_PAGE_ALARM_GUI_SOUND_TYPE_1, (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE], true););
           M_BOX(GP_CENTER,
@@ -559,7 +559,7 @@ void build(void) {
               }
             }
 
-            GP.BLOCK_BEGIN(GP_THIN, "90%;padding:5px 5px 5px 15px;border-width:4px;border-radius:25px", "", UI_ALARM_BLOCK_COLOR);
+            GP.BLOCK_THIN_BOLD("90%", UI_ALARM_BLOCK_COLOR);
             lableList = F("alarmSet/");
             lableList += i;
             GP.BOX_BEGIN();
@@ -608,7 +608,7 @@ void build(void) {
 
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_TIMER_BLOCK, UI_BLOCK_COLOR);
 
-          GP.BLOCK_BEGIN(GP_THIN, "280px;border-width:4px;border-radius:25px", "", UI_TIMER_BLOCK_COLOR);
+          GP.BLOCK_THIN_BOLD("280px", UI_TIMER_BLOCK_COLOR);
           GP.LABEL(getTimerState(), "timerState", UI_TIMER_INFO_COLOR, 0, 1);
 
           GP.TABLE_BEGIN("15%,15%,15%", GP_ALS(GP_CENTER, GP_CENTER, GP_CENTER), "200px");
@@ -925,15 +925,20 @@ void build(void) {
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_HOURS, UI_BLOCK_COLOR);
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
-          if (i) GP.HR(UI_MENU_LINE_COLOR, 0);
-          GP.BREAK();
-          M_BOX(
-            GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", GP_DEFAULT, 30);
-            GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_BAR_TEMP_COLOR);
-            GP.LABEL(String(weatherArrMain[1][i]) + "%", "", UI_BAR_HUM_COLOR);
-            GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_BAR_PRESS_COLOR);
-          );
-          GP.BREAK();
+          //if (i) GP.HR(UI_WEATHER_LINE_COLOR, 0);
+          //GP.BREAK();
+          GP.BLOCK_THIN_BOLD("90%", UI_WEATHER_BLOCK_COLOR);
+          M_BOX(GP_EDGES,
+                GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", UI_WEATHER_TIME_COLOR, 40);
+                GP.BLOCK_BEGIN(GP_DIV_RAW);
+                GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_WEATHER_TEMP_COLOR);
+                GP.LABEL(String(weatherArrMain[1][i]) + "%", "", UI_WEATHER_HUM_COLOR);
+                GP.BREAK();
+                GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_WEATHER_PRESS_COLOR);
+                GP.BLOCK_END();
+               );
+          GP.BLOCK_END();
+          //GP.BREAK();
           if (++time_start > 23) time_start = 0;
         }
       }

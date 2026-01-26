@@ -51,6 +51,7 @@ enum GPblock {
   GP_DIV,
   GP_TAB,
   GP_THIN,
+  GP_THIN_BOLD,
 };
 
 // получить align
