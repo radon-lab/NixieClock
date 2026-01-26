@@ -396,13 +396,18 @@ boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode)
   return 0;
 }
 #endif
+//--------------------------------Очистка буфера анимации-------------------------------------------
+void animClearBuff(void) //очистка буфера анимации
+{
+  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
+}
 //-----------------------------Запись чисел в буфер анимации----------------------------------------
 void animPrintNum(uint16_t _num, int8_t _indi, uint8_t _length, uint8_t _filler) //запись чисел в буфер анимации
 {
   printNum(_num, (anim.flipBuffer + 5), _indi, _length, _filler); //печать чисел
 }
 //-------------------------------Отрисовка буфера анимации-----------------------------------------
-void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
+void animPrintIndi(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовка буфера анимации
 {
   for (uint8_t i = 0; i < _max; i++) {
     if ((uint8_t)_indi < LAMP_NUM) { //если число в поле индикатора
@@ -413,11 +418,6 @@ void animPrintBuff(int8_t _indi, uint8_t _step, uint8_t _max) //отрисовк
 #if GEN_ENABLE
   indiChangePwm(); //установка нового значения шим линейного регулирования
 #endif
-}
-//--------------------------------Очистка буфера анимации-------------------------------------------
-void animClearBuff(void) //очистка буфера анимации
-{
-  for (uint8_t i = 6; i < (LAMP_NUM + 6); i++) anim.flipBuffer[i] = INDI_NULL;
 }
 //--------------------------------Анимация смены яркости цифр---------------------------------------
 void animBright(uint8_t bri) //анимация смены яркости цифр

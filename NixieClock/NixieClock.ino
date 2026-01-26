@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 14.01.26
+  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 26.01.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2088,7 +2088,7 @@ void animUpdateTime(void) //обновить буфер анимации тек�
 void animIndi(uint8_t mode, uint8_t type) //анимация цифр
 {
   switch (mode) {
-    case 0: if (type == FLIP_NORMAL) animPrintBuff(0, 6, LAMP_NUM); animShow = ANIM_NULL; return; //без анимации
+    case 0: if (type == FLIP_NORMAL) animPrintIndi(0, 6, LAMP_NUM); animShow = ANIM_NULL; return; //без анимации
     case 1: if (type == FLIP_DEMO) return; else mode = pgm_read_byte(&_anim_set[random(0, sizeof(_anim_set))]); break; //случайный режим
   }
 
@@ -2096,7 +2096,7 @@ void animIndi(uint8_t mode, uint8_t type) //анимация цифр
   flipIndi(mode, type); //перешли в отрисовку анимации
   if (mode == FLIP_BRIGHT) indiSetBright(indi.maxBright); //возвращаем максимальную яркость
 
-  animPrintBuff(0, 6, LAMP_NUM); //отрисовали буфер
+  animPrintIndi(0, 6, LAMP_NUM); //отрисовали буфер
   animShow = ANIM_NULL; //сбрасываем флаг анимации
 }
 //----------------------------------Анимация цифр-----------------------------------
@@ -2138,24 +2138,24 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
       for (uint8_t i = 0; i < LAMP_NUM; i++) {
         anim.flipBuffer[i] = indiDecodeNum(anim.flipBuffer[i]);
         changeBuffer[i] = indiDecodeNum(anim.flipBuffer[i + 6]);
-        if (type == FLIP_DEMO) anim.flipBuffer[i]--;
-        else if ((anim.flipBuffer[i] != changeBuffer[i]) || (mode == FLIP_SLOT_MACHINE)) {
+        if (type == FLIP_DEMO) {
+          if (--anim.flipBuffer[i] > 9) anim.flipBuffer[i] = 9;
+        }
+        if ((anim.flipBuffer[i] != changeBuffer[i]) || (mode == FLIP_SLOT_MACHINE)) {
           if (changeBuffer[i] == 10) changeBuffer[i] = (anim.flipBuffer[i]) ? (anim.flipBuffer[i] - 1) : 9;
           if (anim.flipBuffer[i] == 10) anim.flipBuffer[i] = (changeBuffer[i]) ? (changeBuffer[i] - 1) : 9;
         }
         if (mode == FLIP_ORDER_OF_CATHODES) {
-          for (uint8_t i = 0; i < LAMP_NUM; i++) {
-            for (uint8_t c = 0; c < 10; c++) {
-              if (cathodeMask[c] == anim.flipBuffer[i]) {
-                anim.flipBuffer[i] = c;
-                break;
-              }
+          for (uint8_t c = 0; c < 10; c++) {
+            if (cathodeMask[c] == anim.flipBuffer[i]) {
+              anim.flipBuffer[i] = c;
+              break;
             }
-            for (uint8_t c = 0; c < 10; c++) {
-              if (cathodeMask[c] == changeBuffer[i]) {
-                changeBuffer[i] = c;
-                break;
-              }
+          }
+          for (uint8_t c = 0; c < 10; c++) {
+            if (cathodeMask[c] == changeBuffer[i]) {
+              changeBuffer[i] = c;
+              break;
             }
           }
         }
@@ -2178,13 +2178,13 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
         indi.update = 1; //сбрасываем флаг
         animUpdateTime(); //обновляем буфер анимации текущего времени
         switch (mode) { //режим анимации перелистывания
-          case FLIP_RUBBER_BAND: if (changeCnt) animPrintBuff(LAMP_NUM - changeNum, (LAMP_NUM + 6) - changeNum, changeNum); break; //вывод часов
+          case FLIP_RUBBER_BAND: if (changeCnt) animPrintIndi(LAMP_NUM - changeNum, (LAMP_NUM + 6) - changeNum, changeNum); break; //вывод часов
           case FLIP_HIGHLIGHTS:
           case FLIP_EVAPORATION:
             if (changeCnt || (mode == FLIP_HIGHLIGHTS)) for (uint8_t f = 0; f < changeNum; f++) indiSet(anim.flipBuffer[6 + changeBuffer[f]], changeBuffer[f]); //вывод часов
             break;
           case FLIP_SLOT_MACHINE:
-            animPrintBuff(0, 6, changeNum); //вывод часов
+            animPrintIndi(0, 6, changeNum); //вывод часов
             for (uint8_t f = changeNum; f < LAMP_NUM; f++) changeBuffer[f] = indiDecodeNum(anim.flipBuffer[f + 6]);
             break;
         }
@@ -2202,7 +2202,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
                 else indiSetBright(changeCnt); //уменьшение яркости
               }
               else {
-                animPrintBuff(0, 6, LAMP_NUM); //вывод буфера
+                animPrintIndi(0, 6, LAMP_NUM); //вывод буфера
                 changeIndi = 1; //перешли к разгоранию
               }
             }
@@ -2237,8 +2237,8 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
         case FLIP_TRAIN: { //поезд
             if (changeIndi < (LAMP_NUM + FLIP_MODE_5_STEP - 1)) {
               indiClr(); //очистка индикатора
-              animPrintBuff(changeIndi + 1, 0, LAMP_NUM);
-              animPrintBuff(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
+              animPrintIndi(changeIndi + 1, 0, LAMP_NUM);
+              animPrintIndi(changeIndi - (LAMP_NUM + FLIP_MODE_5_STEP - 1), 6, LAMP_NUM);
               changeIndi++;
               _timer_ms[TMR_ANIM] = FLIP_MODE_5_TIME; //устанавливаем таймер
             }
@@ -2285,12 +2285,12 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
               if (changeNum < ((LAMP_NUM / 2) + 1)) {
                 indiClr(); //очистка индикатора
                 if (!changeIndi) {
-                  animPrintBuff(-changeNum, 0, (LAMP_NUM / 2));
-                  animPrintBuff(changeNum + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
+                  animPrintIndi(-changeNum, 0, (LAMP_NUM / 2));
+                  animPrintIndi(changeNum + (LAMP_NUM / 2), (LAMP_NUM / 2), (LAMP_NUM / 2));
                 }
                 else {
-                  animPrintBuff(changeNum - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
-                  animPrintBuff(LAMP_NUM - changeNum, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
+                  animPrintIndi(changeNum - (LAMP_NUM / 2), 6, (LAMP_NUM / 2));
+                  animPrintIndi(LAMP_NUM - changeNum, 6 + (LAMP_NUM / 2), (LAMP_NUM / 2));
                 }
                 changeNum++; //прибавляем цикл
                 _timer_ms[TMR_ANIM] = FLIP_MODE_7_TIME; //устанавливаем таймер
@@ -2308,7 +2308,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
               if (changeNum < LAMP_NUM) {
                 switch (changeCnt) {
                   case 0: indiClr((LAMP_NUM - 1) - changeNum); break; //очистка индикатора
-                  case 1: animPrintBuff((LAMP_NUM - 1) - changeNum, (LAMP_NUM + 5) - changeNum, changeNum + 1); break; //вывод часов
+                  case 1: animPrintIndi((LAMP_NUM - 1) - changeNum, (LAMP_NUM + 5) - changeNum, changeNum + 1); break; //вывод часов
                 }
                 if (anim.flipBuffer[changeNum + (changeCnt * 6)] != INDI_NULL) _timer_ms[TMR_ANIM] = FLIP_MODE_8_TIME; //устанавливаем таймер
                 changeNum++; //прибавляем цикл
@@ -5450,7 +5450,7 @@ uint8_t showDate(void) //показать дату
 {
 #if (SHOW_DATE_TYPE < 2) || (LAMP_NUM < 6)
   uint8_t mode = 0; //текущий режим
-  
+
   setDotDate(1); //включили разделительную точку
 #else
   setDotDate(2); //включили разделительные точки
@@ -5779,7 +5779,7 @@ void autoShowMenu(void) //меню автоматического показа
         if (!_timer_ms[TMR_ANIM]) { //если пришло время
           _timer_ms[TMR_ANIM] = AUTO_SHOW_DATE_TIME; //установили время
           if (blink) indiClr(); //очистили индикаторы
-          else animPrintBuff(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
+          else animPrintIndi(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
           blink = !blink; //изменили состояние
         }
       }
@@ -5787,7 +5787,7 @@ void autoShowMenu(void) //меню автоматического показа
       if (buttonState()) return; //возврат если нажата кнопка
     }
 #if AUTO_SHOW_DATE_BLINK
-    if (blink) animPrintBuff(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
+    if (blink) animPrintIndi(0, 6, LAMP_NUM); //отрисовали предыдущий буфер
 #endif
   }
   animShow = (mainSettings.autoShowFlip) ? (ANIM_OTHER + mainSettings.autoShowFlip) : ANIM_MAIN; //установили флаг анимации
