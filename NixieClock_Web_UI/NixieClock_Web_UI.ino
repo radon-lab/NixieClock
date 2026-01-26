@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 24.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 26.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -399,7 +399,6 @@ void build(void) {
         updateList += F(",extAlarm");
         GP.RELOAD("extAlarm");
 
-        GP.GRID_BEGIN();
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_ALARM_BLOCK, UI_BLOCK_COLOR);
         if (alarm.set) { //если режим настройки будильника
           PAGE_TITLE_NAME(LANG_PAGE_ALARM_TITLE);
@@ -474,12 +473,14 @@ void build(void) {
           GP.BLOCK_END();
 
           GP.HR_TEXT(LANG_PAGE_ALARM_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
+          GP.BLOCK_OFFSET_BEGIN();
           M_BOX(GP_CENTER, GP.SELECT_LIST("alarmSoundType", (deviceInformation[RADIO_ENABLE]) ? LANG_PAGE_ALARM_GUI_SOUND_TYPE_2 : LANG_PAGE_ALARM_GUI_SOUND_TYPE_1, (boolean)alarm_data[alarm.now][ALARM_DATA_RADIO], 0, (boolean)!deviceInformation[RADIO_ENABLE], true););
           M_BOX(GP_CENTER,
                 GP.SELECT_LIST("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0, (boolean)(deviceInformation[RADIO_ENABLE] && alarm_data[alarm.now][ALARM_DATA_RADIO]));
                 GP.SELECT_LIST("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)(!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]));
                );
           M_BOX(GP_CENTER, GP.SLIDER_MAX(LANG_PAGE_ALARM_GUI_SOUND_VOLUME, LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO, LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX, "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
+          GP.BLOCK_END();
 
           GP.HR(UI_LINE_COLOR);
           M_BOX(GP_CENTER,
@@ -599,14 +600,12 @@ void build(void) {
           GP.RELOAD_CLICK(reloadList);
         }
         GP.BLOCK_END();
-        GP.GRID_END();
       }
 
       if (!alarm.set || !deviceInformation[ALARM_TYPE]) { //если не режим настройки будильника
         if (deviceInformation[TIMER_ENABLE] && deviceInformation[EXT_BTN_ENABLE]) {
           updateList += F(",timerTime,timerState");
 
-          GP.GRID_BEGIN();
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_TIMER_BLOCK, UI_BLOCK_COLOR);
 
           GP.BLOCK_BEGIN(GP_THIN, "280px;border-width:4px;border-radius:25px", "", UI_TIMER_BLOCK_COLOR);
@@ -652,7 +651,6 @@ void build(void) {
           }
           GP.BREAK();
           GP.BLOCK_END();
-          GP.GRID_END();
 
           GP.UPDATE_CLICK("timerTime", "timerHour/0,timerHour/1,timerHour/2,timerHour/3,timerHour/4,timerHour/5");
           GP.UPDATE_CLICK("timerTime,timerState", "timerControl/0,timerControl/1,timerControl/2");
@@ -1040,12 +1038,15 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MAC, "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
       if (wifiGetConnectStatus()) {
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SUBNET, "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_GATEWAY, "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
+        GP.BREAK();
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_GATEWAY, "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SUBNET, "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_TIME, "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(wifiGetConnectTime()), "", UI_INFO_COLOR););
       }
       if (WiFi.getMode() != WIFI_STA) {
+        GP.BREAK();
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
       }
@@ -1324,6 +1325,7 @@ void webShowUpdateAuth(void) {
     M_BOX(GP_CENTER, GP.TEXT("", "", LANG_PAGE_UPDATE_GUI_PASS, "", 0, "", true); GP.BUTTON_MINI("", LANG_PAGE_UPDATE_GUI_LOGIN, "", GP_GRAY, "200px!important", true););
     GP.SPAN(String((passGetCheckError()) ? LANG_PAGE_UPDATE_WARN_PASS : "") + LANG_PAGE_UPDATE_WARN_TIME, GP_CENTER, "", GP_RED); //описание
   }
+  GP.VOID_BOX("0;height:10px");
 }
 //--------------------------------------------------------------------
 boolean webShowUpdateState(void) {
@@ -1331,7 +1333,7 @@ boolean webShowUpdateState(void) {
     PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
 
     GP.PAGE_MIDDLE_ALIGN();
-    
+
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     if (!updaterFlash()) {
@@ -1359,7 +1361,7 @@ boolean webShowHardwareInfo(void) {
     PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
 
     GP.PAGE_MIDDLE_ALIGN();
-    
+
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
@@ -1387,7 +1389,7 @@ boolean webShowReloadInfo(void) {
     PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
 
     GP.PAGE_MIDDLE_ALIGN();
-    
+
     GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
     GP.BLOCK_OFFSET_BEGIN();
     GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание

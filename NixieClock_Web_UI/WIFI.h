@@ -77,6 +77,9 @@ uint8_t wifiGetSignalStrength(void) {
   return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
 }
 //--------------------------------------------------------------------
+uint32_t wifiGetConnectTime(void) {
+  return (millis() - wifi_connect_timer);
+}
 boolean wifiGetConnectStatus(void) {
   return (boolean)(wifi_status == WL_CONNECTED);
 }
