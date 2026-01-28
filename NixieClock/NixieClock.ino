@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 26.01.26
+  Arduino IDE 1.8.13 версия прошивки 2.2.9 релиз от 28.01.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1261,7 +1261,7 @@ void changeBright(void) //установка яркости от времени 
 
 #if (SECS_DOT == 0) || (SECS_DOT == 1) || (SECS_DOT == 2)
       if (dot.maxBright) { //пересчитываем шаги
-#if (SECS_DOT == 0) || (SECS_DOT == 1)
+#if (SECS_DOT == 0) || (SECS_DOT == 1) || (SECS_DOT == 2)
         dot.brightStep = setBrightStep(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт шага яркости точки
         dot.brightTime = setBrightTime(dot.maxBright * 2, DOT_PULS_STEP_TIME, DOT_PULS_TIME); //расчёт периода шага яркости точки
 #endif
