@@ -1010,7 +1010,7 @@
 #define LANG_PAGE_INFO_GUI_NET_GATEWAY "Network gateway"
 #define LANG_PAGE_INFO_GUI_NET_SSID "Network SSID"
 #define LANG_PAGE_INFO_GUI_NET_IP "Network IP"
-#define LANG_PAGE_INFO_GUI_NET_TIME "Network time"
+#define LANG_PAGE_INFO_GUI_NET_TIME "Connect time"
 #define LANG_PAGE_INFO_GUI_AP_SSID "Access point SSID"
 #define LANG_PAGE_INFO_GUI_AP_IP "Access point IP"
 #define LANG_PAGE_INFO_GUI_MODE_AP "AP"

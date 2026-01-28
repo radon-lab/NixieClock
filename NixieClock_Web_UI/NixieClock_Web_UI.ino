@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 26.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 28.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -200,7 +200,19 @@ String playerVoiceList(void) { //список голосов для озвучк
 }
 //--------------------------------------------------------------------
 void PAGE_TITLE_NAME(const String& title) {
-  GP.PAGE_TITLE(((settings.namePrefix) ? (settings.nameDevice + String(" - ")) : "") + title + ((settings.namePostfix) ? (String(" - ") + settings.nameDevice) : ""));
+  String str;
+  str.reserve(70);
+  str = "";
+  if (settings.namePrefix) {
+    str += settings.nameDevice;
+    str += F(" - ");
+  }
+  str += title;
+  if (settings.namePostfix) {
+    str += settings.nameDevice;
+    str += F(" - ");
+  }
+  GP.PAGE_TITLE(str);
 }
 //--------------------------------------------------------------------
 void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean rl = false, boolean al = false) {
@@ -1053,7 +1065,7 @@ void build(void) {
       }
       if (WiFi.getMode() != WIFI_STA) {
         GP.BREAK();
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, 12), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(wifiGetApSSID(), 12), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
       }
 
@@ -1979,7 +1991,7 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.clickSub("alert")) {
       if (ui.click("alertResetOk")) {
-        resetMainSettings(); //устанавливаем настройки по умолчанию
+        memoryResetSettings(); //устанавливаем настройки по умолчанию
         memoryWriteSettings(); //записать данные в память
         busRebootDevice(DEVICE_RESET);
       }
@@ -2525,7 +2537,7 @@ void passCheckAttempt(const String& pass) {
   }
 }
 //--------------------------------------------------------------------
-boolean checkFsData(const char** data, int8_t size) {
+boolean checkFileSystemData(const char** data, int8_t size) {
   File file;
   while (size > 0) {
     size--;
@@ -2546,19 +2558,19 @@ void initFileSystemData(void) {
     fsUpdate = true; //включаем обновление
     Serial.println F("File system init");
 
-    if (checkFsData(climateFsData, 1)) {
+    if (checkFileSystemData(climateFsData, 1)) {
       climateLocal = true; //работаем локально
       Serial.println F("Script file found");
     }
-    if (checkFsData(alarmFsData, 3)) {
+    if (checkFileSystemData(alarmFsData, 3)) {
       alarmSvgImage = true; //работаем локально
       Serial.println F("Alarm svg files found");
     }
-    if (checkFsData(timerFsData, 5)) {
+    if (checkFileSystemData(timerFsData, 5)) {
       timerSvgImage = true; //работаем локально
       Serial.println F("Timer svg files found");
     }
-    if (checkFsData(radioFsData, 6)) {
+    if (checkFileSystemData(radioFsData, 6)) {
       radioSvgImage = true; //работаем локально
       Serial.println F("Radio svg files found");
     }
@@ -2586,7 +2598,7 @@ void initFileSystemData(void) {
   }
 }
 //--------------------------------------------------------------------
-void resetMainSettings(void) {
+void memoryResetSettings(void) {
   strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
   settings.ntpHost[19] = '\0'; //устанавливаем последний символ
 
@@ -2648,7 +2660,7 @@ void setup() {
   wifiReadSettings();
 
   //устанавливаем настройки по умолчанию
-  resetMainSettings();
+  memoryResetSettings();
 
   //читаем настройки из памяти
   memoryReadSettings();
@@ -2704,7 +2716,6 @@ void setup() {
 //--------------------------------------------------------------------
 void loop() {
   wifiUpdate(); //обработка состояния wifi
-
   groupUpdate(); //обработка группового взаимодействия
 
   if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) { //если связь с часами установлена

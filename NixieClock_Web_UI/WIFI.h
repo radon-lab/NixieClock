@@ -22,6 +22,17 @@ String wifi_scan_list; //список найденых wifi сетей
 String wifi_host_name; //имя wifi устройства
 
 //--------------------------------------------------------------------
+String wifiGetApSSID(void) {
+  String str;
+  str.reserve(70);
+  str = F(AP_SSID);
+  if (settings.nameAp) {
+    str += F(" - ");
+    str += settings.nameDevice;
+  }
+  return str;
+}
+//--------------------------------------------------------------------
 String wifiGetLocalSSID(void) {
   String str;
   str.reserve(70);
@@ -177,10 +188,10 @@ void wifiStartAP(void) {
   WiFi.softAPConfig(local, local, subnet);
 
   //запускаем точку доступа
-  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
+  if (!WiFi.softAP(wifiGetApSSID(), AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
   else {
     Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID);
+    Serial.print(wifiGetApSSID());
     if (AP_PASS[0] != '\0') {
       Serial.print F(" ][ pass: ");
       Serial.print(AP_PASS);
