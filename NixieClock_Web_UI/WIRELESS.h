@@ -115,28 +115,28 @@ void wirelessCopyData(void) {
     }
   }
 }
-boolean wirelessSetData(uint8_t* _buff) {
-  boolean _update = false;
-  int16_t _temp = _buff[7] | ((int16_t)_buff[8] << 8);
-  if (_temp != 0x7FFF) {
-    uint16_t _press = _buff[9] | ((uint16_t)_buff[10] << 8);
-    if (((millis() - wireless_timer) >= 30000) || (sens.temp[SENS_WIRELESS] != _temp) || (sens.press[SENS_WIRELESS] != _press) || (sens.hum[SENS_WIRELESS] != _buff[11])) _update = true;
-    sens.temp[SENS_WIRELESS] = _temp;
-    sens.press[SENS_WIRELESS] = _press;
-    sens.hum[SENS_WIRELESS] = _buff[11];
+boolean wirelessSetData(uint8_t* buff) {
+  boolean update = false;
+  int16_t temp = buff[7] | ((int16_t)buff[8] << 8);
+  if (temp != 0x7FFF) {
+    uint16_t press = buff[9] | ((uint16_t)buff[10] << 8);
+    if (((millis() - wireless_timer) >= 30000) || (sens.temp[SENS_WIRELESS] != temp) || (sens.press[SENS_WIRELESS] != press) || (sens.hum[SENS_WIRELESS] != buff[11])) update = true;
+    sens.temp[SENS_WIRELESS] = temp;
+    sens.press[SENS_WIRELESS] = press;
+    sens.hum[SENS_WIRELESS] = buff[11];
     wireless_status = WIRELESS_ONLINE;
   }
   else {
-    _update = true;
+    update = true;
     wirelessResetData();
     wireless_status = WIRELESS_NOT_SENSOR;
   }
-  wireless_battery = _buff[12];
-  wireless_signal = _buff[13];
-  wireless_interval = _buff[14];
-  wireless_timeout = 120000UL * (_buff[14] + 1);
+  wireless_battery = buff[12];
+  wireless_signal = buff[13];
+  wireless_interval = buff[14];
+  wireless_timeout = 120000UL * (buff[14] + 1);
   wireless_timer = millis();
-  return _update;
+  return update;
 }
 boolean wirelessCheckData(void) {
   uint8_t _crc = 0; //буфер контрольной суммы

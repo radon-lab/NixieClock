@@ -52,10 +52,10 @@ void ntpRequest(void) {
   }
 }
 //--------------------------------------------------------------------
-boolean ntpCheckTime(uint32_t _unix, int8_t _dst) {
-  if (_dst <= 0) return true;
-  int32_t diff = ntp_unix - _unix;
-  if (_dst == 1) diff += 3600;
+boolean ntpCheckTime(uint32_t unix, int8_t dst) {
+  if (dst <= 0) return true;
+  int32_t diff = ntp_unix - unix;
+  if (dst == 1) diff += 3600;
   if (diff < 0) diff = -diff;
   if (diff < 60) return true;
   ntp_status = NTP_DESYNCED;

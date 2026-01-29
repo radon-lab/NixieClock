@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 28.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 29.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -937,8 +937,6 @@ void build(void) {
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_HOURS, UI_BLOCK_COLOR);
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
-          //if (i) GP.HR(UI_WEATHER_LINE_COLOR, 0);
-          //GP.BREAK();
           GP.BLOCK_THIN_BOLD("90%", UI_WEATHER_BLOCK_COLOR);
           M_BOX(GP_EDGES,
                 GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", UI_WEATHER_TIME_COLOR, 40);
@@ -950,7 +948,6 @@ void build(void) {
                 GP.BLOCK_END();
                );
           GP.BLOCK_END();
-          //GP.BREAK();
           if (++time_start > 23) time_start = 0;
         }
       }
@@ -1057,16 +1054,18 @@ void build(void) {
 
       if (wifiGetConnectStatus()) {
         GP.BREAK();
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "hint1", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_GATEWAY, "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SUBNET, "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_TIME, "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(wifiGetConnectTime()), "", UI_INFO_COLOR););
+        GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
       }
       if (WiFi.getMode() != WIFI_STA) {
         GP.BREAK();
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(wifiGetApSSID(), 12), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(wifiGetApSSID(), 12), "hint2", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
+        GP.HINT("hint2", wifiGetApSSID()); //всплывающая подсказка
       }
 
       GP.BREAK();
@@ -2366,8 +2365,8 @@ void weatherAveragData(void) {
 }
 //--------------------------------------------------------------------
 void timeUpdate(void) {
-  if ((millis() - secondsTimer) >= 1000) {
-    if (!secondsTimer) secondsTimer = millis();
+  if ((millis() - secondsTimer) >= 1000) { //если прошла секунда
+    if (!secondsTimer) secondsTimer = millis(); //инициализировали таймер
     else { //счет времени
       if (++mainTime.second > 59) { //секунды
         mainTime.second = 0; //сбросили секунды
@@ -2392,40 +2391,40 @@ void timeUpdate(void) {
         if (!(mainTime.minute % 15) && rtcGetFoundStatus() && (!settings.ntpSync || !ntpGetSyncStatus())) busSetCommand(READ_RTC_TIME); //отправить время в RTC
         else busSetCommand(READ_TIME_DATE, 0); //прочитали время из часов
 
-        if (settings.ntpSync) {
-          if (!settings.ntpDst) {
-            if (!syncTimer) {
-              syncTimer = ntpSyncTime[settings.ntpTime];
+        if (settings.ntpSync) { //если включена автосинхронизация
+          if (!settings.ntpDst) { //если выключен учет летнего времени
+            if (!syncTimer) { //если пришло время отправить новый запрос
+              syncTimer = ntpSyncTime[settings.ntpTime]; //сбросили таймер синхронизации
               ntpRequest(); //запросить время с ntp сервера
             }
-            else syncTimer--;
+            else syncTimer--; //иначе убавили таймер
           }
-          else {
+          else { //иначе запрос не реже чем раз в час
             if (!(mainTime.minute % ntpSyncTime[(settings.ntpDst && (settings.ntpTime > 2)) ? 2 : settings.ntpTime])) {
               ntpRequest(); //запросить время с ntp сервера
             }
           }
         }
       }
-      if (sensorAvaibleData()) {
-        if (!sensorTimer) {
-          sensorTimer = 59;
-          sensorUpdateData();
+      if (sensorAvaibleData()) { //если датчик температуры доступен
+        if (!sensorTimer) { //если пришло время обновить показания
+          sensorTimer = 59; //сбросили таймер
+          sensorUpdateData(); //обновили показания датчика
         }
-        else sensorTimer--;
+        else sensorTimer--; //иначе убавили таймер
       }
       secondsTimer += 1000; //прибавили секунду
     }
-    if (timer.mode) busSetCommand(READ_TIMER_TIME);
+    if (timer.mode) busSetCommand(READ_TIMER_TIME); //отправляем запрос оновления показаний таймера
     if (!waitTimer) { //если пришло время опросить статус часов
       waitTimer = 4; //установили таймер ожидания
       busUpdateClockStatus(); //обновить статус часов
       busSetCommand(READ_STATUS); //запрос статуса часов
     }
-    else waitTimer--;
-    if (playbackTimer > -1) {
+    else waitTimer--; //иначе убавили таймер
+    if (playbackTimer > -1) { //если запущено воспроизведение
       if (!playbackTimer) busSetCommand(WRITE_STOP_SOUND); //остановка воспроизведения
-      playbackTimer--;
+      playbackTimer--; //убавили таймер воспроизведения
     }
 #if STATUS_LED == 2
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
@@ -2433,8 +2432,8 @@ void timeUpdate(void) {
   }
 
   if (ntpUpdate()) { //обработка ntp
-    if (settings.ntpSync || !syncState) {
-      syncTimer = ntpSyncTime[settings.ntpTime];
+    if (settings.ntpSync || !syncState) { //если включена автосинхронизация или необходимо обновить немедленно
+      syncTimer = ntpSyncTime[settings.ntpTime]; //сбросили таймер синхронизации
       busSetCommand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
     }
   }
