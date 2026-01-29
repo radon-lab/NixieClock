@@ -104,6 +104,109 @@ const char *failureDataList[] = {
   LANG_FAIL_DATA_7, LANG_FAIL_DATA_8, LANG_FAIL_DATA_9, LANG_FAIL_DATA_10, LANG_FAIL_DATA_11, LANG_FAIL_DATA_12, LANG_FAIL_DATA_13
 };
 
+//----------------------------Получить состояние таймера---------------------------------
+String getTimerState(void) { //получить состояние таймера
+  String str;
+  str.reserve(50);
+
+  str = statusTimerList[timer.mode & 0x03];
+  if (((timer.mode & 0x03) == 2) && !timer.count) str += LANG_TIMER_STATUS_ALARM;
+  else if (timer.mode & 0x80) str += LANG_TIMER_STATUS_PAUSE;
+
+  return str;
+}
+//------------------------Преобразовать время в формат ЧЧ:ММ:СС--------------------------
+String convertTimerTime(void) { //преобразовать время в формат ЧЧ:ММ:СС
+  String str;
+  str.reserve(15);
+  str = "";
+
+  uint8_t buff = 0;
+  if (timer.mode) buff = timer.count / 3600;
+  else buff = timer.hour;
+  if (buff < 10) str += '0';
+  str += buff;
+  str += ':';
+
+  if (timer.mode) buff = (timer.count / 60) % 60;
+  else buff = timer.mins;
+  if (buff < 10) str += '0';
+  str += buff;
+  str += ':';
+
+  if (timer.mode) buff = timer.count % 60;
+  else buff = timer.secs;
+  if (buff < 10) str += '0';
+  str += buff;
+
+  return str;
+}
+//--------------------------------------------------------------------
+String encodeTime(GPtime data) {
+  String str;
+  str.reserve(15);
+
+  if (mainSettings.timeFormat) {
+    if (data.hour > 12) data.hour -= 12;
+    else if (!data.hour) data.hour = 12;
+  }
+
+  str = data.hour / 10;
+  str += data.hour % 10;
+  str += ':';
+  str += data.minute / 10;
+  str += data.minute % 10;
+  str += ':';
+  str += data.second / 10;
+  str += data.second % 10;
+
+  return str;
+}
+//--------------------------------------------------------------------
+String getTimeFromMs(uint32_t data) {
+  data /= 1000;
+
+  uint8_t second = data % 60;
+  data /= 60;
+  uint8_t minute = data % 60;
+  data /= 60;
+  uint16_t hour = data % 24;
+  data /= 24;
+
+  String str;
+  str.reserve(20);
+
+  str = data;
+  str += ':';
+  str += hour;
+  str += ':';
+  str += minute / 10;
+  str += minute % 10;
+  str += ':';
+  str += second / 10;
+  str += second % 10;
+
+  return str;
+}
+//--------------------------------------------------------------------
+String getClockFirmwareVersion(void) {
+  String str;
+  str.reserve(10);
+  str = deviceInformation[FIRMWARE_VERSION_1];
+  str += '.';
+  str += deviceInformation[FIRMWARE_VERSION_2];
+  str += '.';
+  str += deviceInformation[FIRMWARE_VERSION_3];
+  return str;
+}
+//--------------------------------------------------------------------
+String stringLengthConstrain(String str, uint8_t size) {
+  if (str.length() > size) {
+    str.remove(size);
+    str += "…";
+  }
+  return str;
+}
 //--------------------------------------------------------------------
 String backlModeList(void) { //список режимов подсветки
   String str;
@@ -119,6 +222,7 @@ String backlModeList(void) { //список режимов подсветки
   }
   return str;
 }
+//--------------------------------------------------------------------
 String dotModeList(boolean alm) { //список режимов основных разделительных точек
   String str;
   str.reserve(500);
@@ -146,6 +250,7 @@ String dotModeList(boolean alm) { //список режимов основных
   }
   return str;
 }
+//--------------------------------------------------------------------
 String neonDotModeList(void) { //список режимов неоновых разделительных точек
   String str;
   str.reserve(400);
@@ -165,6 +270,7 @@ String neonDotModeList(void) { //список режимов неоновых р
   }
   return str;
 }
+//--------------------------------------------------------------------
 String flipModeList(boolean set) { //список режимов смены минут
   String str;
   str.reserve(370);
@@ -172,6 +278,7 @@ String flipModeList(boolean set) { //список режимов смены ми
   str += F(LANG_FLIP_MODE_3);
   return str;
 }
+//--------------------------------------------------------------------
 String secsModeList(void) { //список режимов смены секунд
   String str;
   str.reserve(200);
@@ -183,6 +290,7 @@ String secsModeList(void) { //список режимов смены секун�
   }
   return str;
 }
+//--------------------------------------------------------------------
 String playerVoiceList(void) { //список голосов для озвучки
   String str;
   str.reserve(100);
@@ -2188,109 +2296,6 @@ void action() {
     LittleFS.remove("/update/firmware.hex"); //удаляем файл
     Serial.println F("Updater file upload abort");
   }
-}
-//----------------------------Получить состояние таймера---------------------------------
-String getTimerState(void) { //получить состояние таймера
-  String str;
-  str.reserve(50);
-
-  str = statusTimerList[timer.mode & 0x03];
-  if (((timer.mode & 0x03) == 2) && !timer.count) str += LANG_TIMER_STATUS_ALARM;
-  else if (timer.mode & 0x80) str += LANG_TIMER_STATUS_PAUSE;
-
-  return str;
-}
-//------------------------Преобразовать время в формат ЧЧ:ММ:СС--------------------------
-String convertTimerTime(void) { //преобразовать время в формат ЧЧ:ММ:СС
-  String str;
-  str.reserve(15);
-  str = "";
-
-  uint8_t buff = 0;
-  if (timer.mode) buff = timer.count / 3600;
-  else buff = timer.hour;
-  if (buff < 10) str += '0';
-  str += buff;
-  str += ':';
-
-  if (timer.mode) buff = (timer.count / 60) % 60;
-  else buff = timer.mins;
-  if (buff < 10) str += '0';
-  str += buff;
-  str += ':';
-
-  if (timer.mode) buff = timer.count % 60;
-  else buff = timer.secs;
-  if (buff < 10) str += '0';
-  str += buff;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String encodeTime(GPtime data) {
-  String str;
-  str.reserve(15);
-
-  if (mainSettings.timeFormat) {
-    if (data.hour > 12) data.hour -= 12;
-    else if (!data.hour) data.hour = 12;
-  }
-
-  str = data.hour / 10;
-  str += data.hour % 10;
-  str += ':';
-  str += data.minute / 10;
-  str += data.minute % 10;
-  str += ':';
-  str += data.second / 10;
-  str += data.second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String getTimeFromMs(uint32_t data) {
-  data /= 1000;
-
-  uint8_t second = data % 60;
-  data /= 60;
-  uint8_t minute = data % 60;
-  data /= 60;
-  uint16_t hour = data % 24;
-  data /= 24;
-
-  String str;
-  str.reserve(20);
-
-  str = data;
-  str += ':';
-  str += hour;
-  str += ':';
-  str += minute / 10;
-  str += minute % 10;
-  str += ':';
-  str += second / 10;
-  str += second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String getClockFirmwareVersion(void) {
-  String str;
-  str.reserve(10);
-  str = deviceInformation[FIRMWARE_VERSION_1];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_2];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_3];
-  return str;
-}
-//--------------------------------------------------------------------
-String stringLengthConstrain(String str, uint8_t size) {
-  if (str.length() > size) {
-    str.remove(size);
-    str += "…";
-  }
-  return str;
 }
 //--------------------------------------------------------------------
 void sensorSendData(uint8_t sens) {

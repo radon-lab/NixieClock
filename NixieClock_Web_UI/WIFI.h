@@ -176,7 +176,7 @@ void wifiReadSettings(void) {
 //--------------------------------------------------------------------
 void wifiServiceRun(boolean run) {
   static boolean state = false;
-  
+
   if (state != run) { //если нужно изменить состояние сервисов
     state = run; //запомнили текущее состояние сервисов
     if (run) { //если нужно запустить сервисы
@@ -272,17 +272,17 @@ void wifiUpdate(void) {
             wifi_connect_timer = millis(); //сбросили таймер
             if (wifi_status == WL_NO_SSID_AVAIL) { //если заданный ssid не обнаружен
               wifiServiceRun(false); //остановить wifi сервисы
-              wifi_interval = WIFI_CONNECT_WAIT_TIME; //устанавливаем интервал ожидания
               wifi_station_disconnect(); //отключаемся от точки доступа
+              wifi_interval = WIFI_CONNECT_WAIT_TIME; //устанавливаем интервал ожидания
             }
             else wifi_interval = WIFI_CONNECT_DELAY_TIME; //иначе устанавливаем интервал переподключения
             Serial.println F("Wifi connect wait...");
           }
           else {
             wifiServiceRun(false); //остановить wifi сервисы
-            wifi_interval = 0; //сбрасываем интервал переподключения
-            wifi_connect_state = WIFI_CONNECT_FAIL; //сбросили состояние подключения
             wifi_station_disconnect(); //отключаемся от точки доступа
+            wifi_connect_state = WIFI_CONNECT_FAIL; //сбросили состояние подключения
+            wifi_interval = 0; //сбрасываем интервал переподключения
 #if STATUS_LED == 1
             digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
