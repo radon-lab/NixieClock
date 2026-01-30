@@ -450,7 +450,7 @@
 
 #define LANG_PAGE_INFO_GUI_ID "ID чипа"
 #define LANG_PAGE_INFO_GUI_CPU "Частота процессора"
-#define LANG_PAGE_INFO_GUI_CYCLE "Циклов в секунду"
+#define LANG_PAGE_INFO_GUI_USAGE "Загрузка процессора"
 #define LANG_PAGE_INFO_GUI_UPTIME "Время работы"
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Фрагментировано(Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Свободно(Heap)"
@@ -996,7 +996,7 @@
 
 #define LANG_PAGE_INFO_GUI_ID "Chip ID"
 #define LANG_PAGE_INFO_GUI_CPU "Processor frequency"
-#define LANG_PAGE_INFO_GUI_CYCLE "Cycles per second"
+#define LANG_PAGE_INFO_GUI_USAGE "Processor usage"
 #define LANG_PAGE_INFO_GUI_UPTIME "Uptime"
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Fragmented (Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Free (Heap)"

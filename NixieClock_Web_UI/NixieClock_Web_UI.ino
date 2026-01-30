@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 29.01.25
+  Arduino IDE 1.8.13 версия прошивки 1.2.9 релиз от 30.01.25
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -53,10 +53,12 @@ boolean radioSvgImage = false; //флаг локальных изображен�
 uint8_t passState = 0; //флаг состояния ввода пароля
 uint32_t passTimer = 0; //таймер ожидания пароля
 
-uint8_t timeState = 0; //флаг состояния актуальности времени
+uint32_t secondsTimer = 0; //таймер счета секундных интервалов
 
 int8_t syncState = -1; //флаг состояния синхронизации времени
 uint8_t syncTimer = 0; //таймер запроса времени с ntp сервера
+
+uint8_t timeState = 0; //флаг состояния актуальности времени
 
 int8_t playbackTimer = -1; //таймер остановки воспроизведения
 uint8_t waitTimer = 0; //таймер ожидания опроса шины
@@ -67,7 +69,7 @@ uint8_t sensorTimer = 0; //таймер обновления микроклим�
 uint8_t navMainTab = 0; //флаг открытой страницы основных настроек
 uint8_t navInfoTab = 0; //флаг открытой страницы информации об устройстве
 
-uint32_t secondsTimer = 0; //таймер счета секундных интервалов
+uint32_t sysCycleCount = 0; //счетчик циклов процессора
 
 #if (LED_BUILTIN == TWI_SDA_PIN) || (LED_BUILTIN == TWI_SCL_PIN)
 #undef STATUS_LED
@@ -104,6 +106,105 @@ const char *failureDataList[] = {
   LANG_FAIL_DATA_7, LANG_FAIL_DATA_8, LANG_FAIL_DATA_9, LANG_FAIL_DATA_10, LANG_FAIL_DATA_11, LANG_FAIL_DATA_12, LANG_FAIL_DATA_13
 };
 
+//--------------------------------------------------------------------
+String stringLengthConstrain(String str, uint8_t size) {
+  if (str.length() > size) {
+    str.remove(size);
+    str += F("…");
+  }
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetPercent(uint8_t num) {
+  String str;
+  str.reserve(10);
+  str = num;
+  str += '%';
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetFreq(uint32_t num) {
+  String str;
+  str.reserve(15);
+  str = num;
+  str += F(" MHz");
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetHex(uint32_t num) {
+  String str;
+  str.reserve(15);
+  str = String(num, HEX);
+  str.toUpperCase();
+  str = "0x" + str;
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetKilobyte(uint32_t num, uint8_t dec) {
+  String str;
+  str.reserve(15);
+  str = String(num / 1000.0, dec);
+  str += F(" kB");
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetTimeFromMs(uint32_t data) {
+  data /= 1000;
+
+  uint8_t second = data % 60;
+  data /= 60;
+  uint8_t minute = data % 60;
+  data /= 60;
+  uint16_t hour = data % 24;
+  data /= 24;
+
+  String str;
+  str.reserve(20);
+
+  str = data;
+  str += ':';
+  str += hour;
+  str += ':';
+  str += minute / 10;
+  str += minute % 10;
+  str += ':';
+  str += second / 10;
+  str += second % 10;
+
+  return str;
+}
+//--------------------------------------------------------------------
+String encodeTime(GPtime data) {
+  String str;
+  str.reserve(15);
+
+  if (mainSettings.timeFormat) {
+    if (data.hour > 12) data.hour -= 12;
+    else if (!data.hour) data.hour = 12;
+  }
+
+  str = data.hour / 10;
+  str += data.hour % 10;
+  str += ':';
+  str += data.minute / 10;
+  str += data.minute % 10;
+  str += ':';
+  str += data.second / 10;
+  str += data.second % 10;
+
+  return str;
+}
+//--------------------------------------------------------------------
+String getClockFirmwareVersion(void) {
+  String str;
+  str.reserve(10);
+  str = deviceInformation[FIRMWARE_VERSION_1];
+  str += '.';
+  str += deviceInformation[FIRMWARE_VERSION_2];
+  str += '.';
+  str += deviceInformation[FIRMWARE_VERSION_3];
+  return str;
+}
 //----------------------------Получить состояние таймера---------------------------------
 String getTimerState(void) { //получить состояние таймера
   String str;
@@ -139,72 +240,6 @@ String convertTimerTime(void) { //преобразовать время в фо�
   if (buff < 10) str += '0';
   str += buff;
 
-  return str;
-}
-//--------------------------------------------------------------------
-String encodeTime(GPtime data) {
-  String str;
-  str.reserve(15);
-
-  if (mainSettings.timeFormat) {
-    if (data.hour > 12) data.hour -= 12;
-    else if (!data.hour) data.hour = 12;
-  }
-
-  str = data.hour / 10;
-  str += data.hour % 10;
-  str += ':';
-  str += data.minute / 10;
-  str += data.minute % 10;
-  str += ':';
-  str += data.second / 10;
-  str += data.second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String getTimeFromMs(uint32_t data) {
-  data /= 1000;
-
-  uint8_t second = data % 60;
-  data /= 60;
-  uint8_t minute = data % 60;
-  data /= 60;
-  uint16_t hour = data % 24;
-  data /= 24;
-
-  String str;
-  str.reserve(20);
-
-  str = data;
-  str += ':';
-  str += hour;
-  str += ':';
-  str += minute / 10;
-  str += minute % 10;
-  str += ':';
-  str += second / 10;
-  str += second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String getClockFirmwareVersion(void) {
-  String str;
-  str.reserve(10);
-  str = deviceInformation[FIRMWARE_VERSION_1];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_2];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_3];
-  return str;
-}
-//--------------------------------------------------------------------
-String stringLengthConstrain(String str, uint8_t size) {
-  if (str.length() > size) {
-    str.remove(size);
-    str += "…";
-  }
   return str;
 }
 //--------------------------------------------------------------------
@@ -390,18 +425,18 @@ void build(void) {
     GP.LINE_LED("barLink", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
     GP.BLOCK_SHADOW_END();
 
-    if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
-      updateList += F(",barRtc");
-      GP.BLOCK_SHADOW_BEGIN();
-      GP.LABEL(LANG_PAGE_MENU_STATE_RTC, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_RTC_1_COLOR, UI_MENU_RTC_2_COLOR);
-      GP.BLOCK_SHADOW_END();
-    }
     if (wirelessGetSensorStastus()) {
       updateList += F(",barSens");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_SENS, "", UI_MENU_TEXT_COLOR, 15);
       GP.LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_SENS_1_COLOR, UI_MENU_SENS_2_COLOR);
+      GP.BLOCK_SHADOW_END();
+    }
+    if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
+      updateList += F(",barRtc");
+      GP.BLOCK_SHADOW_BEGIN();
+      GP.LABEL(LANG_PAGE_MENU_STATE_RTC, "", UI_MENU_TEXT_COLOR, 15);
+      GP.LINE_LED("barRtc", rtcGetNormalStatus(), UI_MENU_RTC_1_COLOR, UI_MENU_RTC_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
     if (ntpGetRunStatus()) {
@@ -1047,12 +1082,12 @@ void build(void) {
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
           GP.BLOCK_THIN_BOLD("90%", UI_WEATHER_BLOCK_COLOR);
           M_BOX(GP_EDGES,
-                GP.LABEL(((time_start >= 10) ? String(time_start) : ('0' + String(time_start))) + ":00", "", UI_WEATHER_TIME_COLOR, 40);
+                GP.LABEL(((time_start < 10) ? '0' : '\0') + String(time_start) + F(":00"), "", UI_WEATHER_TIME_COLOR, 40);
                 GP.BLOCK_BEGIN(GP_DIV_RAW);
-                GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + "°С", "", UI_WEATHER_TEMP_COLOR);
-                GP.LABEL(String(weatherArrMain[1][i]) + "%", "", UI_WEATHER_HUM_COLOR);
+                GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + F("°С"), "", UI_WEATHER_TEMP_COLOR);
+                GP.LABEL(String(weatherArrMain[1][i]) + '%', "", UI_WEATHER_HUM_COLOR);
                 GP.BREAK();
-                GP.LABEL(String(weatherArrExt[0][i] / 10) + "mm.Hg", "", UI_WEATHER_PRESS_COLOR);
+                GP.LABEL(String(weatherArrExt[0][i] / 10) + F("mm.Hg"), "", UI_WEATHER_PRESS_COLOR);
                 GP.BLOCK_END();
                );
           GP.BLOCK_END();
@@ -1132,31 +1167,33 @@ void build(void) {
     else if (ui.uri("/information")) { //информация о системе
       PAGE_TITLE_NAME(LANG_PAGE_INFO_TITLE);
 
+      updateList += F(",infUsage,infUptime,infFrag,infFree,infSignal,infNettime");
+
       GP.NAV_TABS_M("extInfoTab", LANG_PAGE_INFO_MENU, navInfoTab, UI_BUTTON_COLOR);
 
       GP.NAV_BLOCK_BEGIN("extInfoTab", 0, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_SYSTEM, UI_BLOCK_COLOR);
       GP.BLOCK_HIDE_BEGIN();
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ID, "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CPU, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + F(" MHz"), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CYCLE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_UPTIME, "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ID, "", UI_LABEL_COLOR); GP.LABEL(stringGetHex(ESP.getChipId()), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CPU, "", UI_LABEL_COLOR); GP.LABEL(stringGetFreq(ESP.getCpuFreqMHz()), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_USAGE, "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(systemGetUsage()), "infUsage", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_UPTIME, "", UI_LABEL_COLOR); GP.LABEL(stringGetTimeFromMs(millis()), "infUptime", UI_INFO_COLOR););
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_MEMORY, UI_LINE_COLOR, UI_HINT_COLOR);
 
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FRAG, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FREE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FRAG, "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(ESP.getHeapFragmentation()), "infFrag", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_HEAP_FREE, "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFreeHeap(), 3), "infFree", UI_INFO_COLOR););
 
       GP.BREAK();
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_ALL, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFlashChipSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FULL, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getSketchSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FREE, "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_ALL, "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFlashChipSize(), 1), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FULL, "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getSketchSize(), 1), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_FLASH_FREE, "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFreeSketchSpace(), 1), "", UI_INFO_COLOR););
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_NETWORK, UI_LINE_COLOR, UI_HINT_COLOR);
 
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(wifiGetSignalStrength()) + '%', "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(wifiGetSignalStrength()), "infSignal", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MODE, "", UI_LABEL_COLOR); GP.LABEL(wifiGetCurrentMode(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MAC, "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
 
@@ -1166,7 +1203,7 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_GATEWAY, "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SUBNET, "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_TIME, "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(wifiGetConnectTime()), "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_TIME, "", UI_LABEL_COLOR); GP.LABEL(stringGetTimeFromMs(wifiGetConnectTime()), "infNettime", UI_INFO_COLOR););
         GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
       }
       if (WiFi.getMode() != WIFI_STA) {
@@ -1198,7 +1235,7 @@ void build(void) {
         else {
           for (uint8_t i = 0; i < 13; i++) {
             if (device.failure & (0x01 << i)) {
-              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERR) + ((i < 9) ? "0" : "") + (i + 1), "", UI_LABEL_COLOR); GP.LABEL_W(failureDataList[i], "", UI_INFO_COLOR, 0, GP_RIGHT, 0, false, true););
+              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERR) + ((i < 9) ? '0' : '\0') + (i + 1), "", UI_LABEL_COLOR); GP.LABEL_W(failureDataList[i], "", UI_INFO_COLOR, 0, GP_RIGHT, 0, false, true););
             }
           }
         }
@@ -1229,8 +1266,8 @@ void build(void) {
       }
       if (wirelessGetSensorStastus()) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_UID, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetId(settings.wirelessId), INT32_MAX, "", true););
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetSignal()) + "%", INT32_MAX, "", true););
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_BATTERY, "", UI_LABEL_COLOR); GP.NUMBER("", String(wirelessGetBattery()) + "%", INT32_MAX, "", true););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.NUMBER("", stringGetPercent(wirelessGetSignal()), INT32_MAX, "", true););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_BATTERY, "", UI_LABEL_COLOR); GP.NUMBER("", stringGetPercent(wirelessGetBattery()), INT32_MAX, "", true););
       }
 
       String rtcStatus;
@@ -2188,16 +2225,6 @@ void action() {
       }
     }
     //--------------------------------------------------------------------
-    if (ui.updateSub("timer")) {
-      if (ui.update("timerState")) { //если было обновление
-        ui.answer(getTimerState());
-        if (!timer.mode) busSetCommand(READ_TIMER_STATE);
-      }
-      if (ui.update("timerTime")) { //если было обновление
-        ui.answer(convertTimerTime());
-      }
-    }
-    //--------------------------------------------------------------------
     if (ui.updateSub("ext")) {
       if (ui.update("extUpdate")) { //если было обновление
         ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? getUpdaterState() : LANG_PAGE_RELOAD_WAIT));
@@ -2233,6 +2260,37 @@ void action() {
       }
       if (ui.update("extGroup") && groupGetUpdateStatus()) { //если было обновление
         ui.answer(groupGetList());
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.updateSub("inf")) {
+      if (ui.update("infUsage")) { //если было обновление
+        ui.answer(stringGetPercent(systemGetUsage()));
+      }
+      if (ui.update("infUptime")) { //если было обновление
+        ui.answer(stringGetTimeFromMs(millis()));
+      }
+      if (ui.update("infFrag")) { //если было обновление
+        ui.answer(stringGetPercent(ESP.getHeapFragmentation()));
+      }
+      if (ui.update("infFree")) { //если было обновление
+        ui.answer(stringGetKilobyte(ESP.getFreeHeap(), 3));
+      }
+      if (ui.update("infSignal")) { //если было обновление
+        ui.answer(stringGetPercent(wifiGetSignalStrength()));
+      }
+      if (ui.update("infNettime")) { //если было обновление
+        ui.answer(stringGetTimeFromMs(wifiGetConnectTime()));
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.updateSub("timer")) {
+      if (ui.update("timerState")) { //если было обновление
+        ui.answer(getTimerState());
+        if (!timer.mode) busSetCommand(READ_TIMER_STATE);
+      }
+      if (ui.update("timerTime")) { //если было обновление
+        ui.answer(convertTimerTime());
       }
     }
     //--------------------------------------------------------------------
@@ -2602,6 +2660,24 @@ void initFileSystemData(void) {
   }
 }
 //--------------------------------------------------------------------
+void systemUpdate(void) {
+  ui.tick(); //обработка веб интерфейса
+  if (sysCycleCount != 0xFFFFFFFF) sysCycleCount++; //посчет циклов
+}
+//--------------------------------------------------------------------
+uint8_t systemGetUsage(void) {
+  static uint32_t timer = 0;
+  static uint8_t usage = 0;
+
+  uint32_t ms = millis();
+  if ((ms - timer) >= 1000) {
+    usage = map(constrain(sysCycleCount / (ms - timer), 1, 25), 1, 25, 100, 0);
+    sysCycleCount = 0;
+    timer = ms;
+  }
+  return usage;
+}
+//--------------------------------------------------------------------
 void memoryResetSettings(void) {
   strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
   settings.ntpHost[19] = '\0'; //устанавливаем последний символ
@@ -2733,6 +2809,5 @@ void loop() {
   else if (updaterRun()) busRebootDevice(SYSTEM_REBOOT); //загрузчик прошивки
 
   memoryUpdate(); //обработка памяти настроек
-
-  ui.tick(); //обработка веб интерфейса
+  systemUpdate(); //обработка системных функций
 }
