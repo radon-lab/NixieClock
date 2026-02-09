@@ -571,7 +571,7 @@ boolean backlGetAnimState(void) //получить состояние анима
   return (boolean)(fastSettings.backlMode & 0x7F); //вернули состояние подсветки
 }
 //---------------------Получить яркость анимации подсветки----------------------
-boolean backlGetAnimBright(void) //Получить яркость анимации подсветки
+uint8_t backlGetAnimBright(void) //Получить яркость анимации подсветки
 {
   return (backlGetAnimState()) ? backl.maxBright : 0; //вернули яркость подсветки
 }
