@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_000 бета от 09.02.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_001 бета от 09.02.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -564,6 +564,16 @@ void backlAnimEnable(void) //разрешить анимации подсвет�
 void backlAnimDisable(void) //запретить анимации подсветки
 {
   fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+}
+//--------------------Получить состояние анимации подсветки---------------------
+boolean backlGetAnimState(void) //получить состояние анимации подсветки
+{
+  return (boolean)(fastSettings.backlMode & 0x7F); //вернули состояние подсветки
+}
+//---------------------Получить яркость анимации подсветки----------------------
+boolean backlGetAnimBright(void) //Получить яркость анимации подсветки
+{
+  return (backlGetAnimState()) ? backl.maxBright : 0; //вернули яркость подсветки
 }
 //----------------------Разрешить анимацию секундных точек----------------------
 void dotAnimEnable(void) //разрешить анимацию секундных точек
@@ -1282,7 +1292,7 @@ void changeBright(void) //установка яркости от времени 
     if (fastSettings.backlMode & 0x80) { //если подсветка заблокирована
 #if BACKL_TYPE == 3
       switch (changeBrightState) { //режим управления яркостью
-        case CHANGE_STATIC_BACKL: if (fastSettings.backlMode & 0x7F) wsBacklSetLedBright(backl.maxBright); break; //устанавливаем максимальную яркость
+        case CHANGE_STATIC_BACKL: if (backlGetAnimState()) wsBacklSetLedBright(backl.maxBright); break; //устанавливаем максимальную яркость
         case CHANGE_DYNAMIC_BACKL: wsBacklSetOnLedBright(backl.maxBright); break; //устанавливаем максимальную яркость
         default: wsBacklSetOnLedBright(backl.menuBright); break; //установка яркости подсветки в меню
       }
@@ -4534,7 +4544,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
         backlAnimDisable(); //запретили эффекты подсветки
 #if RADIO_BACKL_TYPE == 1
         changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-        wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+        wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
         wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif
@@ -4739,7 +4749,7 @@ uint8_t radioMenu(void) //радиоприемник
     backlAnimDisable(); //запретили эффекты подсветки
 #if RADIO_BACKL_TYPE == 1
     changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-    wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+    wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
     wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif
@@ -5123,7 +5133,7 @@ uint8_t timerStopwatch(void) //таймер-секундомер
   backlAnimDisable(); //запретили эффекты подсветки
 #if TIMER_BACKL_TYPE == 1
   changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-  wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+  wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
   wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif
@@ -5322,7 +5332,7 @@ uint8_t showTemp(void) //показать температуру
   backlAnimDisable(); //запретили эффекты подсветки
 #if SHOW_TEMP_BACKL_TYPE == 1
   changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-  wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+  wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
   wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif
@@ -5460,7 +5470,7 @@ uint8_t showDate(void) //показать дату
   backlAnimDisable(); //запретили эффекты подсветки
 #if SHOW_DATE_BACKL_TYPE == 1
   changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-  wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+  wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
   wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif
@@ -5723,7 +5733,7 @@ void autoShowMenu(void) //меню автоматического показа
       backlAnimDisable(); //запретили эффекты подсветки
 #if AUTO_SHOW_BACKL_TYPE == 1
       changeBrightDisable(CHANGE_STATIC_BACKL); //разрешить смену яркости статичной подсветки
-      wsBacklSetLedBright((fastSettings.backlMode & 0x7F) ? backl.maxBright : 0); //установили яркость в зависимости от режима подсветки
+      wsBacklSetLedBright(backlGetAnimBright()); //установили яркость в зависимости от режима подсветки
 #else
       wsBacklSetLedBright(backl.menuBright); //установили максимальную яркость
 #endif

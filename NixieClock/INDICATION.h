@@ -236,9 +236,17 @@ void indiSetDotsMain(uint8_t _dot) //установка разделительн
   if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
 #elif DOTS_MAIN == 1
   if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
-#else
+#elif DOTS_MAIN == 2
   if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
   if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+#elif DOTS_MAIN == 3
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(2); //установка разделительной точки
+#else
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotR(1); //установка разделительной точки
+  if ((_dot == DOT_LEFT) || (_dot == DOT_ALL)) indiSetDotL(1); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotL(2); //установка разделительной точки
+  if ((_dot == DOT_RIGHT) || (_dot == DOT_ALL)) indiSetDotR(2); //установка разделительной точки
 #endif
 #endif
 #elif DOTS_NUM > 4

@@ -355,5 +355,5 @@ const uint16_t general_sound[][2] PROGMEM = {
 #define EEPROM_BLOCK_BOOT 1023       //блок памяти загрузчика(1001..1023)
 
 //Версия прошивки
-#define FIRMWARE_VERSION "0.0.0"     //версия прошивки для отображения и озвучки
+#define FIRMWARE_VERSION "0.0.1"     //версия прошивки для отображения и озвучки
 #define HARDWARE_VERSION 0x13        //версия прошивки для интерфейса wire
