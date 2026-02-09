@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.7 релиз от 31.02.25
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 30.01.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -48,6 +48,8 @@ uint8_t sensorStartWait = 0; //время ожидания после перво
 
 uint16_t vccVoltage = 0; //напряжение питания
 
+uint32_t sysCycleCount = 0; //счетчик циклов процессора
+
 const uint8_t sleepTime[] = {1, 5, 10, 15, 30, 60};
 const char sleepTimeList[] = "Каждую 1 мин,Каждые 5 мин,Каждые 10 мин,Каждые 15 мин,Каждые 30 мин,Каждый 1 час";
 
@@ -93,60 +95,47 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 #include "WIFI.h"
 #include "PING.h"
 
-ADC_MODE(ADC_VCC);
+ADC_MODE(ADC_VCC); //режим измерения напряжения питания
 
 void build(void) {
-  GP.PAGE_ZOOM("90%", "370px");
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+
+  GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
+
+  GP.PAGE_ZOOM(90, 390);
+  GP.PAGE_BLOCK_BEGIN(700);
 
   //обновления блоков
-  String updateList = "barBat";
-
-  //начать меню
-  GP.UI_MENU("Wireless Sensor", UI_MENU_COLOR);
+  String updateList;
+  updateList.reserve(500);
+  updateList = F("barBat");
 
   //ссылки меню
-  GP.UI_LINK("/", "Об устройстве");
-  if (otaUpdate) GP.UI_LINK("/update", "Обновление ПО");
-  if (ui.uri("/connection")) GP.UI_LINK("/connection", "Сетевые настройки");
-  else if (ui.uri("/manual")) GP.UI_LINK("/manual", "Сетевые настройки");
-  else GP.UI_LINK("/network", "Сетевые настройки");
+  String menuLinks;
+  menuLinks.reserve(100);
+  menuLinks = F("/,/update,");
 
-  GP.HR(UI_MENU_LINE_COLOR, 6);
+  //начать меню
+  if (ui.uri("/connection")) menuLinks += F("/connection");
+  else if (ui.uri("/manual")) menuLinks += F("/manual");
+  else menuLinks += F("/network");
+  GP.NAV_BAR_LINKS(menuLinks, "Инфо,Обновление,Сеть", 750, UI_MENU_COLOR);
 
-  //состояние соединения
-  if (wifiGetConnectStatus()) {
-    updateList += ",bar_wifi";
-    GP.BLOCK_SHADOW_BEGIN();
-    GP.LABEL("Сигнал WiFi", "", UI_MENU_TEXT_COLOR, 15);
-    GP.LINE_BAR("bar_wifi", getWiFiSignal(), 0, 100, 1, UI_MENU_WIFI_COLOR);
-    GP.BLOCK_SHADOW_END();
-  }
-
-  GP.FOOTER_BEGIN();
-  GP.HR(UI_MENU_LINE_COLOR, 0);
-  GP.TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
-  GP.BREAK();
-  GP.TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
-  GP.FOOTER_END();
-
-  GP.UI_BODY(); //начать основное окно
-
-  GP.BOX_BEGIN(GP_JUSTIFY, "auto;padding-left:2%;padding-right:2%");
+  GP.BOX_BEGIN(GP_JUSTIFY, "100%;width:auto;padding-left:2%;padding-right:2%");
   GP.LABEL_BLOCK(getBatteryState(), "barBat", UI_BAR_BATTERY_COLOR, 18, 1);
 
   GP.BOX_BEGIN(GP_RIGHT, "100%");
   if (settings.sensor) {
     if (sens.temp != 0x7FFF) {
-      updateList += ",barTemp";
+      updateList += F(",barTemp");
       GP.LABEL_BLOCK(String(sens.temp / 10.0, 1) + "°С", "barTemp", UI_BAR_TEMP_COLOR, 18, 1);
     }
     if (sens.hum) {
-      updateList += ",barHum";
+      updateList += F(",barHum");
       GP.LABEL_BLOCK(String(sens.hum) + "%", "barHum", UI_BAR_HUM_COLOR, 18, 1);
     }
     if (sens.press) {
-      updateList += ",barPress";
+      updateList += F(",barPress");
       GP.LABEL_BLOCK(String(sens.press) + "mm.Hg", "barPress", UI_BAR_PRESS_COLOR, 18, 1);
     }
   }
@@ -159,59 +148,15 @@ void build(void) {
   GP.HR(UI_BAR_LINE_COLOR);
 
   if (ui.uri("/")) { //информация о системе
-    GP.PAGE_TITLE("Об устройстве");
+    GP.PAGE_TITLE("Информация");
 
-    GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
-    GP.BLOCK_HIDE_BEGIN();
-    M_BOX(GP.LABEL("Уровень сигнала", "", UI_LABEL_COLOR); GP.LABEL("📶 " + String(getWiFiSignal()) + '%', "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(WiFi.getMode() == WIFI_AP ? "AP" : (WiFi.getMode() == WIFI_STA ? "STA" : "AP_STA"), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
+    updateList += F(",infSignal,infPower,infUptime,infUsage");
 
-    if (wifiGetConnectStatus()) {
-      M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("Шлюз", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(strLengthConstrain(WiFi.SSID(), 12), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
-    }
-    if (WiFi.getMode() != WIFI_STA) {
-      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(strLengthConstrain(AP_SSID, 12), "", UI_INFO_COLOR););
-      M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
-    }
+    String sensorsList;
+    sensorsList.reserve(150);
+    sensorsList = "";
 
-    GP.BREAK();
-    GP.HR_TEXT("Память устройства", "", UI_LINE_COLOR, UI_HINT_COLOR);
-
-    M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getHeapFragmentation()) + '%', "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeHeap() / 1000.0, 3) + " kB", "", UI_INFO_COLOR););
-
-    M_BOX(GP.LABEL("Всего(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFlashChipSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Занято(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getSketchSize() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getFreeSketchSpace() / 1000.0, 1) + " kB", "", UI_INFO_COLOR););
-
-    GP.BREAK();
-    GP.HR_TEXT("О системе", "", UI_LINE_COLOR, UI_HINT_COLOR);
-
-    M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL("0x" + String(ESP.getChipId(), HEX), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(String(getBatteryVoltage(), 2) + " V", "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCpuFreqMHz()) + " MHz", "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Циклов в секунду", "", UI_LABEL_COLOR); GP.LABEL(String(ESP.getCycleCount()), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(getTimeFromMs(millis()), "", UI_INFO_COLOR););
-
-    GP.BREAK();
-    GP.HR_TEXT("Версия ПО", "", UI_LINE_COLOR, UI_HINT_COLOR);
-
-    M_BOX(GP.LABEL("UID", "", UI_LABEL_COLOR); GP.LABEL(getSensorId(), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("CORE", "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
-    M_BOX(GP.LABEL("GyverPortal", "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
-
-    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VERSION, "", UI_INFO_COLOR););
-    GP.BLOCK_END();
-    GP.BLOCK_END();
-
-    String sensorsList = "";
-
-    GP.BLOCK_BEGIN(GP_THIN, "", "Информация о датчике", UI_BLOCK_COLOR);
+    GP.BLOCK_BEGIN(GP_THIN, "", "Датчик температуры", UI_BLOCK_COLOR);
     for (uint8_t i = 0; i < SENS_MAX; i++) {
       if (settings.sensor & (0x01 << i)) {
         if (sensorsList[0] != '\0') sensorsList += '+';
@@ -219,8 +164,72 @@ void build(void) {
       }
     }
     M_BOX(GP.LABEL("Датчик", "", UI_LABEL_COLOR); GP.NUMBER("", (sensorsList[0] == '\0') ? "Отсутсвует" : sensorsList, INT32_MAX, "", true););
-    M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.SELECT("extPeriod", sleepTimeList, settings.period););
+    M_BOX(GP.LABEL("Интервал", "", UI_LABEL_COLOR); GP.SELECT_LIST("extPeriod", sleepTimeList, settings.period););
     GP.BLOCK_END();
+
+    GP.BLOCK_BEGIN(GP_THIN, "", "Системная информация", UI_BLOCK_COLOR);
+    GP.BLOCK_HIDE_BEGIN();
+    M_BOX(GP.LABEL("Уровень сигнала", "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(wifiGetSignal()), "infSignal", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Режим модема", "", UI_LABEL_COLOR); GP.LABEL(wifiGetCurrentMode(), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("MAC адрес", "", UI_LABEL_COLOR); GP.LABEL(WiFi.macAddress(), "", UI_INFO_COLOR););
+
+    if (wifiGetConnectStatus()) {
+      GP.BREAK();
+      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "hint1", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Шлюз сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
+      GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
+    }
+    if (WiFi.getMode() != WIFI_STA) {
+      GP.BREAK();
+      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(AP_SSID, 12), "hint2", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
+      GP.HINT("hint2", AP_SSID); //всплывающая подсказка
+    }
+
+    GP.BREAK();
+    GP.HR_TEXT("Память устройства", UI_LINE_COLOR, UI_HINT_COLOR);
+
+    M_BOX(GP.LABEL("Фрагментировано(Heap)", "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(ESP.getHeapFragmentation()), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Свободно(Heap)", "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFreeHeap(), 3), "", UI_INFO_COLOR););
+
+    GP.BREAK();
+    M_BOX(GP.LABEL("Всего(Flash)", "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFlashChipSize(), 1), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Занято(Flash)", "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getSketchSize(), 1), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Свободно(Flash)", "", UI_LABEL_COLOR); GP.LABEL(stringGetKilobyte(ESP.getFreeSketchSpace(), 1), "", UI_INFO_COLOR););
+
+    GP.BREAK();
+    GP.HR_TEXT("Параметры", UI_LINE_COLOR, UI_HINT_COLOR);
+
+    M_BOX(GP.LABEL("ID чипа", "", UI_LABEL_COLOR); GP.LABEL(stringGetHex(ESP.getChipId()), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Частота процессора", "", UI_LABEL_COLOR); GP.LABEL(stringGetFreq(ESP.getCpuFreqMHz()), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Загрузка процессора", "", UI_LABEL_COLOR); GP.LABEL(stringGetPercent(systemGetUsage()), "infUsage", UI_INFO_COLOR););
+
+    GP.BREAK();
+    M_BOX(GP.LABEL("Напряжение питания", "", UI_LABEL_COLOR); GP.LABEL(stringGetVoltage(getBatteryVoltage()), "infPower", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Время работы", "", UI_LABEL_COLOR); GP.LABEL(stringGetTimeFromMs(millis()), "infUptime", UI_INFO_COLOR););
+
+    GP.BREAK();
+    GP.HR_TEXT("Версия ПО", UI_LINE_COLOR, UI_HINT_COLOR);
+
+    M_BOX(GP.LABEL("SDK", "", UI_LABEL_COLOR); GP.LABEL(ESP.getSdkVersion(), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("CORE", "", UI_LABEL_COLOR); GP.LABEL(ESP.getCoreVersion(), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("GyverPortal", "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
+
+    GP.BREAK();
+    M_BOX(GP.LABEL("UID", "", UI_LABEL_COLOR); GP.LABEL(getSensorId(), "", UI_INFO_COLOR););
+    M_BOX(GP.LABEL("Firmware", "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VERSION, "", UI_INFO_COLOR););
+
+    GP.BREAK();
+    GP.BLOCK_END();
+    GP.BLOCK_END();
+
+    GP.FOOTER_BEGIN();
+    GP.TEXT_LINK("https://github.com/radon-lab/", "@radon_lab", "user", "#bbb");
+    GP.BREAK();
+    GP.TEXT_LINK("https://community.alexgyver.ru/threads/chasy-na-gri-v2-alternativnaja-proshivka.5843/", "Обсуждение на форуме", "forum", "#e67b09");
+    GP.FOOTER_END();
   }
   else if (ui.uri("/update") && otaUpdate) { //обновление ESP
     GP.PAGE_TITLE("Обновление");
@@ -230,8 +239,9 @@ void build(void) {
     GP.BREAK();
     GP.SPAN("Поддерживаемые форматы файлов: bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.BREAK();
-    GP.HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
-    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
+    GP.HR_TEXT("Загрузить файлы", UI_LINE_COLOR, UI_HINT_COLOR);
+    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("📥", UI_BUTTON_COLOR, true););
+    GP.VOID_BOX("0;height:10px");
     GP.BLOCK_END();
   }
   else { //подключение к роутеру
@@ -240,15 +250,15 @@ void build(void) {
     GP.BLOCK_BEGIN(GP_THIN, "", "Локальная сеть WIFI", UI_BLOCK_COLOR);
     if (wifiGetConnectStatus() || wifiGetConnectWaitStatus()) { //подключение к сети
       if (!wifiGetConnectStatus()) {
-        updateList += F(",syncConnect,syncNetwork");
-        GP.RELOAD("syncConnect");
+        updateList += F(",extConnect,extNetwork");
+        GP.RELOAD("extConnect");
       }
 
       GP.FORM_BEGIN("/network");
-      GP.TEXT("", "", wifiGetApSSID(), "", 0, "", true);
+      GP.TEXT("", "", wifiGetLocalSSID(), "", 0, "", true);
       GP.BREAK();
-      GP.TEXT("", "", wifiGetApIP(), "", 0, "", true);
-      GP.SPAN(wifiGetConnectState(), GP_CENTER, "syncNetwork", UI_INFO_COLOR); //описание
+      GP.TEXT("", "", wifiGetLocalIP(), "", 0, "", true);
+      GP.SPAN(wifiGetConnectState(), GP_CENTER, "extNetwork", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.SUBMIT((wifiGetConnectStatus()) ? "Отключиться" : "Отмена", UI_BUTTON_COLOR);
       GP.FORM_END();
@@ -256,8 +266,8 @@ void build(void) {
     else { //выбор сети
       if (wifiGetScanCompleteStatus()) wifiResetScanCompleteStatus();
 
-      updateList += F(",syncReload");
-      GP.RELOAD("syncReload");
+      updateList += F(",extScan");
+      GP.RELOAD("extScan");
 
       GP.FORM_BEGIN("/connection");
       if (ui.uri("/manual")) { //ручной режим ввода сети
@@ -267,23 +277,23 @@ void build(void) {
         GP.BREAK();
         GP.TEXT_LINK("/network", "Список сетей", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
-        GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
+        GP.BOX_BEGIN(GP_CENTER, "300px");
         GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
-        GP.SEND("</div>\n");
+        GP.BUTTON("extClear", "✕", "", (!settings.ssid[0] && !settings.pass[0]) ? GP_GRAY : UI_BUTTON_COLOR, "65px", (boolean)(!settings.ssid[0] && !settings.pass[0]), true);
+        GP.BOX_END();
       }
       else { //выбор сети из списка
-        GP.SELECT("wifiNetwork", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
+        GP.SELECT_LIST("wifiSsid", wifi_scan_list, 0, 0, wifiGetScanFoundStatus());
         GP.BREAK();
         GP.PASS_EYE("wifiPass", "Пароль", settings.pass, 64);
         GP.BREAK();
         GP.TEXT_LINK("/manual", "Ручной режим", "net", UI_LINK_COLOR);
         GP.HR(UI_LINE_COLOR);
-        GP.SEND("<div style='max-width:300px;justify-content:center' class='inliner'>\n");
-        if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%;margin-top:10px;margin-bottom:0", true);
+        GP.BOX_BEGIN(GP_CENTER, "300px");
+        if (wifiGetScanFoundStatus()) GP.BUTTON("", "Подключиться", "", GP_GRAY, "90%", true);
         else GP.SUBMIT("Подключиться", UI_BUTTON_COLOR);
-        GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px;margin-top:10px;margin-bottom:0", false, true);
-        GP.SEND("</div>\n");
+        GP.BUTTON("extScan", "<big><big>↻</big></big>", "", UI_BUTTON_COLOR, "65px", false, true);
+        GP.BOX_END();
       }
       GP.FORM_END();
     }
@@ -295,19 +305,19 @@ void build(void) {
       IPAddress addrSend;
       for (uint8_t i = 0; i < MAX_CLOCK; i++) {
         if (i) {
-          GP.HR(UI_MENU_LINE_COLOR);
+          GP.HR(UI_LINE_COLOR);
         }
         addrSend = settings.send[i];
         if (addrSend) {
           M_BOX(
-            M_BOX(GP_LEFT, GP.TEXT("", "IP адрес", addrSend.toString(), "", 20, "", true); GP.TEXT("", "", String("Попыток: ") + settings.attempt[i], "", 20, "", true););
-            GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "115px!important", false, true);
+            GP.TEXT("", "IP адрес", addrSend.toString() + " [x" + settings.attempt[i] + ']', "90%;max-width:408px", 20, "", true);
+            GP.BUTTON_MINI(String("extSendDel/") + i, "Удалить", "", UI_BUTTON_COLOR, "auto;min-width:110px", false, true);
           );
         }
         else {
           M_BOX(
             M_BOX(GP_LEFT, GP.TEXT("extSendIp", "IP адрес", "", "", 15); GP.NUMBER("extSendAttempt", "Попыток", INT32_MAX, "", false););
-            GP.BUTTON_MINI("extSendAdd", "Добавить", "", UI_BUTTON_COLOR, "115px!important", false, true);
+            GP.BUTTON_MINI("extSendAdd", "Добавить", "", UI_BUTTON_COLOR, "auto;min-width:110px", false, true);
           );
           buffSendIp[0] = '\0';
           buffSendAttempt = 1;
@@ -319,48 +329,54 @@ void build(void) {
   }
 
   GP.UPDATE(updateList);
-  GP.UI_END(); //завершить окно панели управления
 
+  GP.PAGE_BLOCK_END();
   GP.BUILD_END();
 }
-
+//--------------------------------------------------------------------
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
-  GP.PAGE_ZOOM("90%", "370px");
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME, 500);
+  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+
+  GP.PAGE_ZOOM(90, 390);
+  GP.PAGE_MIDDLE_ALIGN();
+  GP.PAGE_BLOCK_BEGIN(500);
 
   GP.PAGE_TITLE("Обновление");
 
-  GP.BLOCK_MIDDLE_BEGIN();
-
-  GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
   if (!UpdateEnd) {
+    GP.BLOCK_BEGIN(GP_THIN, "", "Загрузка прошивки", UI_BLOCK_COLOR);
     GP.SPAN("Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой).", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.BREAK();
     GP.SPAN("Поддерживаемые форматы файлов: bin и bin.gz.", GP_CENTER, "", UI_INFO_COLOR); //описание
     GP.BREAK();
-    GP.HR_TEXT("Загрузить файлы", "", UI_LINE_COLOR, UI_HINT_COLOR);
-    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("", UI_BUTTON_COLOR, true););
-  }
-  else if (UpdateError.length()) {
-    GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+    GP.HR_TEXT("Загрузить файлы", UI_LINE_COLOR, UI_HINT_COLOR);
+    M_BOX(GP.LABEL("Прошивка ESP", "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("📥", UI_BUTTON_COLOR, true););
+    GP.VOID_BOX("0;height:10px");
   }
   else {
-    GP.SPAN("<big><b>Выполняется обновление прошивки...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
-    GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
-    GP.UPDATE("syncUpdate,syncWarn");
-    setUpdateCompleted();
+    GP.BLOCK_BEGIN(GP_THIN, "", "Обновление прошивки", UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    if (UpdateError.length()) {
+      GP.SPAN("<big><b>Произошла ошибка при обновлении...</b></big><br><small>[" + UpdateError + "]</small>", GP_CENTER, "", GP_RED); //описание
+    }
+    else {
+      GP.SPAN("<big><b>Выполняется обновление прошивки...</b></big>", GP_CENTER, "syncUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN("<small>Не выключайте устройство до завершения обновления!</small>", GP_CENTER, "syncWarn", GP_RED); //описание
+      GP.UPDATE("syncUpdate,syncWarn");
+      setUpdateCompleted();
+    }
+    GP.BLOCK_END();
   }
   GP.HR(UI_LINE_COLOR);
-  GP.CENTER_BOX_BEGIN();
+  GP.BOX_BEGIN(GP_CENTER);
   GP.BUTTON_MINI_LINK("/", "Вернуться на главную", UI_BUTTON_COLOR);
   GP.BOX_END();
   GP.BLOCK_END();
 
-  GP.BLOCK_END();
-
+  GP.PAGE_BLOCK_END();
   GP.BUILD_END();
 }
-
+//--------------------------------------------------------------------
 void action() {
   if (ui.click()) {
     if (ui.clickSub("ext")) {
@@ -420,16 +436,18 @@ void action() {
   if (ui.form()) {
     if (!wifiGetConnectWaitStatus() && !wifiGetConnectStatus()) {
       if (ui.form("/connection")) {
-        if (!ui.copyStr("wifiSsid", settings.ssid, 64)) { //копируем из строки
-          int network = 0; //номер сети из списка
-          if (ui.copyInt("wifiNetwork", network)) {
-            strncpy(settings.ssid, WiFi.SSID(network).c_str(), 64); //копируем из списка
-            settings.ssid[63] = '\0'; //устанавливаем последний символ
-          }
+        wifiSetConnectStatus(); //устанавливаем интервал переподключения
+        String _ssid; //временная строка ssid сети
+        _ssid.reserve(64); //резервируем всю длинну
+        if (ui.copyString("wifiSsid", _ssid)) { //копируем ssid сети
+          _ssid.replace(" 🔒", ""); //удаляем лишние символы
+          _ssid.trim(); //удаляем пробелы
+          strncpy(settings.ssid, _ssid.c_str(), 64); //копируем ssid сети
         }
+        else wifiResetConnectStatus(); //сбрасываем интервал переподключения
+        settings.ssid[63] = '\0'; //устанавливаем последний символ
         ui.copyStr("wifiPass", settings.pass, 64); //копируем пароль сети
         settings.pass[63] = '\0'; //устанавливаем последний символ
-        wifiSetConnectStatus(); //подключиться к сети
         memorySaveSettings(); //обновить данные в памяти
       }
     }
@@ -442,16 +460,31 @@ void action() {
   }
   /**************************************************************************/
   if (ui.update()) {
-    if (ui.updateSub("sync")) {
-      if (ui.update("syncNetwork")) { //если было обновление
+    if (ui.updateSub("ext")) {
+      if (ui.update("extNetwork")) { //если было обновление
         ui.answer(wifiGetConnectState());
       }
-      if (ui.update("syncConnect") && wifiGetConnectStatus()) { //если было обновление
+      if (ui.update("extConnect") && wifiGetConnectStatus()) { //если было обновление
         ui.answer(1);
       }
-      if (ui.update("syncReload") && wifiGetScanCompleteStatus()) { //если было обновление
+      if (ui.update("extScan") && wifiGetScanCompleteStatus()) { //если было обновление
         ui.answer(1);
         wifiResetScanCompleteStatus();
+      }
+    }
+    //--------------------------------------------------------------------
+    if (ui.updateSub("inf")) {
+      if (ui.update("infSignal")) { //если было обновление
+        ui.answer(stringGetPercent(wifiGetSignal()));
+      }
+      if (ui.update("infPower")) { //если было обновление
+        ui.answer(stringGetVoltage(getBatteryVoltage()));
+      }
+      if (ui.update("infUsage")) { //если было обновление
+        ui.answer(stringGetPercent(systemGetUsage()));
+      }
+      if (ui.update("infUptime")) { //если было обновление
+        ui.answer(stringGetTimeFromMs(millis()));
       }
     }
     //--------------------------------------------------------------------
@@ -469,35 +502,60 @@ void action() {
       if (ui.update("barPress")) { //если было обновление
         ui.answer(String(sens.press) + "mm.Hg");
       }
-
-      if (ui.update("bar_wifi")) { //если было обновление
-        ui.answer(getWiFiSignal());
-      }
     }
   }
 }
-//---------------------------Получить напряжение батареи---------------------------------
-float getBatteryVoltage(void) { //получить напряжение батареи
-  return (vccVoltage / 1000.0);
-}
-//---------------------------Получить состояние батареи----------------------------------
-uint8_t getBatteryCharge(void) { //получить состояние батареи
-  if (vccVoltage <= BAT_VOLTAGE_MIN) return 0;
-  return constrain((uint8_t)(((vccVoltage - BAT_VOLTAGE_MIN) / ((BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN) / 20.0)) + 1) * 5, 5, 100);
-}
-//---------------------------Получить состояние батареи----------------------------------
-String getBatteryState(void) { //получить состояние батареи
-  String data = "🔋 ";
-  data += getBatteryCharge();
-  data += '%';
-  return data;
-}
-//---------------------------Получить состояние батареи----------------------------------
-uint8_t getWiFiSignal(void) { //получить состояние батареи
-  return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
+//--------------------------------------------------------------------
+String stringLengthConstrain(String str, uint8_t size) {
+  if (str.length() > size) {
+    str.remove(size);
+    str += F("…");
+  }
+  return str;
 }
 //--------------------------------------------------------------------
-String getTimeFromMs(uint32_t data) {
+String stringGetPercent(uint8_t num) {
+  String str;
+  str.reserve(10);
+  str = num;
+  str += '%';
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetVoltage(float num) {
+  String str;
+  str.reserve(10);
+  str = String(num, 2);
+  str += F(" V");
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetFreq(uint32_t num) {
+  String str;
+  str.reserve(15);
+  str = num;
+  str += F(" MHz");
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetHex(uint32_t num) {
+  String str;
+  str.reserve(15);
+  str = String(num, HEX);
+  str.toUpperCase();
+  str = "0x" + str;
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetKilobyte(uint32_t num, uint8_t dec) {
+  String str;
+  str.reserve(15);
+  str = String(num / 1000.0, dec);
+  str += F(" kB");
+  return str;
+}
+//--------------------------------------------------------------------
+String stringGetTimeFromMs(uint32_t data) {
   data /= 1000;
 
   uint8_t second = data % 60;
@@ -507,9 +565,10 @@ String getTimeFromMs(uint32_t data) {
   uint16_t hour = data % 24;
   data /= 24;
 
-  String str = "";
+  String str;
+  str.reserve(20);
 
-  str += data;
+  str = data;
   str += ':';
   str += hour;
   str += ':';
@@ -520,6 +579,22 @@ String getTimeFromMs(uint32_t data) {
   str += second % 10;
 
   return str;
+}
+//--------------------------------------------------------------------
+float getBatteryVoltage(void) { //получить напряжение батареи
+  return (vccVoltage / 1000.0);
+}
+//--------------------------------------------------------------------
+uint8_t getBatteryCharge(void) { //получить уровень заряда батареи
+  if (vccVoltage <= BAT_VOLTAGE_MIN) return 0;
+  return constrain((uint8_t)(((vccVoltage - BAT_VOLTAGE_MIN) / ((BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN) / 20.0)) + 1) * 5, 5, 100);
+}
+//--------------------------------------------------------------------
+String getBatteryState(void) { //получить состояние батареи
+  String data = "🔋 ";
+  data += getBatteryCharge();
+  data += '%';
+  return data;
 }
 //--------------------------------------------------------------------
 char getHexChar(uint8_t hex) {
@@ -543,14 +618,6 @@ String getSensorId(void) {
   }
 
   return str;
-}
-//--------------------------------------------------------------------
-String strLengthConstrain(String data, uint8_t size) {
-  if (data.length() > size) {
-    data.remove(size);
-    data += "…";
-  }
-  return data;
 }
 //--------------------------------------------------------------------
 void efuseGetDefaultMacAddress(uint8_t* mac) {
@@ -796,7 +863,7 @@ void updateBuffer(void) {
     buffSendData[11] = (uint8_t)sens.hum;
 
     buffSendData[12] = (uint8_t)getBatteryCharge();
-    buffSendData[13] = (uint8_t)getWiFiSignal();
+    buffSendData[13] = (uint8_t)wifiGetSignal();
     buffSendData[14] = (uint8_t)sleepTime[settings.period];
 
     uint8_t crc = 0;
@@ -917,6 +984,24 @@ void timeUpdate(void) {
   }
 }
 //--------------------------------------------------------------------
+void systemUpdate(void) {
+  ui.tick(); //обработка веб интерфейса
+  if (sysCycleCount != 0xFFFFFFFF) sysCycleCount++; //посчет циклов
+}
+//--------------------------------------------------------------------
+uint8_t systemGetUsage(void) {
+  static uint32_t timer = 0;
+  static uint8_t usage = 0;
+
+  uint32_t ms = millis();
+  if ((ms - timer) >= 1000) {
+    usage = map(constrain(sysCycleCount / (ms - timer), 1, 25), 1, 25, 100, 0);
+    sysCycleCount = 0;
+    timer = ms;
+  }
+  return usage;
+}
+//--------------------------------------------------------------------
 void setup() {
   //выключить питание wifi
   WiFi.forceSleepBegin();
@@ -1010,7 +1095,7 @@ void setup() {
   if (WiFi.getAutoConnect() != false) WiFi.setAutoConnect(false);
   if (WiFi.getAutoReconnect() != false) WiFi.setAutoReconnect(false);
   if (settingsMode == true) wifiStartAP();
-  else WiFi.mode(WIFI_STA);
+  else wifiStartSTA();
 }
 //--------------------------------------------------------------------
 void loop() {
@@ -1021,6 +1106,6 @@ void loop() {
 
   if (settingsMode == true) {
     memoryUpdate(); //обработка памяти настроек
-    ui.tick(); //обработка веб интерфейса
+    systemUpdate(); //обработка системных функций
   }
 }

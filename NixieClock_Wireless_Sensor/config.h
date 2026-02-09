@@ -6,7 +6,7 @@
 
 #define SEND_DATA_PERIOD 1 //период отправки данных по умолчанию(0 - 1(мин) | 1 - 5(мин) | 2 - 10(мин) | 3 - 15(мин) | 4 - 30(мин) | 5 - 60(мин))
 
-#define SETTINGS_MODE_TIME 60 //время работы точки доступа в режиме настройки(20..120)(сек)
+#define SETTINGS_MODE_TIME 90 //время работы точки доступа в режиме настройки(20..240)(сек)
 
 #define BAT_VOLTAGE_MIN 2500 //минимальное напряжение для расчета заряда батареи(2500..3000)(мВ)
 #define BAT_VOLTAGE_MAX 3000 //максимальное напряжение для расчета заряда батареи(3000..3500)(мВ)
@@ -26,16 +26,13 @@
 //Настройки цветовой схемы, доступные цвета по умолчанию(GP_RED, GP_RED_B, GP_PINK, GP_PINK_B, GP_VIOL, GP_VIOL_B, GP_BLUE, GP_BLUE_B, GP_CYAN, GP_CYAN_B, GP_GREEN, GP_GREEN_B, GP_YELLOW, GP_YELLOW_B, GP_ORANGE, GP_ORANGE_B, GP_GRAY, GP_GRAY_B, GP_BLACK, GP_WHITE) или цвет в формате PSTR("#rrggbb")
 #define UI_BUTTON_COLOR "#e67b09" //цвет кнопок веб интерфейса
 #define UI_BLOCK_COLOR "#e67b09" //цвет блока веб интерфейса
-#define UI_LABEL_COLOR "#e67b09" //цвет надписей веб интерфейса
+#define UI_LABEL_COLOR "#e9c46a" //цвет надписей веб интерфейса
 #define UI_LINE_COLOR "#e67b09" //цвет горизонтальных линий веб интерфейса
 #define UI_HINT_COLOR "#e67b09" //цвет основных подсказок веб интерфейса
 #define UI_INFO_COLOR "#07b379" //цвет информационных подсказок веб интерфейса
 #define UI_LINK_COLOR "#07b379" //цвет текста ссылки веб интерфейса
 
 #define UI_MENU_COLOR "#e67b09" //цвет меню веб интерфейса
-#define UI_MENU_LINE_COLOR GP_GRAY //цвет горизонтальных линий меню веб интерфейса
-#define UI_MENU_TEXT_COLOR "#aaa" //цвет текста блоков меню веб интерфейса
-#define UI_MENU_WIFI_COLOR "#e67b09" //цвет блока меню уровень сигнала wifi веб интерфейса
 
 #define UI_BAR_BATTERY_COLOR GP_WHITE //цвет заряда батареи в статус баре
 #define UI_BAR_TEMP_COLOR GP_GREEN //цвет температуры в статус баре
@@ -45,7 +42,7 @@
 
 //Дополнительно
 #define DEBUG_MODE 0 //активация режима отладки прошивки(0 - выкл | 1 - вкл)
-#define SLEEP_MODE 1 //активация режима сна датчика(0 - выкл | 1 - вкл)
+#define SLEEP_MODE 1 //активация режима глубокого сна датчика(0 - выкл | 1 - вкл)
 
 #define MAX_CLOCK 4 //максимум часов для отправки данных(2..5)
 
@@ -60,4 +57,4 @@
 #define UDP_ANSWER_SIZE 1 //размер пакета ответа(1)
 #define UDP_ANSWER_WAIT_TIME 1000 //время ожидания ответа(100..2000)(мс)
 
-#define ESP_FIRMWARE_VERSION "1.1.7" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.1.8" //версия прошивки модуля esp

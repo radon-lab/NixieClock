@@ -1,3 +1,7 @@
+#define WIFI_CONNECT_DELAY_TIME 5000 //задержка перед подключением к локальной сети(1000..10000)(мс)
+#define WIFI_CONNECT_WAIT_TIME 30000 //время ожидания до следующей попытки подключения к локальной сети(5000..60000)(мс)
+#define WIFI_AP_TIMIOUT 300000 //время работы точки доступа после подключения к локальной сети(30000..600000)(мс)
+
 enum {
   WIFI_SCAN_WAIT, //ожидание нового сканирования сетей wifi
   WIFI_SCAN_SUCCESS, //сканирование сетей wifi завершено
@@ -16,11 +20,22 @@ uint8_t wifi_connect_state = WIFI_CONNECT_IDLE; //состояние подкл�
 uint32_t wifi_connect_timer = 0; //таймер подключения к wifi
 
 uint8_t wifi_status = WL_IDLE_STATUS; //статус соединения wifi
-uint32_t wifi_interval = 5000; //интервал переподключения к wifi
+uint32_t wifi_interval = WIFI_CONNECT_DELAY_TIME; //интервал переподключения к wifi
 
 String wifi_scan_list; //список найденых wifi сетей
 String wifi_host_name; //имя wifi устройства
 
+//--------------------------------------------------------------------
+String wifiGetApSSID(void) {
+  String str;
+  str.reserve(70);
+  str = F(AP_SSID);
+  if (settings.nameAp) {
+    str += F(" - ");
+    str += settings.nameDevice;
+  }
+  return str;
+}
 //--------------------------------------------------------------------
 String wifiGetLocalSSID(void) {
   String str;
@@ -77,6 +92,9 @@ uint8_t wifiGetSignalStrength(void) {
   return constrain(2 * (WiFi.RSSI() + 100), 0, 100);
 }
 //--------------------------------------------------------------------
+uint32_t wifiGetConnectTime(void) {
+  return (millis() - wifi_connect_timer);
+}
 boolean wifiGetConnectStatus(void) {
   return (boolean)(wifi_status == WL_CONNECTED);
 }
@@ -156,10 +174,30 @@ void wifiReadSettings(void) {
   settings.wifiPASS[63] = '\0';
 }
 //--------------------------------------------------------------------
+void wifiServiceRun(boolean run) {
+  static boolean state = false;
+
+  if (state != run) { //если нужно изменить состояние сервисов
+    state = run; //запомнили текущее состояние сервисов
+    if (run) { //если нужно запустить сервисы
+      ntpStart(); //запустить ntp
+      weatherCheck(); //запросить прогноз погоды
+      groupStart(settings.groupFind); //запустить обнаружение устройств поблизости
+      Serial.println F("Wifi services startup...");
+    }
+    else { //иначе останавливаем сервисы
+      ntpStop(); //остановили ntp
+      groupLocal(); //остановить обнаружение устройств поблизости
+      weatherDisconnect(); //отключились от сервера погоды
+      Serial.println F("Wifi services stopped");
+    }
+  }
+}
+//--------------------------------------------------------------------
 void wifiStartAP(void) {
   //настраиваем режим работы
   WiFi.mode(WIFI_AP_STA);
-  WiFi.setPhyMode(WIFI_PHY_MODE_11G);
+  WiFi.setPhyMode(WIFI_PHY_MODE);
   Serial.println F("");
 
 #if WIFI_OUTPUT_POWER
@@ -174,10 +212,10 @@ void wifiStartAP(void) {
   WiFi.softAPConfig(local, local, subnet);
 
   //запускаем точку доступа
-  if (!WiFi.softAP((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID, AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
+  if (!WiFi.softAP(wifiGetApSSID(), AP_PASS, AP_CHANNEL)) Serial.println F("Wifi access point start failed, wrong settings");
   else {
     Serial.print F("Wifi access point enable, [ ssid: ");
-    Serial.print((settings.nameAp) ? (AP_SSID + String(" - ") + settings.nameDevice) : AP_SSID);
+    Serial.print(wifiGetApSSID());
     if (AP_PASS[0] != '\0') {
       Serial.print F(" ][ pass: ");
       Serial.print(AP_PASS);
@@ -200,9 +238,7 @@ void wifiUpdate(void) {
 
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
-      ntpStop(); //остановили ntp
-      groupLocal(); //остановить обнаружение устройств поблизости
-      weatherDisconnect(); //отключились от сервера погоды
+      wifiServiceRun(false); //остановить wifi сервисы
       WiFi.disconnect(); //отключаемся от точки доступа
       Serial.println F("Wifi disconnecting...");
       if (WiFi.getMode() != WIFI_AP_STA) wifiStartAP(); //включаем точку доступа
@@ -214,11 +250,9 @@ void wifiUpdate(void) {
         wifi_connect_timer = millis(); //сбросили таймер
 
         if (WiFi.getMode() != WIFI_AP_STA) wifi_interval = 0; //сбрасываем интервал переподключения
-        else wifi_interval = 300000; //устанавливаем интервал отключения точки доступа
+        else wifi_interval = WIFI_AP_TIMIOUT; //устанавливаем интервал отключения точки доступа
 
-        ntpStart(); //запустить ntp
-        weatherCheck(); //запросить прогноз погоды
-        groupStart(settings.groupFind); //запустить обнаружение устройств поблизости
+        wifiServiceRun(true); //запустить wifi сервисы
 
 #if STATUS_LED == 1
         digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
@@ -236,22 +270,24 @@ void wifiUpdate(void) {
         if (wifi_connect_state != WIFI_CONNECT_FAIL) { //если нет ошибки соединения
           if (((wifi_status == WL_DISCONNECTED) || (wifi_status == WL_NO_SSID_AVAIL)) && (wifi_connect_state != WIFI_CONNECT_START)) {
             wifi_connect_timer = millis(); //сбросили таймер
-            if (wifi_status == WL_NO_SSID_AVAIL) wifi_interval = 30000; //устанавливаем интервал ожидания
-            else wifi_interval = 5000; //устанавливаем интервал переподключения
+            if (wifi_status == WL_NO_SSID_AVAIL) { //если заданный ssid не обнаружен
+              wifiServiceRun(false); //остановить wifi сервисы
+              wifi_station_disconnect(); //отключаемся от точки доступа
+              wifi_interval = WIFI_CONNECT_WAIT_TIME; //устанавливаем интервал ожидания
+            }
+            else wifi_interval = WIFI_CONNECT_DELAY_TIME; //иначе устанавливаем интервал переподключения
             Serial.println F("Wifi connect wait...");
           }
           else {
-            wifi_interval = 0; //сбрасываем интервал переподключения
+            wifiServiceRun(false); //остановить wifi сервисы
+            wifi_station_disconnect(); //отключаемся от точки доступа
             wifi_connect_state = WIFI_CONNECT_FAIL; //сбросили состояние подключения
+            wifi_interval = 0; //сбрасываем интервал переподключения
 #if STATUS_LED == 1
             digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
 #endif
             Serial.println F("Wifi connect error");
           }
-          wifi_station_disconnect(); //отключаемся от точки доступа
-          ntpStop(); //остановить ntp
-          groupLocal(); //остановить обнаружение устройств поблизости
-          weatherDisconnect(); //отключились от сервера погоды
         }
         break;
     }
@@ -264,12 +300,13 @@ void wifiUpdate(void) {
       Serial.println F("Wifi access point disabled");
     }
     else { //иначе новое поключение
+      wifiServiceRun(false); //остановить wifi сервисы
       wifi_station_disconnect(); //отключаемся от точки доступа
       WiFi.hostname(wifi_host_name); //установили имя устройства
       wifi_status = WiFi.begin(settings.wifiSSID, settings.wifiPASS); //подключаемся к wifi
       if (wifi_status != WL_CONNECT_FAILED) {
         wifi_connect_timer = millis(); //сбросили таймер
-        wifi_interval = 30000; //устанавливаем интервал ожидания
+        wifi_interval = WIFI_CONNECT_WAIT_TIME; //устанавливаем интервал ожидания
         Serial.print F("Wifi connecting to \"");
         Serial.print(settings.wifiSSID);
         Serial.println F("\"...");

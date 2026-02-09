@@ -6,7 +6,7 @@
 
 #define GP_PGM(name, val) static const char name[] PROGMEM = val
 #define GP_PGM_LIST(name, ...) const char* const name[] PROGMEM = {__VA_ARGS__};
-extern String _GP_empty_str;
+extern String _gp_empty_str;
 
 // ==================== COLORS =====================
 GP_PGM(GP_RED, "#bf1e1e");
@@ -28,15 +28,17 @@ GP_PGM(GP_ORANGE_B, "#ff4500");
 GP_PGM(GP_GRAY, "#5e5e5e");
 GP_PGM(GP_GRAY_B, "#9c9ea1");
 GP_PGM(GP_BLACK, "#13161a");
-GP_PGM(GP_WHITE, "#fff");
-GP_PGM(GP_DEFAULT, "#fff");
+GP_PGM(GP_WHITE, "#ffffff");
+GP_PGM(GP_DEFAULT, "unset");
+
+#define GP_ITEM_DISABLE "&dsbl&"
 
 enum GPalign {
   GP_CENTER,
   GP_LEFT,
   GP_RIGHT,
   GP_EDGES,
-  GP_JUSTIFY = 3,
+  GP_JUSTIFY,
 
   GP_CENTER2,
   GP_LEFT2,
@@ -49,6 +51,7 @@ enum GPblock {
   GP_DIV,
   GP_TAB,
   GP_THIN,
+  GP_THIN_BOLD,
 };
 
 // получить align
@@ -87,12 +90,6 @@ struct GP_parser {
   String str;
   const String* strp;
 };
-
-//получить скрипт ссылками для обновления
-String getUiLinksUpdate(String list) {
-  list.replace("\"", "\\\"");
-  return "linkUpdate(\"" + list + "\")";
-}
 
 // получить номер, под которым name входит в list вида "val1,val2,val3"
 int GPinList(const String& s, const String& list);
@@ -418,18 +415,18 @@ String GPfileType(const String& uri) {
 GP_PGM(_gp_al0, "center");
 GP_PGM(_gp_al1, "flex-start");
 GP_PGM(_gp_al2, "flex-end");
-GP_PGM(_gp_al3, "space-between");
-//GP_PGM(_gp_al4, "center");
+GP_PGM(_gp_al3, "space-around");
+GP_PGM(_gp_al4, "space-between");
 GP_PGM(_gp_al5, "left");
 GP_PGM(_gp_al6, "right");
 GP_PGM(_gp_al7, "justify");
-GP_PGM_LIST(_gp_al, _gp_al0, _gp_al1, _gp_al2, _gp_al3, _gp_al0, _gp_al5, _gp_al6, _gp_al7);
+GP_PGM_LIST(_gp_al, _gp_al0, _gp_al1, _gp_al2, _gp_al3, _gp_al4, _gp_al0, _gp_al5, _gp_al6, _gp_al7, _gp_al7);
 
 PGM_P GPgetAlignFlex(GPalign a) {
   return _gp_al[a];
 }
 PGM_P GPgetAlign(GPalign a) {
-  return _gp_al[a + 4];
+  return _gp_al[a + 5];
 }
 
 // ===================== DATE-TIME UNIX =====================
@@ -479,7 +476,7 @@ String GPlistIdx(const String& li, int idx, char div) {
   while (1) {
     if (li[i] == div || !li[i]) {
       if (cnt == idx) return li.substring(p, i);
-      if (!li[i]) return _GP_empty_str;
+      if (!li[i]) return _gp_empty_str;
       cnt++;
       p = i + 1;
     }

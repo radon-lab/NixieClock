@@ -28,6 +28,7 @@
 #define AP_PASS "1234567890" //пароль точки доступа(минимум 8 символов)("" - открытая сеть)
 #define AP_CHANNEL 5 //канал точки доступа(1..13)
 
+#define WIFI_PHY_MODE WIFI_PHY_MODE_11G //режим работы wifi(WIFI_PHY_MODE_11B | WIFI_PHY_MODE_11G | WIFI_PHY_MODE_11N)
 #define WIFI_OUTPUT_POWER 0 //максимальная мощность передачи wifi сигнала(0 - по умолчанию)(0.25..20.5)(шаг - 0.25)(дБм)
 
 #define STATUS_LED 1 //тип работы индикации состояния(0 - выключить | 1 - состояние wifi | 2 - индикация работы)
@@ -70,9 +71,9 @@
 #define UI_MENU_CLOCK_2_COLOR GP_GREEN //цвет блока меню часы "Подключены" веб интерфейса
 
 #define UI_ALARM_ADD_COLOR "#e67b09" //цвет кнопки нового будильника
+#define UI_ALARM_SET_COLOR "#e67b09" //цвет кнопки настроить будильник
 #define UI_ALARM_DIS_COLOR GP_YELLOW //цвет кнопки отключить будильник
 #define UI_ALARM_DEL_COLOR GP_RED //цвет кнопки удалить будильник
-#define UI_ALARM_SET_COLOR "#e67b09" //цвет кнопки настроить будильник
 #define UI_ALARM_BACK_COLOR GP_BLUE //цвет кнопки выйти из настроек будильника
 #define UI_ALARM_TIME_COLOR "#bbb" //цвет времени будильника
 #define UI_ALARM_INFO_COLOR "#bbb" //цвет состояния будильника
@@ -94,6 +95,13 @@
 #define UI_TIMER_SET_COLOR "#e67b09" //цвет кнопок настройки таймера/секундомера
 #define UI_TIMER_CTRL_COLOR "#e67b09" //цвет кнопок управления таймером/секундомером
 
+#define UI_WEATHER_TIME_COLOR "#e9c46a" //цвет времени в расшифровке погоды
+#define UI_WEATHER_LINE_COLOR "#2a2d35" //цвет горизонтальной линии в расшифровке погоды
+#define UI_WEATHER_TEMP_COLOR "#07b379" //цвет температуры в расшифровке погоды
+#define UI_WEATHER_HUM_COLOR "#07b379" //цвет влажности в расшифровке погоды
+#define UI_WEATHER_PRESS_COLOR "#07b379" //цвет давления в расшифровке погоды
+#define UI_WEATHER_BLOCK_COLOR "#2a2d35" //цвет блока информации в расшифровке погоды
+
 #define UI_BAR_CLOCK_COLOR GP_WHITE //цвет времени в статус баре
 #define UI_BAR_TEMP_COLOR GP_GREEN //цвет температуры в статус баре
 #define UI_BAR_HUM_COLOR GP_BLUE //цвет влажности в статус баре
@@ -108,4 +116,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.2.9_073" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.3.0_000" //версия прошивки модуля esp

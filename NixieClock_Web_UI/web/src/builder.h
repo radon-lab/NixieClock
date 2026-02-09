@@ -37,6 +37,23 @@ struct Builder {
     else *_GPP += String(val, (uint16_t)dec);
   }
 
+  // ===================== ОТПРАВКА RAW =====================
+  void SEND(const String& s) {
+    *_GPP += s;
+    send();
+  }
+  void SEND_P(PGM_P s) {
+    send(true);
+    _gp_server->sendContent_P(s);
+  }
+
+  void send(bool force = 0) {
+    if ((int)_GPP->length() > (force ? 0 : _gp_bufsize)) {
+      _gp_server->sendContent(*_GPP);
+      *_GPP = "";
+    }
+  }
+
   // ======================= БИЛДЕР =======================
   void BUILD_BEGIN(void) {
     PAGE_BEGIN();
@@ -81,21 +98,8 @@ struct Builder {
     }
   }
 
-  // ===================== ОТПРАВКА RAW =====================
-  void SEND(const String& s) {
-    *_GPP += s;
-    send();
-  }
-  void SEND_P(PGM_P s) {
-    send(true);
-    _gp_server->sendContent_P(s);
-  }
-
-  void send(bool force = 0) {
-    if ((int)_GPP->length() > (force ? 0 : _gp_bufsize)) {
-      _gp_server->sendContent(*_GPP);
-      *_GPP = "";
-    }
+  void PAGE_MIDDLE_ALIGN(void) {
+    SEND(F("<style>body{display:flex;justify-content:center;}.mainblock{width:100%;}</style>\n"));
   }
 
   // ========================== UI БЛОК ==========================
@@ -114,7 +118,7 @@ struct Builder {
 
   void UI_MENU(const String& title, PGM_P st = GP_GREEN) {
     _ui_style = st;
-    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     *_GPP += title;
     *_GPP += F("</div></div>\n<nav class='sidebar' id='dashSdb'><div class='sblock'><div class='header header_s'>");
@@ -124,7 +128,7 @@ struct Builder {
   }
   void UI_MENU(const String& title, const String& name, PGM_P st_1 = GP_GREEN, PGM_P st_2 = GP_GRAY) {
     _ui_style = st_1;
-    *_GPP += F("<style>.mainblock{max-width:100%!important}</style>\n");
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     if (name.length()) *_GPP += name;
     else *_GPP += title;
@@ -148,7 +152,7 @@ struct Builder {
     if (st != GP_DEFAULT) {
       *_GPP += F("<style>.ui_load>span{background-color:");
       *_GPP += FPSTR(st);
-      *_GPP += F("}</style>\n");
+      *_GPP += F(";}</style>\n");
     }
     *_GPP += F("</div>\n<div class='ui_block'");
     if (w != 1000) {
@@ -335,6 +339,28 @@ struct Builder {
     send();
   }
 
+  // ======================= HIDDEN =======================
+  void HIDDEN(const String& name, const String& value) {
+    *_GPP += F("<input type='hidden' name='");
+    *_GPP += name;
+    *_GPP += F("' value='");
+    *_GPP += value;
+    *_GPP += F("' id='");
+    *_GPP += name;
+    *_GPP += F("'>\n");
+    send();
+  }
+  void HIDDEN(const String& id, const String& name, const String& value) {
+    *_GPP += F("<input type='hidden' name='");
+    *_GPP += name;
+    *_GPP += F("' value=\"");
+    *_GPP += value;
+    *_GPP += F("\" id='");
+    *_GPP += id;
+    *_GPP += F("'>\n");
+    send();
+  }
+
   // ======================= UPDATE =======================
   void UPDATE(const String& list, int prd = 1000) {
     *_GPP += F("<script>setInterval(function(){if(!document.hidden)EVupdate('");
@@ -507,6 +533,7 @@ struct Builder {
   void FORM_END(void) {
     SEND(F("</form>\n"));
   }
+
   void SUBMIT(const String& text, PGM_P st = GP_GREEN, const String& cls = "") {
     *_GPP += F("<input type='submit' value='");
     *_GPP += text;
@@ -548,26 +575,6 @@ struct Builder {
     SUBMIT(text, st);
     FORM_END();
   }
-  void HIDDEN(const String& name, const String& value) {
-    *_GPP += F("<input type='hidden' name='");
-    *_GPP += name;
-    *_GPP += F("' value='");
-    *_GPP += value;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
-    send();
-  }
-  void HIDDEN(const String& id, const String& name, const String& value) {
-    *_GPP += F("<input type='hidden' name='");
-    *_GPP += name;
-    *_GPP += F("' value=\"");
-    *_GPP += value;
-    *_GPP += F("\" id='");
-    *_GPP += id;
-    *_GPP += F("'>\n");
-    send();
-  }
   void FORM_SUBMIT(const String& name, const String& text, const String& namehidden, const String& valuehidden, PGM_P st = GP_GREEN) {
     FORM_BEGIN(name);
     HIDDEN(namehidden, valuehidden);
@@ -592,7 +599,7 @@ struct Builder {
   void GRID_RESPONSIVE(int width) {
     *_GPP += F("<style type='text/css'>@media screen and (max-width:");
     *_GPP += width;
-    *_GPP += F("px){\n.grid{display:block;}\n#grid .block{margin:20px 5px;width:unset;}}</style>\n");
+    *_GPP += F("px){.grid{display:block;}#grid .block{margin:20px 10px;width:unset;}}</style>\n");
     send();
   }
 
@@ -603,13 +610,14 @@ struct Builder {
       *_GPP += F(" block");
       if (text.length()) *_GPP += F(" blockTab");
       if (type == GP_THIN) *_GPP += F(" thinBlock");
+      if (type == GP_THIN_BOLD) *_GPP += F(" thinBlock thinBold");
     }
     *_GPP += '\'';
     if (type == GP_TAB) *_GPP += F(" id='blockBack'");
 
     *_GPP += F(" style='");
-    if (type == GP_THIN && st != GP_DEFAULT) {
-      *_GPP += F("border:2px solid ");
+    if ((type == GP_THIN || type == GP_THIN_BOLD) && st != GP_DEFAULT) {
+      *_GPP += F("border-color:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
     }
@@ -669,9 +677,6 @@ struct Builder {
     SEND(F("</div>\n"));
   }
 
-  void BLOCK_MIDDLE_BEGIN(void) {
-    SEND(F("<div class='blockMid'>\n<style>.block{width:500px;}</style>\n"));
-  }
   void BLOCK_OFFSET_BEGIN(void) {
     SEND(F("<div class='blockOfst'>\n"));
   }
@@ -682,6 +687,10 @@ struct Builder {
   void BLOCK_TAB_BEGIN(const String& label, const String& width = "", PGM_P st = GP_DEFAULT) {
     BLOCK_BEGIN(GP_TAB, width, label, st);
   }
+
+  void BLOCK_THIN_BOLD(const String& width = "", PGM_P st = GP_DEFAULT, PGM_P bg = GP_DEFAULT) {
+    BLOCK_BEGIN(GP_THIN_BOLD, width, "", st, bg);
+  }
   void BLOCK_THIN_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_THIN, width);
   }
@@ -690,7 +699,7 @@ struct Builder {
   }
 
   void BLOCK_SHADOW_BEGIN(void) {
-    SEND(F("<div class='blockSh'>\n"));
+    SEND(F("<div class='blockShadow'>\n"));
   }
   void BLOCK_SHADOW_END(void) {
     SEND(F("</div>\n"));
@@ -723,7 +732,7 @@ struct Builder {
   }
 
   void FOOTER_BEGIN(void) {
-    SEND("<div class='blockSp'></div>\n<footer>");
+    SEND("<div class='blockSpace'></div>\n<footer>");
   }
   void FOOTER_END(void) {
     SEND("</footer>");
@@ -894,7 +903,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += F(":checked:after{background-color:");
     *_GPP += FPSTR(st);
-    *_GPP += F(";box-shadow:inset 0px 3px #fff7,0px 0px 10px 1px ");
+    *_GPP += F(";box-shadow:0 0 10px 2px ");
     *_GPP += FPSTR(st);
     *_GPP += F(";}</style>\n");
 
@@ -936,7 +945,7 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' class='ledc");
     if (st != GP_DEFAULT) {
-      *_GPP += F("' style='box-shadow:0px 0px 10px 2px '");
+      *_GPP += F("' style='box-shadow:0 0 10px 2px '");
       *_GPP += FPSTR(st);
       *_GPP += F("background-color:");
       *_GPP += FPSTR(st);
@@ -1093,27 +1102,63 @@ struct Builder {
   }
 
   // ======================= НАВИГАЦИЯ =======================
-  void NAV_TABS_LINKS(const String& urls, const String& names, PGM_P st = GP_GREEN) {
-    *_GPP += F("<div class='navtab'><ul ");
-    if (st != GP_GREEN) {
-      *_GPP += F("style='background:");
+  void NAV_BAR_LINKS(const String& urls, const String& names, int width = 0, PGM_P st = GP_GREEN) {
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{bottom:68px;}}.mainblock{padding-bottom:95px;}</style>\n");
+    *_GPP += F("<div class='navfixed'><div class='navtab navbar' ");
+    if (width) {
+      *_GPP += F("style='max-width:");
+      *_GPP += width;
+      *_GPP += F("px'");
+    }
+    *_GPP += F("><ul id='_nav' onWheel='barScroll(this,event)'>\n");
+    GP_parser n(names);
+    GP_parser u(urls);
+    while (n.parse()) {
+      u.parse();
+      *_GPP += F("<li ");
+      if (_gp_uri->equals(u.str)) {
+        if (st != GP_DEFAULT) {
+          *_GPP += F("style='background:");
+          *_GPP += FPSTR(st);
+          *_GPP += F(";color:#13161a' ");
+        }
+        else *_GPP += F("class='navopen' ");
+      }
+      *_GPP += F("onclick='saveNav();location.href=\"");
+      *_GPP += u.str;
+      *_GPP += F("\";'>");
+      *_GPP += n.str;
+      *_GPP += F("</li>\n");
+    }
+    *_GPP += F("</ul></div></div>\n");
+
+    *_GPP += F("<script>restoreNav();</script>\n");
+    send();
+  }
+
+  void NAV_TABS_LINKS(const String& urls, const String& names, PGM_P st = GP_DEFAULT) {
+    *_GPP += F("<div class='navtab'");
+    if (st != GP_DEFAULT) {
+      *_GPP += F(" style='background:");
       *_GPP += FPSTR(st);
       *_GPP += "'";
     }
-    *_GPP += ">\n";
+    *_GPP += "><ul id='_nav' onWheel='barScroll(this,event)'>\n";
     GP_parser n(names);
     GP_parser u(urls);
     while (n.parse()) {
       u.parse();
       *_GPP += F("<li ");
       if (_gp_uri->equals(u.str)) *_GPP += F("class='navopen' ");
-      *_GPP += F("onclick='location.href=\"");
+      *_GPP += F("onclick='saveNav();location.href=\"");
       *_GPP += u.str;
       *_GPP += F("\";'>");
       *_GPP += n.str;
       *_GPP += F("</li>\n");
     }
     *_GPP += F("</ul></div>\n");
+
+    *_GPP += F("<script>restoreNav();</script>\n");
     send();
   }
 
@@ -1123,7 +1168,7 @@ struct Builder {
       *_GPP += st;
       *_GPP += F(";color:#13161a;}</style>\n");
     }
-    *_GPP += F("<div class='navtab'><ul>\n");
+    *_GPP += F("<div class='navtab'><ul onWheel='barScroll(this,event)'>\n");
     GP_parser tab(list);
     while (tab.parse()) {
       *_GPP += F("<li ");
@@ -1148,15 +1193,15 @@ struct Builder {
     send();
   }
 
-  void NAV_TABS_A(const String& name, const String& list, PGM_P st = GP_GREEN) {
+  void NAV_TABS_A(const String& name, const String& list, PGM_P st = GP_DEFAULT) {
     _gp_nav_pos = 0;
     *_GPP += F("<div class='navtab'><ul ");
-    if (st != GP_GREEN) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("style='background:");
       *_GPP += FPSTR(st);
-      *_GPP += "' ";
+      *_GPP += '\'';
     }
-    *_GPP += ">\n";
+    *_GPP += " onWheel='barScroll(this,event)'>\n";
     GP_parser p(list);
     while (p.parse()) {
       *_GPP += F("<li ");
@@ -1174,6 +1219,36 @@ struct Builder {
       *_GPP += '/';
       *_GPP += p.count;
       *_GPP += F("=\");'>");
+      *_GPP += p.str;
+      *_GPP += F("</li>\n");
+    }
+    *_GPP += F("</ul></div>\n");
+    send();
+  }
+
+  void NAV_TABS(const String& list, PGM_P st = GP_DEFAULT) {
+    _gp_nav_id++;
+    _gp_nav_pos = 0;
+    *_GPP += F("<div class='navtab'><ul ");
+    if (st != GP_DEFAULT) {
+      *_GPP += F("style='background:");
+      *_GPP += FPSTR(st);
+      *_GPP += '\'';
+    }
+    *_GPP += " onWheel='barScroll(this,event)'>\n";
+    GP_parser p(list);
+    while (p.parse()) {
+      *_GPP += F("<li ");
+      *_GPP += F("class='nt-");
+      *_GPP += _gp_nav_id;
+      if (!p.count) *_GPP += F(" navopen");
+      *_GPP += F("' onclick='EVopenTab(\"ntab-");
+      *_GPP += _gp_nav_id;
+      *_GPP += '/';
+      *_GPP += p.count;
+      *_GPP += F("\",this,\"nb-");
+      *_GPP += _gp_nav_id;
+      *_GPP += F("\")'>");
       *_GPP += p.str;
       *_GPP += F("</li>\n");
     }
@@ -1204,36 +1279,6 @@ struct Builder {
     *_GPP += "' ";
     if (!pos) *_GPP += F("style='display:block'");
     *_GPP += ">\n";
-    send();
-  }
-
-  void NAV_TABS(const String& list, PGM_P st = GP_GREEN) {
-    _gp_nav_id++;
-    _gp_nav_pos = 0;
-    *_GPP += F("<div class='navtab'><ul ");
-    if (st != GP_GREEN) {
-      *_GPP += F("style='background:");
-      *_GPP += FPSTR(st);
-      *_GPP += "' ";
-    }
-    *_GPP += ">\n";
-    GP_parser p(list);
-    while (p.parse()) {
-      *_GPP += F("<li ");
-      *_GPP += F("class='nt-");
-      *_GPP += _gp_nav_id;
-      if (!p.count) *_GPP += F(" navopen");
-      *_GPP += F("' onclick='EVopenTab(\"ntab-");
-      *_GPP += _gp_nav_id;
-      *_GPP += '/';
-      *_GPP += p.count;
-      *_GPP += F("\",this,\"nb-");
-      *_GPP += _gp_nav_id;
-      *_GPP += F("\")'>");
-      *_GPP += p.str;
-      *_GPP += F("</li>\n");
-    }
-    *_GPP += F("</ul></div>\n");
     send();
   }
 
@@ -2003,7 +2048,7 @@ struct Builder {
     *_GPP += F("<input type='hidden' name='_range' class='range_inp' id='");
     *_GPP += name;
     if (color.length()) {
-      *_GPP += F("' placeholder='");
+      *_GPP += F("' data-color='");
       *_GPP += color;
     }
     *_GPP += F("' value='");
@@ -2038,18 +2083,18 @@ struct Builder {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1);
   }
 
-  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
-  }
-  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 100, PGM_P st = GP_GREEN, bool dis = 0) {
-    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
-  }
-
   void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 0, 1, lable);
   }
   void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
+  }
+
+  void SLIDER_COLOR(const String& name, const String& color, float value = 0, float min = 0, float max = 10, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 0, 0, "", color);
+  }
+  void SLIDER_COLOR_C(const String& name, const String& color, float value = 0, float min = 0, float max = 10, PGM_P st = GP_GREEN, bool dis = 0) {
+    SLIDER(name, "", "", value, min, max, 1, st, dis, 1, 0, "", color);
   }
 
   void SPINNER_BTN(const String& name, float step, PGM_P st, uint8_t dec, bool dis) {
@@ -2277,7 +2322,7 @@ struct Builder {
     *_GPP += nums;
     *_GPP += F("' max='");
     *_GPP += sel;
-    *_GPP += F("' placeholder='");
+    *_GPP += F("' data-list='");
     *_GPP += list;
     *_GPP += F("' onclick='selectList(this)' readonly");
     if (dis) *_GPP += F(" disabled\n");
