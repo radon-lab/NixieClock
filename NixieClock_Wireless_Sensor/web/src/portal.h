@@ -55,7 +55,9 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
       }
 #endif
 
-      server.begin(port);
+#ifdef ESP32
+      server.enableDelay(false);
+#endif
 
 #if defined(FS_H)
       if (_fs) server.serveStatic("/gp_data", *_fs, "/gp_data", GP_CACHE_PRD);
@@ -264,6 +266,8 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
         }
       });
 #endif
+
+      server.begin(port);
     }
 
     // остановить портал

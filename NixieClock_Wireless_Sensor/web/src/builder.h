@@ -1546,10 +1546,6 @@ struct Builder {
 #endif
 
     TR();
-    TD(GP_LEFT); BOLD(F("Cycle Count"));
-    TD(GP_RIGHT); SEND(String(ESP.getCycleCount()));
-
-    TR();
     TD(GP_LEFT); BOLD(F("Cpu Freq."));
     TD(GP_RIGHT); SEND(String(ESP.getCpuFreqMHz()) + F(" MHz"));
 
