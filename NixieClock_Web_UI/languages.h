@@ -12,6 +12,10 @@
 #define LANG_WIFI_SSID_NULL "unset"
 #define LANG_WIFI_SSID_LOCK " 🔒"
 
+#define LANG_WIFI_MODE_AP "AP"
+#define LANG_WIFI_MODE_STA "STA"
+#define LANG_WIFI_MODE_AP_STA "AP_STA"
+
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
@@ -467,9 +471,6 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Время соединения"
 #define LANG_PAGE_INFO_GUI_AP_SSID "SSID точки доступа"
 #define LANG_PAGE_INFO_GUI_AP_IP "IP точки доступа"
-#define LANG_PAGE_INFO_GUI_MODE_AP "AP"
-#define LANG_PAGE_INFO_GUI_MODE_STA "STA"
-#define LANG_PAGE_INFO_GUI_MODE_AP_STA "AP_STA"
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"
@@ -557,6 +558,10 @@
 #define LANG_WIFI_IP_NULL "0.0.0.0"
 #define LANG_WIFI_SSID_NULL "unset"
 #define LANG_WIFI_SSID_LOCK " 🔒"
+
+#define LANG_WIFI_MODE_AP "AP"
+#define LANG_WIFI_MODE_STA "STA"
+#define LANG_WIFI_MODE_AP_STA "AP_STA"
 
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "No network connection"
@@ -1013,9 +1018,6 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Connect time"
 #define LANG_PAGE_INFO_GUI_AP_SSID "Access point SSID"
 #define LANG_PAGE_INFO_GUI_AP_IP "Access point IP"
-#define LANG_PAGE_INFO_GUI_MODE_AP "AP"
-#define LANG_PAGE_INFO_GUI_MODE_STA "STA"
-#define LANG_PAGE_INFO_GUI_MODE_AP_STA "AP_STA"
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"

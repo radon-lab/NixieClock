@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_001 бета от 13.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_002 бета от 13.02.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -13,7 +13,7 @@
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
   1МБ - FS:none OTA:~502KB(только обновление esp по OTA).
-  1МБ - FS:512KB OTA:~246KB(только локальные файлы FS и обновление прошивки часов).
+  1МБ - FS:256KB OTA:~374KB(только локальные файлы FS).
   2МБ - FS:1MB OTA:~512KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
   4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
   8МБ - FS:6MB OTA:~1019KB(обновление esp по OTA, обновление прошивки часов и локальные файлы FS).
@@ -174,7 +174,7 @@ String stringGetTimeFromMs(uint32_t data) {
   return str;
 }
 //--------------------------------------------------------------------
-String encodeTime(GPtime data) {
+String stringEncodeTime(GPtime data) {
   String str;
   str.reserve(15);
 
@@ -464,7 +464,7 @@ void build(void) {
     GP.UI_BODY(1000, UI_LOAD_COLOR); //начать основное окно
 
     GP.BOX_BEGIN(GP_JUSTIFY, "100%;width:auto;padding-left:2%;padding-right:2%");
-    GP.LABEL_BLOCK(encodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
+    GP.LABEL_BLOCK(stringEncodeTime(mainTime), "barTime", UI_BAR_CLOCK_COLOR, 18, 1);
 
     GP.BOX_BEGIN(GP_RIGHT, "100%");
     if (climateGetBarTemp() != 0x7FFF) {
@@ -1120,7 +1120,7 @@ void build(void) {
 
       if (radioSvgImage) {
         GP.SEND("<style>.i_mask{margin:0;}#radioMode .i_mask{margin-right:4px;}</style>\n");
-        M_BOX(GP_JUSTIFY, "380px;height:70px",
+        M_BOX(GP_JUSTIFY, "380px;height:70px;margin-bottom:5px",
               GP.ICON_FILE_BUTTON("radioMode", radioFsData[4], 40, UI_RADIO_BACK_COLOR);
               GP.ICON_FILE_BUTTON("radioSeekDown", radioFsData[0], 30, UI_RADIO_FREQ_2_COLOR);
               GP.ICON_FILE_BUTTON("radioFreqDown", radioFsData[1], 30, UI_RADIO_FREQ_2_COLOR);
@@ -1150,6 +1150,7 @@ void build(void) {
         );
       }
       GP.TABLE_END();
+      GP.VOID_BOX("0;height:10px");
       GP.BLOCK_END();
 
       GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioFreq",
@@ -2193,7 +2194,7 @@ void action() {
   if (ui.update()) {
     if (ui.updateSub("bar")) {
       if (ui.update("barTime")) { //если было обновление
-        ui.answer(encodeTime(mainTime));
+        ui.answer(stringEncodeTime(mainTime));
         waitTimer = 0; //установили таймер ожидания
       }
 
@@ -2478,17 +2479,21 @@ void timeUpdate(void) {
       }
       secondsTimer += 1000; //прибавили секунду
     }
+
     if (timer.mode) busSetCommand(READ_TIMER_TIME); //отправляем запрос оновления показаний таймера
+
     if (!waitTimer) { //если пришло время опросить статус часов
       waitTimer = 4; //установили таймер ожидания
       busUpdateClockStatus(); //обновить статус часов
       busSetCommand(READ_STATUS); //запрос статуса часов
     }
     else waitTimer--; //иначе убавили таймер
+
     if (playbackTimer > -1) { //если запущено воспроизведение
       if (!playbackTimer) busSetCommand(WRITE_STOP_SOUND); //остановка воспроизведения
       playbackTimer--; //убавили таймер воспроизведения
     }
+
 #if STATUS_LED == 2
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
 #endif
