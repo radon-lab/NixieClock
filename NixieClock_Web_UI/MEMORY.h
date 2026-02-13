@@ -57,7 +57,7 @@ void memoryWriteSettings(void) {
       checkCRC(&_crc, _buff);
       EEPROM.write(i, _buff);
     }
-    EEPROM.write(sizeof(settings) + 1, _crc ^ MEM_MASK_CRC);
+    EEPROM.write(sizeof(settings), _crc ^ MEM_MASK_CRC);
     EEPROM.commit();
   }
 }
@@ -68,7 +68,7 @@ void memoryReadSettings(void) {
     uint8_t _crc = 0;
     memory_state = true;
     for (uint16_t i = 0; i < sizeof(settings); i++) checkCRC(&_crc, EEPROM.read(i));
-    if (_crc == (EEPROM.read(sizeof(settings) + 1) ^ MEM_MASK_CRC)) {
+    if (_crc == (EEPROM.read(sizeof(settings)) ^ MEM_MASK_CRC)) {
       for (uint16_t i = 0; i < sizeof(settings); i++) {
         *((uint8_t*)&settings + i) = EEPROM.read(i);
       }
