@@ -1002,7 +1002,7 @@ uint8_t systemGetUsage(void) {
   return usage;
 }
 //--------------------------------------------------------------------
-void setup() {
+void setup(void) {
   //выключить питание wifi
   WiFi.forceSleepBegin();
 
@@ -1098,7 +1098,7 @@ void setup() {
   else wifiStartSTA();
 }
 //--------------------------------------------------------------------
-void loop() {
+void loop(void) {
   if (wifiUpdate()) sleepMode(); //обработка статусов wifi
 
   timeUpdate(); //обработка времени
