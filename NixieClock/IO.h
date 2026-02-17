@@ -5,12 +5,13 @@
 
 #define DDR_REG(portx) (*(&portx - 1))
 #define PIN_REG(portx) (*(&portx - 2))
+
 #define BIT_READ_INV(value, bit) (((value) ^ (0x01 << (bit))) & (0x01 << (bit)))
 #define BIT_READ(value, bit) ((value) & (0x01 << (bit)))
 #define BIT_INV(value, bit) ((value) ^= (0x01 << (bit)))
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
-#define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
+#define BIT_WRITE(value, bit) ((value) = (0x01 << (bit)))
 
 #define CONSTRAIN(value, min, max) (((value) > (max)) ? (max) : (((value) < (min)) ? (min) : (value)))
 #define CONSTRAIN_MAX(value, max) (((value) > (max)) ? (max) : (value))
@@ -175,6 +176,18 @@
 //Пин синхронизации SQW
 #define SQW_BIT   DECODE_BIT(SQW_PIN)
 #define SQW_PORT  DECODE_PORT(SQW_PIN)
+
+#if SQW_PIN == 2
+#define SQW_INT_EN   (BIT_WRITE(EIMSK, INT0))
+#define SQW_INT_CLR  (BIT_SET(EIFR, INTF0))
+#define SQW_INT_CHK  (BIT_READ(EIFR, INTF0))
+#define SQW_INT_INIT (BIT_WRITE(EICRA, ISC01))
+#elif SQW_PIN == 3
+#define SQW_INT_EN   (BIT_WRITE(EIMSK, INT1))
+#define SQW_INT_CLR  (BIT_SET(EIFR, INTF1))
+#define SQW_INT_CHK  (BIT_READ(EIFR, INTF1))
+#define SQW_INT_INIT (BIT_WRITE(EICRA, ISC11))
+#endif
 
 #define SQW_SET   (BIT_SET(SQW_PORT, SQW_BIT))
 #define SQW_INP   (BIT_CLEAR(DDR_REG(SQW_PORT), SQW_BIT))

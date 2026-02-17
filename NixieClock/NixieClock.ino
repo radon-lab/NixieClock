@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_001 бета от 09.02.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_003 бета от 17.02.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -79,26 +79,26 @@ int main(void) //главный цикл программ
         break;
 #endif
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-      case RADIO_PROGRAM: mainTask = radioMenu(); break; //радиоприемник
+      case RADIO_PROGRAM: mainTask = radioScreen(); break; //радиоприемник
 #endif
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
-      case TIMER_PROGRAM: mainTask = timerStopwatch(); break; //таймер-секундомер
+      case TIMER_PROGRAM: mainTask = timerScreen(); break; //таймер-секундомер
 #endif
       case SLEEP_PROGRAM: //режим сна индикаторов
         mainTask = sleepIndi(); //переход в программу
         setAnimTimers(); //установка таймеров анимаций
         break;
 #if !BTN_EASY_MAIN_MODE
-      case FAST_SET_PROGRAM: mainTask = fastSetSwitch(); break; //переключение настроек
-      case MAIN_SET_PROGRAM: mainTask = settings_main(); break; //основные настроки
+      case FAST_SET_PROGRAM: mainTask = fastMenu(); break; //быстрые настроки
+      case MAIN_SET_PROGRAM: mainTask = mainMenu(); break; //основные настроки
 #endif
-      case CLOCK_SET_PROGRAM: mainTask = settings_time(); break; //настройки времени
+      case CLOCK_SET_PROGRAM: mainTask = timeSettings(); break; //настройки времени
 #if ALARM_TYPE
       case ALARM_SET_PROGRAM: //настройка будильника
 #if ALARM_TYPE == 1
-        mainTask = settings_singleAlarm(); //переход в программу
+        mainTask = singleAlarmSettings(); //переход в программу
 #elif ALARM_TYPE == 2
-        mainTask = settings_multiAlarm(); //переход в программу
+        mainTask = multiAlarmSettings(); //переход в программу
 #endif
 #if PLAYER_TYPE
         playerSetVolNow(mainSettings.volumeSound); //установили громкость
@@ -220,30 +220,30 @@ void INIT_SYSTEM(void) //инициализация
   else { //иначе загружаем настройки из памяти
     if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) { //проверяем быстрые настройки
       updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем быстрые настройки в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем быстрые настройки из памяти
     if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) { //проверяем основные настройки
       updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
     if (checkData(sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO)) { //проверяем настройки радио
       updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&radioSettings, EEPROM_BLOCK_SETTINGS_RADIO, sizeof(radioSettings)); //считываем настройки радио из памяти
 #if ESP_ENABLE
     if (checkData(sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED)) { //проверяем расширенные настройки
       updateData((uint8_t*)&extendedSettings, sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED); //записываем расширенные настройки в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&extendedSettings, EEPROM_BLOCK_SETTINGS_EXTENDED, sizeof(extendedSettings)); //считываем настройки радио из памяти
 #endif
 #if ALARM_TYPE
     if (checkByte(EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM)) { //проверяем количетво будильников
       updateByte(alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
-      SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else alarms.num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
 #endif
@@ -257,7 +257,7 @@ void INIT_SYSTEM(void) //инициализация
   }
   if (checkData(sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG)) { //проверяем настройки отладки
     updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
-    SET_ERROR(MEMORY_ERROR); //устанавливаем ошибку памяти
+    SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
   }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
@@ -408,7 +408,7 @@ void systemTask(void) //системная задача
       if (timerSQW > SQW_MAX_TIME) { //если сигнал слишком длинный
         EIMSK = 0; //перешли на внутреннее тактирование
         tick_sec = 1; //установили секунду
-        SET_ERROR(SQW_LONG_ERROR); //устанавливаем ошибку длинного сигнала
+        SET_ERROR(ERROR_LONG_SQW); //устанавливаем ошибку длинного сигнала
       }
     }
     else { //если внешние тактирование не обнаружено
@@ -445,14 +445,14 @@ void systemTask(void) //системная задача
         EIMSK = 0; //перешли на внутреннее тактирование
         tick_sec = 0; //сбросили счетчик секунд
         timerClock = timerSQW; //установили таймер секунды
-        SET_ERROR(SQW_SHORT_ERROR); //устанавливаем ошибку короткого сигнала
+        SET_ERROR(ERROR_SHORT_SQW); //устанавливаем ошибку короткого сигнала
         return; //выходим
       }
       timerSQW = 0; //сбросили таймер
     }
 #endif
 #if DS3231_ENABLE
-    else if (!_timer_sec[TMR_SYNC] && RTC.s == RTC_SYNC_PHASE) { //если работаем от внутреннего тактирования
+    else if (!_timer_sec[TMR_SYNC] && (RTC.s == RTC_SYNC_PHASE)) { //если работаем от внутреннего тактирования
       _timer_sec[TMR_SYNC] = ((uint16_t)RTC_SYNC_TIME * 60); //установили таймер
       if (rtcGetTime(RTC_CHECK_OSF)) RTC.s--; //синхронизируем время
     }
@@ -536,427 +536,6 @@ void dataUpdate(void) //обработка данных
 #endif
   updateMemory(); //обновить данные в памяти
 }
-//--------------------------Установка таймеров анимаций-------------------------
-void setAnimTimers(void) //установка таймеров анимаций
-{
-  _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
-  _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); //установка таймера антиотравления
-  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
-}
-//-------------------------Разрешить анимации подсветки-------------------------
-void backlAnimEnable(void) //разрешить анимации подсветки
-{
-#if BACKL_TYPE == 3
-  if (fastSettings.backlMode & 0x80) { //если эффекты подсветки были запрещены
-    fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
-    backl.steps = 0; //сбросили шаги
-    backl.drive = 0; //сбросили направление
-    backl.position = 0; //сбросили позицию
-    _timer_ms[TMR_COLOR] = 0; //сбросили таймер смены цвета
-    _timer_ms[TMR_BACKL] = 0; //сбросили таймер анимации подсветки
-    if (fastSettings.backlMode) wsBacklSetLedBright(backl.maxBright); //установили максимальную яркость
-  }
-#else
-  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
-#endif
-}
-//-------------------------Запретить анимации подсветки-------------------------
-void backlAnimDisable(void) //запретить анимации подсветки
-{
-  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
-}
-//--------------------Получить состояние анимации подсветки---------------------
-boolean backlGetAnimState(void) //получить состояние анимации подсветки
-{
-  return (boolean)(fastSettings.backlMode & 0x7F); //вернули состояние подсветки
-}
-//---------------------Получить яркость анимации подсветки----------------------
-uint8_t backlGetAnimBright(void) //Получить яркость анимации подсветки
-{
-  return (backlGetAnimState()) ? backl.maxBright : 0; //вернули яркость подсветки
-}
-//----------------------Разрешить анимацию секундных точек----------------------
-void dotAnimEnable(void) //разрешить анимацию секундных точек
-{
-  fastSettings.dotMode &= 0x7F; //разрешили эффекты точек
-}
-//----------------------Запретить анимацию секундных точеки---------------------
-void dotAnimDisable(void) //запретить анимацию секундных точек
-{
-  fastSettings.dotMode |= 0x80; //запретили эффекты точек
-}
-//----------------------------Разрешить смену яркости---------------------------
-void changeBrightEnable(void) //разрешить смену яркости
-{
-  changeBrightState = CHANGE_ENABLE; //разрешили смену яркости
-}
-//----------------------------Запретить смену яркости---------------------------
-void changeBrightDisable(uint8_t _state) //запретить смену яркости
-{
-  changeBrightState = _state; //запретили смену яркости
-}
-//-----------------------------Расчет шага яркости-----------------------------
-uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
-{
-  uint8_t temp = ceil((float)_brt / (float)_time * (float)_step); //расчёт шага яркости точки
-  if (!temp) temp = 1; //если шаг слишком мал, устанавливаем минимум
-  return temp;
-}
-//-------------------------Расчет периода шага яркости--------------------------
-uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет периода шага яркости
-{
-  uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
-  if (temp < _step) temp = _step; //если шаг слишком мал то устанавливаем минимум
-  return temp;
-}
-//---------------------Получить усредненную яркость-----------------------------
-uint8_t getMidBright(uint8_t night, uint8_t day) //получить усредненную яркость
-{
-  return night + ((day - night) >> 1);
-}
-//---------------------Установка яркости от времени суток-----------------------------
-boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
-{
-  return ((_start > _end && (RTC.h >= _start || RTC.h < _end)) || (_start < _end && RTC.h >= _start && RTC.h < _end));
-}
-//---------------------------------Получить время со сдвигом фазы-----------------------------------------
-uint16_t getPhaseTime(uint8_t time, int8_t phase) //получить время со сдвигом фазы
-{
-  return ((uint16_t)time * 60) + (phase - RTC.s) - ((RTC.s >= phase) ? 0 : 60);  //возвращаем результат
-}
-//---------------------------------Инициализация будильника----------------------------------------------
-void alarmInit(void) //инициализация будильника
-{
-  if (!alarms.num) alarmCreate(); //создать новый будильник
-#if !ESP_ENABLE && (ALARM_TYPE == 1)
-  else if (alarms.num > 1) { //если будильников в памяти больше одного
-    alarms.num = 1; //оставляем один будильник
-    updateByte(alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
-  }
-#endif
-}
-//-----------------------------------Отключение будильника------------------------------------------------
-void alarmDisable(void) //отключение будильника
-{
-#if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
-#else
-  melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
-#endif
-  alarmReset(); //сброс будильника
-}
-//--------------------------------------Сброс будильника--------------------------------------------------
-void alarmReset(void) //сброс будильника
-{
-  _timer_sec[TMR_ALM] = 0; //сбрасываем таймер отключения будильника
-  _timer_sec[TMR_ALM_WAIT] = 0; //сбрасываем таймер ожидания повторного включения тревоги
-  _timer_sec[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
-  alarms.now = ALARM_DISABLE; //сбрасываем флаг тревоги
-  alarmCheck(ALARM_CHECK_SET); //проверка будильников
-  dotReset(ANIM_RESET_CHANGE); //сброс анимации точек
-}
-//-----------------------------Получить основные данные будильника-----------------------------------------
-uint8_t alarmRead(uint8_t almNum, uint8_t almDataPos) //получить основные данные будильника
-{
-  return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * ALARM_MAX_ARR) + almDataPos); //возвращаем запрошеный байт
-}
-//-----------------------------Записать основные данные будильника-----------------------------------------
-void alarmWrite(uint8_t almNum, uint8_t almDataPos, uint8_t almData) //записать основные данные будильника
-{
-  EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * ALARM_MAX_ARR) + almDataPos, almData); //записываем указанный байт
-}
-//--------------------------Получить блок основных данных будильника---------------------------------------
-void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
-{
-  uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
-  for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + curCell + i) : 0; //считываем блок данных
-}
-//---------------------------Записать блок основных данных будильника--------------------------------------
-void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
-{
-  if (!almNum) return; //если нет ни одного будильника то выходим
-  uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
-  for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + curCell + i, data[i]); //записываем блок данных
-}
-//---------------------------------Создать новый будильник-------------------------------------------------
-void alarmCreate(void) //создать новый будильник
-{
-  if (alarms.num < MAX_ALARMS) { //если новый будильник меньше максимума
-    uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)alarms.num * ALARM_MAX_ARR);
-    EEPROM_UpdateByte(newCell + ALARM_HOURS, DEFAULT_ALARM_TIME_HH); //устанавливаем час по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_MINS, DEFAULT_ALARM_TIME_MM); //устанавливаем минуты по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_MODE, DEFAULT_ALARM_MODE); //устанавливаем режим по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_DAYS, 0); //устанавливаем дни недели по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_SOUND, 0); //устанавливаем мелодию по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_VOLUME, DEFAULT_ALARM_VOLUME); //устанавливаем громкость по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_RADIO, 0); //устанавливаем радиобудильник по умолчанию
-    EEPROM_UpdateByte(newCell + ALARM_STATUS, 0); //устанавливаем статус по умолчанию
-    updateByte(++alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
-  }
-}
-//-----------------------------------Удалить будильник-----------------------------------------------------
-void alarmRemove(uint8_t alarm) //удалить будильник
-{
-  if (alarms.num > 1) { //если будильник доступен
-    for (uint8_t start = alarm; start < alarms.num; start++) { //перезаписываем массив будильников
-      uint16_t oldCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)start * ALARM_MAX_ARR);
-      uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)(start - 1) * ALARM_MAX_ARR);
-      for (uint8_t block = 0; block < ALARM_MAX_ARR; block++) EEPROM_UpdateByte(newCell + block, EEPROM_ReadByte(oldCell + block));
-    }
-    updateByte(--alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
-  }
-}
-//----------------------------------Проверка будильников----------------------------------------------------
-void alarmCheck(uint8_t check) //проверка будильников
-{
-  if (alarms.now < ALARM_WAIT) { //если тревога не активна
-    if (RTC.YY <= 2000) return; //выходим если время не установлено
-
-    alarms.now = ALARM_DISABLE; //сбрасываем флаг будильников
-    int16_t time_now = 1440 + ((int16_t)RTC.h * 60) + RTC.m; //рассчитали текущее время
-    for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
-      uint8_t mode_alarm = alarmRead(alm, ALARM_MODE); //считали режим будильника
-      if (mode_alarm) { //если будильник включен
-        alarms.now = ALARM_ENABLE; //мигание точек при включенном будильнике
-        if (check == ALARM_CHECK_SET) return; //выходим если нужно только проверить
-
-        uint8_t days_alarm = alarmRead(alm, ALARM_DAYS); //считали дни недели будильника
-        int16_t time_alarm = ((int16_t)alarmRead(alm, ALARM_HOURS) * 60) + alarmRead(alm, ALARM_MINS);
-        switch (mode_alarm) { //устанавливаем дни в зависимости от режима
-          case 3: days_alarm = 0x3E; break; //по будням
-          case 4: if (!days_alarm) days_alarm = 0xFF; else if (days_alarm & 0x80) days_alarm |= 0x01; break; //по дням недели
-          default: days_alarm = 0xFF; break; //каждый день
-        }
-
-        uint8_t start_alarm = 0; //установили первоначальное время до будильника
-        for (uint8_t dw = RTC.DW - 1; dw <= RTC.DW; dw++) { //проверяем все дни недели
-          if (days_alarm & (0x01 << dw)) { //если активирован день недели
-            int16_t time_buf = time_now - time_alarm; //расчет интервала
-            if (!time_buf) start_alarm = 1; //если будильник в зоне активации
-            else if ((time_buf > 0) && (time_buf < 30)) start_alarm = 2; //если будильник в зоне активации
-          }
-          time_alarm += 1440; //прибавили время будильнику
-        }
-
-        uint8_t status_alarm = alarmRead(alm, ALARM_STATUS); //считали статус будильника
-
-        if (status_alarm) { //если будильник заблокирован автоматически
-          if (status_alarm == 255) { //если будильник заблокирован пользователем
-            if ((check == ALARM_CHECK_INIT) || (start_alarm < 2)) { //если первичная проверка будильников или будильник вне зоны активации
-              status_alarm = 0; //сбросили статус блокировки пользователем
-              alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
-            }
-          }
-          else if ((status_alarm != RTC.DW) && !start_alarm) { //если вышли из зоны активации будильника
-            status_alarm = 0; //устанавливаем статус блокировки будильника
-            alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
-          }
-        }
-        if (!status_alarm && start_alarm) { //если будильник не был заблокирован
-          alarms.now = ALARM_WARN; //устанавливаем флаг тревоги
-          if (mode_alarm == 1) { //если был установлен режим одиночный
-#if ESP_ENABLE
-            device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
-#endif
-            alarmWrite(alm, ALARM_MODE, 0); //выключаем будильник
-          }
-          alarmWrite(alm, ALARM_STATUS, RTC.DW); //сбрасываем статус активности будильник
-          alarms.sound = alarmRead(alm, ALARM_SOUND); //номер мелодии
-          alarms.radio = alarmRead(alm, ALARM_RADIO); //текущий режим звука
-          alarms.volume = alarmRead(alm, ALARM_VOLUME); //текущая громкость
-          _timer_sec[TMR_ALM] = ((uint16_t)extendedSettings.alarmTime * 60); //установили таймер таймаута будильника
-          _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
-          return; //выходим
-        }
-      }
-    }
-  }
-}
-//-------------------------------Обновление данных будильников---------------------------------------------
-void alarmDataUpdate(void) //обновление данных будильников
-{
-  if (alarms.now > ALARM_ENABLE) { //если тревога активна
-    if (!_timer_sec[TMR_ALM]) { //если пришло время выключить будильник
-      alarmReset(); //сброс будильника
-      return; //выходим
-    }
-
-    if (extendedSettings.alarmWaitTime && (alarms.now == ALARM_WAIT)) { //если будильник в режиме ожидания
-      if (!_timer_sec[TMR_ALM_WAIT]) { //если пришло время повторно включить звук
-        _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
-        alarms.now = ALARM_WARN; //устанавливаем флаг тревоги будильника
-      }
-    }
-    else if (extendedSettings.alarmSoundTime) { //если таймаут тревоги включен
-      if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
-        if (extendedSettings.alarmWaitTime) { //если время ожидания включено
-          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60); //установили таймер таймаута ожидания будильника
-          alarms.now = ALARM_WAIT; //устанавливаем флаг ожидания тревоги
-        }
-        else alarmReset(); //сброс будильника
-      }
-    }
-  }
-}
-//----------------------------------Тревога будильника---------------------------------------------------------
-uint8_t alarmWarn(void) //тревога будильника
-{
-  boolean blink_data = 0; //флаг мигания индикаторами
-
-#if PLAYER_TYPE || (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE))
-  boolean auto_vol = 0; //флаг автогромкости
-  uint8_t cur_vol = alarms.volume; //текущая громкость
-
-  if (!cur_vol) { //если автогромкость
-    auto_vol = 1; //установили флаг автогромкости
-    cur_vol = ALARM_AUTO_VOL_MIN; //установили минимальную громкость
-  }
-
-  _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
-#endif
-
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  if (alarms.radio) { //если режим радио
-    if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
-      setPowerRDA(RDA_ON); //включаем радио
-      setVolumeRDA(cur_vol); //устанавливаем громкость
-      setFreqRDA(radioSettings.stationsSave[alarms.sound]); //устанавливаем частоту
-    }
-    else { //иначе переходим в режим мелодии
-      alarms.sound = 0; //установили номер мелодии
-      alarms.radio = 0; //отключили режим радио
-    }
-  }
-  else radioPowerOff(); //выключить питание радиоприемника
-#endif
-
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  if (!alarms.radio) {
-#endif
-#if PLAYER_TYPE
-    playerStop(); //остановить воспроизведение
-    playerSetVolNow(cur_vol); //установить громкость
-#else
-    melodyPlay(alarms.sound, SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
-#endif
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-  }
-#endif
-
-#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
-  backlAnimDisable(); //запретили эффекты подсветки
-#if ALARM_BACKL_TYPE == 1
-  changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
-#endif
-  wsBacklSetLedHue(ALARM_BACKL_COLOR, WHITE_ON); //установили цвет будильника
-#endif
-
-  _timer_ms[TMR_MS] = 0; //сбросили таймер
-
-  while (1) {
-    dataUpdate(); //обработка данных
-
-    if (alarms.now != ALARM_WARN) { //если тревога сброшена
-#if PLAYER_TYPE
-      playerStop(); //сброс позиции мелодии
-#else
-      melodyStop(); //сброс позиции мелодии
-#endif
-      return MAIN_PROGRAM; //выходим
-    }
-
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-#if PLAYER_TYPE
-    if (!alarms.radio && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
-    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
-      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
-      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
-      else auto_vol = 0; //сбросили флаг автогромкости
-
-      if (alarms.radio) setVolumeRDA(cur_vol); //устанавливаем громкость
-      else playerSetVolNow(cur_vol); //установка громкости
-    }
-#else
-    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
-      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
-      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
-      else auto_vol = 0; //сбросили флаг автогромкости
-      setVolumeRDA(cur_vol); //устанавливаем громкость
-    }
-#endif
-#elif PLAYER_TYPE
-    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
-    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
-      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
-      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
-      else auto_vol = 0; //сбросили флаг автогромкости
-      playerSetVolNow(cur_vol); //установка громкости
-    }
-#endif
-
-    if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
-      _timer_ms[TMR_MS] = ALARM_BLINK_TIME; //устанавливаем таймер
-
-      switch (blink_data) {
-        case 0: indiClr(); break; //очистка индикаторов
-        case 1:
-          indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
-          indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
-          indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
-          break;
-      }
-      dotSetBright((blink_data) ? dot.menuBright : 0); //установили точки
-#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
-#if ALARM_BACKL_TYPE == 1
-      wsBacklSetLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
-#else
-      wsBacklSetLedBright((blink_data) ? backl.menuBright : 0); //установили яркость
-#endif
-#endif
-      blink_data = !blink_data; //мигаем временем
-    }
-
-    switch (buttonState()) {
-      case LEFT_KEY_PRESS: //клик левой кнопкой
-      case RIGHT_KEY_PRESS: //клик правой кнопкой
-      case SET_KEY_PRESS: //клик средней кнопкой
-      case ADD_KEY_PRESS: //клик дополнительной кнопкой
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
-        if (extendedSettings.alarmWaitTime && !alarms.radio) //если есть время ожидания и режим музыкального будильника
-#else
-        if (extendedSettings.alarmWaitTime) //если есть время ожидания
-#endif
-        {
-          alarms.now = ALARM_WAIT; //устанавливаем флаг ожидания
-          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
-          _timer_sec[TMR_ALM_SOUND] = 0;
-#if PLAYER_TYPE
-          if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
-#else
-          melodyPlay(SOUND_ALARM_WAIT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
-#endif
-        }
-        else {
-#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
-          if (alarms.radio) {
-            radioSettings.stationsFreq = radioSettings.stationsSave[alarms.sound];
-            radio.powerState = RDA_ON; //установили флаг питания радио
-          }
-#endif
-          alarmDisable(); //отключение будильника
-        }
-        return MAIN_PROGRAM; //выходим
-
-      case LEFT_KEY_HOLD: //удержание левой кнопки
-      case RIGHT_KEY_HOLD: //удержание правой кнопки
-      case SET_KEY_HOLD: //удержание средней кнопки
-      case ADD_KEY_HOLD: //удержание дополнительной кнопки
-        alarmDisable(); //отключение будильника
-        return MAIN_PROGRAM; //выходим
-    }
-  }
-  return INIT_PROGRAM;
-}
 //-------------------Установить флаг обновления данных в памяти---------------------
 void saveMemoryBlock(uint8_t mask) //установить флаг обновления данных в памяти
 {
@@ -987,6 +566,43 @@ void updateMemory(void) //обновить данные в памяти
     }
     memoryUpdate = 0; //сбрасываем флаги
   }
+}
+//------------------Проверка модуля часов реального времени-------------------------
+void checkRealTimeClock(void) //проверка модуля часов реального времени
+{
+#if DS3231_ENABLE
+  if (!rtcDisable32K()) return; //отключение вывода 32K
+#endif
+
+#if SQW_PORT_ENABLE
+#if DS3231_ENABLE
+  if (!rtcSetSQW()) return; //установка SQW на 1Гц
+#endif
+  SQW_INT_INIT; //настраиваем внешнее прерывание по спаду импульса на INT
+  SQW_INT_CLR; //сбрасываем флаг прерывания INT
+
+  _timer_ms[TMR_MS] = SQW_TEST_TIME; //установили время ожидания
+  while (!SQW_INT_CHK && _timer_ms[TMR_MS]) systemTask(); //ждем сигнала от SQW
+  tick_sec = 0; //сбросили счетчик секунд
+#endif
+
+#if DS3231_ENABLE
+  if (!rtcGetTime(RTC_CLEAR_OSF)) { //считываем время из RTC
+    rtcWriteAging(debugSettings.aging); //восстанавливаем коррекцию хода
+    rtcSendTime(); //отправляем последнее сохраненное время в RTC
+  }
+#if ESP_ENABLE
+  else device.status |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+#endif
+#endif
+
+#if SQW_PORT_ENABLE
+  if (SQW_INT_CHK) { //если был сигнал с SQW
+    SQW_INT_CLR; //сбрасываем флаг прерывания INT
+    SQW_INT_EN; //разрешаем внешнее прерывание INT
+  }
+  else SET_ERROR(ERROR_LONG_SQW); //иначе выдаем ошибку
+#endif
 }
 //------------------Чтение установленных датчиков температуры-----------------------
 void readTempSens(void) //чтение установленных датчиков температуры
@@ -1078,7 +694,7 @@ void checkTempSens(void) //проверка установленного дат�
 #endif
   updateTempSens(); //чтение установленных датчиков температуры
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
-  if (!(sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL)))) SET_ERROR(TEMP_SENS_ERROR); //иначе выдаем ошибку
+  if (!(sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL)))) SET_ERROR(ERROR_SENS_TEMP); //иначе выдаем ошибку
 #endif
 }
 //-------------------------Обновить показания температуры---------------------------
@@ -1168,6 +784,94 @@ uint8_t getHumidity(void)
 #else
   return sens.hum;
 #endif
+}
+//--------------------------Установка таймеров анимаций-------------------------
+void setAnimTimers(void) //установка таймеров анимаций
+{
+  _timer_sec[TMR_SHOW] = getPhaseTime(mainSettings.autoShowTime, AUTO_SHOW_PHASE); //установка таймера показа температуры
+  _timer_sec[TMR_BURN] = getPhaseTime(mainSettings.burnTime, BURN_PHASE); //установка таймера антиотравления
+  _timer_sec[TMR_GLITCH] = random(GLITCH_MIN_TIME, GLITCH_MAX_TIME); //находим рандомное время появления глюка
+}
+//-------------------------Разрешить анимации подсветки-------------------------
+void backlAnimEnable(void) //разрешить анимации подсветки
+{
+#if BACKL_TYPE == 3
+  if (fastSettings.backlMode & 0x80) { //если эффекты подсветки были запрещены
+    fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+    backl.steps = 0; //сбросили шаги
+    backl.drive = 0; //сбросили направление
+    backl.position = 0; //сбросили позицию
+    _timer_ms[TMR_COLOR] = 0; //сбросили таймер смены цвета
+    _timer_ms[TMR_BACKL] = 0; //сбросили таймер анимации подсветки
+    if (fastSettings.backlMode) wsBacklSetLedBright(backl.maxBright); //установили максимальную яркость
+  }
+#else
+  fastSettings.backlMode &= 0x7F; //разрешили эффекты подсветки
+#endif
+}
+//-------------------------Запретить анимации подсветки-------------------------
+void backlAnimDisable(void) //запретить анимации подсветки
+{
+  fastSettings.backlMode |= 0x80; //запретили эффекты подсветки
+}
+//--------------------Получить состояние анимации подсветки---------------------
+boolean backlGetAnimState(void) //получить состояние анимации подсветки
+{
+  return (boolean)(fastSettings.backlMode & 0x7F); //вернули состояние подсветки
+}
+//---------------------Получить яркость анимации подсветки----------------------
+uint8_t backlGetAnimBright(void) //Получить яркость анимации подсветки
+{
+  return (backlGetAnimState()) ? backl.maxBright : 0; //вернули яркость подсветки
+}
+//----------------------Разрешить анимацию секундных точек----------------------
+void dotAnimEnable(void) //разрешить анимацию секундных точек
+{
+  fastSettings.dotMode &= 0x7F; //разрешили эффекты точек
+}
+//----------------------Запретить анимацию секундных точеки---------------------
+void dotAnimDisable(void) //запретить анимацию секундных точек
+{
+  fastSettings.dotMode |= 0x80; //запретили эффекты точек
+}
+//----------------------------Разрешить смену яркости---------------------------
+void changeBrightEnable(void) //разрешить смену яркости
+{
+  changeBrightState = CHANGE_ENABLE; //разрешили смену яркости
+}
+//----------------------------Запретить смену яркости---------------------------
+void changeBrightDisable(uint8_t _state) //запретить смену яркости
+{
+  changeBrightState = _state; //запретили смену яркости
+}
+//-----------------------------Расчет шага яркости-----------------------------
+uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
+{
+  uint8_t temp = ceil((float)_brt / (float)_time * (float)_step); //расчёт шага яркости точки
+  if (!temp) temp = 1; //если шаг слишком мал, устанавливаем минимум
+  return temp;
+}
+//-------------------------Расчет периода шага яркости--------------------------
+uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет периода шага яркости
+{
+  uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
+  if (temp < _step) temp = _step; //если шаг слишком мал то устанавливаем минимум
+  return temp;
+}
+//---------------------Получить усредненную яркость-----------------------------
+uint8_t getMidBright(uint8_t night, uint8_t day) //получить усредненную яркость
+{
+  return night + ((day - night) >> 1);
+}
+//---------------------Установка яркости от времени суток-----------------------------
+boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
+{
+  return ((_start > _end && (RTC.h >= _start || RTC.h < _end)) || (_start < _end && RTC.h >= _start && RTC.h < _end));
+}
+//---------------------------------Получить время со сдвигом фазы-----------------------------------------
+uint16_t getPhaseTime(uint8_t time, int8_t phase) //получить время со сдвигом фазы
+{
+  return ((uint16_t)time * 60) + (phase - RTC.s) - ((RTC.s >= phase) ? 0 : 60);  //возвращаем результат
 }
 //------------------------------------Звук смены часа------------------------------------
 void hourSound(void) //звук смены часа
@@ -2409,41 +2113,338 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     }
   }
 }
-//------------------Проверка модуля часов реального времени-------------------------
-void checkRealTimeClock(void) //проверка модуля часов реального времени
+//---------------------------------Инициализация будильника----------------------------------------------
+void alarmInit(void) //инициализация будильника
 {
-#if DS3231_ENABLE
-  if (!rtcDisable32K()) return; //отключение вывода 32K
-#endif
-
-#if SQW_PORT_ENABLE
-#if DS3231_ENABLE
-  if (!rtcSetSQW()) return; //установка SQW на 1Гц
-#endif
-  EICRA = (0x01 << ISC01); //настраиваем внешнее прерывание по спаду импульса на INT0
-  EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
-
-  for (_timer_ms[TMR_MS] = SQW_TEST_TIME; !(EIFR & (0x01 << INTF0)) && _timer_ms[TMR_MS];) systemTask(); //ждем сигнала от SQW
-  tick_sec = 0; //сбросили счетчик секунд
-#endif
-
-#if DS3231_ENABLE
-  if (!rtcGetTime(RTC_CLEAR_OSF)) { //считываем время из RTC
-    rtcWriteAging(debugSettings.aging); //восстанавливаем коррекцию хода
-    rtcSendTime(); //отправляем последнее сохраненное время в RTC
+  if (!alarms.num) alarmCreate(); //создать новый будильник
+#if !ESP_ENABLE && (ALARM_TYPE == 1)
+  else if (alarms.num > 1) { //если будильников в памяти больше одного
+    alarms.num = 1; //оставляем один будильник
+    updateByte(alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
   }
+#endif
+}
+//-----------------------------------Отключение будильника------------------------------------------------
+void alarmDisable(void) //отключение будильника
+{
+#if PLAYER_TYPE
+  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
+#else
+  melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
+#endif
+  alarmReset(); //сброс будильника
+}
+//--------------------------------------Сброс будильника--------------------------------------------------
+void alarmReset(void) //сброс будильника
+{
+  _timer_sec[TMR_ALM] = 0; //сбрасываем таймер отключения будильника
+  _timer_sec[TMR_ALM_WAIT] = 0; //сбрасываем таймер ожидания повторного включения тревоги
+  _timer_sec[TMR_ALM_SOUND] = 0; //сбрасываем таймер отключения звука
+  alarms.now = ALARM_DISABLE; //сбрасываем флаг тревоги
+  alarmCheck(ALARM_CHECK_SET); //проверка будильников
+  dotReset(ANIM_RESET_CHANGE); //сброс анимации точек
+}
+//-----------------------------Получить основные данные будильника-----------------------------------------
+uint8_t alarmRead(uint8_t almNum, uint8_t almDataPos) //получить основные данные будильника
+{
+  return EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * ALARM_MAX_ARR) + almDataPos); //возвращаем запрошеный байт
+}
+//-----------------------------Записать основные данные будильника-----------------------------------------
+void alarmWrite(uint8_t almNum, uint8_t almDataPos, uint8_t almData) //записать основные данные будильника
+{
+  EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + ((uint16_t)almNum * ALARM_MAX_ARR) + almDataPos, almData); //записываем указанный байт
+}
+//--------------------------Получить блок основных данных будильника---------------------------------------
+void alarmReadBlock(uint8_t almNum, uint8_t* data) //получить блок основных данных будильника
+{
+  uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
+  for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) data[i] = (almNum) ? EEPROM_ReadByte(EEPROM_BLOCK_ALARM_DATA + curCell + i) : 0; //считываем блок данных
+}
+//---------------------------Записать блок основных данных будильника--------------------------------------
+void alarmWriteBlock(uint8_t almNum, uint8_t* data) //записать блок основных данных будильника
+{
+  if (!almNum) return; //если нет ни одного будильника то выходим
+  uint16_t curCell = (uint16_t)(almNum - 1) * ALARM_MAX_ARR;
+  for (uint8_t i = 0; i < ALARM_MAX_ARR; i++) EEPROM_UpdateByte(EEPROM_BLOCK_ALARM_DATA + curCell + i, data[i]); //записываем блок данных
+}
+//---------------------------------Создать новый будильник-------------------------------------------------
+void alarmCreate(void) //создать новый будильник
+{
+  if (alarms.num < MAX_ALARMS) { //если новый будильник меньше максимума
+    uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)alarms.num * ALARM_MAX_ARR);
+    EEPROM_UpdateByte(newCell + ALARM_HOURS, DEFAULT_ALARM_TIME_HH); //устанавливаем час по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_MINS, DEFAULT_ALARM_TIME_MM); //устанавливаем минуты по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_MODE, DEFAULT_ALARM_MODE); //устанавливаем режим по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_DAYS, 0); //устанавливаем дни недели по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_SOUND, 0); //устанавливаем мелодию по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_VOLUME, DEFAULT_ALARM_VOLUME); //устанавливаем громкость по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_RADIO, 0); //устанавливаем радиобудильник по умолчанию
+    EEPROM_UpdateByte(newCell + ALARM_STATUS, 0); //устанавливаем статус по умолчанию
+    updateByte(++alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
+  }
+}
+//-----------------------------------Удалить будильник-----------------------------------------------------
+void alarmRemove(uint8_t alarm) //удалить будильник
+{
+  if (alarms.num > 1) { //если будильник доступен
+    for (uint8_t start = alarm; start < alarms.num; start++) { //перезаписываем массив будильников
+      uint16_t oldCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)start * ALARM_MAX_ARR);
+      uint16_t newCell = EEPROM_BLOCK_ALARM_DATA + ((uint16_t)(start - 1) * ALARM_MAX_ARR);
+      for (uint8_t block = 0; block < ALARM_MAX_ARR; block++) EEPROM_UpdateByte(newCell + block, EEPROM_ReadByte(oldCell + block));
+    }
+    updateByte(--alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
+  }
+}
+//----------------------------------Проверка будильников----------------------------------------------------
+void alarmCheck(uint8_t check) //проверка будильников
+{
+  if (alarms.now < ALARM_WAIT) { //если тревога не активна
+    if (RTC.YY <= 2000) return; //выходим если время не установлено
+
+    alarms.now = ALARM_DISABLE; //сбрасываем флаг будильников
+    int16_t time_now = 1440 + ((int16_t)RTC.h * 60) + RTC.m; //рассчитали текущее время
+    for (uint8_t alm = 0; alm < alarms.num; alm++) { //опрашиваем все будильники
+      uint8_t mode_alarm = alarmRead(alm, ALARM_MODE); //считали режим будильника
+      if (mode_alarm) { //если будильник включен
+        alarms.now = ALARM_ENABLE; //мигание точек при включенном будильнике
+        if (check == ALARM_CHECK_SET) return; //выходим если нужно только проверить
+
+        uint8_t days_alarm = alarmRead(alm, ALARM_DAYS); //считали дни недели будильника
+        int16_t time_alarm = ((int16_t)alarmRead(alm, ALARM_HOURS) * 60) + alarmRead(alm, ALARM_MINS);
+        switch (mode_alarm) { //устанавливаем дни в зависимости от режима
+          case 3: days_alarm = 0x3E; break; //по будням
+          case 4: if (!days_alarm) days_alarm = 0xFF; else if (days_alarm & 0x80) days_alarm |= 0x01; break; //по дням недели
+          default: days_alarm = 0xFF; break; //каждый день
+        }
+
+        uint8_t start_alarm = 0; //установили первоначальное время до будильника
+        for (uint8_t dw = RTC.DW - 1; dw <= RTC.DW; dw++) { //проверяем все дни недели
+          if (days_alarm & (0x01 << dw)) { //если активирован день недели
+            int16_t time_buf = time_now - time_alarm; //расчет интервала
+            if (!time_buf) start_alarm = 1; //если будильник в зоне активации
+            else if ((time_buf > 0) && (time_buf < 30)) start_alarm = 2; //если будильник в зоне активации
+          }
+          time_alarm += 1440; //прибавили время будильнику
+        }
+
+        uint8_t status_alarm = alarmRead(alm, ALARM_STATUS); //считали статус будильника
+
+        if (status_alarm) { //если будильник заблокирован автоматически
+          if (status_alarm == 255) { //если будильник заблокирован пользователем
+            if ((check == ALARM_CHECK_INIT) || (start_alarm < 2)) { //если первичная проверка будильников или будильник вне зоны активации
+              status_alarm = 0; //сбросили статус блокировки пользователем
+              alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
+            }
+          }
+          else if ((status_alarm != RTC.DW) && !start_alarm) { //если вышли из зоны активации будильника
+            status_alarm = 0; //устанавливаем статус блокировки будильника
+            alarmWrite(alm, ALARM_STATUS, status_alarm); //устанавливаем статус активности будильник
+          }
+        }
+        if (!status_alarm && start_alarm) { //если будильник не был заблокирован
+          alarms.now = ALARM_WARN; //устанавливаем флаг тревоги
+          if (mode_alarm == 1) { //если был установлен режим одиночный
 #if ESP_ENABLE
-  else device.status |= (0x01 << STATUS_UPDATE_TIME_SET); //установили статус актуального времени
+            device.status |= (0x01 << STATUS_UPDATE_ALARM_SET);
 #endif
+            alarmWrite(alm, ALARM_MODE, 0); //выключаем будильник
+          }
+          alarmWrite(alm, ALARM_STATUS, RTC.DW); //сбрасываем статус активности будильник
+          alarms.sound = alarmRead(alm, ALARM_SOUND); //номер мелодии
+          alarms.radio = alarmRead(alm, ALARM_RADIO); //текущий режим звука
+          alarms.volume = alarmRead(alm, ALARM_VOLUME); //текущая громкость
+          _timer_sec[TMR_ALM] = ((uint16_t)extendedSettings.alarmTime * 60); //установили таймер таймаута будильника
+          _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
+          return; //выходим
+        }
+      }
+    }
+  }
+}
+//-------------------------------Обновление данных будильников---------------------------------------------
+void alarmDataUpdate(void) //обновление данных будильников
+{
+  if (alarms.now > ALARM_ENABLE) { //если тревога активна
+    if (!_timer_sec[TMR_ALM]) { //если пришло время выключить будильник
+      alarmReset(); //сброс будильника
+      return; //выходим
+    }
+
+    if (extendedSettings.alarmWaitTime && (alarms.now == ALARM_WAIT)) { //если будильник в режиме ожидания
+      if (!_timer_sec[TMR_ALM_WAIT]) { //если пришло время повторно включить звук
+        _timer_sec[TMR_ALM_SOUND] = ((uint16_t)extendedSettings.alarmSoundTime * 60); //установили таймер таймаута звука будильника
+        alarms.now = ALARM_WARN; //устанавливаем флаг тревоги будильника
+      }
+    }
+    else if (extendedSettings.alarmSoundTime) { //если таймаут тревоги включен
+      if (!_timer_sec[TMR_ALM_SOUND]) { //если пришло время выключить тревогу
+        if (extendedSettings.alarmWaitTime) { //если время ожидания включено
+          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60); //установили таймер таймаута ожидания будильника
+          alarms.now = ALARM_WAIT; //устанавливаем флаг ожидания тревоги
+        }
+        else alarmReset(); //сброс будильника
+      }
+    }
+  }
+}
+//----------------------------------Тревога будильника---------------------------------------------------------
+uint8_t alarmWarn(void) //тревога будильника
+{
+  boolean blink_data = 0; //флаг мигания индикаторами
+
+#if PLAYER_TYPE || (RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE))
+  boolean auto_vol = 0; //флаг автогромкости
+  uint8_t cur_vol = alarms.volume; //текущая громкость
+
+  if (!cur_vol) { //если автогромкость
+    auto_vol = 1; //установили флаг автогромкости
+    cur_vol = ALARM_AUTO_VOL_MIN; //установили минимальную громкость
+  }
+
+  _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
 #endif
 
-#if SQW_PORT_ENABLE
-  if (EIFR & (0x01 << INTF0)) { //если был сигнал с SQW
-    EIFR |= (0x01 << INTF0); //сбрасываем флаг прерывания INT0
-    EIMSK = (0x01 << INT0); //разрешаем внешнее прерывание INT0
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
+  if (alarms.radio) { //если режим радио
+    if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
+      setPowerRDA(RDA_ON); //включаем радио
+      setVolumeRDA(cur_vol); //устанавливаем громкость
+      setFreqRDA(radioSettings.stationsSave[alarms.sound]); //устанавливаем частоту
+    }
+    else { //иначе переходим в режим мелодии
+      alarms.sound = 0; //установили номер мелодии
+      alarms.radio = 0; //отключили режим радио
+    }
   }
-  else SET_ERROR(SQW_LONG_ERROR); //иначе выдаем ошибку
+  else radioPowerOff(); //выключить питание радиоприемника
 #endif
+
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
+  if (!alarms.radio) {
+#endif
+#if PLAYER_TYPE
+    playerStop(); //остановить воспроизведение
+    playerSetVolNow(cur_vol); //установить громкость
+#else
+    melodyPlay(alarms.sound, SOUND_LINK(alarm_sound), REPLAY_CYCLE); //воспроизводим мелодию
+#endif
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
+  }
+#endif
+
+#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
+  backlAnimDisable(); //запретили эффекты подсветки
+#if ALARM_BACKL_TYPE == 1
+  changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
+#endif
+  wsBacklSetLedHue(ALARM_BACKL_COLOR, WHITE_ON); //установили цвет будильника
+#endif
+
+  _timer_ms[TMR_MS] = 0; //сбросили таймер
+
+  while (1) {
+    dataUpdate(); //обработка данных
+
+    if (alarms.now != ALARM_WARN) { //если тревога сброшена
+#if PLAYER_TYPE
+      playerStop(); //сброс позиции мелодии
+#else
+      melodyStop(); //сброс позиции мелодии
+#endif
+      return MAIN_PROGRAM; //выходим
+    }
+
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
+#if PLAYER_TYPE
+    if (!alarms.radio && !playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
+    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
+      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
+      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
+      else auto_vol = 0; //сбросили флаг автогромкости
+
+      if (alarms.radio) setVolumeRDA(cur_vol); //устанавливаем громкость
+      else playerSetVolNow(cur_vol); //установка громкости
+    }
+#else
+    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
+      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
+      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
+      else auto_vol = 0; //сбросили флаг автогромкости
+      setVolumeRDA(cur_vol); //устанавливаем громкость
+    }
+#endif
+#elif PLAYER_TYPE
+    if (!playerPlaybackStatus()) playerSetTrack(PLAYER_ALARM_START + alarms.sound, PLAYER_ALARM_FOLDER); //воспроизводим мелодию
+    if (auto_vol && !_timer_ms[TMR_ANIM]) { //если пришло время
+      _timer_ms[TMR_ANIM] = ALARM_AUTO_VOL_TIMER; //устанавливаем таймер
+      if (cur_vol < ALARM_AUTO_VOL_MAX) cur_vol++;
+      else auto_vol = 0; //сбросили флаг автогромкости
+      playerSetVolNow(cur_vol); //установка громкости
+    }
+#endif
+
+    if (!_timer_ms[TMR_MS]) { //если прошло пол секунды
+      _timer_ms[TMR_MS] = ALARM_BLINK_TIME; //устанавливаем таймер
+
+      switch (blink_data) {
+        case 0: indiClr(); break; //очистка индикаторов
+        case 1:
+          indiPrintNum((mainSettings.timeFormat) ? get_12h(RTC.h) : RTC.h, 0, 2, 0); //вывод часов
+          indiPrintNum(RTC.m, 2, 2, 0); //вывод минут
+          indiPrintNum(RTC.s, 4, 2, 0); //вывод секунд
+          break;
+      }
+      dotSetBright((blink_data) ? dot.menuBright : 0); //установили точки
+#if (BACKL_TYPE == 3) && ALARM_BACKL_TYPE
+#if ALARM_BACKL_TYPE == 1
+      wsBacklSetLedBright((blink_data) ? backl.maxBright : 0); //установили яркость
+#else
+      wsBacklSetLedBright((blink_data) ? backl.menuBright : 0); //установили яркость
+#endif
+#endif
+      blink_data = !blink_data; //мигаем временем
+    }
+
+    switch (buttonState()) {
+      case LEFT_KEY_PRESS: //клик левой кнопкой
+      case RIGHT_KEY_PRESS: //клик правой кнопкой
+      case SET_KEY_PRESS: //клик средней кнопкой
+      case ADD_KEY_PRESS: //клик дополнительной кнопкой
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
+        if (extendedSettings.alarmWaitTime && !alarms.radio) //если есть время ожидания и режим музыкального будильника
+#else
+        if (extendedSettings.alarmWaitTime) //если есть время ожидания
+#endif
+        {
+          alarms.now = ALARM_WAIT; //устанавливаем флаг ожидания
+          _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
+          _timer_sec[TMR_ALM_SOUND] = 0;
+#if PLAYER_TYPE
+          if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
+#else
+          melodyPlay(SOUND_ALARM_WAIT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
+#endif
+        }
+        else {
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE) && ALARM_RADIO_CONTINUE
+          if (alarms.radio) {
+            radioSettings.stationsFreq = radioSettings.stationsSave[alarms.sound];
+            radio.powerState = RDA_ON; //установили флаг питания радио
+          }
+#endif
+          alarmDisable(); //отключение будильника
+        }
+        return MAIN_PROGRAM; //выходим
+
+      case LEFT_KEY_HOLD: //удержание левой кнопки
+      case RIGHT_KEY_HOLD: //удержание правой кнопки
+      case SET_KEY_HOLD: //удержание средней кнопки
+      case ADD_KEY_HOLD: //удержание дополнительной кнопки
+        alarmDisable(); //отключение будильника
+        return MAIN_PROGRAM; //выходим
+    }
+  }
+  return INIT_PROGRAM;
 }
 //-----------------------------Проверка ошибок-------------------------------------
 void checkErrors(void) //проверка ошибок
@@ -2488,71 +2489,6 @@ void checkErrors(void) //проверка ошибок
     }
     updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //сбросили ошибки
     updateByte(0x00, EEPROM_BLOCK_EXT_ERROR, EEPROM_BLOCK_CRC_EXT_ERROR); //сбросили ошибки
-  }
-}
-//---------------------------Проверка системы---------------------------------------
-void testSystem(void) //проверка системы
-{
-  indiPrintNum(CONVERT_NUM(FIRMWARE_VERSION), 0); //отрисовываем версию прошивки
-#if PLAYER_TYPE
-  playerSetTrackNow(PLAYER_FIRMWARE_SOUND, PLAYER_GENERAL_FOLDER);
-  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[0]));
-  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[2]));
-  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
-#endif
-  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
-
-#if PLAYER_TYPE
-  playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER); //звук тестирования динамика
-#else
-  melodyPlay(SOUND_TEST_SPEAKER, SOUND_LINK(general_sound), REPLAY_ONCE); //сигнал тестирования динамика
-#endif
-
-#if (BACKL_TYPE != 3) && BACKL_TYPE
-  ledBacklSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
-#endif
-  indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
-#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
-  dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
-#endif
-
-#if DOTS_PORT_ENABLE
-#if DOTS_TYPE == 2
-  indiSetDots(0, DOTS_NUM * 2); //установка разделительных точек
-#else
-  indiSetDots(0, DOTS_NUM); //установка разделительных точек
-#endif
-#endif
-
-  while (1) {
-#if INDI_SYMB_TYPE
-    indiClr(); //очистка индикаторов
-    for (uint8_t symb = 0; symb < 10; symb++) {
-      indiSetSymb(ID(symb)); //установка индикатора символов
-      for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
-        dataUpdate(); //обработка данных
-        if (buttonState()) return; //выходим если нажата кнопка
-      }
-    }
-    indiClrSymb(); //очистка индикатора символов
-#endif
-    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
-      indiClr(); //очистка индикаторов
-#if BACKL_TYPE == 3
-      wsBacklSetLedBright(0); //выключаем светодиоды
-      wsBacklSetLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
-#endif
-      for (uint8_t digit = 0; digit < 10; digit++) {
-        indiPrintNum(digit, indi); //отрисовываем цифру
-#if BACKL_TYPE == 3
-        wsBacklSetLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
-#endif
-        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
-          dataUpdate(); //обработка данных
-          if (buttonState()) return; //выходим если нажата кнопка
-        }
-      }
-    }
   }
 }
 //-----------------------------Проверка пароля------------------------------------
@@ -2626,6 +2562,71 @@ boolean checkPass(void) //проверка пароля
     }
   }
   return 0;
+}
+//---------------------------Проверка системы---------------------------------------
+void testSystem(void) //проверка системы
+{
+  indiPrintNum(CONVERT_NUM(FIRMWARE_VERSION), 0); //отрисовываем версию прошивки
+#if PLAYER_TYPE
+  playerSetTrackNow(PLAYER_FIRMWARE_SOUND, PLAYER_GENERAL_FOLDER);
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[0]));
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[2]));
+  playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
+#endif
+  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
+
+#if PLAYER_TYPE
+  playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER); //звук тестирования динамика
+#else
+  melodyPlay(SOUND_TEST_SPEAKER, SOUND_LINK(general_sound), REPLAY_ONCE); //сигнал тестирования динамика
+#endif
+
+#if (BACKL_TYPE != 3) && BACKL_TYPE
+  ledBacklSetBright(TEST_BACKL_BRIGHT); //устанавливаем максимальную яркость
+#endif
+  indiSetBright(TEST_INDI_BRIGHT); //установка яркости индикаторов
+#if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
+  dotSetBright(TEST_DOT_BRIGHT); //установка яркости точек
+#endif
+
+#if DOTS_PORT_ENABLE
+#if DOTS_TYPE == 2
+  indiSetDots(0, DOTS_NUM * 2); //установка разделительных точек
+#else
+  indiSetDots(0, DOTS_NUM); //установка разделительных точек
+#endif
+#endif
+
+  while (1) {
+#if INDI_SYMB_TYPE
+    indiClr(); //очистка индикаторов
+    for (uint8_t symb = 0; symb < 10; symb++) {
+      indiSetSymb(ID(symb)); //установка индикатора символов
+      for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+        dataUpdate(); //обработка данных
+        if (buttonState()) return; //выходим если нажата кнопка
+      }
+    }
+    indiClrSymb(); //очистка индикатора символов
+#endif
+    for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
+      indiClr(); //очистка индикаторов
+#if BACKL_TYPE == 3
+      wsBacklSetLedBright(0); //выключаем светодиоды
+      wsBacklSetLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
+#endif
+      for (uint8_t digit = 0; digit < 10; digit++) {
+        indiPrintNum(digit, indi); //отрисовываем цифру
+#if BACKL_TYPE == 3
+        wsBacklSetLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
+#endif
+        for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
+          dataUpdate(); //обработка данных
+          if (buttonState()) return; //выходим если нажата кнопка
+        }
+      }
+    }
+  }
 }
 //-----------------------------Отладка------------------------------------
 void debugMenu(void) //отладка
@@ -2914,7 +2915,7 @@ void debugMenu(void) //отладка
   }
 }
 //----------------------------Настройки времени----------------------------------
-uint8_t settings_time(void) //настройки времени
+uint8_t timeSettings(void) //настройки времени
 {
   boolean time_update = 0; //флаг изменения времени
   boolean blink_data = 0; //мигание сигментами
@@ -3048,7 +3049,7 @@ uint8_t settings_time(void) //настройки времени
   return INIT_PROGRAM;
 }
 //-----------------------------Настройка будильника------------------------------------
-uint8_t settings_singleAlarm(void) //настройка будильника
+uint8_t singleAlarmSettings(void) //настройка будильника
 {
   boolean cur_indi = 0; //текущий индикатор
   boolean blink_data = 0; //мигание сигментами
@@ -3415,7 +3416,7 @@ uint8_t settings_singleAlarm(void) //настройка будильника
   return INIT_PROGRAM;
 }
 //-----------------------------Настройка будильников------------------------------------
-uint8_t settings_multiAlarm(void) //настройка будильников
+uint8_t multiAlarmSettings(void) //настройка будильников
 {
   boolean cur_indi = 0; //текущий индикатор
   boolean blink_data = 0; //мигание сигментами
@@ -3836,7 +3837,7 @@ uint8_t settings_multiAlarm(void) //настройка будильников
   return INIT_PROGRAM;
 }
 //-----------------------------Настроки основные------------------------------------
-uint8_t settings_main(void) //настроки основные
+uint8_t mainMenu(void) //настроки основные
 {
   boolean set = 0; //режим настройки
   boolean cur_indi = 0; //текущий индикатор
@@ -4515,7 +4516,7 @@ void radioSeekDown(void) //автопоиск радиостанций
   }
 }
 //-----------------------------Быстрые настройки радио-----------------------------------
-uint8_t radioFastSettings(void) //быстрые настройки радио
+uint8_t radioFastMenu(void) //быстрые настройки радио
 {
   if (btn.state) { //если радио включено и нажата кнопка
     uint8_t _state = btn.state; //буфер кнопки
@@ -4677,7 +4678,7 @@ uint8_t radioFastSettings(void) //быстрые настройки радио
   return 0;
 }
 //------------------------------Меню настроек радио-------------------------------------
-boolean radioMenuSettings(void) //меню настроек радио
+boolean radioMainMenu(void) //меню настроек радио
 {
   boolean _state = 0; //флаг бездействия
   uint8_t _station = radioSettings.stationNum & 0x7F; //текущий номер радиостанции
@@ -4740,7 +4741,7 @@ boolean radioMenuSettings(void) //меню настроек радио
   }
 }
 //---------------------------------Радиоприемник----------------------------------------
-uint8_t radioMenu(void) //радиоприемник
+uint8_t radioScreen(void) //радиоприемник
 {
   if (getPowerStatusRDA() != RDA_ERROR) { //если радиоприемник доступен
     uint8_t time_out = 0; //таймаут автовыхода
@@ -4902,7 +4903,7 @@ uint8_t radioMenu(void) //радиоприемник
       }
 #endif
 
-      switch (radioFastSettings()) { //быстрые настройки радио
+      switch (radioFastMenu()) { //быстрые настройки радио
         case 1: //клик
           time_out = 0; //сбросили таймер
           _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -4945,7 +4946,7 @@ uint8_t radioMenu(void) //радиоприемник
 
         case ADD_KEY_HOLD: //удержание дополнительной кнопки
           if (!radio.seekRun) { //если не идет поиск
-            if (!radioMenuSettings()) { //настройки радио
+            if (!radioMainMenu()) { //настройки радио
 #if !PLAYER_TYPE
               buzzPulse(RADIO_SAVE_SOUND_FREQ, RADIO_SAVE_SOUND_TIME); //сигнал успешной записи радиостанции в память
 #endif
@@ -5109,7 +5110,7 @@ void timerSettings(void) //настройки таймера
   }
 }
 //--------------------------------Таймер-секундомер----------------------------------------
-uint8_t timerStopwatch(void) //таймер-секундомер
+uint8_t timerScreen(void) //таймер-секундомер
 {
   uint8_t mode = 0; //текущий режим
   uint8_t time_out = 0; //таймаут автовыхода
@@ -5909,7 +5910,7 @@ uint8_t getFastSetData(uint8_t pos) //получить значение быст
   return 0;
 }
 //----------------------------------Переключение быстрых настроек-----------------------------------
-uint8_t fastSetSwitch(void) //переключение быстрых настроек
+uint8_t fastMenu(void) //переключение быстрых настроек
 {
   uint8_t show = 1; //флаг запуска анимации
   uint8_t mode = FAST_FLIP_MODE; //режим быстрой настройки
@@ -6068,7 +6069,7 @@ uint8_t mainScreen(void) //главный экран
 #endif
 
 #if RADIO_ENABLE && IR_PORT_ENABLE && IR_EXT_BTN_ENABLE
-    if (radioFastSettings() == 1) return MAIN_PROGRAM; //перезапуск основной программы
+    if (radioFastMenu() == 1) return MAIN_PROGRAM; //перезапуск основной программы
 #endif
 
     if (!indi.update) { //если пришло время обновить индикаторы
