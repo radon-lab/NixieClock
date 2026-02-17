@@ -178,11 +178,13 @@
 #define SQW_PORT  DECODE_PORT(SQW_PIN)
 
 #if SQW_PIN == 2
+#define SQW_INT       INT0_vect
 #define SQW_INT_EN   (BIT_WRITE(EIMSK, INT0))
 #define SQW_INT_CLR  (BIT_SET(EIFR, INTF0))
 #define SQW_INT_CHK  (BIT_READ(EIFR, INTF0))
 #define SQW_INT_INIT (BIT_WRITE(EICRA, ISC01))
 #elif SQW_PIN == 3
+#define SQW_INT       INT1_vect
 #define SQW_INT_EN   (BIT_WRITE(EIMSK, INT1))
 #define SQW_INT_CLR  (BIT_SET(EIFR, INTF1))
 #define SQW_INT_CHK  (BIT_READ(EIFR, INTF1))
