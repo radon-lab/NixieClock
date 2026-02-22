@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_002 бета от 13.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_004 бета от 22.02.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -379,6 +379,7 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
 void build(void) {
   GP.BUILD_BEGIN(GP_DEFAULT_THEME);
 
+  GP.HINT_NOTIFY_STYLE(UI_BLOCK_COLOR, UI_LABEL_COLOR);
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
 
   GP.PAGE_ZOOM(90, 390);
@@ -858,7 +859,7 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsAutoShowFlip", flipModeList(true), mainSettings.autoShowFlip););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_DISPLAY, UI_LINE_COLOR, UI_HINT_COLOR, "hint4");
-      GP.HINT("hint4", LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY); //всплывающая подсказка
+      GP.HINT_NOTIFY("hint4", LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY); //всплывающая подсказка
       for (uint8_t i = 0; i < 5; i++) {
         M_BOX(GP_JUSTIFY, "100%;height:60px",
               M_BOX(GP_LEFT, GP.LABEL(String(i + 1), "hint4", UI_LABEL_COLOR); GP.SELECT_LIST(String("extShowMode/") + i, showModeList, extendedSettings.autoShowModes[i]););
@@ -877,7 +878,7 @@ void build(void) {
       M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsIndiBrtNight", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.indiBrightNight, 5, 30, 1, UI_SLIDER_COLOR););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR, "hint1");
-      GP.HINT("hint1", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
+      GP.HINT_NOTIFY("hint1", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
@@ -885,7 +886,7 @@ void build(void) {
            );
       GP.HINT_BOX("hintB1", "setsTimeBrightS", "setsTimeBrightE", lightHint);
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SLEEP, UI_LINE_COLOR, UI_HINT_COLOR, "hint2");
-      GP.HINT("hint2", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
+      GP.HINT_NOTIFY("hint2", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
@@ -933,7 +934,7 @@ void build(void) {
       }
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_HOUR, UI_LINE_COLOR, UI_HINT_COLOR, "hint3");
-      GP.HINT("hint3", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
+      GP.HINT_NOTIFY("hint3", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
             GP.VOID_BOX("20px");
@@ -1205,13 +1206,13 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_GATEWAY, "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_SUBNET, "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NET_TIME, "", UI_LABEL_COLOR); GP.LABEL(stringGetTimeFromMs(wifiGetConnectTime()), "infNettime", UI_INFO_COLOR););
-        GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
+        GP.HINT_NOTIFY("hint1", WiFi.SSID()); //всплывающая подсказка
       }
       if (WiFi.getMode() != WIFI_STA) {
         GP.BREAK();
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_SSID, "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(wifiGetApSSID(), 12), "hint2", UI_INFO_COLOR););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_IP, "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
-        GP.HINT("hint2", wifiGetApSSID()); //всплывающая подсказка
+        GP.HINT_NOTIFY("hint2", wifiGetApSSID()); //всплывающая подсказка
       }
 
       GP.BREAK();

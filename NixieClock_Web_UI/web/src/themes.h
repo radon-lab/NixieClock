@@ -37,6 +37,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 input[type=number],input[type=text],input[type=password],input[type=date],input[type=time],input[type=color],input[type=checkbox],input[type=select],select,textarea{
 width:90%;max-width:200px;border-radius:10px;padding:3px 10px;color:#bbb;border:none;background-color:#2a2d35;vertical-align:middle;
 position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
+input[type=hint]{display:none;}
 input[type=color]{width:80px;height:40px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
@@ -118,7 +119,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .pass.pass{width:90.1%;max-width:214px;min-width:180px;padding:3px 35px;}
 .eyepass{position:absolute;margin-left:-35px;margin-top:7px;cursor:pointer;font-size:25px;color:#0b0c0e;}
 .inlpass{display:inline-block;position:relative}
-.header{font-size:25px;color:#fff;}
+.header{white-space:nowrap;font-size:25px;color:#fff;}
 .header_s{display:none;padding-bottom:5px;}
 .headbar{display:flex;justify-content:flex-start;align-items:center;position:fixed;top:0;left:0;width:100%;height:40px;z-index:3;background-color:#2a2d35;box-shadow:#000 0 0 10px;}
 .burgbtn{padding:0 8px;cursor:pointer;}
@@ -162,7 +163,9 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .rad:checked:after{background-color:#37a93c;}
 .radBlock{width:70px;height:30px;margin:5px 12px 14px 2px;}
 .radLable{position:relative;top:-33px;left:5px;cursor:pointer;color:#fff;}
-.hintBlock{visibility:hidden;height:20px;color:#505050;font-size:14px;line-height:10px;padding:0 10px;cursor:default;}
+.hint{display:none;opacity:0;position:fixed;width:250px;top:20px;left:calc(50% - 125px);z-index:1;transition-duration:.3s;}
+.hintBox{visibility:hidden;height:20px;color:#505050;font-size:14px;line-height:10px;padding:0 10px;cursor:default;}
+.hintBlock{margin:0;padding:14px 12px 17px 12px;box-shadow:#00000073 0 0 10px 8px;overflow:hidden;font-size:15px;}
 .popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popup::-webkit-scrollbar{display:none;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
@@ -175,14 +178,6 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 @keyframes offline{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media screen and (max-width:450px){.mainblock{padding:9px 0 9px 0;}}
-@media screen and (max-width:1000px){.page{margin-top:35px;}.ui_load{transform:translateY(-40px);}.navbar{max-width:100%!important;}}
-@media(min-width:1000px){
-.navbar{max-width:50%;margin:30px 8px;}
-.navbar>ul{height:40px;}
-.burgbtn{display:none!important;}
-.page{margin-left:250px;margin-top:0;}
-.overlay{display:none!important;}
-.headbar{display:none!important;}
-.sidebar{left:0!important;}
-.header_s{display:block;}}
+@media screen and (max-width:1000px){.page{margin-top:35px;}.ui_load{transform:translateY(-40px);}.navbar{max-width:100%!important;}.hint{top:60px;}}
+@media screen and (min-width:1000px){.navbar{max-width:50%;margin:30px 8px;}.navbar>ul{height:40px;}.burgbtn{display:none!important;}.page{margin-left:250px;margin-top:0;}.overlay{display:none!important;}.headbar{display:none!important;}.sidebar{left:0!important;}.header_s{display:block;}}
 )";

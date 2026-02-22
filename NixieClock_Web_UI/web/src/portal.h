@@ -86,7 +86,6 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 #ifndef GP_NO_PRESS
         else if (_uri.startsWith(F("/EV_press"))) {       // нажатие
           _holdF = server.arg(0)[0] - '0';
-          //_clickF = 1;
           if (_holdF == 1) _hold = server.argName(0);
           else _hold = "";
           server.send(200);
@@ -100,7 +99,8 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
             _updPtr = &name;
             if (_action) _action();               // внутри answer() прибавляет к answ
             else if (_actionR) _actionR(*this);
-          } else {
+          }
+          else {
             GP_parser n(name);                  // парсер
             _updPtr = &n.str;                   // указатель на имя (в парсинге)
             while (n.parse()) {                 // парсим
@@ -147,7 +147,8 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 #if defined(FS_H)
             _fs->remove(server.argName(0));
 #endif
-          } else _delF = 1;
+          }
+          else _delF = 1;
           _showPage = 1;
         }
         else if (_uri.startsWith(F("/EV_rename"))) {       // переименовать
@@ -155,7 +156,8 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 #if defined(FS_H)
             _fs->rename(server.argName(0), server.arg(0));
 #endif
-          } else _renF = 1;
+          }
+          else _renF = 1;
           _showPage = 1;
         }
         else if (_uri.startsWith(F("/hotspot-detect.html"))) {        // AP
@@ -190,13 +192,12 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
         _argNamePtr = nullptr;
 
         if (_fileDF) server.send(200);  // юзер не ответил на update или не отправил файл
-        _reqF = _fileDF = _clickF = _formF = _delF = _renF = 0;     // скидываем флаги
+        _reqF = _fileDF = _clickF = _formF = _delF = _renF = 0;  // скидываем флаги
         _holdF = 0;
       });
 
 #if defined(FS_H) && !defined(GP_NO_UPLOAD)
       server.on("/EV_upload", HTTP_POST, [this]() {
-        //server.send(200);
         server.send(200, "text/html", F("<script>setInterval(function(){if(history.length>0)window.history.back();else window.location.href='/';},500);</script>"));
       }, [this]() {
         if (!uplOn) return;
@@ -233,7 +234,8 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
 #endif
             if (_autoU && _fs) {
               file = _fs->open('/' + upl.filename, "w");
-            } else if (_action || _actionR) {
+            }
+            else if (_action || _actionR) {
               _uplF = 1;
               if (_action) _action();
               else if (_actionR) _actionR(*this);
@@ -253,7 +255,6 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
                 _uplEF = 0;
               }
             }
-            //show();
             break;
           case UPLOAD_FILE_ABORTED:
             if (file) file.close();
@@ -261,7 +262,6 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
             if (_action) _action();
             else if (_actionR) _actionR(*this);
             _abortF = 0;
-            //server.send(200, "text/html", F("<h2>Upload Error, <a href='/'>return back</a></h2>"));
             break;
         }
       });

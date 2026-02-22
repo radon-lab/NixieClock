@@ -3,8 +3,8 @@
 // GP Scripts
 
 const char GP_JS_TOP[] PROGMEM = R"(
-var _tout=2000,_zoom=1,_err=0;
-var _popupStack=[],_clkRelList=[],_clkCloseList=[],_clkUpdList={},_pressId=null,_spinInt=null,_spinF=0,_touch=0;
+var _tout=2000,_zoom=1,_err=0,_touch=0,_pressId=null,_timerId=null,_spinInt=null,_spinF=0;
+var _popupStack=[],_clkRelList=[],_clkCloseList=[],_clkUpdList={};
 document.title='GyverPortalMod';
 function EVsend(req,r=null,upd=null){var xhttp=new XMLHttpRequest();xhttp.open(upd?'GET':'POST',req,true);
 xhttp.send();xhttp.timeout=_tout;xhttp.onreadystatechange=function(){if(this.status||(++_err>=5)){onlShow(!this.status);_err=0;}if(this.status||upd){
@@ -38,8 +38,7 @@ default:item.innerHTML=resp;break;}break;
 default:item.value=resp;break;}
 switch(item.type){
 case'number':EVspinw(item);break;
-case'textarea':logScroll(item);break;
-}}}
+case'textarea':logScroll(item);break;}}}
 function EVpress(arg,dir){_pressId=(dir==1)?arg.name:null;if(arg.name)EVsend('/EV_press?'+arg.name+'='+dir);}
 function EVclick(arg,r=null,s=null){var val;var name=(!arg.name)?arg.id:arg.name;
 if(arg.type=='number'){
@@ -73,7 +72,7 @@ btn.classList.add('navopen');}
 function EVhint(id,txt){el=getEl(id);if(el.className=='_sw_c'){el=getEl('_'+id)}el.title=txt;}
 function EVhintBox(min,max,box){_min=getEl(min);_max=getEl(max);_box=getEl(box);
 _box.style.visibility=(_min.value==_max.value)?'visible':'hidden';}
-function EVhintLoad(min,max,func){func();getEl(min).addEventListener("change", func);getEl(max).addEventListener("change", func);}
+function EVhintLoad(min,max,func){func();getEl(min).addEventListener('change',func);getEl(max).addEventListener('change',func);}
 function EVspinc(arg){if(arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
 function EVspinw(arg){if(arg.className=='spin_inp')arg.style.width=((arg.value.length+2)*12)+'px';}
 function EVspin(arg){var num=getEl(arg.name);num.value=(Number(num.value)+Number(arg.min)).toFixed(Number(arg.max));
@@ -107,6 +106,11 @@ _popupStack.shift();if(_popupStack.length>0){let pop=getEl(_popupStack[0]);popup
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
+function hintActiv(arg){let el=getEl(arg.name);if(el){el.addEventListener('touchstart',hintShow);el.addEventListener('mouseover',hintShow);el.addEventListener('mouseleave',hintHide);}}
+function hintTimer(func,time){clearTimeout(_timerId);_timerId=setTimeout(func,time);}
+function hintShow(ev){let el=getEl('_hint_'+ev.currentTarget.id);if(el.value){let hint=getEl('_hint');hint.innerHTML='<div class=\"blockBase block blockTab thinBlock hintBlock\">'+el.value+'</div>';
+hint.style.display='block';hintTimer(function(){hint.style.opacity=1;hintTimer(hintHide,15000);},300);}}
+function hintHide(){let hint=getEl('_hint');if(hint.style.display!='none'){hintTimer(function(){hint.style.opacity=0;hintTimer(function(){hint.style.display='none';},300);},300);}}
 function selectUpdate(arg){let val=arg.dataset.list.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
 function selectChoice(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
 function selectList(arg){arg.blur();const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.dataset.list.split(',');
@@ -114,7 +118,8 @@ for(let i=0;i<val.length;i++){const item=document.createElement('input');item.cl
 item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectChoice(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
 const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectChoice(event.target)');}
-function pageUpdate(){document.querySelectorAll('.range_inp').forEach(x=>{rangeActiv(x);rangeChange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));document.querySelectorAll('input[type=select]').forEach(x=>selectUpdate(x));
+function pageUpdate(){document.querySelectorAll('.range_inp').forEach(x=>{rangeActiv(x);rangeChange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinw(x));
+document.querySelectorAll('input[type=select]').forEach(x=>selectUpdate(x));document.querySelectorAll('input[type=hint]').forEach(x=>hintActiv(x));document.addEventListener('scroll',hintHide);
 let el=document.querySelector('.ui_block');if(el!=null){document.querySelector('.ui_load').remove();el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}}
 
 var _rangeId=null,_rangeFocus=0,_rangeWidth=0,_rangePos=0,_rangeX=0,_rangeY=0;

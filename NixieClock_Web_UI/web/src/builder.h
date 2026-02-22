@@ -15,7 +15,7 @@ struct Builder {
     _timeUpdPrd = t;
   }
   void updateTime(void) {
-    if (!_gp_unix_tmr || millis() - _gp_unix_tmr >= _timeUpdPrd) {
+    if (!_gp_unix_tmr || ((millis() - _gp_unix_tmr) >= _timeUpdPrd)) {
       SEND(F("<script>EVsend('/EV_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
     }
   }
@@ -116,9 +116,14 @@ struct Builder {
     UI_BODY(w);
   }
 
-  void UI_MENU(const String& title, PGM_P st = GP_GREEN) {
+  void UI_MENU_STYLE(PGM_P st = GP_GREEN) {
     _ui_style = st;
-    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
+    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}"
+               "@media screen and (min-width:1000px){.hint{left:50%;}}</style>\n");
+  }
+
+  void UI_MENU(const String& title, PGM_P st = GP_GREEN) {
+    UI_MENU_STYLE(st);
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     *_GPP += title;
     *_GPP += F("</div></div>\n<nav class='sidebar' id='dashSdb'><div class='sblock'><div class='header header_s'>");
@@ -127,8 +132,7 @@ struct Builder {
     send();
   }
   void UI_MENU(const String& title, const String& name, PGM_P st_1 = GP_GREEN, PGM_P st_2 = GP_GRAY) {
-    _ui_style = st_1;
-    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}</style>\n");
+    UI_MENU_STYLE(st_1);
     *_GPP += F("<div class='headbar'><div class='burgbtn' id='menuToggle' onclick='sdbTgl()'><span></span><span></span><span></span></div>\n<div class='header'>");
     if (name.length()) *_GPP += name;
     else *_GPP += title;
@@ -231,8 +235,8 @@ struct Builder {
     send();
   }
   void PAGE_BLOCK_END(void) {
-    *_GPP += F("</div>\n<div id='offlAnim' class='offlAnim'>");
-    *_GPP += F("<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
+    *_GPP += F("</div>\n<div class='hint' id='_hint'></div>\n<div id='offlAnim' class='offlAnim'>"
+               "<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
@@ -302,7 +306,7 @@ struct Builder {
   void HINT_BOX(const String& name, const String& min, const String& max, const String& txt) {
     *_GPP += F("<div id='");
     *_GPP += name;
-    *_GPP += F("' class='hintBlock'>");
+    *_GPP += F("' class='hintBox'>");
     *_GPP += txt;
     *_GPP += F("</div>\n<script>function ");
     *_GPP += name;
@@ -320,6 +324,26 @@ struct Builder {
     *_GPP += name;
     *_GPP += F(");</script>\n");
     send();
+  }
+
+  void HINT_NOTIFY(const String& name, const String& txt) {
+    *_GPP += F("<input type='hint' id='_hint_");
+    *_GPP += name;
+    *_GPP += F("' name='");
+    *_GPP += name;
+    *_GPP += F("' value='");
+    *_GPP += txt;
+    *_GPP += F("'>\n");
+    send();
+  }
+  void HINT_NOTIFY_STYLE(PGM_P st_1, PGM_P st_2 = GP_DEFAULT) {
+    *_GPP += F("<style>.hintBlock{border-color:");
+    *_GPP += FPSTR(st_1);
+    if (st_2 != GP_DEFAULT) {
+      *_GPP += F(";color:");
+      *_GPP += FPSTR(st_2);
+    }
+    *_GPP += F(";}</style>\n");
   }
 
   void JS_BEGIN(void) {
@@ -439,7 +463,7 @@ struct Builder {
     *_GPP += F("<td");
     if (al != GP_CENTER || _als) {
       *_GPP += F(" align=");
-      if (al == GP_CENTER && _als && _als[_alsCount] >= 0 && _als[_alsCount] <= 3) *_GPP += FPSTR(GPgetAlign(_als[_alsCount++]));
+      if (al == GP_CENTER && _als && (_als[_alsCount] >= 0) && (_als[_alsCount] <= 3)) *_GPP += FPSTR(GPgetAlign(_als[_alsCount++]));
       else *_GPP += FPSTR(GPgetAlign(al));
     }
     if (cs > 1) {
