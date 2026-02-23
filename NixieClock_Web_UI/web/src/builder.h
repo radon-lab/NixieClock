@@ -1073,8 +1073,8 @@ struct Builder {
     *_GPP += F("' name='");
     *_GPP += name;
 #ifndef GP_NO_PRESS
-    *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' "
-               "ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)' onclick='EVclick(this)'>");
+    *_GPP += F("' onmousedown='EVpress(this,1,0)' onmouseup='EVpress(this,2,0)' onmouseleave='EVpress(this,2,0);' "
+               "ontouchstart='EVpress(this,1,1)' ontouchend='EVpress(this,2,1)' onclick='EVclick(this)'>");
 #else
     *_GPP += F("' onclick='EVclick(this)'>");
 #endif
@@ -1123,6 +1123,12 @@ struct Builder {
     *_GPP += size;
     *_GPP += F("px;'><span></span></label>\n");
     send();
+  }
+
+  String ICON_INFO(const String& txt) {
+    String s(txt);
+    s += F("<span class='info'>ⓘ</span>");
+    return s;
   }
 
   // ======================= НАВИГАЦИЯ =======================
@@ -1662,8 +1668,8 @@ struct Builder {
       *_GPP += num;
     }
 #ifndef GP_NO_PRESS
-    *_GPP += F("' onmousedown='if(!_touch)EVpress(this,1)' onmouseup='if(!_touch&&_pressId)EVpress(this,2)' onmouseleave='if(_pressId&&!_touch)EVpress(this,2);' ");
-    if (!dis) *_GPP += F("ontouchstart='_touch=1;EVpress(this,1)' ontouchend='EVpress(this,2)");
+    *_GPP += F("' onmousedown='EVpress(this,1,0)' onmouseup='EVpress(this,2,0)' onmouseleave='EVpress(this,2,0);' ");
+    if (!dis) *_GPP += F("ontouchstart='EVpress(this,1,1)' ontouchend='EVpress(this,2,1)");
 #endif
     if (tar.length()) {
       *_GPP += F("' onclick=\"EVclickId('");
@@ -2126,9 +2132,9 @@ struct Builder {
     *_GPP += step;
     *_GPP += F("' max='");
     *_GPP += dec;
-    *_GPP += F("' onmouseleave='if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null' onmousedown='_pressId=this.name;_spinInt=setInterval(()=>{EVspin(this);_spinF=1},");
+    *_GPP += F("' onmouseleave='EVspinP(this,0,0)' onmousedown='EVspinP(this,1,");
     *_GPP += _spin_prd;
-    *_GPP += F(")' onmouseup='clearInterval(_spinInt)' onclick='if(!_spinF)EVspin(this);_spinF=0' value='");
+    *_GPP += F(")' onmouseup='EVspinP(this,2,0)' onclick='EVspinP(this,3,0)' value='");
     *_GPP += (step > 0) ? '+' : '-';
     *_GPP += F("' ");
     *_GPP += F(" style='background:");
@@ -2150,9 +2156,9 @@ struct Builder {
     }
     *_GPP += F("' step='");
     floatDec(step, dec);
-    *_GPP += F("' onkeyup='EVspinw(this)' onkeydown='EVspinw(this)' onchange='");
-    if (!dec) *_GPP += F("EVspinc(this);");
-    *_GPP += F("EVclick(this);EVspinw(this)' value='");
+    *_GPP += F("' onkeyup='EVspinW(this)' onkeydown='EVspinW(this)' onchange='");
+    if (!dec) *_GPP += F("EVspinC(this);");
+    *_GPP += F("EVclick(this);EVspinW(this)' value='");
     floatDec(value, dec);
     if (!isnan(min)) {
       *_GPP += F("' min='");

@@ -97,6 +97,7 @@ output{display:inline-block;height:17px;margin:12px 5px 12px 0;padding:1.5px 3px
 .navblock{display:none;padding:0;}
 .navfixed{position:fixed;bottom:0;left:0;z-index:3;width:100%;}
 .navopen.navopen{background:#2a2d35;color:#fff;}
+.info{position:relative;top:-10px;left:2px;}
 i{padding:5px 7px;vertical-align:middle;}
 img.colorpick-eyedropper-input-trigger{display:none;}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
@@ -165,7 +166,7 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .radLable{position:relative;top:-33px;left:5px;cursor:pointer;color:#fff;}
 .hint{display:none;opacity:0;position:fixed;width:250px;top:20px;left:calc(50% - 125px);z-index:1;transition-duration:.3s;}
 .hintBox{visibility:hidden;height:20px;color:#505050;font-size:14px;line-height:10px;padding:0 10px;cursor:default;}
-.hintBlock{margin:0;padding:14px 12px 17px 12px;box-shadow:#00000073 0 0 10px 8px;overflow:hidden;font-size:15px;}
+.hintBlock{margin:0;padding:14px 12px 17px 12px;box-shadow:#00000073 0 0 10px 8px;overflow:hidden;text-align:center;font-size:15px;}
 .popup{display:none;z-index:100;position:fixed;width:100%;height:100%;overflow-y:auto;scrollbar-width:none;justify-content:center;top:0;left:0;backdrop-filter:blur(0);transition-duration:.3s;}
 .popup::-webkit-scrollbar{display:none;}
 .popupBlock{z-index:100;margin:auto;min-width:250px;min-height:100px;}
