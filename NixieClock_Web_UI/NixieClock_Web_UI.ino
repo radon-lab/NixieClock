@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_005 бета от 23.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_006 бета от 24.02.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -598,19 +598,19 @@ void build(void) {
           GP.TABLE_BEGIN("50px,50px,50px,50px,50px,50px,50px");
           GP.TR(GP_CENTER);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_1, "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_1, "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_2, "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_2, "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_3, "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_3, "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_4, "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_4, "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_5, "", UI_ALARM_WEEK_1_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_5, "", UI_ALARM_WEEK_1_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_6, "", UI_ALARM_WEEK_2_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_6, "", UI_ALARM_WEEK_2_COLOR, 0);
           GP.TD(GP_CENTER);
-          GP.LABEL_BLOCK_W(LANG_PAGE_ALARM_GUI_DAYS_7, "", UI_ALARM_WEEK_2_COLOR, 0);
+          GP.LABEL_BLOCK(LANG_PAGE_ALARM_GUI_DAYS_7, "", UI_ALARM_WEEK_2_COLOR, 0);
 
           uint8_t alarmDays = alarm_data[alarm.now][ALARM_DATA_DAYS];
           GP.TR(GP_CENTER);
@@ -635,7 +635,7 @@ void build(void) {
                 GP.SELECT_LIST("alarmSound", alarmSoundList, alarm_data[alarm.now][ALARM_DATA_SOUND], 0, (boolean)(deviceInformation[RADIO_ENABLE] && alarm_data[alarm.now][ALARM_DATA_RADIO]));
                 GP.SELECT_LIST("alarmRadio", alarmRadioList, alarm_data[alarm.now][ALARM_DATA_STATION], 0, (boolean)(!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]));
                );
-          M_BOX(GP_CENTER, GP.SLIDER_MAX(LANG_PAGE_ALARM_GUI_SOUND_VOLUME, LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO, LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX, "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
+          M_BOX(GP_CENTER, "420px", GP.SLIDER_MAX(LANG_PAGE_ALARM_GUI_SOUND_VOLUME, LANG_PAGE_ALARM_GUI_SOUND_VOL_AUTO, LANG_PAGE_ALARM_GUI_SOUND_VOL_MAX, "alarmVol", alarm_data[alarm.now][ALARM_DATA_VOLUME], 0, 15, 1, UI_SLIDER_COLOR, (boolean)((!deviceInformation[RADIO_ENABLE] || !alarm_data[alarm.now][ALARM_DATA_RADIO]) && !deviceInformation[PLAYER_TYPE])););
           GP.BLOCK_END();
 
           GP.HR(UI_LINE_COLOR);

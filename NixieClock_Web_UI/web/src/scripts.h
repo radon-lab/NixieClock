@@ -118,7 +118,7 @@ function steplim(n,step){n=Number(n);step=Number(step);if(step>=0.01){let val=n;
 function rangeActiv(arg){let el=getEl(arg.id+'_dsp');if(!el.classList.contains('dsbl')){el.addEventListener('touchstart',rangeStart,{passive:true});el.addEventListener('mousedown',rangeStart,{passive:true});}}
 function rangeChange(arg,val=null){lineChange(arg,val);const out=getEl(arg.id+'_val');if(arg.dataset.color){const col=arg.dataset.color.split(',');let pos=arg.value-Number(arg.min);out.style.backgroundColor=(col.length>pos)?col[pos]:'#2a2d35';}
 else{const lim=out.name.split(',');if((arg.value<=Number(arg.min))&&lim[0]){out.value=lim[0];}else if((arg.value>=Number(arg.max))&&lim[1]){out.value=lim[1];}else out.value=Number(arg.value);}}
-function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_rangeId.min);let val=(limit(Math.round((pos-_rangePos)+(step/2)),0,_rangeWidth)/step)+Number(_rangeId.min);
+function rangeClick(pos,fs=null){let step=_rangeWidth/Number(_rangeId.max-_rangeId.min);let val=(limit(Math.round((pos-_rangePos)+(step/2*_rangeId.step)),0,_rangeWidth)/step)+Number(_rangeId.min);
 val=steplim(val,_rangeId.step);if(Number(_rangeId.value)!=val){rangeChange(_rangeId,val);if(_rangeId.checked)fs=1;}if(fs)EVclickVal(_rangeId);}
 function rangeStop(){delEv('touchend',rangeEvent);delEv('touchcancel',rangeEvent);delEv('touchmove',rangeEvent);delEv('mousemove',rangeEvent);delEv('mouseup',rangeEvent);_rangeId=null;_rangeFocus=0;}
 function rangeStart(ev){_rangeFocus=0;if((ev.type=='touchstart')||((ev.type=='mousedown')&&(ev.which==1))){
