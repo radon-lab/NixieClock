@@ -26,8 +26,6 @@ uint32_t ntp_unix = 0; //последнее запрошенное время
 const uint8_t ntpSyncTime[] = {15, 30, 60, 120, 180}; //время синхронизации ntp
 const char *ntpStatusList[] = {LANG_NTP_STATUS_1, LANG_NTP_STATUS_2, LANG_NTP_STATUS_3, LANG_NTP_STATUS_4, LANG_NTP_STATUS_5, LANG_NTP_STATUS_6};
 
-#include <time.h>
-
 #include <WiFiUdp.h>
 WiFiUDP udp;
 

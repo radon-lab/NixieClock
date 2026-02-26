@@ -1127,7 +1127,7 @@ struct Builder {
 
   String ICON_INFO(const String& txt) {
     String s(txt);
-    s += F("<span class='info'>ⓘ</span>");
+    s += F("<span class='info'></span>");
     return s;
   }
 

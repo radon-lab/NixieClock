@@ -6,7 +6,7 @@
 #define DEFAULT_DST 0 //учитывать летнее время при синхронизации с ntp сервером по умолчанию(0 - летнее время не учитывается | 1 - летнее время учитывается)
 #define DEFAULT_SYNC 0 //автосинхронизация времени по умолчанию(0 - отключена | 1 - включена)
 
-#define DEFAULT_NTP_HOST "pool.ntp.org" //хост ntp сервера по умолчанию("pool.ntp.org", "ntp1.stratum2.ru", "ntp2.stratum2.ru", "ntp.msk-ix.ru")
+#define DEFAULT_NTP_HOST "ntp.msk-ix.ru" //хост ntp сервера по умолчанию("pool.ntp.org", "ntp1.stratum2.ru", "ntp2.stratum2.ru", "ntp.msk-ix.ru")
 #define DEFAULT_NTP_TIME 2 //период запроса нового времени с ntp сервера по умолчанию(0 - каждые 15 мин | 1 - каждые 30 мин | 2 - каждый 1 час | 3 - каждые 2 часа | 4 - каждые 3 часа)
 
 #define DEFAULT_WEATHER_CITY 37 //номер города из списка для получения данных о погоде по умолчанию(0..82)
@@ -116,4 +116,4 @@
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
 
 #define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.3.0_006" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VERSION "1.3.0_007" //версия прошивки модуля esp

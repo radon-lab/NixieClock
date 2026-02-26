@@ -97,7 +97,8 @@ output{display:inline-block;height:17px;margin:12px 5px 12px 0;padding:1.5px 3px
 .navblock{display:none;padding:0;}
 .navfixed{position:fixed;bottom:0;left:0;z-index:3;width:100%;}
 .navopen.navopen{background:#2a2d35;color:#fff;}
-.info{position:relative;top:-10px;left:2px;}
+.info{position:relative;top:-11px;left:3px;font-size:10px;font-family:monospace;}
+.info:after{padding:0.5px 4px;border:1px solid;border-radius:50%;content:'i';}
 i{padding:5px 7px;vertical-align:middle;}
 img.colorpick-eyedropper-input-trigger{display:none;}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}

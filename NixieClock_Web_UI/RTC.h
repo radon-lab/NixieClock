@@ -17,44 +17,6 @@ enum {
 uint8_t rtc_status = RTC_NOT_FOUND; //состояние модуля RTC
 int8_t rtc_aging = 0; //коррекция модуля RTC
 
-const uint8_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; //дней в месяце
-//------------------------------Максимальное количество дней------------------------------
-uint8_t maxDays(uint16_t YY, uint8_t MM) { //максимальное количество дней
-  return (((MM == 2) && !(YY % 4)) ? 1 : 0) + daysInMonth[MM - 1]; //возвращаем количество дней в месяце
-}
-//---------------------------------Получить день недели-----------------------------------
-uint8_t getWeekDay(uint16_t YY, uint8_t MM, uint8_t DD) { //получить день недели
-  if (YY >= 2000) YY -= 2000; //если год больше 2000
-  uint16_t days = DD; //записываем дату
-  for (uint8_t i = 1; i < MM; i++) days += daysInMonth[i - 1]; //записываем сколько дней прошло до текущего месяца
-  if ((MM > 2) && !(YY % 4)) days++; //если високосный год, прибавляем день
-  return (days + 365 * YY + (YY + 3) / 4 - 2 + 6) % 7 + 1; //возвращаем день недели
-}
-//--------------------------------Получить летнее время-----------------------------------
-boolean DST(uint8_t MM, uint8_t DD, uint8_t DW, uint8_t HH) { //получить летнее время
-  if (MM < 3 || MM > 10) return 0; //зима
-  switch (MM) {
-    case 3:
-      if (DD < 25) return 0; //зима
-      else if (DW == 7) {
-        if (HH >= 1) return 1; //лето
-        else return 0; //зима
-      }
-      else if ((DD - 25) < DW) return 0; //зима
-      else return 1; //лето
-      break;
-    case 10:
-      if (DD < 25) return 1; //лето
-      else if (DW == 7) {
-        if (HH >= 2) return 0; //зима
-        else return 1; //лето
-      }
-      else if ((DD - 25) < DW) return 1; //лето
-      else return 0; //зима
-      break;
-  }
-  return 1; //лето
-}
 //---------------------------------Распаковка регистра-------------------------------------
 uint8_t unpackREG(uint8_t data) //распаковка регистра
 {
@@ -169,8 +131,8 @@ uint8_t rtcGetTime(boolean mode) //запрашиваем время из RTC
       mainDate.month = unpackREG(twi_read_byte(TWI_ACK)); //получаем месяц
       mainDate.year = unpackREG(twi_read_byte(TWI_NACK)) + 2000; //получаем год
       if (!twi_error()) { //если передача была успешной
-        if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-        timeState = 0x03; //установили флаги актуального времени
+        if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+        timeSetState(0x03); //установили флаги актуального времени
         return 0; //выходим
       }
     }

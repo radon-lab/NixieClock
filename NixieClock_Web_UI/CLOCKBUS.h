@@ -480,39 +480,14 @@ void busUpdate(void) {
     if (busStatusBuffer()) { //если есть новая команда
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
-            if ((timeState != 0x03) || ntpCheckTime(GPunix(mainDate, mainTime, settings.ntpGMT), syncState)) {
+            if ((timeGetValidState()) || ntpCheckTime(GPunix(mainDate, mainTime, settings.ntpGMT), syncState)) {
 
-              time_t unix = ntpGetUnix() + (settings.ntpGMT * 3600UL);
-              secondsTimer = millis() - ntpGetMillis();
+              timeSetUnix(ntpGetUnix() + (settings.ntpGMT * 3600UL));
+              timeSetMillis(millis() - ntpGetMillis());
 
-              tm time; //буфер времени
-              gmtime_r(&unix, &time);
-
-              mainTime.second = time.tm_sec;
-              mainTime.minute = time.tm_min;
-              mainTime.hour = time.tm_hour;
-              uint8_t dayWeek = time.tm_wday;
-              if (!dayWeek) dayWeek = 7;
-              mainDate.day = time.tm_mday;
-              mainDate.month = time.tm_mon + 1;
-              mainDate.year = time.tm_year + 1900;
-
-              if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) { //если учет летнего времени включен
+              if (settings.ntpDst && timeGetDST(mainDate.month, mainDate.day, timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day), mainTime.hour)) { //если учет летнего времени включен
                 syncState = 1; //летнее время
-                if (mainTime.hour != 23) mainTime.hour += 1; //прибавили час
-                else {
-                  mainTime.hour = 0; //сбросили час
-                  if (++dayWeek > 7) dayWeek = 1; //день недели
-                  if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //день
-                    mainDate.day = 1; //сбросили день
-                    if (++mainDate.month > 12) { //месяц
-                      mainDate.month = 1; //сбросили месяц
-                      if (++mainDate.year > 2099) { //год
-                        mainDate.year = 2000; //сбросили год
-                      }
-                    }
-                  }
-                }
+                timeSetDST(); //установили летнее время
               }
               else syncState = 2; //зимнее время
 
@@ -525,11 +500,11 @@ void busUpdate(void) {
                 twi_write_byte(mainDate.month);
                 twi_write_byte(mainDate.year & 0xFF);
                 twi_write_byte((mainDate.year >> 8) & 0xFF);
-                twi_write_byte(dayWeek); //отправляем день недели
+                twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day)); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
                   if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-                  if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-                  timeState = 0x03; //установили флаги актуального времени
+                  if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+                  timeSetState(0x03); //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
                 }
               }
@@ -550,8 +525,8 @@ void busUpdate(void) {
             if (!twi_error()) { //если передача была успешной
               if (busReadBufferArg()) { //если время обновлено в часах
                 if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-                if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-                timeState = 0x03; //установили флаги актуального времени
+                if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+                timeSetState(0x03); //установили флаги актуального времени
               }
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
@@ -568,10 +543,10 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
-            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
+            twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState = 0x03; //установили флаги актуального времени
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x03); //установили флаги актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
           }
@@ -584,8 +559,8 @@ void busUpdate(void) {
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState |= 0x01; //установили флаг актуального времени
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x01); //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
           }
@@ -599,11 +574,11 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
-            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
+            twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState |= 0x02; //установили флаг актуальной даты
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x02); //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
             }
           }

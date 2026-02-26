@@ -204,8 +204,8 @@ void climateUpdate(boolean mode) {
   if (climateGetChartTemp() != 0x7FFF) {
     uint32_t unix_now = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
 
-    if ((first_start < timeState) || (mode == CLIMATE_RESET)) {
-      first_start = timeState;
+    if ((first_start < timeGetState()) || (mode == CLIMATE_RESET)) {
+      first_start = timeGetState();
       climateDefault(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unix_now);
       climateReset(); //сброс усреднения
     }
