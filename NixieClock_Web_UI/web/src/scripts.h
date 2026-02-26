@@ -28,6 +28,7 @@ case'_title':document.title=resp;break;
 case'_line':lineChange(item,resp);break;
 case'_range':if(_rangeFocus!=2)rangeChange(item,resp);break;}}break;
 case'checkbox':case'radio':item.checked=Number(resp);break;
+case'button':item.innerHTML=resp;break;
 case'select':item.max=Number(resp);selectUpdate(item);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
 case undefined:switch(item.className){
