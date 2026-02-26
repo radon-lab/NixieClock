@@ -168,6 +168,7 @@
 
 //-------------------------------------------------------//
 #define LANG_PAGE_MENU_LINK_HOME "Главная"
+#define LANG_PAGE_MENU_LINK_ALARM "Будильник"
 #define LANG_PAGE_MENU_LINK_SETTINGS "Настройки"
 #define LANG_PAGE_MENU_LINK_CLIMATE "Микроклимат"
 #define LANG_PAGE_MENU_LINK_WEATHER "Погода"
@@ -715,13 +716,14 @@
 
 //-------------------------------------------------------//
 #define LANG_PAGE_MENU_LINK_HOME "Main"
+#define LANG_PAGE_MENU_LINK_ALARM "Alarm"
 #define LANG_PAGE_MENU_LINK_SETTINGS "Settings"
 #define LANG_PAGE_MENU_LINK_CLIMATE "Microclimate"
 #define LANG_PAGE_MENU_LINK_WEATHER "Weather"
 #define LANG_PAGE_MENU_LINK_RADIO "Radio"
 #define LANG_PAGE_MENU_LINK_UPDATE "Update"
 #define LANG_PAGE_MENU_LINK_INFO "About"
-#define LANG_PAGE_MENU_LINK_NETWORK "Network settings"
+#define LANG_PAGE_MENU_LINK_NETWORK "Network"
 
 #define LANG_PAGE_MENU_STATE_CLOCK "Clock status"
 #define LANG_PAGE_MENU_STATE_RTC "RTC status"

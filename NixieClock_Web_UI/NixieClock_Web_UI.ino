@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_008 бета от 26.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_009 бета от 26.02.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -392,7 +392,8 @@ void build(void) {
     GP.HR(UI_MENU_LINE_COLOR, 6);
 
     //ссылки меню
-    GP.UI_LINK("/", LANG_PAGE_MENU_LINK_HOME);
+    if (!alarm.set) GP.UI_LINK("/", LANG_PAGE_MENU_LINK_HOME);
+    else GP.UI_LINK("/", LANG_PAGE_MENU_LINK_ALARM);
     GP.UI_LINK("/settings", LANG_PAGE_MENU_LINK_SETTINGS);
     if (sensorGetValidStatus()) GP.UI_LINK("/climate", LANG_PAGE_MENU_LINK_CLIMATE);
     if (weatherGetValidStatus()) GP.UI_LINK("/weather", LANG_PAGE_MENU_LINK_WEATHER);
