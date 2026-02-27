@@ -169,12 +169,12 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
           return;
         }
 #endif
-        else if (_uri.startsWith(F("/GP_SCRIPT.js"))) {        // скрипты
-          sendFile_P(GP_JS_TOP, "text/javascript");
+        else if (_uri.startsWith(F("/GP_SCRIPTS.js"))) {        // скрипты
+          sendFile_P(GP_SCRIPTS, "text/javascript");
           return;
         }
-        else if (_uri.startsWith(F("/GP_STYLE.css"))) {        // стили
-          sendFile_P(_gp_style, "text/css");
+        else if (_uri.startsWith(F("/GP_STYLES.css"))) {        // стили
+          sendFile_P(GP_STYLES, "text/css");
           return;
         }
         else {                                                 // любой другой запрос

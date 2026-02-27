@@ -57,16 +57,18 @@ struct Builder {
   // ======================= БИЛДЕР =======================
   void BUILD_BEGIN(void) {
     PAGE_BEGIN();
+    THEME();
     JS_TOP();
   }
-  void BUILD_BEGIN(PGM_P style) {
+  void BUILD_BEGIN(const String& style) {
     PAGE_BEGIN();
-    THEME(style);
+    THEME_FILE(style);
     JS_TOP();
   }
 
   void BUILD_BEGIN_FILE(void) {
     PAGE_BEGIN();
+    THEME();
     JS_TOP_FILE();
   }
   void BUILD_BEGIN_FILE(const String& style) {
@@ -235,8 +237,8 @@ struct Builder {
     send();
   }
   void PAGE_BLOCK_END(void) {
-    *_GPP += F("</div>\n<div class='hint' id='_hint'></div>\n<div id='offlAnim' class='offlAnim'>"
-               "<svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
+    *_GPP += F("</div>\n<div class='hint' id='_hint' onmouseenter='hintFreeze(this)' onmouseleave='hintHide()'></div>\n"
+               "<div id='offlAnim' class='offlAnim'><svg width='40px' height='40px' xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 1024 1024'>"
                "<path d='M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 "
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
@@ -244,18 +246,16 @@ struct Builder {
                "<div class='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
   }
 
-  void THEME(PGM_P style) {
-    *_GPP += F("<link rel='stylesheet' href='/GP_STYLE.css?v" GP_VERSION "=");
-    *_GPP += ((unsigned long)style) & 0xFFFF;
-    *_GPP += "'";
-    *_GPP += ">\n";
-    _gp_style = style;
-  }
   void THEME_FILE(const String& style) {
     *_GPP += F("<link rel='stylesheet' href='/gp_data/");
     *_GPP += style;
     *_GPP += F(".css?=" GP_VERSION "'>\n");
     send();
+  }
+  void THEME(void) {
+    *_GPP += F("<link rel='stylesheet' href='/GP_STYLES.css?v" GP_VERSION "=");
+    *_GPP += _gp_seed;
+    *_GPP += F("'>\n");
   }
 
   void JS_TOP_FILE(void) {
@@ -263,7 +263,7 @@ struct Builder {
     updateTime();
   }
   void JS_TOP(void) {
-    *_GPP += F("<script src='/GP_SCRIPT.js?v" GP_VERSION "=");
+    *_GPP += F("<script src='/GP_SCRIPTS.js?v" GP_VERSION "=");
     *_GPP += _gp_seed;
     *_GPP += F("'></script>\n");
     updateTime();

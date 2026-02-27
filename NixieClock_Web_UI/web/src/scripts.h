@@ -2,7 +2,7 @@
 
 // GP Scripts
 
-const char GP_JS_TOP[] PROGMEM = R"(
+const char GP_SCRIPTS[] PROGMEM = R"(
 var _tout=2000,_zoom=1,_err=0,_pressId=null,_pressT=0,_hintTmr=null,_hintS=0,_spinInt=null,_spinF=0;
 var _popupStack=[],_clkRelList=[],_clkCloseList=[],_clkUpdList={};
 document.title='GyverPortalMod';
@@ -97,8 +97,9 @@ _popupStack.shift();if(_popupStack.length>0){let pop=getEl(_popupStack[0]);popup
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
-function hintActiv(arg){let el=getEl(arg.name);if(el){el.addEventListener('click',hintShow);el.addEventListener('mouseover',hintShow);el.addEventListener('mouseleave',hintHide);}}
 function hintTimer(func,time){clearTimeout(_hintTmr);_hintTmr=setTimeout(func,time);}
+function hintActiv(arg){let el=getEl(arg.name);if(el){el.addEventListener('click',hintShow);el.addEventListener('mouseover',hintShow);el.addEventListener('mouseleave',hintHide);}}
+function hintFreeze(arg){_hintS=1;hintTimer(function(){arg.style.opacity=1;},300);}
 function hintShow(ev){let el=getEl('_hint_'+ev.currentTarget.id);if(el.value){let hint=getEl('_hint');hint.innerHTML='<div class=\"blockBase block blockTab thinBlock hintBlock\">'+el.value+'</div>';
 _hintS=1;hint.style.display='block';hintTimer(function(){hint.style.opacity=1;hintTimer(hintHide,15000);},300);}}
 function hintHide(){if(_hintS!=0){let hint=getEl('_hint');hintTimer(function(){hint.style.opacity=0;hintTimer(function(){hint.style.display='none';},300);},300);_hintS=0;}}
