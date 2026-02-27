@@ -732,7 +732,7 @@ struct Builder {
   void BOX_BEGIN(GPalign al = GP_JUSTIFY, const String& w = "100%", bool top = 0) {
     *_GPP += F("<div style='justify-content:");
     *_GPP += FPSTR(GPgetAlignFlex(al));
-    if (top) *_GPP += F(";align-items: flex-start");
+    if (top) *_GPP += F(";align-items:flex-start");
     if (w.length()) {
       *_GPP += F(";max-width:");
       *_GPP += w;
@@ -2053,7 +2053,7 @@ struct Builder {
 
   void SLIDER(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0, bool oninp = 0, bool maxsz = 0, const String& lable = "", const String& color = "") {
     if (maxsz) {
-      *_GPP += F("<lable class='rangeLable");
+      *_GPP += F("<div class='inliner'><lable class='rangeLable");
       if (dis) *_GPP += F(" dsbl");
       *_GPP += F("'>");
       *_GPP += lable;
@@ -2103,16 +2103,17 @@ struct Builder {
     if (color.length()) *_GPP += F("rangeColor");
     if (dis) *_GPP += F(" dsbl");
     *_GPP += F("'></output>\n");
+    if (maxsz) *_GPP += F("</div>\n");
     send();
   }
   void SLIDER_C(const String& name, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1);
   }
 
-  void SLIDER_MAX(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+  void SLIDER_MAX(const String& name, const String& lable, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 0, 1, lable);
   }
-  void SLIDER_MAX_C(const String& lable, const String& min_lable, const String& max_lable, const String& name, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
+  void SLIDER_MAX_C(const String& name, const String& lable, const String& min_lable, const String& max_lable, float value = 0, float min = 0, float max = 100, float step = 1, PGM_P st = GP_GREEN, bool dis = 0) {
     SLIDER(name, min_lable, max_lable, value, min, max, step, st, dis, 1, 1, lable);
   }
 
