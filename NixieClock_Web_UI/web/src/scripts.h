@@ -67,7 +67,7 @@ _box.style.visibility=(_min.value==_max.value)?'visible':'hidden';}
 function EVhintLoad(min,max,func){func();getEl(min).addEventListener('change',func);getEl(max).addEventListener('change',func);}
 function EVspinC(arg){if(arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
 function EVspinW(arg){if(arg.className=='spin_inp')arg.style.width=((arg.value.length+2)*12)+'px';}
-function EVspinP(arg,s,p){if(s==0){if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null}else if(s==1){_pressId=this.name;_spinInt=setInterval(()=>{EVspin(arg);_spinF=1},p);}
+function EVspinP(arg,s,p){if(s==0){if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null}else if(s==1){_pressId=arg.name;_spinInt=setInterval(()=>{EVspin(arg);_spinF=1},p);}
 else if(s==2)clearInterval(_spinInt);else if(s==3){if(!_spinF)EVspin(arg);_spinF=0;}}
 function EVspin(arg){var num=getEl(arg.name);num.value=(Number(num.value)+Number(arg.min)).toFixed(Number(arg.max));var e=new Event('change');num.dispatchEvent(e);}
 function EVeye(arg){var p=arg.previousElementSibling;p.type=p.type=='text'?'password':'text';arg.style.color=p.type=='text'?'#bbb':'#13161a';}

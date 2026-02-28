@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_011 бета от 27.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_012 бета от 28.02.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -493,20 +493,20 @@ void build(void) {
         M_BOX(
           GP.LABEL(LANG_PAGE_HOME_GUI_TIME, "", UI_LABEL_COLOR);
           M_BOX(GP_RIGHT,
-                GP.NUMBER_C("setsTimeH", LANG_PAGE_HOME_GUI_HOUR, -1, 0, 23, "56px", "setsTimeM");
+                GP.NUMBER_ENTER("setsTimeH", LANG_PAGE_HOME_GUI_HOUR, -1, 0, 23, "56px", "setsTimeM");
                 GP.LABEL_M(":", -1, 9);
-                GP.NUMBER_C("setsTimeM", LANG_PAGE_HOME_GUI_MIN, -1, 0, 59, "56px", "setsTimeS");
+                GP.NUMBER_ENTER("setsTimeM", LANG_PAGE_HOME_GUI_MIN, -1, 0, 59, "56px", "setsTimeS");
                 GP.LABEL_M(":", -1, 9);
-                GP.NUMBER_C("setsTimeS", LANG_PAGE_HOME_GUI_SEC, -1, 0, 59, "56px"););
+                GP.NUMBER_ENTER("setsTimeS", LANG_PAGE_HOME_GUI_SEC, -1, 0, 59, "56px"););
         );
         M_BOX(
           GP.LABEL(LANG_PAGE_HOME_GUI_DATE, "", UI_LABEL_COLOR);
           M_BOX(GP_RIGHT,
-                GP.NUMBER_C("setsDateD", LANG_PAGE_HOME_GUI_DAY, -1, 1, 31, "56px", "setsDateM");
+                GP.NUMBER_ENTER("setsDateD", LANG_PAGE_HOME_GUI_DAY, -1, 1, 31, "56px", "setsDateM");
                 GP.LABEL_M(".", 0, 7);
-                GP.NUMBER_C("setsDateM", LANG_PAGE_HOME_GUI_MOUN, -1, 1, 12, "56px", "setsDateY");
+                GP.NUMBER_ENTER("setsDateM", LANG_PAGE_HOME_GUI_MOUN, -1, 1, 12, "56px", "setsDateY");
                 GP.LABEL_M(".", 0, 7);
-                GP.NUMBER_C("setsDateY", LANG_PAGE_HOME_GUI_YEAR, -1, 0, 99, "56px"););
+                GP.NUMBER_ENTER("setsDateY", LANG_PAGE_HOME_GUI_YEAR, -1, 0, 99, "56px"););
         );
         M_BOX(
           GP.LABEL(LANG_PAGE_HOME_GUI_FORMAT, "", UI_LABEL_COLOR);
@@ -580,9 +580,9 @@ void build(void) {
           GP.BREAK();
           M_BOX(GP_CENTER,
                 M_BOX(GP_RIGHT,
-                      GP.NUMBER_C("alarmTimeH", LANG_PAGE_HOME_GUI_HOUR, alarm_data[alarm.now][ALARM_DATA_HOUR], 0, 23, "92px", "alarmTimeM");
+                      GP.NUMBER_ENTER("alarmTimeH", LANG_PAGE_HOME_GUI_HOUR, alarm_data[alarm.now][ALARM_DATA_HOUR], 0, 23, "92px", "alarmTimeM");
                       GP.LABEL_M(":", -1, 9);
-                      GP.NUMBER_C("alarmTimeM", LANG_PAGE_HOME_GUI_MIN, alarm_data[alarm.now][ALARM_DATA_MINS], 0, 59, "92px");
+                      GP.NUMBER_ENTER("alarmTimeM", LANG_PAGE_HOME_GUI_MIN, alarm_data[alarm.now][ALARM_DATA_MINS], 0, 59, "92px");
                      );
                 M_BOX(GP_LEFT, GP.SELECT_LIST("alarmMode", LANG_PAGE_ALARM_GUI_MODE, alarm_data[alarm.now][ALARM_DATA_MODE]););
                );

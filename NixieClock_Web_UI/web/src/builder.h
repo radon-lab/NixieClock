@@ -7,15 +7,16 @@
 struct Builder {
   uint8_t _gp_nav_pos = 0;
   uint8_t _gp_nav_id = 0;
+
   int _spin_prd = 200;
+  uint32_t _time_upd_prd = 10 * 60 * 1000ul;
 
   // время
-  uint32_t _timeUpdPrd = 10 * 60 * 1000ul;
   void setTimeUpdatePeriod(uint32_t t) {
-    _timeUpdPrd = t;
+    _time_upd_prd = t;
   }
   void updateTime(void) {
-    if (!_gp_unix_tmr || ((millis() - _gp_unix_tmr) >= _timeUpdPrd)) {
+    if (!_gp_unix_tmr || ((millis() - _gp_unix_tmr) >= _time_upd_prd)) {
       SEND(F("<script>EVsend('/EV_time?unix='+Math.round(new Date().getTime()/1000)+'&gmt='+(-new Date().getTimezoneOffset()));</script>\n"));
     }
   }
@@ -176,13 +177,13 @@ struct Builder {
   void UI_LINK(const String& url, const String& name) {
     *_GPP += F("<a href='");
     *_GPP += url;
-    *_GPP += "'";
+    *_GPP += '\'';
     if (_gp_uri->equals(url)) {
       *_GPP += F(" class='sbsel' style='background:");
       *_GPP += FPSTR(_ui_style);
       *_GPP += F(" !important;'");
     }
-    *_GPP += ">";
+    *_GPP += '>';
     *_GPP += name;
     *_GPP += F("</a>\n");
     send();
@@ -233,7 +234,7 @@ struct Builder {
       *_GPP += width;
       *_GPP += F("px'");
     }
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
   void PAGE_BLOCK_END(void) {
@@ -272,9 +273,9 @@ struct Builder {
     SEND(F("<script>pageUpdate();</script>\n"));
   }
 
-  void SPOILER_BEGIN(const String& text, PGM_P st = GP_GREEN) {
+  void SPOILER_BEGIN(const String& text, PGM_P st = GP_DEFAULT) {
     *_GPP += F("<details><summary align='left' style='");
-    if (st != GP_GREEN) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("background-color:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
@@ -282,7 +283,7 @@ struct Builder {
     *_GPP += F("'>");
     *_GPP += text;
     *_GPP += F("</summary><div align='center' style='");
-    if (st != GP_GREEN) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("border-color:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
@@ -425,7 +426,7 @@ struct Builder {
 
   // ====================== ТАБЛИЦЫ ======================
   GPalign* _als = nullptr;
-  int _alsCount = 0;
+  int _als_count = 0;
 
   void TABLE_BORDER(bool show) {
     *_GPP += F("<style>td{border:");
@@ -441,7 +442,6 @@ struct Builder {
     send();
 
     if (tdw.length()) {
-      //TR();
       *_GPP += F("<tr style='visibility:collapse;'>\n");
       GP_parser p(tdw);
       while (p.parse()) {
@@ -453,8 +453,13 @@ struct Builder {
       }
     }
   }
+  void TABLE_END(void) {
+    _als = nullptr;
+    SEND(F("</table>\n"));
+  }
+
   void TR(GPalign al = GP_CENTER) {
-    _alsCount = 0;
+    _als_count = 0;
     *_GPP += F("<tr align='");
     *_GPP += FPSTR(GPgetAlign(al));
     *_GPP += F("'>\n");
@@ -463,7 +468,7 @@ struct Builder {
     *_GPP += F("<td");
     if (al != GP_CENTER || _als) {
       *_GPP += F(" align=");
-      if (al == GP_CENTER && _als && (_als[_alsCount] >= 0) && (_als[_alsCount] <= 3)) *_GPP += FPSTR(GPgetAlign(_als[_alsCount++]));
+      if (al == GP_CENTER && _als && (_als[_als_count] >= 0) && (_als[_als_count] <= 3)) *_GPP += FPSTR(GPgetAlign(_als[_als_count++]));
       else *_GPP += FPSTR(GPgetAlign(al));
     }
     if (cs > 1) {
@@ -477,11 +482,6 @@ struct Builder {
     *_GPP += ">\n";
     send();
   }
-  void TABLE_END() {
-    _als = nullptr;
-    SEND(F("</table>\n"));
-  }
-
 
   // ====================== ПОПАПЫ =======================
   void ALERT(const String& name) {
@@ -574,12 +574,12 @@ struct Builder {
     SUBMIT(text, st, F("miniButton"));
   }
 
-  void FORM_SEND(const String& text, const String& url = "", PGM_P st = GP_GREEN, const String& cls = "") {
+  void FORM_SEND(const String& text, const String& url = "", PGM_P st = GP_DEFAULT, const String& cls = "") {
     *_GPP += F("<input type='button' onclick='EVsendForm(this.parentNode.id,\"");
     *_GPP += url;
     *_GPP += F("\")' value='");
     *_GPP += text;
-    if (st != GP_GREEN) {
+    if (st != GP_DEFAULT) {
       *_GPP += F("' style='background:");
       *_GPP += FPSTR(st);
     }
@@ -590,16 +590,16 @@ struct Builder {
     *_GPP += F("'>\n");
     send();
   }
-  void FORM_SEND_MINI(const String& text, const String& url = "", PGM_P st = GP_GREEN) {
+  void FORM_SEND_MINI(const String& text, const String& url = "", PGM_P st = GP_DEFAULT) {
     FORM_SEND(text, url, st, F("miniButton"));
   }
 
-  void FORM_SUBMIT(const String& name, const String& text, PGM_P st = GP_GREEN) {
+  void FORM_SUBMIT(const String& name, const String& text, PGM_P st = GP_DEFAULT) {
     FORM_BEGIN(name);
     SUBMIT(text, st);
     FORM_END();
   }
-  void FORM_SUBMIT(const String& name, const String& text, const String& namehidden, const String& valuehidden, PGM_P st = GP_GREEN) {
+  void FORM_SUBMIT(const String& name, const String& text, const String& namehidden, const String& valuehidden, PGM_P st = GP_DEFAULT) {
     FORM_BEGIN(name);
     HIDDEN(namehidden, valuehidden);
     SUBMIT(text, st);
@@ -614,7 +614,7 @@ struct Builder {
       *_GPP += width;
       *_GPP += F("px'");
     }
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
   void GRID_END(void) {
@@ -756,10 +756,10 @@ struct Builder {
   }
 
   void FOOTER_BEGIN(void) {
-    SEND("<div class='blockSpace'></div>\n<footer>");
+    SEND(F("<div class='blockSpace'></div>\n<footer>"));
   }
   void FOOTER_END(void) {
-    SEND("</footer>");
+    SEND(F("</footer>"));
   }
 
   void BREAK(const String& h = "") {
@@ -830,7 +830,7 @@ struct Builder {
     if (name.length()) {
       *_GPP += F(" id='");
       *_GPP += name;
-      *_GPP += "'";
+      *_GPP += '\'';
     }
     *_GPP += F(" style='");
     if (st != GP_DEFAULT) {
@@ -1042,7 +1042,7 @@ struct Builder {
     if (st != GP_DEFAULT) {
       s += F("color:");
       s += FPSTR(st);
-      s += ";";
+      s += ';';
     }
     s += F("'></i>");
     return s;
@@ -1054,7 +1054,7 @@ struct Builder {
     if (st != GP_DEFAULT) {
       s += F("background-color:");
       s += FPSTR(st);
-      s += ";";
+      s += ';';
     }
     if (size) {
       s += F("width:");
@@ -1306,9 +1306,9 @@ struct Builder {
     *_GPP += name;
     *_GPP += '/';
     *_GPP += pos;
-    *_GPP += "' ";
-    if (!pos) *_GPP += F("style='display:block'");
-    *_GPP += ">\n";
+    *_GPP += '\'';
+    if (!pos) *_GPP += F(" style='display:block'");
+    *_GPP += F(">\n");
     send();
   }
 
@@ -1319,9 +1319,9 @@ struct Builder {
     *_GPP += _gp_nav_id;
     *_GPP += '/';
     *_GPP += _gp_nav_pos;
-    *_GPP += "' ";
-    if (!_gp_nav_pos) *_GPP += F("style='display:block'");
-    *_GPP += ">\n";
+    *_GPP += '\'';
+    if (!_gp_nav_pos) *_GPP += F(" style='display:block'");
+    *_GPP += F(">\n");
     send();
     _gp_nav_pos++;
   }
@@ -1331,7 +1331,7 @@ struct Builder {
   }
 
   // ======================= ФАЙЛЫ =======================
-  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_GREEN, const String& accept = "", const String& options = "", const String& action = "/EV_upload") {
+  void FILE_UPLOAD_RAW(const String& name, const String& text = "", PGM_P st = GP_DEFAULT, const String& accept = "", const String& options = "", const String& action = "/EV_upload") {
     *_GPP += F("<div id='");
     *_GPP += name;
     *_GPP += F("'><form action='");
@@ -1342,12 +1342,12 @@ struct Builder {
                "<div id='ubtn' onclick='EVsaveFile(\"");
     *_GPP += name;
     *_GPP += F("_inp\")'");
-    if (st != GP_GREEN) {
+    if (st != GP_DEFAULT) {
       *_GPP += F(" style='background:");
       *_GPP += FPSTR(st);
-      *_GPP += "'";
+      *_GPP += '\'';
     }
-    *_GPP += ">";
+    *_GPP += '>';
     *_GPP += text;
     *_GPP += F("</div>\n"
                "<div id='ubtnclr'><input ");
@@ -1367,19 +1367,19 @@ struct Builder {
     send();
   }
 
-  void FILE_UPLOAD(const String& name, const String& text = "", const String& accept = "", PGM_P st = GP_GREEN) {
+  void FILE_UPLOAD(const String& name, const String& text = "", const String& accept = "", PGM_P st = GP_DEFAULT) {
     FILE_UPLOAD_RAW(name, (!text.length()) ? "📄" : text, st, accept, F("multiple "));
   }
 
-  void FOLDER_UPLOAD(const String& name, const String& text = "", PGM_P st = GP_GREEN) {
+  void FOLDER_UPLOAD(const String& name, const String& text = "", PGM_P st = GP_DEFAULT) {
     FILE_UPLOAD_RAW(name, (!text.length()) ? "📁" : text, st, "", F("multiple webkitdirectory allowdirs "));
   }
 
-  void OTA_FIRMWARE(const String& text = "OTA firmware", PGM_P st = GP_GREEN, bool page = 0) {
+  void OTA_FIRMWARE(const String& text = "OTA firmware", PGM_P st = GP_DEFAULT, bool page = 0) {
     FILE_UPLOAD_RAW(F("firmware"), (!text.length()) ? "🔧" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
-  void OTA_FILESYSTEM(const String& text = "OTA filesystem", PGM_P st = GP_GREEN, bool page = 0) {
+  void OTA_FILESYSTEM(const String& text = "OTA filesystem", PGM_P st = GP_DEFAULT, bool page = 0) {
     FILE_UPLOAD_RAW(F("filesystem"), (!text.length()) ? "💾" : text, st, F(".bin,.bin.gz"), "", page ? F("/ota_update") : F("/EV_OTAupload"));
   }
 
@@ -1642,14 +1642,14 @@ struct Builder {
 
   // ======================= КНОПКА =======================
   void BUTTON_RAW(const String& name, const String& value, const String& tar, PGM_P st, const String& width = "", const String& cls = "", int num = -1, bool dis = 0, bool rel = 0) {
-    *_GPP += F("<button type='button' ");
+    *_GPP += F("<button type='button'");
     if (cls.length()) {
-      *_GPP += F("class='");
+      *_GPP += F(" class='");
       *_GPP += cls;
-      *_GPP += "' ";
+      *_GPP += '\'';
     }
-    *_GPP += F("style='");
-    if (st != GP_GREEN) {
+    *_GPP += F(" style='");
+    if (st != GP_DEFAULT) {
       *_GPP += F("background:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
@@ -1689,49 +1689,49 @@ struct Builder {
       *_GPP += F(")'");
     }
     if (dis) *_GPP += F(" disabled");
-    *_GPP += ">";
+    *_GPP += '>';
     *_GPP += value;
     *_GPP += F("</button>\n");
     send();
   }
 
-  void BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, tar, st, width, "", -1, dis, rel);
   }
-  void BUTTON_MINI(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_MINI(const String& name, const String& value, const String& tar = "", PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, tar, st, width, F("miniButton"), -1, dis, rel);
   }
-  void BUTTON_MICRO(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_MICRO(const String& name, const String& value, const String& tar = "", PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, tar, st, width, F("microButton"), -1, dis, rel);
   }
 
-  void BUTTON_NUM(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_NUM(const String& name, const String& value, int num, PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, "", st, width, "", num, dis, rel);
   }
-  void BUTTON_NUM_MINI(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_NUM_MINI(const String& name, const String& value, int num, PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, "", st, width, F("miniButton"), num, dis, rel);
   }
-  void BUTTON_NUM_MICRO(const String& name, const String& value, int num, PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void BUTTON_NUM_MICRO(const String& name, const String& value, int num, PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, "", st, width, F("microButton"), num, dis, rel);
   }
 
   // ======================= КНОПКА-ССЫЛКА =======================
-  void BUTTON_LINK_RAW(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& cls = "", const String& name = "") {
-    *_GPP += F("<input type='button' ");
+  void BUTTON_LINK_RAW(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "", const String& cls = "", const String& name = "") {
+    *_GPP += F("<input type='button'");
     if (name.length()) {
-      *_GPP += F("name='");
+      *_GPP += F(" name='");
       *_GPP += name;
       *_GPP += F("' id='");
       *_GPP += name;
-      *_GPP += "' ";
+      *_GPP += '\'';
     }
     if (cls.length()) {
-      *_GPP += F("class='");
+      *_GPP += F(" class='");
       *_GPP += cls;
-      *_GPP += "' ";
+      *_GPP += '\'';
     }
-    *_GPP += F("style='");
-    if (st != GP_GREEN) {
+    *_GPP += F(" style='");
+    if (st != GP_DEFAULT) {
       *_GPP += F("background:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
@@ -1755,13 +1755,13 @@ struct Builder {
     }
     send();
   }
-  void BUTTON_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
+  void BUTTON_LINK(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "", const String& name = "") {
     BUTTON_LINK_RAW(url, value, st, width, "", name);
   }
-  void BUTTON_MINI_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
+  void BUTTON_MINI_LINK(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "", const String& name = "") {
     BUTTON_LINK_RAW(url, value, st, width, F("miniButton"), name);
   }
-  void BUTTON_MICRO_LINK(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& name = "") {
+  void BUTTON_MICRO_LINK(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "", const String& name = "") {
     BUTTON_LINK_RAW(url, value, st, width, F("microButton"), name);
   }
 
@@ -1779,27 +1779,27 @@ struct Builder {
     *_GPP += F("_link{filter:brightness(0.75);}</style>\n<a href='");
     *_GPP += url;
     *_GPP += F("' class='");
-    *_GPP += id + "_link";
-    *_GPP += F("'>");
+    *_GPP += id;
+    *_GPP += F("_link'>");
     *_GPP += text;
     *_GPP += F("</a>\n");
     send();
   }
 
   // ==================== КНОПКА-СКАЧКА ====================
-  void BUTTON_DOWNLOAD_RAW(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "", const String& cls = "") {
+  void BUTTON_DOWNLOAD_RAW(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "", const String& cls = "") {
     *_GPP += F("<a style='text-decoration:none;' href='");
     *_GPP += url;
     *_GPP += F("' download><input type='button' value='");
     *_GPP += value;
-    *_GPP += "' ";
+    *_GPP += '\'';
     if (cls.length()) {
-      *_GPP += F("class='");
+      *_GPP += F(" class='");
       *_GPP += cls;
       *_GPP += "' ";
     }
-    *_GPP += F("style='");
-    if (st != GP_GREEN) {
+    *_GPP += F(" style='");
+    if (st != GP_DEFAULT) {
       *_GPP += F("background:");
       *_GPP += FPSTR(st);
       *_GPP += ';';
@@ -1809,17 +1809,16 @@ struct Builder {
       *_GPP += width;
       *_GPP += ';';
     }
-    *_GPP += F("'>");
-    *_GPP += F("</a>\n");
+    *_GPP += F("'></a>\n");
     send();
   }
-  void BUTTON_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
+  void BUTTON_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "") {
     BUTTON_DOWNLOAD_RAW(url, value, st, width);
   }
-  void BUTTON_MINI_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
+  void BUTTON_MINI_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "") {
     BUTTON_DOWNLOAD_RAW(url, value, st, width, F("miniButton"));
   }
-  void BUTTON_MICRO_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_GREEN, const String& width = "") {
+  void BUTTON_MICRO_DOWNLOAD(const String& url, const String& value, PGM_P st = GP_DEFAULT, const String& width = "") {
     BUTTON_DOWNLOAD_RAW(url, value, st, width, F("microButton"));
   }
 
@@ -1853,10 +1852,10 @@ struct Builder {
     *_GPP += place;
     *_GPP += F("' onchange='EVclick(this)'");
     if (dis) *_GPP += F(" disabled");
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
-  void NUMBER_C(const String& name, const String& place = "", int8_t value = -1, uint8_t min = 0, uint8_t max = 99, const String& width = "", const String& next = "", bool dis = 0) {
+  void NUMBER_ENTER(const String& name, const String& place = "", int8_t value = -1, uint8_t min = 0, uint8_t max = 99, const String& width = "", const String& next = "", bool dis = 0) {
     *_GPP += F("<input type='number' step='any' name='");
     *_GPP += name;
     *_GPP += F("' id='");
@@ -1881,7 +1880,7 @@ struct Builder {
     *_GPP += next;
     *_GPP += F("\",0)'");
     if (dis) *_GPP += F(" disabled");
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
   void NUMBER(const String& name, const String& place = "", int value = INT32_MAX, const String& width = "", bool dis = false) {
@@ -1915,7 +1914,7 @@ struct Builder {
       *_GPP += F(" pattern=");
       *_GPP += pattern;
     }
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
   void TEXT_EN(const String& name, const String& place = "", const String& value = "", const String& width = "", int maxlength = 0, const String& pattern = "", bool dis = false) {
@@ -1941,7 +1940,7 @@ struct Builder {
       *_GPP += F(" pattern=");
       *_GPP += pattern;
     }
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     if (eye) {
       *_GPP += F("<span class='eyepass' style='margin-top:13px;' onclick='EVeye(this)'>"
                  "<svg viewBox='0 0 20 20' style='width:25px;height:25px;fill:currentcolor;'>"
@@ -1976,10 +1975,10 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (state) *_GPP += F("checked ");
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='EVclick(this)'><span></span></label>\n");
+    *_GPP += '\'';
+    if (state) *_GPP += F(" checked");
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onclick='EVclick(this)'><span></span></label>\n");
     send();
   }
   void SWITCH(const String& name, bool state = 0, PGM_P st = GP_DEFAULT, bool dis = false, const String& sw_upd = "", bool sw_val = false) {
@@ -1996,10 +1995,10 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (state) *_GPP += F("checked ");
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onclick='EVclick(this)");
+    *_GPP += '\'';
+    if (state) *_GPP += F(" checked");
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onclick='EVclick(this)");
     if (sw_upd.length()) {
       *_GPP += F(";swUpd(\"");
       *_GPP += sw_upd;
@@ -2028,9 +2027,9 @@ struct Builder {
       *_GPP += F("' value='");
       *_GPP += d.encode();
     }
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this)'>\n");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this)'>\n");
     send();
   }
 
@@ -2045,9 +2044,9 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += t.encode();
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this)'>\n");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this)'>\n");
     send();
   }
 
@@ -2137,8 +2136,7 @@ struct Builder {
     *_GPP += _spin_prd;
     *_GPP += F(")' onmouseup='EVspinP(this,2,0)' onclick='EVspinP(this,3,0)' value='");
     *_GPP += (step > 0) ? '+' : '-';
-    *_GPP += F("' ");
-    *_GPP += F(" style='background:");
+    *_GPP += F("' style='background:");
     *_GPP += FPSTR(st);
     *_GPP += F(";'");
     if (dis) *_GPP += F(" disabled");
@@ -2169,9 +2167,9 @@ struct Builder {
       *_GPP += F("' max='");
       floatDec(max, dec);
     }
-    *_GPP += F("' ");
-    if (dis) *_GPP += F("disabled ");
-    if (!w.length()) *_GPP += F("class='spin_inp'");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    if (!w.length()) *_GPP += F(" class='spin_inp'");
     *_GPP += F(">\n");
     SPINNER_BTN(name, step, st, dec, dis);
     *_GPP += F("</div>\n");
@@ -2186,9 +2184,9 @@ struct Builder {
     *_GPP += F("' value='");
     GPcolor col(value);
     *_GPP += col.encode();
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this)'>\n");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this)'>\n");
     send();
   }
   void COLOR(const String& name, GPcolor col, bool dis = false) {
@@ -2198,9 +2196,9 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' value='");
     *_GPP += col.encode();
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this)'>\n");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this)'>\n");
     send();
   }
 
@@ -2228,10 +2226,10 @@ struct Builder {
     *_GPP += num;
     *_GPP += F("' value='");
     *_GPP += num;
-    *_GPP += F("' onchange='EVclick(this)'");
+    *_GPP += '\'';
     if (val == num) *_GPP += F(" checked");
     if (dis) *_GPP += F(" disabled");
-    *_GPP += F(">\n");
+    *_GPP += F(" onchange='EVclick(this)'>\n");
 
     if (value.length()) {
       *_GPP += F("<label class='radLable' for='");
@@ -2253,9 +2251,9 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this,");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
 
@@ -2264,12 +2262,12 @@ struct Builder {
     while (p.parse()) {
       *_GPP += F("<option value='");
       *_GPP += idx;
-      *_GPP += "'";
+      *_GPP += '\'';
       if (p.count == sel) *_GPP += F(" selected");
-      *_GPP += F(">");
+      *_GPP += '>';
       if (nums) {
         *_GPP += idx;
-        *_GPP += ". ";
+        *_GPP += F(". ");
       }
       *_GPP += p.str;
       *_GPP += F("</option>\n");
@@ -2284,21 +2282,21 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this,");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
     int idx = 0;
     while (list[idx].length()) {
       *_GPP += F("<option value='");
       *_GPP += idx;
-      *_GPP += "'";
+      *_GPP += '\'';
       if (idx == sel) *_GPP += F(" selected");
-      *_GPP += F(">");
+      *_GPP += '>';
       if (nums) {
         *_GPP += idx;
-        *_GPP += ". ";
+        *_GPP += F(". ");
       }
       *_GPP += list[idx];
       *_GPP += F("</option>\n");
@@ -2313,21 +2311,21 @@ struct Builder {
     *_GPP += name;
     *_GPP += F("' id='");
     *_GPP += name;
-    *_GPP += "' ";
-    if (dis) *_GPP += F("disabled ");
-    *_GPP += F("onchange='EVclick(this,");
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(" onchange='EVclick(this,");
     *_GPP += rel;
     *_GPP += F(")'>\n");
     int idx = 0;
     while (list[idx] != nullptr) {
       *_GPP += F("<option value='");
       *_GPP += idx;
-      *_GPP += "'";
+      *_GPP += '\'';
       if (idx == sel) *_GPP += F(" selected");
-      *_GPP += F(">");
+      *_GPP += '>';
       if (nums) {
         *_GPP += idx;
-        *_GPP += ". ";
+        *_GPP += F(". ");
       }
       *_GPP += list[idx];
       *_GPP += F("</option>\n");
@@ -2351,16 +2349,16 @@ struct Builder {
     *_GPP += sel;
     *_GPP += F("' data-list='");
     *_GPP += list;
-    *_GPP += F("' onclick='selectList(this)' readonly");
+    *_GPP += F("' onclick='selectList(this)' onfocus='this.blur()' readonly");
     if (dis) *_GPP += F(" disabled\n");
     *_GPP += F(">\n");
     send();
   }
-  void SELECT_LIST_STYLE(PGM_P st_1, PGM_P st_2 = GP_GREEN) {
+  void SELECT_LIST_STYLE(PGM_P st_1, PGM_P st_2 = GP_DEFAULT) {
     *_GPP += F("<style>.selActive{background:");
     *_GPP += FPSTR(st_1);
     *_GPP += F("!important;}");
-    if (st_2 != GP_GREEN) {
+    if (st_2 != GP_DEFAULT) {
       *_GPP += F(".selBlock{border:2px solid ");
       *_GPP += FPSTR(st_2);
       *_GPP += F("!important;}");
@@ -2501,8 +2499,6 @@ struct Builder {
     }
     *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='EVclick(this)'");
-    if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
       *_GPP += maxlength;
@@ -2511,7 +2507,9 @@ struct Builder {
       *_GPP += F(" pattern=");
       *_GPP += pattern;
     }
-    *_GPP += ">\n";
+    *_GPP += F("' onchange='EVclick(this)'");
+    if (dis) *_GPP += F(" disabled");
+    *_GPP += F(">\n");
 
     if (dis) {
       *_GPP += F("<script>setInterval(()=>textBlink('");
@@ -2521,7 +2519,7 @@ struct Builder {
     send();
   }
 
-  void AREA_BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_GREEN, const String& width = "", bool dis = 0, bool rel = 0) {
+  void AREA_BUTTON(const String& name, const String& value, const String& tar = "", PGM_P st = GP_DEFAULT, const String& width = "", bool dis = 0, bool rel = 0) {
     BUTTON_RAW(name, value, tar, st, width, F("areaButton"), dis, rel);
   }
 };
