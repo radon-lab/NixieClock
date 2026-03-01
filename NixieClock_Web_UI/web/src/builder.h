@@ -190,7 +190,7 @@ struct Builder {
   }
 
   void UI_LINKS_BEGIN(const String& id) {
-    *_GPP += F("<div class='_link' id='");
+    *_GPP += F("<div data-type='link' id='");
     *_GPP += id;
     *_GPP += F("' style='display:none'>");
     send();
@@ -244,7 +244,7 @@ struct Builder {
                "20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 "
                "12.92-44.91.01-65.03zM554.67 768h-85.33v-85.33h85.33V768zm0-426.67v298.66h-85.33V341.32l85.33.01z' "
                "fill='#f00' class='offlImg'></path></svg></div>\n"
-               "<div class='_popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
+               "<div data-type='popup' id='uploadAnim' style='display:none'><div class='popupBlock'><div class='uploadAnim'></div></div></div>\n");
   }
 
   void THEME_FILE(const String& style) {
@@ -304,26 +304,16 @@ struct Builder {
     send();
   }
 
-  void HINT_BOX(const String& name, const String& min, const String& max, const String& txt) {
+  void HINT_BOX(const String& name, const String& id_1, const String& id_2, const String& txt) {
     *_GPP += F("<div id='");
     *_GPP += name;
+    *_GPP += F("' data-id1='");
+    *_GPP += id_1;
+    *_GPP += F("' data-id2='");
+    *_GPP += id_2;
     *_GPP += F("' class='hintBox'>");
     *_GPP += txt;
-    *_GPP += F("</div>\n<script>function ");
-    *_GPP += name;
-    *_GPP += F("(){EVhintBox('");
-    *_GPP += min;
-    *_GPP += F("','");
-    *_GPP += max;
-    *_GPP += F("','");
-    *_GPP += name;
-    *_GPP += F("');}\nEVhintLoad('");
-    *_GPP += min;
-    *_GPP += F("','");
-    *_GPP += max;
-    *_GPP += F("',");
-    *_GPP += name;
-    *_GPP += F(");</script>\n");
+    *_GPP += F("</div>\n");
     send();
   }
 
@@ -513,7 +503,7 @@ struct Builder {
   }
 
   void POPUP_BEGIN(const String& id, const String& width = "") {
-    *_GPP += F("<div class='_popup' id='");
+    *_GPP += F("<div data-type='popup' id='");
     *_GPP += id;
     *_GPP += F("' style='display:none'>\n<div class='popupBlock'");
     if (width.length()) {
@@ -912,77 +902,51 @@ struct Builder {
   }
 
   // ======================= ЛЕДЫ =======================
-  void LED(const String& name, bool state = 0) {
-    *_GPP += F("<input class='ledn' type='radio' disabled ");
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("name='");
+  void LED_RAW(const String& name, bool state = 0, bool mode = 0, PGM_P st_0 = GP_DEFAULT, PGM_P st_1 = GP_DEFAULT) {
+    int color = -1;
+    *_GPP += F("<div data-type='ledc' class='ledInd' id='");
     *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
-    send();
-  }
-  void LED(const String& name, bool state, PGM_P st) {
-    *_GPP += F("<style>.led_");
-    *_GPP += name;
-    *_GPP += F(":checked:after{background-color:");
-    *_GPP += FPSTR(st);
-    *_GPP += F(";box-shadow:0 0 10px 2px ");
-    *_GPP += FPSTR(st);
-    *_GPP += F(";}</style>\n");
-
-    *_GPP += F("<input class='led led_");
-    *_GPP += name;
-    *_GPP += F("' type='radio' disabled ");
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
-    send();
-  }
-
-  void LED_RED(const String& name, bool state = 0) {
-    *_GPP += F("<input class='led red' type='radio' disabled ");
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
-    send();
-  }
-  void LED_GREEN(const String& name, bool state = 0) {
-    *_GPP += F("<input class='led green' type='radio' disabled ");
-    if (state) *_GPP += F("checked ");
-    *_GPP += F("name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += F("'>\n");
-    send();
-  }
-
-  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
-    *_GPP += F("<div id='");
-    *_GPP += name;
-    *_GPP += F("' class='ledc");
-    if (st != GP_DEFAULT) {
-      *_GPP += F("' style='box-shadow:0 0 10px 2px '");
-      *_GPP += FPSTR(st);
-      *_GPP += F("background-color:");
-      *_GPP += FPSTR(st);
+    if (!mode) {
+      if (st_0 != GP_DEFAULT) {
+        *_GPP += F("' data-off='");
+        *_GPP += FPSTR(st_0);
+        if (!state) color = 0;
+      }
+      if (st_1 != GP_DEFAULT) {
+        *_GPP += F("' data-on='");
+        *_GPP += FPSTR(st_1);
+        if (state) color = 1;
+      }
+    }
+    else color = 0;
+    if (color >= 0) {
+      *_GPP += F("' style='box-shadow:0 0 10px 2px ");
+      *_GPP += color ? FPSTR(st_1) : FPSTR(st_0);
+      *_GPP += F(";background-color:");
+      *_GPP += color ? FPSTR(st_1) : FPSTR(st_0);
     }
     *_GPP += F("'></div>\n");
     send();
   }
 
+  void LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
+    LED_RAW(name, state, 0, st_0, st_1);
+  }
+  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
+    LED_RAW(name, 0, 1, st);
+  }
+
+  void LED_RED(const String& name, bool state = 0) {
+    LED_RAW(name, state, 0, GP_DEFAULT, GP_RED);
+  }
+  void LED_GREEN(const String& name, bool state = 0) {
+    LED_RAW(name, state, 0, GP_DEFAULT, GP_GREEN);
+  }
+
   // ======================= ИНДИКАТОРЫ =======================
 
   void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
-    *_GPP += F("<div class='lineBar");
-    *_GPP += F("' id='");
+    *_GPP += F("<div class='lineBar' id='");
     *_GPP += name;
     *_GPP += F("_dsp' style='background-image:linear-gradient(");
     *_GPP += FPSTR(st);
@@ -1005,23 +969,16 @@ struct Builder {
   }
 
   void LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-    *_GPP += F("<style>#__");
+    *_GPP += F("<div data-type='ledl' class='lineBar' id='");
     *_GPP += name;
-    *_GPP += F(" input:checked+span::before{background-color:");
-    *_GPP += FPSTR(st_1);
-    *_GPP += F("}\n#__");
-    *_GPP += name;
-    *_GPP += F(" span::before{background-color:");
+    *_GPP += F("' style='");
+    *_GPP += F("background-color:");
+    *_GPP += state ? FPSTR(st_1) : FPSTR(st_0);
+    *_GPP += F("' data-off='");
     *_GPP += FPSTR(st_0);
-    *_GPP += F("}\n</style>\n<label id='__");
-    *_GPP += name;
-    *_GPP += F("' class='check_c lineled'><input type='checkbox' name='");
-    *_GPP += name;
-    *_GPP += F("' id='");
-    *_GPP += name;
-    *_GPP += '\'';
-    if (state) *_GPP += F(" checked");
-    *_GPP += F(" disabled><span></span></label>\n");
+    *_GPP += F("' data-on='");
+    *_GPP += FPSTR(st_1);
+    *_GPP += F("'></div>\n");
     send();
   }
 
@@ -1904,7 +1861,7 @@ struct Builder {
     *_GPP += F("' placeholder='");
     *_GPP += place;
     *_GPP += F("' onchange='EVclick(this)'");
-    if (en) *_GPP += F(" oninput='textEn(this)'");
+    if (en) *_GPP += F(" oninput='textCheck(this)'");
     if (dis) *_GPP += F(" disabled");
     if (maxlength) {
       *_GPP += F(" maxlength=");
@@ -2349,7 +2306,7 @@ struct Builder {
     *_GPP += sel;
     *_GPP += F("' data-list='");
     *_GPP += list;
-    *_GPP += F("' onclick='selectList(this)' onfocus='this.blur()' readonly");
+    *_GPP += F("' onclick='selectOpen(this)' onfocus='this.blur()' readonly");
     if (dis) *_GPP += F(" disabled\n");
     *_GPP += F(">\n");
     send();

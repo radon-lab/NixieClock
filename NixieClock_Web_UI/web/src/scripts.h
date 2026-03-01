@@ -31,15 +31,11 @@ case'checkbox':case'radio':item.checked=Number(resp);break;
 case'button':item.innerHTML=resp;break;
 case'select':item.max=Number(resp);selectUpdate(item);break;
 case'select-one':document.querySelector('#'+item.id).value=resp;break;
-case undefined:switch(item.className){
-case'_popup':if(resp=='1')popupOpen(item.innerHTML,item.id);else if(resp=='-1')popupClose();break;
-case'_link':linkUpdate(item.id,resp);break;
-case'ledc':ledColor(item.id,resp);break;
-default:item.innerHTML=resp;break;}break;
-default:item.value=resp;break;}
-switch(item.type){
-case'number':EVspinW(item);break;
-case'textarea':logScroll(item);break;}}}
+case undefined:switch(item.dataset.type){
+case'popup':if(resp=='1')popupOpen(item.innerHTML,item.id);else if(resp=='-1')popupClose();break;
+case'link':linkUpdate(item.id,resp);break;case'ledc':case'ledl':ledChange(item,resp);break;
+default:item.innerHTML=resp;break;}break;default:item.value=resp;break;}
+switch(item.type){case'number':EVspinW(item);break;case'textarea':logScroll(item);break;}}}
 function EVpress(arg,dir,tch){if(tch==1||!_pressT){_pressT=tch;if(_pressId&&arg.name)EVsend('/EV_press?'+arg.name+'='+dir);_pressId=(dir==1)?arg.name:null;}}
 function EVclick(arg,r=null,s=null){var val;var name=(!arg.name)?arg.id:arg.name;if(arg.type=='number'){
 if(arg.hasAttribute('min')&&Number(arg.value)<=Number(arg.min))arg.value=arg.min;
@@ -61,15 +57,12 @@ function EVrename(url){res=prompt('Rename File',url);if(!res)return;EVsend('/EV_
 function EVopenTab(tab,btn,blk){var x=document.getElementsByClassName(blk);
 for(var i=0;i<x.length;i++)x[i].style.display='none';getEl(tab).style.display='block';x=document.getElementsByClassName(btn.className);
 for(var i=0;i<x.length;i++)x[i].classList.remove('navopen');btn.classList.add('navopen');}
-function EVhint(id,txt){el=getEl(id);if(el.className=='_sw_c'){el=getEl('_'+id)}el.title=txt;}
-function EVhintBox(min,max,box){_min=getEl(min);_max=getEl(max);_box=getEl(box);
-_box.style.visibility=(_min.value==_max.value)?'visible':'hidden';}
-function EVhintLoad(min,max,func){func();getEl(min).addEventListener('change',func);getEl(max).addEventListener('change',func);}
 function EVspinC(arg){if(arg.className=='spin_inp'){arg.value-=arg.value%arg.step;}}
 function EVspinW(arg){if(arg.className=='spin_inp')arg.style.width=((arg.value.length+2)*12)+'px';}
 function EVspinP(arg,s,p){if(s==0){if(_pressId)clearInterval(_spinInt);_spinF=_pressId=null}else if(s==1){_pressId=arg.name;_spinInt=setInterval(()=>{EVspin(arg);_spinF=1},p);}
 else if(s==2)clearInterval(_spinInt);else if(s==3){if(!_spinF)EVspin(arg);_spinF=0;}}
 function EVspin(arg){var num=getEl(arg.name);num.value=(Number(num.value)+Number(arg.min)).toFixed(Number(arg.max));var e=new Event('change');num.dispatchEvent(e);}
+function EVhint(id,txt){el=getEl(id);if(el.className=='_sw_c'){el=getEl('_'+id)}el.title=txt;}
 function EVeye(arg){var p=arg.previousElementSibling;p.type=p.type=='text'?'password':'text';arg.style.color=p.type=='text'?'#bbb':'#13161a';}
 function saveNav(){window.sessionStorage.setItem('navpos',getEl('_nav').scrollLeft);}
 function restoreNav(){getEl('_nav').scrollLeft=window.sessionStorage.getItem('navpos')||0;}
@@ -85,8 +78,8 @@ function onlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
 function lineChange(arg,val=null){if(val!=null)arg.value=limit(val,arg.min,arg.max);const dsp=getEl(arg.id+'_dsp');dsp.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';}
-function ledColor(id,c){let el=getEl('led_'+id);if(el){if(c){el.style.boxShadow='0 0 10px 2px '+c;el.style.backgroundColor=c;}else el.removeAttribute('style');}}
-function textEn(arg){arg.value=arg.value.replace(/[^\w\s\-\_\(\)\.\"\']/g,'');}
+function ledChange(arg,val){let set=Number(val);set=(isNaN(val))?val:(set?arg.dataset.on:arg.dataset.off);if(set){if(arg.dataset.type=='ledc')arg.style.boxShadow='0 0 10px 2px '+set;arg.style.backgroundColor=set;}else arg.removeAttribute('style');}
+function textCheck(arg){arg.value=arg.value.replace(/[^\w\s\-\_\(\)\.\"\']/g,'');}
 function textBlink(id){let el=getEl(id);let val=el.value;if(val.charAt(val.length-1)=='|')EVupdate(id);else el.value+='|';}
 function logScroll(id){id.scrollTop=id.scrollHeight;}
 function barScroll(arg,ev){arg.scrollLeft+=ev.deltaY>0?50:-50;}
@@ -97,6 +90,8 @@ _popupStack.shift();if(_popupStack.length>0){let pop=getEl(_popupStack[0]);popup
 function linkUpdate(id,val){val=val.split(',');var block='';var data='';for(let i=0;i<val.length;i++){data=val[i];data=data.split(':');if((data.length==2)&&(data[0].length)){block+='<a href=\"http://';
 block+=data[0];block+='\"';if(data[0]==window.location.hostname)block+=' class=\"sbsel\" style=\"background:#e67b09!important;\"';block+='>';block+=data[1].length?data[1]:data[0];block+='</a>';}}
 let el=getEl(id);el.querySelector('#_link_block').innerHTML=block;el.style.display=block.length?'block':'none';}
+function boxActiv(arg){function fn(){boxCheck(arg);}getEl(arg.dataset.id1).addEventListener('change',fn);getEl(arg.dataset.id2).addEventListener('change',fn);fn();}
+function boxCheck(arg){arg.style.visibility=(getEl(arg.dataset.id1).value==getEl(arg.dataset.id2).value)?'visible':'hidden';}
 function hintTimer(func,time){clearTimeout(_hintTmr);_hintTmr=setTimeout(func,time);}
 function hintActiv(arg){let el=getEl(arg.name);if(el){el.addEventListener('click',hintShow);el.addEventListener('mouseover',hintShow);el.addEventListener('mouseleave',hintHide);}}
 function hintFreeze(arg){_hintS=1;hintTimer(function(){arg.style.opacity=1;},300);}
@@ -105,12 +100,12 @@ _hintS=1;hint.style.display='block';hintTimer(function(){hint.style.opacity=1;hi
 function hintHide(){if(_hintS!=0){let hint=getEl('_hint');hintTimer(function(){hint.style.opacity=0;hintTimer(function(){hint.style.display='none';},300);},300);_hintS=0;}}
 function selectUpdate(arg){let val=arg.dataset.list.split(',');let num=(Number(val.length)>Number(arg.max))?arg.max:0;arg.value=((arg.min!=0)?((Number(arg.min)+num)+'. '+val[num]):val[num]).replaceAll('&dsbl&','');}
 function selectChoice(arg){if(arg.id=='_popup')popupClose();else if(arg.id.includes('_sel_')){popupClose();let el=getEl(arg.name);if(Number(arg.max)!=Number(el.max)){el.max=Number(arg.max);el.value=arg.value;EVclick(arg,Number(el.step),Number(arg.max));}}}
-function selectList(arg){arg.blur();const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.dataset.list.split(',');
+function selectOpen(arg){const list=document.createElement('div');list.className='blockBase block thinBlock selBlock';let val=arg.dataset.list.split(',');
 for(let i=0;i<val.length;i++){const item=document.createElement('input');item.className='selItem';item.id='_sel_'+i;item.name=arg.id;item.type='button';item.max=i;
 item.value=(arg.min!=0)?((Number(arg.min)+i)+'. '+val[i]):val[i];item.setAttribute('onclick','selectChoice(this)');if(i==arg.max)item.className+=' selActive';list.appendChild(item);
 if(item.value.includes('&dsbl&')){item.value=item.value.replaceAll('&dsbl&','');item.disabled=true;}}
 const pop=document.createElement('div');pop.className='popupBlock';pop.appendChild(list);popupOpen(pop.outerHTML);getEl('_popup').setAttribute('onclick','selectChoice(event.target)');}
-function pageUpdate(){document.querySelectorAll('.range_inp').forEach(x=>{rangeActiv(x);rangeChange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinW(x));
+function pageUpdate(){document.querySelectorAll('.range_inp').forEach(x=>{rangeActiv(x);rangeChange(x)});document.querySelectorAll('.spin_inp').forEach(x=>EVspinW(x));document.querySelectorAll('.hintBox').forEach(x=>boxActiv(x));
 document.querySelectorAll('input[type=select]').forEach(x=>selectUpdate(x));document.querySelectorAll('input[type=hint]').forEach(x=>hintActiv(x));document.addEventListener('scroll',hintHide);
 let el=document.querySelector('.ui_block');if(el!=null){document.querySelector('.ui_load').remove();el.style.display='block';setTimeout(function(){el.style.opacity=1;},15);}}
 
