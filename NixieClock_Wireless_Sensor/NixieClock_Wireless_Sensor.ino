@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 13.02.26
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 01.03.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -98,7 +98,7 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 ADC_MODE(ADC_VCC); //режим измерения напряжения питания
 
 void build(void) {
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+  GP.BUILD_BEGIN();
 
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
 
@@ -335,7 +335,7 @@ void build(void) {
 }
 //--------------------------------------------------------------------
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+  GP.BUILD_BEGIN();
 
   GP.PAGE_ZOOM(90, 390);
   GP.PAGE_MIDDLE_ALIGN();
