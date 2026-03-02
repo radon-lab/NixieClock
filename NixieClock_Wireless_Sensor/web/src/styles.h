@@ -71,8 +71,8 @@ output{display:inline-block;height:17px;margin:12px 5px 12px 0;padding:1.5px 3px
 .rangeLable{display:inline-block;position:relative;left:17px;bottom:1px;width:0;z-index:1;color:#fff;pointer-events:none;}
 .rangeColor{height:15px;padding:0;background-color:#2a2d35;border:3px solid #2a2d35;}
 .rangeValue{display:inline-flex;justify-content:end;position:relative;right:70px;width:0;margin-right:-55px;background:none;color:#fff;pointer-events:none;}
-.ledInd{display:inline-block;width:20px;height:20px;margin-bottom:-3px;border-radius:10px;background-color:#333;box-shadow:inset 0 0 5px 2px #0000005c;}
-.lineBar{display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;border-radius:5px;box-shadow:#000000b3 0 0 15px;background-repeat:no-repeat;background-color:#1a1a1a;}
+.indled{display:inline-block;width:20px;height:20px;margin-bottom:-3px;border-radius:10px;background-color:#333;box-shadow:inset 0 0 5px 2px #0000005c;}
+.indline{display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;border-radius:5px;box-shadow:#000000b3 0 0 15px;background-repeat:no-repeat;background-color:#1a1a1a;}
 .display{display:inline-block;margin:2px 3px;padding:0.1em 0.3em;border-radius:8px;font-size:18px;color:#000;background:#37a93c;}
 #ubtn{padding:0 10px;min-width:34px;height:40px;font-size:25px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:25px;color:#13161a;cursor:pointer;text-align:center;vertical-align:middle;line-height:160%;}
 #ubtn:hover{filter:brightness(0.9);}

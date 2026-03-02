@@ -901,87 +901,6 @@ struct Builder {
     send();
   }
 
-  // ======================= ЛЕДЫ =======================
-  void LED_RAW(const String& name, bool state = 0, bool mode = 0, PGM_P st_0 = GP_DEFAULT, PGM_P st_1 = GP_DEFAULT) {
-    int color = -1;
-    *_GPP += F("<div data-type='ledc' class='ledInd' id='");
-    *_GPP += name;
-    if (!mode) {
-      if (st_0 != GP_DEFAULT) {
-        *_GPP += F("' data-off='");
-        *_GPP += FPSTR(st_0);
-        if (!state) color = 0;
-      }
-      if (st_1 != GP_DEFAULT) {
-        *_GPP += F("' data-on='");
-        *_GPP += FPSTR(st_1);
-        if (state) color = 1;
-      }
-    }
-    else color = 0;
-    if (color >= 0) {
-      *_GPP += F("' style='box-shadow:0 0 10px 2px ");
-      *_GPP += color ? FPSTR(st_1) : FPSTR(st_0);
-      *_GPP += F(";background-color:");
-      *_GPP += color ? FPSTR(st_1) : FPSTR(st_0);
-    }
-    *_GPP += F("'></div>\n");
-    send();
-  }
-
-  void LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-    LED_RAW(name, state, 0, st_0, st_1);
-  }
-  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
-    LED_RAW(name, 0, 1, st);
-  }
-
-  void LED_RED(const String& name, bool state = 0) {
-    LED_RAW(name, state, 0, GP_DEFAULT, GP_RED);
-  }
-  void LED_GREEN(const String& name, bool state = 0) {
-    LED_RAW(name, state, 0, GP_DEFAULT, GP_GREEN);
-  }
-
-  // ======================= ИНДИКАТОРЫ =======================
-
-  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
-    *_GPP += F("<div class='lineBar' id='");
-    *_GPP += name;
-    *_GPP += F("_dsp' style='background-image:linear-gradient(");
-    *_GPP += FPSTR(st);
-    *_GPP += ',';
-    *_GPP += FPSTR(st);
-    *_GPP += F(");background-size:");
-    *_GPP += map(value, min, max, 0, 100);
-    *_GPP += F("% 100%'></div>\n");
-
-    *_GPP += F("<input type='hidden' name='_line' id='");
-    *_GPP += name;
-    *_GPP += F("' value='");
-    *_GPP += value;
-    *_GPP += F("' min='");
-    *_GPP += min;
-    *_GPP += F("' max='");
-    *_GPP += max;
-    *_GPP += F("'>\n");
-    send();
-  }
-
-  void LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
-    *_GPP += F("<div data-type='ledl' class='lineBar' id='");
-    *_GPP += name;
-    *_GPP += F("' style='");
-    *_GPP += F("background-color:");
-    *_GPP += state ? FPSTR(st_1) : FPSTR(st_0);
-    *_GPP += F("' data-off='");
-    *_GPP += FPSTR(st_0);
-    *_GPP += F("' data-on='");
-    *_GPP += FPSTR(st_1);
-    *_GPP += F("'></div>\n");
-    send();
-  }
-
   // ======================= ИКОНКИ =======================
   void ICON_SUPPORT(void) {
     SEND(F("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>\n"));
@@ -2321,6 +2240,88 @@ struct Builder {
       *_GPP += F("!important;}");
     }
     *_GPP += F("</style>\n");
+  }
+
+
+  // ======================= ЛЕДЫ =======================
+  void LED_RAW(const String& name, bool state = 0, bool mode = 0, PGM_P st_0 = GP_DEFAULT, PGM_P st_1 = GP_DEFAULT) {
+    PGM_P color = GP_DEFAULT;
+    *_GPP += F("<div data-type='ledc' class='indled' id='");
+    *_GPP += name;
+    if (!mode) {
+      if (st_0 != GP_DEFAULT) {
+        *_GPP += F("' data-off='");
+        *_GPP += FPSTR(st_0);
+        if (!state) color = st_0;
+      }
+      if (st_1 != GP_DEFAULT) {
+        *_GPP += F("' data-on='");
+        *_GPP += FPSTR(st_1);
+        if (state) color = st_1;
+      }
+    }
+    else color = st_0;
+    if (color != GP_DEFAULT) {
+      *_GPP += F("' style='box-shadow:0 0 10px 2px ");
+      *_GPP += FPSTR(color);
+      *_GPP += F(";background-color:");
+      *_GPP += FPSTR(color);
+    }
+    *_GPP += F("'></div>\n");
+    send();
+  }
+
+  void LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
+    LED_RAW(name, state, 0, st_0, st_1);
+  }
+  void LED_COLOR(const String& name, PGM_P st = GP_DEFAULT) {
+    LED_RAW(name, 0, 1, st);
+  }
+
+  void LED_RED(const String& name, bool state = 0) {
+    LED_RAW(name, state, 0, GP_DEFAULT, GP_RED);
+  }
+  void LED_GREEN(const String& name, bool state = 0) {
+    LED_RAW(name, state, 0, GP_DEFAULT, GP_GREEN);
+  }
+
+  // ======================= ИНДИКАТОРЫ =======================
+
+  void LINE_BAR(const String& name, int value = 0, int min = 0, int max = 100, PGM_P st = GP_GREEN) {
+    *_GPP += F("<div class='indline' id='");
+    *_GPP += name;
+    *_GPP += F("_dsp' style='background-image:linear-gradient(");
+    *_GPP += FPSTR(st);
+    *_GPP += ',';
+    *_GPP += FPSTR(st);
+    *_GPP += F(");background-size:");
+    *_GPP += map(value, min, max, 0, 100);
+    *_GPP += F("% 100%'></div>\n");
+
+    *_GPP += F("<input type='hidden' name='_line' id='");
+    *_GPP += name;
+    *_GPP += F("' value='");
+    *_GPP += value;
+    *_GPP += F("' min='");
+    *_GPP += min;
+    *_GPP += F("' max='");
+    *_GPP += max;
+    *_GPP += F("'>\n");
+    send();
+  }
+
+  void LINE_LED(const String& name, bool state = 0, PGM_P st_0 = GP_RED, PGM_P st_1 = GP_GREEN) {
+    *_GPP += F("<div data-type='ledl' class='indline' id='");
+    *_GPP += name;
+    *_GPP += F("' style='");
+    *_GPP += F("background-color:");
+    *_GPP += state ? FPSTR(st_1) : FPSTR(st_0);
+    *_GPP += F("' data-off='");
+    *_GPP += FPSTR(st_0);
+    *_GPP += F("' data-on='");
+    *_GPP += FPSTR(st_1);
+    *_GPP += F("'></div>\n");
+    send();
   }
 
   // ======================= ГРАФИКИ =======================
