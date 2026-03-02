@@ -648,6 +648,7 @@ class GyverPortalMod : public TimeTicker, public ArgParser {
         server.send(200);
         return;
       }
+      if (_cache) server.sendHeader(F("Cache-Control"), GP_CACHE_PRD);
 #ifdef ESP8266
       server.streamFile(file, mime::getContentType(file.name()));
 #else

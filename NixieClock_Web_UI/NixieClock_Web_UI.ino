@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_013 бета от 01.03.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_014 бета от 02.03.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1136,13 +1136,13 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RADIO_BLOCK_CHANNEL, UI_BLOCK_COLOR);
-      GP.TABLE_BEGIN("20%,30%,20%,30%", GP_ALS(GP_RIGHT, GP_LEFT, GP_RIGHT, GP_LEFT));
+      GP.TABLE_BEGIN("20%,30%,30%,20%", GP_ALS(GP_RIGHT, GP_LEFT, GP_RIGHT, GP_LEFT));
       for (int i = 0; i < 10; i += 2) {
         M_TR(
-          GP.BUTTON_MINI(String("radioCh/") + i, String(LANG_PAGE_RADIO_GUI_CHANNEL) + i, "", UI_RADIO_CHANNEL_COLOR),
+          GP.BUTTON_MINI(String("radioCh/") + i, String(LANG_PAGE_RADIO_GUI_CHANNEL) + i, "", UI_RADIO_CHANNEL_COLOR, "70px;font-size:24px;font-family:monospace"),
           GP.NUMBER_F(String("radioSta/") + i, LANG_PAGE_RADIO_GUI_CHANNEL_NULL, (radioSettings.stationsSave[i]) ? (radioSettings.stationsSave[i] / 10.0) : NAN, 1),
-          GP.BUTTON_MINI(String("radioCh/") + (i + 1), String(LANG_PAGE_RADIO_GUI_CHANNEL) + (i + 1), "", UI_RADIO_CHANNEL_COLOR),
-          GP.NUMBER_F(String("radioSta/") + (i + 1), LANG_PAGE_RADIO_GUI_CHANNEL_NULL, (radioSettings.stationsSave[i + 1]) ? (radioSettings.stationsSave[i + 1] / 10.0) : NAN, 1)
+          GP.NUMBER_F(String("radioSta/") + (i + 1), LANG_PAGE_RADIO_GUI_CHANNEL_NULL, (radioSettings.stationsSave[i + 1]) ? (radioSettings.stationsSave[i + 1] / 10.0) : NAN, 1),
+          GP.BUTTON_MINI(String("radioCh/") + (i + 1), String(LANG_PAGE_RADIO_GUI_CHANNEL) + (i + 1), "", UI_RADIO_CHANNEL_COLOR, "70px;font-size:24px;font-family:monospace")
         );
       }
       GP.TABLE_END();
