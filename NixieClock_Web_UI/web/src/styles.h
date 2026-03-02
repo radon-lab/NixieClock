@@ -58,6 +58,13 @@ input:focus,select,textarea:focus{outline:none;}
 .miniButton.miniButton{width:auto;min-height:40px;height:auto;padding:1px 7px;font-size:20px;}
 .areaButton{width:auto;min-height:30px;height:auto;padding:1px 7px;border-radius:10px;}
 .areaText.areaText{max-width:100%;height:30px;text-align:left;}
+.range{display:inline-block;max-width:250px;width:70%;height:20px;margin:12px 8px;padding:0px;border-radius:6px;background:#2a2d35;background-repeat:no-repeat;background-image:linear-gradient(#37a93c,#37a93c);cursor:pointer;user-select:none;}
+.range:hover,.range:active{filter:brightness(0.93);}
+.rangeColor{height:15px;padding:0;background-color:#2a2d35;border:3px solid #2a2d35;}
+.rangeLarge{height:34px;width:100%;max-width:430px;margin:8px 4px;border-radius:20px;box-shadow:#000000b3 0 0 15px;}
+.rangeLable{display:inline-block;position:relative;left:17px;width:0;z-index:1;color:#13161a;font-size:15px;font-weight:bold;pointer-events:none;}
+.rangeValue{display:inline-flex;justify-content:end;position:relative;right:70px;width:0;margin-right:-55px;background:none;color:#13161a;font-size:15px;font-weight:bold;pointer-events:none;}
+.rangeLable.dsbl,.rangeValue.dsbl{color:#fff;}
 .switch{display:inline-block;position:relative;width:60px;height:34px;margin:14px 6px 4px 2px;}
 .switch input{width:0;height:0;opacity:0;}
 .slider{position:absolute;top:-5px;left:0;right:0;bottom:5px;border-radius:34px;cursor:pointer;background-color:#54545485;-webkit-transition:.1s;transition:.1s;}
@@ -65,12 +72,6 @@ input:focus,select,textarea:focus{outline:none;}
 input:checked+.slider{background-color:#37a93c;}
 input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px);}
 output{display:inline-block;height:17px;margin:12px 5px 12px 0;padding:1.5px 3px;min-width:50px;border-radius:6px;background:#37a93c;color:#13161a;font-size:14px;cursor:default;}
-.range{display:inline-block;max-width:250px;width:70%;height:20px;margin:12px 8px;padding:0px;border-radius:6px;background:#2a2d35;background-repeat:no-repeat;background-image:linear-gradient(#37a93c,#37a93c);cursor:pointer;user-select:none;}
-.range:hover,.range:active{filter:brightness(0.93);}
-.rangeColor{height:15px;padding:0;background-color:#2a2d35;border:3px solid #2a2d35;}
-.rangeLarge{height:34px;width:100%;max-width:430px;margin:8px 4px;border-radius:20px;box-shadow:#000000b3 0 0 15px;}
-.rangeLable{display:inline-block;position:relative;left:17px;width:0;z-index:1;color:#13161a;font-size:15px;font-weight:bold;pointer-events:none;}
-.rangeValue{display:inline-flex;justify-content:end;position:relative;right:70px;width:0;margin-right:-55px;background:none;color:#13161a;font-size:15px;font-weight:bold;pointer-events:none;}
 .indled{display:inline-block;width:20px;height:20px;margin-bottom:-3px;border-radius:10px;background-color:#333;box-shadow:inset 0 0 5px 2px #0000005c;}
 .indline{display:block;width:124px;height:8px;margin-top:3px;margin-bottom:6px;border-radius:5px;box-shadow:#000000b3 0 0 15px;background-repeat:no-repeat;background-color:#1a1a1a;}
 .display{display:inline-block;margin:2px 3px;padding:0.1em 0.3em;border-radius:8px;font-size:18px;color:#000;background:#37a93c;}
