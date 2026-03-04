@@ -80,6 +80,8 @@ const char* _gp_mdns = nullptr;
 
 #include "styles.h"
 #include "scripts.h"
+
+#include "log.h"
 #include "utils.h"
 #include "portal.h"
 #include "builder.h"

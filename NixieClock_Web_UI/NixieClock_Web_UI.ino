@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_014 бета от 02.03.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_015 бета от 04.03.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -2751,6 +2751,7 @@ void setup() {
   ui.setBufferSize(1500);
   ui.attachBuild(build);
   ui.attach(action);
+  ui.clearCache();
   ui.start();
 
   //настраиваем работу с файлами

@@ -49,7 +49,7 @@ input[type=select]:disabled,select:disabled{filter:brightness(0.6);cursor:defaul
 input[type=submit],input[type=button],button{height:55px;font-size:24px;width:90%;max-width:300px;margin:8px 5px;background-color:#4CAF50;border:none;border-radius:28px;line-height:90%;color:#13161a;cursor:pointer;}
 input[type=submit]:hover,input[type=button]:hover,button:hover,.i_btn:hover{filter:brightness(0.93);}
 input[type=submit]:active,input[type=button]:active,button:active{box-shadow:inset 0 1px 6px #0007;}
-textarea{text-align:left;resize:none;overflow:hidden;max-width:100%;width:100%;box-sizing:unset;}
+textarea{width:100%;max-width:100%;height:auto;padding:0 4px 2px 4px;border:10px solid #2a2d35;text-align:left;resize:none;overflow:hidden;box-sizing:unset;}
 textarea::-webkit-scrollbar{width:6px;}
 textarea::-webkit-scrollbar-track{background-color:#0000;}
 textarea::-webkit-scrollbar-thumb{background-color:#556;border-radius:3px;}
