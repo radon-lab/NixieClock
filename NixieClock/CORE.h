@@ -770,35 +770,35 @@ void coreInit(void) //инициализация периферии ядра
 void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
 {
   for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
+    *crc = ((*crc ^ data) & 0x01) ? ((*crc >> 0x01) ^ 0x8C) : (*crc >> 0x01); //рассчитываем значение
     data >>= 0x01; //сдвигаем буфер
   }
 }
 //------------------------Проверка байта в памяти-------------------------------
-boolean checkByte(uint8_t cell, uint8_t cellCRC) //проверка байта в памяти
+boolean checkByte(uint8_t cell, uint8_t cell_crc) //проверка байта в памяти
 {
-  return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cellCRC));
+  return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cell_crc));
 }
 //-----------------------Обновление байта в памяти-------------------------------
-void updateByte(uint8_t data, uint8_t cell, uint8_t cellCRC) //обновление байта в памяти
+void updateByte(uint8_t data, uint8_t cell, uint8_t cell_crc) //обновление байта в памяти
 {
   EEPROM_UpdateByte(cell, data);
-  EEPROM_UpdateByte(cellCRC, data ^ 0xFF);
+  EEPROM_UpdateByte(cell_crc, data ^ 0xFF);
 }
 //------------------------Проверка данных в памяти-------------------------------
-boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
+boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверка данных в памяти
 {
   uint8_t crc = 0;
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
-  return (boolean)(crc != EEPROM_ReadByte(cellCRC));
+  return (boolean)(crc != EEPROM_ReadByte(cell_crc));
 }
 //-----------------------Обновление данных в памяти-------------------------------
-void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
+void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //обновление данных в памяти
 {
   uint8_t crc = 0;
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
   EEPROM_UpdateBlock((uint16_t)str, cell, size);
-  EEPROM_UpdateByte(cellCRC, crc);
+  EEPROM_UpdateByte(cell_crc, crc);
 }
 //--------------------Проверка контрольной суммы настроек--------------------------
 boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
@@ -1027,40 +1027,40 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 
   switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
     case 0:
-      if (!SET_CHK) { //если нажата кл. ок
+      if (!SET_CHK) { //если нажата кнопка ок
         btn_switch = 1; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!LEFT_CHK) { //если нажата левая кл.
+      else if (!LEFT_CHK) { //если нажата левая кнопка
         btn_switch = 2; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!RIGHT_CHK) { //если нажата правая кл.
+      else if (!RIGHT_CHK) { //если нажата правая кнопка
         btn_switch = 3; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
 #if BTN_ADD_TYPE
-      else if (!ADD_CHK) { //если нажата дополнительная кл.
+      else if (!ADD_CHK) { //если нажата дополнительная кнопка
         btn_switch = 4; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
 #endif
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
-    case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
-    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
-    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
+    case 1: btn_state = SET_CHK; break; //опрашиваем кнопку ок
+    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую кнопку
+    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую кнопку
 #if BTN_ADD_TYPE
-    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную клавишу
+    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную кнопку
 #endif
   }
 
-  switch (btn_state) { //переключаемся в зависимости от состояния клавиши
+  switch (btn_state) { //переключаемся в зависимости от состояния кнопки
     case 0:
       if (btn_check) { //если разрешена провекрка кнопки
         if (++btn_tmr > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
           btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-          btn_check = 0; //запрещем проврку кнопки
+          btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
           playerStop(); //сброс воспроизведения плеера
 #else
@@ -1081,7 +1081,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
     case 1:
       if (btn_tmr > BTN_GIST_TICK) { //если таймер больше времени антидребезга
         btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-        btn_check = 0; //запрещем проврку кнопки
+        btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
@@ -1098,7 +1098,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
         }
       }
       else if (!btn_tmr) {
-        btn_check = 1; //разрешаем проврку кнопки
+        btn_check = 1; //разрешаем проверку кнопки
         btn_switch = 0; //сбрасываем мультиплексатор кнопок
       }
       else btn_tmr--; //убираем дребезг
