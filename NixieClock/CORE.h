@@ -568,6 +568,8 @@ uint8_t memoryUpdate;
 
 #define CELL(x) (0x01 << x) //выбор ячейки памяти
 
+#define EEPROM_START_CRC 0xDB //начальная контрольная сумма
+
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_NULL + 8) //блок памяти быстрых настроек
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио
@@ -578,15 +580,16 @@ uint8_t memoryUpdate;
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_EXT_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + 1) //блок памяти контрольной суммы настроек
-#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_DEFAULT + 2) //блок памяти контрольной суммы быстрых настроек
+#define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы настроек отладки
+#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок памяти контрольной суммы настроек отладки
+#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы быстрых настроек
 #define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы основных настроек
 #define EEPROM_BLOCK_CRC_RADIO (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы настроек радио
-#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_CRC_EXTENDED (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок памяти контрольной суммы расширеных настроек
+#define EEPROM_BLOCK_CRC_EXTENDED (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы расширеных настроек
 #define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_EXTENDED + 1) //блок контрольной суммы памяти ошибок
 #define EEPROM_BLOCK_CRC_EXT_ERROR (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы памяти расширеных ошибок
 #define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_EXT_ERROR + 1) //блок контрольной суммы количества будильников
+
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ALARM + 1) //первая ячейка памяти будильников
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
@@ -774,6 +777,48 @@ void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной 
     data >>= 0x01; //сдвигаем буфер
   }
 }
+//--------------------Проверка контрольной суммы настроек--------------------------
+boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+
+  for (uint8_t n = 0; n < sizeof(fastSettings); n++) checkCRC(&crc, *((uint8_t*)&fastSettings + n));
+  for (uint8_t n = 0; n < sizeof(mainSettings); n++) checkCRC(&crc, *((uint8_t*)&mainSettings + n));
+  for (uint8_t n = 0; n < sizeof(radioSettings); n++) checkCRC(&crc, *((uint8_t*)&radioSettings + n));
+
+
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == crc) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, crc);
+  return 1;
+}
+//------------------Проверка контрольной суммы настроек отладки---------------------
+boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+
+  for (uint8_t n = 0; n < sizeof(debugSettings); n++) checkCRC(&crc, *((uint8_t*)&debugSettings + n));
+
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == crc) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, crc);
+  return 1;
+}
+//------------------------Проверка данных в памяти-------------------------------
+boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверка данных в памяти
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+  
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
+  return (boolean)(crc != EEPROM_ReadByte(cell_crc));
+}
+//-----------------------Обновление данных в памяти-------------------------------
+void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //обновление данных в памяти
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+  
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
+  EEPROM_UpdateBlock((uint16_t)str, cell, size);
+  EEPROM_UpdateByte(cell_crc, crc);
+}
 //------------------------Проверка байта в памяти-------------------------------
 boolean checkByte(uint8_t cell, uint8_t cell_crc) //проверка байта в памяти
 {
@@ -784,46 +829,6 @@ void updateByte(uint8_t data, uint8_t cell, uint8_t cell_crc) //обновлен
 {
   EEPROM_UpdateByte(cell, data);
   EEPROM_UpdateByte(cell_crc, data ^ 0xFF);
-}
-//------------------------Проверка данных в памяти-------------------------------
-boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверка данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
-  return (boolean)(crc != EEPROM_ReadByte(cell_crc));
-}
-//-----------------------Обновление данных в памяти-------------------------------
-void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //обновление данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
-  EEPROM_UpdateBlock((uint16_t)str, cell, size);
-  EEPROM_UpdateByte(cell_crc, crc);
-}
-//--------------------Проверка контрольной суммы настроек--------------------------
-boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
-{
-  uint8_t CRC = 0; //буфер контрольной суммы
-
-  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
-  for (uint8_t i = 0; i < sizeof(radioSettings); i++) checkCRC(&CRC, *((uint8_t*)&radioSettings + i));
-
-
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
-  return 1;
-}
-//------------------Проверка контрольной суммы настроек отладки---------------------
-boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
-{
-  uint8_t CRC = 0; //буфер контрольной суммы
-
-  for (uint8_t i = 0; i < sizeof(debugSettings); i++) checkCRC(&CRC, *((uint8_t*)&debugSettings + i));
-
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
-  return 1;
 }
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
