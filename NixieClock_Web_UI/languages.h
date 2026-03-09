@@ -254,14 +254,14 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Микроклимат"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Датчики"
 
+#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник отображения данных и время отображения в секундах"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "День - время в миинутах<br>Ночь - время в секундах<br><br>0 - отключить режим сна для выбранного промежутка времени"
+
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "Одинаковое время - отключить смену яркости по времени"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Автоматическая смена яркости по времени отключена"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Автоматическая смена яркости по датчику освещения"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Автоматическая смена яркости по времени суток"
-
-#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник и время в секундах"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - отключить режим сна для выбранного промежутка времени"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
 #define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Звук смены часа отключен"
@@ -802,14 +802,14 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Microclimate"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Sensors"
 
+#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Data display source and display time in seconds"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "Day - time in minutes<br>Midnight - time in seconds<br><br>0 - disable sleep mode for the selected time interval"
+
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "The same time - turn off the brightness change by time"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Automatic time-based brightness change is disabled"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Automatic brightness change by light sensor"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Automatic brightness change by time of day"
-
-#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Source and time in seconds"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - disable sleep mode for the selected period of time"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Same time - disable hour change sound"
 #define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Hour change sound is disabled"
