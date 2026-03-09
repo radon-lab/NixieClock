@@ -410,7 +410,7 @@
 #define LANG_PAGE_UPDATE_HR_AUTH "Авторизация"
 
 #define LANG_PAGE_UPDATE_INFO_FW "Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой)."
-#define LANG_PAGE_UPDATE_INFO_FS "Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути."
+#define LANG_PAGE_UPDATE_INFO_FS "Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Export (сохраняется в папку с прошивкой)."
 #define LANG_PAGE_UPDATE_INFO_FORMAT "Поддерживаемые форматы файлов: "
 #define LANG_PAGE_UPDATE_INFO_HEX "hex"
 #define LANG_PAGE_UPDATE_INFO_BIN "bin и bin.gz."
@@ -958,7 +958,7 @@
 #define LANG_PAGE_UPDATE_HR_AUTH "Authorization"
 
 #define LANG_PAGE_UPDATE_INFO_FW "The firmware can be obtained in the Arduino IDE: Sketch -> Export binary file (saved in the folder with the firmware)."
-#define LANG_PAGE_UPDATE_INFO_FS "The file system can be obtained in the Arduino IDE: Tools -> ESP8266 LittleFS Data Upload, in the log you need to find: [LittleFS] upload, the file is located at this path."
+#define LANG_PAGE_UPDATE_INFO_FS "The file system can be obtained in the Arduino IDE: Tools -> ESP8266 LittleFS Data Export (saved in the folder with the firmware)."
 #define LANG_PAGE_UPDATE_INFO_FORMAT "Supported file formats: "
 #define LANG_PAGE_UPDATE_INFO_HEX "hex"
 #define LANG_PAGE_UPDATE_INFO_BIN "bin and bin.gz."
