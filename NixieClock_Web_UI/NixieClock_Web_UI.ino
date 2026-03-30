@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_017 бета от 09.03.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_017 бета от 30.03.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -425,11 +425,11 @@ void build(void) {
     GP.LINE_LED("barLink", busGetClockStatus(), UI_MENU_CLOCK_1_COLOR, UI_MENU_CLOCK_2_COLOR);
     GP.BLOCK_SHADOW_END();
 
-    if (wirelessGetSensorStastus()) {
+    if (wirelessGetOnlineStatus()) {
       updateList += F(",barSens");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_SENS, "", UI_MENU_TEXT_COLOR, 15);
-      GP.LINE_LED("barSens", (wirelessGetOnlineStastus()), UI_MENU_SENS_1_COLOR, UI_MENU_SENS_2_COLOR);
+      GP.LINE_LED("barSens", (wirelessGetSensorStatus()), UI_MENU_SENS_1_COLOR, UI_MENU_SENS_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
     if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
@@ -1048,13 +1048,13 @@ void build(void) {
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_CLIMATE_GUI_HR_WIRELESS, UI_LINE_COLOR, UI_HINT_COLOR);
-      if (!wirelessGetOnlineStastus()) {
-        M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
+      if (!wirelessGetSensorStatus()) {
+        M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStatus(), INT32_MAX, "", true););
       }
       else {
         M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_DATA, "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensDataStr(sens.temp[SENS_WIRELESS], sens.press[SENS_WIRELESS], sens.hum[SENS_WIRELESS]), "", 0, "", true););
       }
-      if (wirelessGetSensorStastus()) {
+      if (wirelessGetOnlineStatus()) {
         M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_TIME, "", UI_LABEL_COLOR); GP.TEXT("", "", String(wirelessGetInterval()) + LANG_PAGE_CLIMATE_GUI_SENS_MINS, "", 0, "", true););
       }
 
@@ -1262,10 +1262,10 @@ void build(void) {
 
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_WIRELESS, UI_LINE_COLOR, UI_HINT_COLOR);
-      if (!wirelessGetOnlineStastus()) {
-        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStastus(), INT32_MAX, "", true););
+      if (!wirelessGetSensorStatus()) {
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetStrStatus(), INT32_MAX, "", true););
       }
-      if (wirelessGetSensorStastus()) {
+      if (wirelessGetOnlineStatus()) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_UID, "", UI_LABEL_COLOR); GP.NUMBER("", wirelessGetId(settings.wirelessId), INT32_MAX, "", true););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SIGNAL, "", UI_LABEL_COLOR); GP.NUMBER("", stringGetPercent(wirelessGetSignal()), INT32_MAX, "", true););
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_BATTERY, "", UI_LABEL_COLOR); GP.NUMBER("", stringGetPercent(wirelessGetBattery()), INT32_MAX, "", true););
@@ -2212,7 +2212,7 @@ void action() {
         ui.answer(busGetClockStatus());
       }
       if (ui.update("barSens")) { //если было обновление
-        ui.answer(wirelessGetOnlineStastus());
+        ui.answer(wirelessGetSensorStatus());
       }
       if (ui.update("barRtc")) { //если было обновление
         ui.answer(rtcGetNormalStatus());
@@ -2385,7 +2385,7 @@ boolean sensorAvaibleData(void) {
 }
 //--------------------------------------------------------------------
 boolean sensorGetValidStatus(void) {
-  return (boolean)(climateAvailableTemp(settings.climateChart) || ((settings.climateChart == SENS_WIRELESS) && wirelessGetSensorStastus()));
+  return (boolean)(climateAvailableTemp(settings.climateChart) || ((settings.climateChart == SENS_WIRELESS) && wirelessGetOnlineStatus()));
 }
 //--------------------------------------------------------------------
 boolean sensorGetDisabledStatus(void) {
