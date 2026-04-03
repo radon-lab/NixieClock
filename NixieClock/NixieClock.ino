@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_016 бета от 08.03.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_018 бета от 03.04.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -175,8 +175,8 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
 #if GEN_ENABLE && (GEN_FEEDBACK == 2)
-  FB_INIT; //инициализация обратной связи
-  ACSR = (0x01 << ACBG); //включаем компаратор
+  FB_INIT; //инициализация порта обратной связи
+  FB_ENABLE; //включаем компаратор обратной связи
 #endif
 
 #if SECS_DOT == 4
@@ -228,11 +228,13 @@ void INIT_SYSTEM(void) //инициализация
       SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
+#if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
     if (checkData(sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO)) { //проверяем настройки радио
       updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
       SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&radioSettings, EEPROM_BLOCK_SETTINGS_RADIO, sizeof(radioSettings)); //считываем настройки радио из памяти
+#endif
 #if ESP_ENABLE
     if (checkData(sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED)) { //проверяем расширенные настройки
       updateData((uint8_t*)&extendedSettings, sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED); //записываем расширенные настройки в память
@@ -2566,14 +2568,17 @@ boolean checkPass(void) //проверка пароля
 //---------------------------Проверка системы---------------------------------------
 void testSystem(void) //проверка системы
 {
-  indiPrintNum(CONVERT_NUM(FIRMWARE_VERSION), 0); //отрисовываем версию прошивки
 #if PLAYER_TYPE
   playerSetTrackNow(PLAYER_FIRMWARE_SOUND, PLAYER_GENERAL_FOLDER);
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[0]));
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[2]));
   playerSpeakNumber(CONVERT_CHAR(FIRMWARE_VERSION[4]));
 #endif
-  for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME; _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
+
+  for (int8_t indi = (LAMP_NUM - 1); indi > -4; indi--) { //анимация отображения версии прошивки
+    indiPrintNum(CONVERT_NUM(FIRMWARE_VERSION), indi); //отрисовываем версию прошивки
+    for (_timer_ms[TMR_MS] = TEST_FIRMWARE_TIME / (LAMP_NUM + 3); _timer_ms[TMR_MS] && !buttonState();) systemTask(); //ждем
+  }
 
 #if PLAYER_TYPE
   playerSetTrackNow(PLAYER_TEST_SOUND, PLAYER_GENERAL_FOLDER); //звук тестирования динамика
