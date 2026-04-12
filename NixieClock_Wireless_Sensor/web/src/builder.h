@@ -348,7 +348,7 @@ struct Builder {
     *_GPP += F("<script>setInterval(function(){if(!document.hidden){var xhttp=new XMLHttpRequest();xhttp.timeout=");
     *_GPP += prd;
     *_GPP += F(";xhttp.open('GET','/EV_ping?',true);xhttp.send();\n"
-               "xhttp.onreadystatechange=function(){onlShow(!this.status)}}},");
+               "xhttp.onreadystatechange=function(){offlShow(!this.status)}}},");
     *_GPP += prd;
     *_GPP += F(");</script>\n");
     send();
@@ -1779,17 +1779,17 @@ struct Builder {
     }
     *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += F("' onchange='EVclick(this)'");
-    if (en) *_GPP += F(" oninput='textCheck(this)'");
-    if (dis) *_GPP += F(" disabled");
     if (maxlength) {
-      *_GPP += F(" maxlength=");
+      *_GPP += F("' maxlength='");
       *_GPP += maxlength;
     }
     if (pattern.length()) {
-      *_GPP += F(" pattern=");
+      *_GPP += F("' pattern='");
       *_GPP += pattern;
     }
+    *_GPP += F("' onchange='EVclick(this)'");
+    if (en) *_GPP += F(" oninput='textCheck(this)'");
+    if (dis) *_GPP += F(" disabled");
     *_GPP += F(">\n");
     send();
   }
@@ -1806,17 +1806,18 @@ struct Builder {
     *_GPP += value;
     *_GPP += F("' placeholder='");
     *_GPP += place;
-    *_GPP += '\'';
-    if (dis) *_GPP += F(" disabled");
     if (maxlength) {
-      *_GPP += F(" maxlength=");
+      *_GPP += F("' maxlength='");
       *_GPP += maxlength;
     }
     if (pattern.length()) {
-      *_GPP += F(" pattern=");
+      *_GPP += F("' pattern='");
       *_GPP += pattern;
     }
+    *_GPP += '\'';
+    if (dis) *_GPP += F(" disabled");
     *_GPP += F(">\n");
+
     if (eye) {
       *_GPP += F("<span class='eyepass' style='margin-top:13px;' onclick='EVeye(this)'>"
                  "<svg viewBox='0 0 20 20' style='width:25px;height:25px;fill:currentcolor;'>"
@@ -2418,19 +2419,20 @@ struct Builder {
 
   // ======================= ВЫВОД ЛОГА =======================
 
-  void AREA_LOG(const String& name, int rows = 5, int size = 12, int prd = 1000, const String& w = "") {
-    *_GPP += F("<div class='inliner'><textarea name='_gplog' style='height:auto;");
-    *_GPP += F("font-size:");
-    *_GPP += size;
-    *_GPP += F("px;");
-    if (w.length()) {
-      *_GPP += F("width:");
-      *_GPP += w;
-    }
-    *_GPP += F("' id='");
+  void AREA_LOG(const String& name, int rows = 5, int size = 12, const String& w = "", boolean add = false, boolean scroll = false, int prd = 1000) {
+    *_GPP += F("<div class='inliner'><textarea id='");
     *_GPP += name;
     *_GPP += F("' rows='");
     *_GPP += rows;
+    *_GPP += F("' style='font-size:");
+    *_GPP += size;
+    *_GPP += F("px");
+    if (w.length()) {
+      *_GPP += F(";width:");
+      *_GPP += w;
+    }
+    if (scroll) *_GPP += F(";overflow:auto' data-scroll='1");
+    if (add) *_GPP += F("' data-add='1");
     *_GPP += F("' disabled></textarea></div>\n");
 
     *_GPP += F("<script>EVupdate('");
@@ -2458,11 +2460,11 @@ struct Builder {
     *_GPP += F("' placeholder='");
     *_GPP += place;
     if (maxlength) {
-      *_GPP += F(" maxlength=");
+      *_GPP += F("' maxlength='");
       *_GPP += maxlength;
     }
     if (pattern.length()) {
-      *_GPP += F(" pattern=");
+      *_GPP += F("' pattern='");
       *_GPP += pattern;
     }
     *_GPP += F("' onchange='EVclick(this)'");
