@@ -267,7 +267,7 @@ boolean weatherUpdate(void) {
           client.print F("&longitude=");
           client.print(weather_longitude, 4);
           client.println F("&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 "
-                           "HTTP/1.1\r\nAccept: */*\r\nAccept-Language: ru,en;q=0.9\r\nConnection: keep-alive\r\nHost: api.open-meteo.com\r\n"
+                           "HTTP/1.1\r\nAccept: */*\r\nAccept-Language: ru,en;q=0.9\r\nHost: api.open-meteo.com\r\nConnection: close\r\n"
                            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36\r\n");
           weather_answer = "";
           weather_timer = millis();
