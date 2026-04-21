@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_018 бета от 03.04.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_018 бета от 20.04.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1291,7 +1291,7 @@ void dotEffect(void) //анимации точек
         case DOT_DECATRON_TIMER:
           if (!RTC.s) decatronDisable(); //отключение декатрона
           else if (RTC.s <= 30) decatronSetLine(0, RTC.s - 1); //установка линии декатрона
-          else decatronSetLine(RTC.s - 30, 0); //установка линии декатрона
+          else decatronSetLine(RTC.s - 30, 29); //установка линии декатрона
           dot.update = 1; //сбросили флаг обновления точек
           break;
         case DOT_DECATRON_SWAY: {
