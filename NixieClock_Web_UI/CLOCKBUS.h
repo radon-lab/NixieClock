@@ -480,7 +480,7 @@ void busUpdate(void) {
     if (busStatusBuffer()) { //если есть новая команда
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
-            if ((timeGetValidState()) || ntpCheckTime(GPunix(mainDate, mainTime, settings.ntpGMT), syncState)) {
+            if ((timeGetValidState()) || ntpCheckTime(timeGetUnix(), syncState)) {
 
               timeSetUnix(ntpGetUnix() + (settings.ntpGMT * 3600UL));
               timeSetMillis(millis() - ntpGetMillis());

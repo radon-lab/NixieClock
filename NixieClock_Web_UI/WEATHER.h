@@ -198,6 +198,7 @@ void weatherGetUnixData(uint32_t* buf, uint8_t len) {
 
   if (weather_state == WEATHER_ERROR) weather_update = false;
 }
+//--------------------------------------------------------------------
 void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
   if (weather_update == false) return;
 

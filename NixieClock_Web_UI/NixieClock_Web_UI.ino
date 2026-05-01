@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_018 бета от 19.04.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_019 бета от 01.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -73,8 +73,9 @@ uint32_t sysCycleCount = 0; //счетчик циклов процессора
 #define STATUS_LED -1
 #endif
 
-#include "NTP.h"
 #include "TIME.h"
+
+#include "NTP.h"
 #include "WIRE.h"
 #include "UPDATER.h"
 #include "CLOCKBUS.h"

@@ -100,6 +100,10 @@ void timeSetUnix(time_t unix) {
   mainDate.year = time.tm_year + 1900;
 }
 //--------------------------------------------------------------------
+uint32_t timeGetUnix(void) {
+  return GPunix(mainDate, mainTime, settings.ntpGMT);
+}
+//--------------------------------------------------------------------
 void timeUpdate(void) {
   if ((millis() - time_timer) >= 1000) { //если прошла секунда
     if (!time_timer) time_timer = millis(); //инициализировали таймер
