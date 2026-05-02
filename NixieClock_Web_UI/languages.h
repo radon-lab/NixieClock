@@ -22,7 +22,9 @@
 #define LANG_NTP_STATUS_3 "Ожидание ответа..."
 #define LANG_NTP_STATUS_4 "Синхронизировано"
 #define LANG_NTP_STATUS_5 "Рассинхронизация"
-#define LANG_NTP_STATUS_6 "Сервер не отвечает"
+#define LANG_NTP_STATUS_6 "Сервер не синхронизирован"
+#define LANG_NTP_STATUS_7 "Некорректный ответ сервера"
+#define LANG_NTP_STATUS_8 "Сервер не отвечает"
 
 #define LANG_NTP_ATTEMPT "Попытка подключения"
 
@@ -569,8 +571,10 @@
 #define LANG_NTP_STATUS_2 "Connecting to server..."
 #define LANG_NTP_STATUS_3 "Waiting for response..."
 #define LANG_NTP_STATUS_4 "Synchronized"
-#define LANG_NTP_STATUS_5 "Desync"
-#define LANG_NTP_STATUS_6 "Server is not responding"
+#define LANG_NTP_STATUS_5 "Desynchronization"
+#define LANG_NTP_STATUS_6 "Server is out of sync"
+#define LANG_NTP_STATUS_7 "Incorrect server response"
+#define LANG_NTP_STATUS_8 "Server is not responding"
 
 #define LANG_NTP_ATTEMPT "Attempting to connect"
 
