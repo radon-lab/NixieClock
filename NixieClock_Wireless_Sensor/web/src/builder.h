@@ -121,7 +121,8 @@ struct Builder {
 
   void UI_MENU_STYLE(PGM_P st = GP_GREEN) {
     _ui_style = st;
-    *_GPP += F("<style>@media screen and (max-width:1000px){.offlAnim{top:-5px;}}.mainblock{width:auto!important;max-width:100%!important;}"
+    *_GPP += F("<style>.mainblock{width:auto!important;max-width:100%!important;}"
+               "@media screen and (max-width:1000px){.offlAnim{top:-5px;}.hint{top:60px;}}"
                "@media screen and (min-width:1000px){.hint{left:50%;}}</style>\n");
   }
 

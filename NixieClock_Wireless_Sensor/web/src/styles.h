@@ -169,6 +169,6 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 @keyframes offline{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media screen and (max-width:450px){.mainblock{padding:9px 0;}}
-@media screen and (max-width:1000px){.navbar{max-width:100%!important;}.page{margin-top:35px;}.hint{top:60px;}.ui_load{transform:translateY(-40px);}}
+@media screen and (max-width:1000px){.navbar{max-width:100%!important;}.page{margin-top:35px;}.ui_load{transform:translateY(-40px);}}
 @media screen and (min-width:1000px){.navbar{max-width:50%;margin:30px 8px;}.navbar>ul{height:40px;}.burgbtn{display:none!important;}.page{margin-left:250px;padding:0 35px;}.overlay{display:none!important;}.headbar{display:none!important;}.sidebar{left:0!important;}.header_s{display:block;}}
 )";
