@@ -180,7 +180,7 @@ void wifiServiceRun(boolean run) {
   if (state != run) { //если нужно изменить состояние сервисов
     state = run; //запомнили текущее состояние сервисов
     if (run) { //если нужно запустить сервисы
-      ntpStart(); //запустить ntp
+      ntpRequest(); //запросить время ntp
       weatherCheck(); //запросить прогноз погоды
       groupStart(settings.groupFind); //запустить обнаружение устройств поблизости
       Serial.println F("Wifi services startup...");

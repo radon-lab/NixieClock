@@ -34,24 +34,23 @@ const char *ntpStatusList[] = {LANG_NTP_STATUS_1, LANG_NTP_STATUS_2, LANG_NTP_ST
 WiFiUDP udp;
 
 //--------------------------------------------------------------------
-void ntpStart(void) {
-  if (udp.begin(NTP_LOCAL_PORT)) {
-    ntp_status = NTP_CONNECTION;
-    ntp_timer = millis();
-    ntp_attempts = 0;
+void ntpRequest(void) {
+  if ((ntp_status != NTP_CONNECTION) && (ntp_status != NTP_WAIT_ANSWER)) {
+    if (udp.begin(NTP_LOCAL_PORT)) {
+      ntp_status = NTP_CONNECTION;
+      ntp_timer = millis();
+      ntp_attempts = 0;
+    }
+    else ntp_status = NTP_ERROR;
   }
-  else ntp_status = NTP_STOPPED;
+}
+void ntpRequestEnd(uint8_t status) {
+  udp.stop();
+  ntp_status = status;
 }
 void ntpStop(void) {
   udp.stop();
   ntp_status = NTP_STOPPED;
-}
-void ntpRequest(void) {
-  if (ntp_status > NTP_WAIT_ANSWER) {
-    ntp_status = NTP_CONNECTION;
-    ntp_timer = millis();
-    ntp_attempts = 0;
-  }
 }
 //--------------------------------------------------------------------
 boolean ntpCheckTime(uint32_t unix, int8_t dst) {
@@ -124,7 +123,7 @@ void ntpInitPacketRequest(void) {
 }
 //--------------------------------------------------------------------
 void ntpChangeAttempt(void) {
-  if (++ntp_attempts > NTP_ATTEMPTS_ALL) ntp_status = NTP_ERROR;
+  if (++ntp_attempts > NTP_ATTEMPTS_ALL) ntpRequestEnd(NTP_ERROR);
   else ntp_status = NTP_CONNECTION;
   ntp_timer = millis();
 }
@@ -153,21 +152,16 @@ boolean ntpUpdate(void) {
               ntp_timer = millis() - ((((ntp_buffer[44] << 8) | ntp_buffer[45]) * 1000UL) >> 16);
               if (ntp_unix == ntpParsePacketTime(&ntp_buffer[24])) {
                 ntp_unix = ntpParsePacketTime(&ntp_buffer[40]);
-                ntp_status = NTP_SYNCED;
+                ntpRequestEnd(NTP_SYNCED);
                 return true;
               }
-              else {
-                ntp_status = NTP_INVALID;
-                return false;
-              }
+              else ntpRequestEnd(NTP_INVALID);
             }
-            else {
-              ntp_status = NTP_NOT_SYNCED;
-              return false;
-            }
+            else ntpRequestEnd(NTP_NOT_SYNCED);
           }
+          else ntpChangeAttempt();
         }
-        ntpChangeAttempt();
+        else ntpChangeAttempt();
       }
       else if ((millis() - ntp_timer) >= NTP_ATTEMPTS_TIMEOUT) ntpChangeAttempt();
       break;
