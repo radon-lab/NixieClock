@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 01.03.26
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 04.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -175,17 +175,17 @@ void build(void) {
 
     if (wifiGetConnectStatus()) {
       GP.BREAK();
-      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "hint1", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "id_1", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Шлюз сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-      GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
+      GP.HINT_NOTIFY("id_1", WiFi.SSID()); //всплывающая подсказка
     }
     if (WiFi.getMode() != WIFI_STA) {
       GP.BREAK();
-      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(AP_SSID, 12), "hint2", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(AP_SSID, 12), "id_2", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
-      GP.HINT("hint2", AP_SSID); //всплывающая подсказка
+      GP.HINT_NOTIFY("id_2", AP_SSID); //всплывающая подсказка
     }
 
     GP.BREAK();
