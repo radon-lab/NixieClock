@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 04.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 07.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -19,6 +19,7 @@
 
 #define GP_NO_DNS
 #define GP_NO_MDNS
+#define GP_NO_PRESS
 
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui;
