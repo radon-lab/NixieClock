@@ -16,6 +16,28 @@
 #define CONSTRAIN(value, min, max) (((value) > (max)) ? (max) : (((value) < (min)) ? (min) : (value)))
 #define CONSTRAIN_MAX(value, max) (((value) > (max)) ? (max) : (value))
 
+#ifdef DIGIT_MASK
+#undef DECODER_MASK
+#define DECODER_MASK DIGIT_MASK
+#endif
+
+#ifdef DECODER_1
+#undef DECODER_1_PIN
+#define DECODER_1_PIN DECODER_1
+#endif
+#ifdef DECODER_2
+#undef DECODER_2_PIN
+#define DECODER_2_PIN DECODER_2
+#endif
+#ifdef DECODER_3
+#undef DECODER_3_PIN
+#define DECODER_3_PIN DECODER_3
+#endif
+#ifdef DECODER_4
+#undef DECODER_4_PIN
+#define DECODER_4_PIN DECODER_4
+#endif
+
 #if INDI_MODE != 0
 #define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : (((pin) < 14) ? PCMSK0 : PCMSK1))
 #define DECODE_PCIE(pin) (((pin) < 8) ? PCIE2 : (((pin) < 14) ? PCIE0 : PCIE1))

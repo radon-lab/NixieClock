@@ -4,10 +4,10 @@
 //Цифровые пины 14..17 - (14 - PORTC0(A0) | 15 - PORTC1(A1) | 16 - PORTC2(A2) | 17 - PORTC3(A3))(доступны только для динамического режима(x2 К155ИД1))
 
 //Дешифратор ламп
-#define DECODER_1 3 //пин дешифратора X1(A)(0..3)(pin A)
-#define DECODER_2 1 //пин дешифратора X2(B)(0..3)(pin A)
-#define DECODER_3 0 //пин дешифратора X4(C)(0..3)(pin A)
-#define DECODER_4 2 //пин дешифратора X8(D)(0..3)(pin A)
+#define DECODER_1_PIN 3 //пин дешифратора X1(A)(0..3)(pin A)
+#define DECODER_2_PIN 1 //пин дешифратора X2(B)(0..3)(pin A)
+#define DECODER_3_PIN 0 //пин дешифратора X4(C)(0..3)(pin A)
+#define DECODER_4_PIN 2 //пин дешифратора X8(D)(0..3)(pin A)
 
 //Аноды ламп
 #define ANODE_0_PIN 2 //пин анода 0(СИМВ)(0..13)(pin D)

@@ -2,19 +2,19 @@
 
 //------------------------[AlexGyver v1] ИН12 (только 4x ИН12)------------------------//
 #if (BOARD_TYPE == 1)
-#undef DIGIT_MASK
-#define DIGIT_MASK ID(0), ID(1), ID(2), ID(3), ID(4), ID(5), ID(6), ID(7), ID(8), ID(9), ID(10) //маска дешифратора
+#undef DECODER_MASK
+#define DECODER_MASK ID(0), ID(1), ID(2), ID(3), ID(4), ID(5), ID(6), ID(7), ID(8), ID(9), ID(10) //маска дешифратора
 #undef CATHODE_MASK
 #define CATHODE_MASK 1, 6, 2, 7, 5, 0, 4, 9, 8, 3 //порядок катодов ИН12
 
-#undef DECODER_1
-#define DECODER_1 0 //пин дешифратора X1(A)(0..3)(pin A)
-#undef DECODER_2
-#define DECODER_2 2 //пин дешифратора X2(B)(0..3)(pin A)
-#undef DECODER_3
-#define DECODER_3 3 //пин дешифратора X4(C)(0..3)(pin A)
-#undef DECODER_4
-#define DECODER_4 1 //пин дешифратора X8(D)(0..3)(pin A)
+#undef DECODER_1_PIN
+#define DECODER_1_PIN 0 //пин дешифратора X1(A)(0..3)(pin A)
+#undef DECODER_2_PIN
+#define DECODER_2_PIN 2 //пин дешифратора X2(B)(0..3)(pin A)
+#undef DECODER_3_PIN
+#define DECODER_3_PIN 3 //пин дешифратора X4(C)(0..3)(pin A)
+#undef DECODER_4_PIN
+#define DECODER_4_PIN 1 //пин дешифратора X8(D)(0..3)(pin A)
 
 #undef ANODE_1_PIN
 #define ANODE_1_PIN 8  //пин анода 1(ЧЧ)(0..13)(pin D)
@@ -58,19 +58,19 @@
 
 //-----------------[AlexGyver v1] ИН14 (6x ИН14 или 4x ИН14 + 2x ИН16)----------------//
 #elif (BOARD_TYPE == 2)
-#undef DIGIT_MASK
-#define DIGIT_MASK ID(0), ID(1), ID(2), ID(3), ID(4), ID(5), ID(6), ID(7), ID(8), ID(9), ID(10) //маска дешифратора
+#undef DECODER_MASK
+#define DECODER_MASK ID(0), ID(1), ID(2), ID(3), ID(4), ID(5), ID(6), ID(7), ID(8), ID(9), ID(10) //маска дешифратора
 #undef CATHODE_MASK
 #define CATHODE_MASK 1, 0, 2, 9, 3, 8, 4, 7, 5, 6 //порядок катодов ИН14
 
-#undef DECODER_1
-#define DECODER_1 0 //пин дешифратора X1(A)(0..3)(pin A)
-#undef DECODER_2
-#define DECODER_2 2 //пин дешифратора X2(B)(0..3)(pin A)
-#undef DECODER_3
-#define DECODER_3 3 //пин дешифратора X4(C)(0..3)(pin A)
-#undef DECODER_4
-#define DECODER_4 1 //пин дешифратора X8(D)(0..3)(pin A)
+#undef DECODER_1_PIN
+#define DECODER_1_PIN 0 //пин дешифратора X1(A)(0..3)(pin A)
+#undef DECODER_2_PIN
+#define DECODER_2_PIN 2 //пин дешифратора X2(B)(0..3)(pin A)
+#undef DECODER_3_PIN
+#define DECODER_3_PIN 3 //пин дешифратора X4(C)(0..3)(pin A)
+#undef DECODER_4_PIN
+#define DECODER_4_PIN 1 //пин дешифратора X8(D)(0..3)(pin A)
 
 #undef ANODE_1_PIN
 #define ANODE_1_PIN 10 //пин анода 1(ЧЧ)(0..13)(pin D)
@@ -114,15 +114,15 @@
 
 //------------------[AlexGyver v2] ИН12 (индикаторы стоят правильно)------------------//
 #elif (BOARD_TYPE == 3)
-#undef DIGIT_MASK
-#define DIGIT_MASK ID(7), ID(3), ID(6), ID(4), ID(1), ID(9), ID(8), ID(0), ID(5), ID(2), ID(10) //маска дешифратора
+#undef DECODER_MASK
+#define DECODER_MASK ID(7), ID(3), ID(6), ID(4), ID(1), ID(9), ID(8), ID(0), ID(5), ID(2), ID(10) //маска дешифратора
 #undef CATHODE_MASK
 #define CATHODE_MASK 1, 6, 2, 7, 5, 0, 4, 9, 8, 3 //порядок катодов ИН12
 
 //------------------[AlexGyver v2] ИН12 turned (индикаторы перевёрнуты)------------------//
 #elif (BOARD_TYPE == 4)
-#undef DIGIT_MASK
-#define DIGIT_MASK ID(2), ID(8), ID(1), ID(9), ID(6), ID(4), ID(3), ID(5), ID(0), ID(7), ID(10) //маска дешифратора
+#undef DECODER_MASK
+#define DECODER_MASK ID(2), ID(8), ID(1), ID(9), ID(6), ID(4), ID(3), ID(5), ID(0), ID(7), ID(10) //маска дешифратора
 #undef CATHODE_MASK
 #define CATHODE_MASK 1, 6, 2, 7, 5, 0, 4, 9, 8, 3 //порядок катодов ИН12
 
@@ -137,8 +137,8 @@
 
 //------------------[AlexGyver v2] ИН14 (обычная и неоновая точка)------------------//
 #elif (BOARD_TYPE == 5)
-#undef DIGIT_MASK
-#define DIGIT_MASK ID(9), ID(8), ID(0), ID(5), ID(4), ID(7), ID(3), ID(6), ID(2), ID(1), ID(10) //маска дешифратора
+#undef DECODER_MASK
+#define DECODER_MASK ID(9), ID(8), ID(0), ID(5), ID(4), ID(7), ID(3), ID(6), ID(2), ID(1), ID(10) //маска дешифратора
 #undef CATHODE_MASK
 #define CATHODE_MASK 1, 0, 2, 9, 3, 8, 4, 7, 5, 6 //порядок катодов ИН14
 

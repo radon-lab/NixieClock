@@ -5,15 +5,15 @@
 #include "CORE.h"
 
 #define _BIT(value, bit) (((value) >> (bit)) & 0x01)
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
+#define ID(digit) ((_BIT(digit, 0) << DECODER_1_PIN) | (_BIT(digit, 1) << DECODER_2_PIN) | (_BIT(digit, 2) << DECODER_3_PIN) | (_BIT(digit, 3) << DECODER_4_PIN))
+#define INDI_NULL ((0x01 << DECODER_2_PIN) | (0x01 << DECODER_4_PIN)) //пустой символ(отключеный индикатор)
 #define INDI_ANODE_OFF 0x00 //выключенный анод
 
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN_MAX(((uint16_t)FREQ_TICK - 2) + (FREQ_TICK >> 5), 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы
+const uint8_t digitMask[] = {DECODER_MASK}; //порядок пинов лампы
 const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS, INDI_4_POS, INDI_5_POS, INDI_6_POS}; //порядок индикации ламп

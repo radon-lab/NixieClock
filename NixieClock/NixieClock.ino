@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_018 бета от 20.04.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_022 бета от 07.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -220,32 +220,32 @@ void INIT_SYSTEM(void) //инициализация
   else { //иначе загружаем настройки из памяти
     if (checkData(sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST)) { //проверяем быстрые настройки
       updateData((uint8_t*)&fastSettings, sizeof(fastSettings), EEPROM_BLOCK_SETTINGS_FAST, EEPROM_BLOCK_CRC_FAST); //записываем быстрые настройки в память
-      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&fastSettings, EEPROM_BLOCK_SETTINGS_FAST, sizeof(fastSettings)); //считываем быстрые настройки из памяти
     if (checkData(sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN)) { //проверяем основные настройки
       updateData((uint8_t*)&mainSettings, sizeof(mainSettings), EEPROM_BLOCK_SETTINGS_MAIN, EEPROM_BLOCK_CRC_MAIN); //записываем основные настройки в память
-      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&mainSettings, EEPROM_BLOCK_SETTINGS_MAIN, sizeof(mainSettings)); //считываем основные настройки из памяти
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
     if (checkData(sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO)) { //проверяем настройки радио
       updateData((uint8_t*)&radioSettings, sizeof(radioSettings), EEPROM_BLOCK_SETTINGS_RADIO, EEPROM_BLOCK_CRC_RADIO); //записываем настройки радио в память
-      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&radioSettings, EEPROM_BLOCK_SETTINGS_RADIO, sizeof(radioSettings)); //считываем настройки радио из памяти
 #endif
 #if ESP_ENABLE
     if (checkData(sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED)) { //проверяем расширенные настройки
       updateData((uint8_t*)&extendedSettings, sizeof(extendedSettings), EEPROM_BLOCK_SETTINGS_EXTENDED, EEPROM_BLOCK_CRC_EXTENDED); //записываем расширенные настройки в память
-      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
     }
     else EEPROM_ReadBlock((uint16_t)&extendedSettings, EEPROM_BLOCK_SETTINGS_EXTENDED, sizeof(extendedSettings)); //считываем настройки радио из памяти
 #endif
 #if ALARM_TYPE
     if (checkByte(EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM)) { //проверяем количетво будильников
       updateByte(alarms.num, EEPROM_BLOCK_ALARM, EEPROM_BLOCK_CRC_ALARM); //записываем количетво будильников в память
-      SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+      SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
     }
     else alarms.num = EEPROM_ReadByte(EEPROM_BLOCK_ALARM); //считываем количество будильников из памяти
 #endif
@@ -259,7 +259,7 @@ void INIT_SYSTEM(void) //инициализация
   }
   if (checkData(sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG)) { //проверяем настройки отладки
     updateData((uint8_t*)&debugSettings, sizeof(debugSettings), EEPROM_BLOCK_SETTINGS_DEBUG, EEPROM_BLOCK_CRC_DEBUG); //записываем настройки отладки в память
-    SET_ERROR(ERROR_MEMORY); //устанавливаем ошибку памяти
+    SET_ERROR(ERROR_MEMORY_FAIL); //устанавливаем ошибку памяти
   }
   else EEPROM_ReadBlock((uint16_t)&debugSettings, EEPROM_BLOCK_SETTINGS_DEBUG, sizeof(debugSettings)); //считываем настройки отладки из памяти
 
@@ -2454,6 +2454,9 @@ void checkErrors(void) //проверка ошибок
   uint16_t _error_reg = EEPROM_ReadByte(EEPROM_BLOCK_ERROR) | ((uint16_t)EEPROM_ReadByte(EEPROM_BLOCK_EXT_ERROR) << 8); //прочитали регистр ошибок
 #if ESP_ENABLE
   device.failure = _error_reg; //скопировали ошибки
+#endif
+#if ERROR_MASK
+  _error_reg &= (uint16_t)ERROR_MASK ^ 0xFFFF; //установили маску
 #endif
   if (_error_reg) { //если есть ошибка
 #if FLIP_ANIM_START == 1
