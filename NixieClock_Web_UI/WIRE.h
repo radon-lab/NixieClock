@@ -65,7 +65,7 @@ boolean twi_running(void)
   return twi_state;
 }
 //--------------------------------------------------------------------
-boolean clockStretch(void)
+boolean twi_clock_stretch(void)
 {
 #if TWI_SCL_STRCH_LIMIT
   int32_t pollCounter = (TWI_SCL_STRCH_LIMIT * TWI_CLOCK_STRETCH_MULTIPLIER);
@@ -80,7 +80,7 @@ boolean clockStretch(void)
   return true;
 }
 //--------------------------------------------------------------------
-boolean dataStretch(void)
+boolean twi_data_stretch(void)
 {
   int8_t pollCounter = TWI_SDA_STRCH_LIMIT;
 
@@ -88,7 +88,7 @@ boolean dataStretch(void)
     if (pollCounter-- < 0) return false;
 
     SCL_HIGH();
-    if (clockStretch() != true) return false;
+    if (twi_clock_stretch() != true) return false;
     twi_delay(TWI_CLOCK_DCOUNT - 3);
 
     SCL_LOW();
@@ -98,7 +98,7 @@ boolean dataStretch(void)
   return true;
 }
 //--------------------------------------------------------------------
-int8_t checkBus(void)
+int8_t twi_check_bus(void)
 {
   int32_t pollCounter = (TWI_BUS_POLLING_LIMIT * TWI_CLOCK_STRETCH_MULTIPLIER);
 
@@ -125,12 +125,12 @@ int8_t twi_write_stop(void)
     SCL_LOW();
     SDA_HIGH();
     twi_delay(TWI_CLOCK_DCOUNT - 3);
-    if (dataStretch() != true) return TWI_BUSY;
+    if (twi_data_stretch() != true) return TWI_BUSY;
     SDA_LOW();
     twi_delay(TWI_CLOCK_DCOUNT - 3);
 
     SCL_HIGH();
-    if (clockStretch() != true) return TWI_BUSY;
+    if (twi_clock_stretch() != true) return TWI_BUSY;
     twi_delay(TWI_CLOCK_DCOUNT - 5);
 
     SDA_HIGH();
@@ -147,7 +147,7 @@ int8_t twi_write_start(void)
   SDA_HIGH();
   twi_delay(TWI_CLOCK_DCOUNT - 18);
 
-  if (checkBus() != TWI_OK) {
+  if (twi_check_bus() != TWI_OK) {
     twi_state = false;
     return TWI_BUSY;
   }
@@ -173,7 +173,7 @@ int8_t twi_write_bit(boolean _bit)
   twi_delay(1);
 
   SCL_HIGH();
-  if (clockStretch() == false) return TWI_BUSY;
+  if (twi_clock_stretch() == false) return TWI_BUSY;
   twi_delay(TWI_CLOCK_DCOUNT - 5);
   SCL_LOW();
   SDA_LOW();
@@ -190,7 +190,7 @@ int8_t twi_read_bit(void)
   twi_delay(TWI_CLOCK_DCOUNT - 3);
 
   SCL_HIGH();
-  if (clockStretch() == false) return TWI_BUSY;
+  if (twi_clock_stretch() == false) return TWI_BUSY;
 
   rxBit = SDA_READ();
   twi_delay(TWI_CLOCK_DCOUNT - 6);
