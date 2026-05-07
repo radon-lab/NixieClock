@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_021 бета от 04.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_023 бета от 07.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -20,7 +20,7 @@
 
   Папки с плагинами "ESP8266LittleFS" и "ESP8266LittleFSExport" необходимо поместить в .../Program Files/Arduino/tools, затем нужно перезапустить Arduino IDE(если была запущена).
   Сначала загружаете прошивку, затем "Инструменты -> ESP8266 LittleFS Data Upload".
-  
+
   Эспорт бинарного файла прошивки - "Скетч -> Экспорт бинарного файла".
   Эспорт бинарного файла FS - "Инструменты -> ESP8266 LittleFS Data Export".
   Бинарные файлы появятся в папке с прошивкой.
@@ -101,8 +101,9 @@ const char *alarmDaysList[] = {LANG_ALARM_DAYS_1, LANG_ALARM_DAYS_2, LANG_ALARM_
 const char *statusTimerList[] = {LANG_TIMER_OFF, LANG_TIMER_MODE_1, LANG_TIMER_MODE_2, LANG_TIMER_ERROR};
 
 const char *failureDataList[] = {
-  LANG_FAIL_DATA_1, LANG_FAIL_DATA_2, LANG_FAIL_DATA_3, LANG_FAIL_DATA_4, LANG_FAIL_DATA_5, LANG_FAIL_DATA_6,
-  LANG_FAIL_DATA_7, LANG_FAIL_DATA_8, LANG_FAIL_DATA_9, LANG_FAIL_DATA_10, LANG_FAIL_DATA_11, LANG_FAIL_DATA_12, LANG_FAIL_DATA_13
+  LANG_FAIL_DATA_1, LANG_FAIL_DATA_2, LANG_FAIL_DATA_3, LANG_FAIL_DATA_4, LANG_FAIL_DATA_5,
+  LANG_FAIL_DATA_6, LANG_FAIL_DATA_7, LANG_FAIL_DATA_8, LANG_FAIL_DATA_9, LANG_FAIL_DATA_10,
+  LANG_FAIL_DATA_11, LANG_FAIL_DATA_12, LANG_FAIL_DATA_13, LANG_FAIL_DATA_14, LANG_FAIL_DATA_15
 };
 
 //--------------------------------------------------------------------
@@ -1231,13 +1232,13 @@ void build(void) {
       if (!(device.failure & 0x8000)) {
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_INFO_HR_STATE, UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CONNECT, "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? LANG_PAGE_INFO_GUI_STATE_OK : LANG_PAGE_INFO_GUI_STATE_NULL, "", UI_INFO_COLOR););
+
         if (!device.failure) {
-          M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CONNECT, "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? LANG_PAGE_INFO_GUI_STATE_OK : LANG_PAGE_INFO_GUI_STATE_DIS, "", UI_INFO_COLOR););
-        }
-        else {
-          for (uint8_t i = 0; i < 13; i++) {
+          GP.BREAK();
+          for (uint8_t i = 0; i < 15; i++) {
             if (device.failure & (0x01 << i)) {
-              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERR) + ((i < 9) ? '0' : '\0') + (i + 1), "", UI_LABEL_COLOR); GP.LABEL_W(failureDataList[i], "", UI_INFO_COLOR, 0, GP_RIGHT, 0, false, true););
+              M_BOX(GP.LABEL(String(LANG_PAGE_INFO_GUI_STATE_ERROR) + ((i < 9) ? '0' : '\0') + (i + 1), "", UI_LABEL_COLOR); GP.LABEL_W(failureDataList[i], "", UI_INFO_COLOR, 0, GP_RIGHT, 0, false, true););
             }
           }
         }

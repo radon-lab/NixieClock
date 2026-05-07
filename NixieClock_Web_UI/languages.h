@@ -482,8 +482,8 @@
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Связь с часами"
 #define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально..."
-#define LANG_PAGE_INFO_GUI_STATE_DIS "Отсутствует..."
-#define LANG_PAGE_INFO_GUI_STATE_ERR "Ошибка 00"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Отсутствует..."
+#define LANG_PAGE_INFO_GUI_STATE_ERROR "Ошибка 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Сигнал"
@@ -545,6 +545,8 @@
 #define LANG_FAIL_DATA_11 "Переполнение стека"
 #define LANG_FAIL_DATA_12 "Переполнение тиков времени"
 #define LANG_FAIL_DATA_13 "Сбой динамической индикации"
+#define LANG_FAIL_DATA_14 "Модуль радиоприемника не отвечает"
+#define LANG_FAIL_DATA_15 "Модуль плеера звуков не отвечает"
 
 //-------------------------------------------------------//
 #endif
@@ -1032,8 +1034,8 @@
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Connection with clock"
 #define LANG_PAGE_INFO_GUI_STATE_OK "Working fine..."
-#define LANG_PAGE_INFO_GUI_STATE_DIS "Missing..."
-#define LANG_PAGE_INFO_GUI_STATE_ERR "Error 00"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Missing..."
+#define LANG_PAGE_INFO_GUI_STATE_ERROR "Error 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Sygnal"
@@ -1095,6 +1097,8 @@
 #define LANG_FAIL_DATA_11 "Stack overflow"
 #define LANG_FAIL_DATA_12 "Time tick overflow"
 #define LANG_FAIL_DATA_13 "Dynamic indication failure"
+#define LANG_FAIL_DATA_14 "Radio receiver module is not responding"
+#define LANG_FAIL_DATA_15 "Sound player module is not responding"
 
 //-------------------------------------------------------//
 #endif
