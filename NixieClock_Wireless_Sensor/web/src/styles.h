@@ -129,8 +129,9 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 .sblock>.sbsel:hover{filter:none;}
 .sbsel.sbsel{color:#13161a;}
 .page{margin:0;overflow-x:hidden;transition:margin-left .2s;}
-.ui_block{display:none;padding:2px 5px;max-width:1000px;opacity:0;transition-duration:.4s;}
-.ui_load{display:flex;align-items:center;justify-content:center;opacity:0;margin-top:50vh;transform:translateY(-20px);animation:delay .5s forwards;}
+.page>.ui_block{padding:2px 5px;max-width:1000px;}
+.ui_block{display:none;opacity:0;transition-duration:.4s;}
+.ui_load{display:flex;align-items:center;justify-content:center;opacity:0;animation:delay .5s forwards;}
 .ui_load>span{height:20px;width:20px;margin:5px;border-radius:25px;background-color:#4CAF50;animation:load 1s linear infinite;}
 .ui_load>span:nth-child(1){animation-delay:.2s;}
 .ui_load>span:nth-child(2){animation-delay:.1s;}
@@ -169,6 +170,6 @@ input[type=checkbox]:disabled,input[type=text]:disabled,input[type=number]:disab
 @keyframes offline{0%{fill:#f00;}25%{fill:#f00;}100%{fill:#ff000000;}}
 @keyframes upload{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media screen and (max-width:450px){.mainblock{padding:9px 0;}}
-@media screen and (max-width:1000px){.navbar{max-width:100%!important;}.page{margin-top:35px;}.ui_load{transform:translateY(-40px);}}
+@media screen and (max-width:1000px){.navbar{max-width:100%!important;}.page{margin-top:35px;}}
 @media screen and (min-width:1000px){.navbar{max-width:50%;margin:30px 8px;}.navbar>ul{height:40px;}.burgbtn{display:none!important;}.page{margin-left:250px;padding:0 35px;}.overlay{display:none!important;}.headbar{display:none!important;}.sidebar{left:0!important;}.header_s{display:block;}}
 )";

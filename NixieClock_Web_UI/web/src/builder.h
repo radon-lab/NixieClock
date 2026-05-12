@@ -116,7 +116,7 @@ struct Builder {
       u.parse();
       UI_LINK(u.str, n.str);
     }
-    UI_BODY(w);
+    UI_BODY(w, st);
   }
 
   void UI_MENU_STYLE(PGM_P st = GP_GREEN) {
@@ -156,23 +156,37 @@ struct Builder {
 
   void UI_BODY(int w = 1000, PGM_P st = GP_DEFAULT) {
     *_GPP += F("</div></nav>\n<div class='overlay' onclick='sdbTgl()' id='dashOver'></div><div class='page'>\n"
-               "<div class='ui_load'><span></span><span></span><span></span>");
+               "<div class='ui_load'><span></span><span></span><span></span>"
+               "<style>body{display:flex;justify-content:center;}.mainblock{width:100%!important");
     if (st != GP_DEFAULT) {
-      *_GPP += F("<style>.ui_load>span{background-color:");
+      *_GPP += F(";}.ui_load>span{background-color:");
       *_GPP += FPSTR(st);
-      *_GPP += F(";}</style>\n");
     }
-    *_GPP += F("</div>\n<div class='ui_block'");
+    *_GPP += F(";}</style></div>\n<div class='ui_block'");
     if (w != 1000) {
       *_GPP += F(" style='max-width:");
       *_GPP += w;
       *_GPP += F("px'");
     }
-    *_GPP += ">\n";
+    *_GPP += F(">\n");
     send();
   }
   void UI_END(void) {
     SEND(F("</div></div>\n"));
+  }
+
+  void UI_PAGE_BEGIN(PGM_P st = GP_DEFAULT) {
+    *_GPP += F("<div class='ui_load'><span></span><span></span><span></span>"
+               "<style>body{display:flex;justify-content:center;}.mainblock{width:100%!important");
+    if (st != GP_DEFAULT) {
+      *_GPP += F(";}.ui_load>span{background-color:");
+      *_GPP += FPSTR(st);
+    }
+    *_GPP += F(";}</style></div>\n<div class='ui_block'>\n");
+    send();
+  }
+  void UI_PAGE_END(void) {
+    SEND(F("</div>\n"));
   }
 
   void UI_LINK(const String& url, const String& name) {
