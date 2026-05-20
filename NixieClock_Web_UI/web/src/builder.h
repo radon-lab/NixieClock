@@ -717,14 +717,15 @@ struct Builder {
     BLOCK_BEGIN(GP_TAB, width, label, st);
   }
 
-  void BLOCK_THIN_BOLD(const String& width = "", PGM_P st = GP_DEFAULT, PGM_P bg = GP_DEFAULT) {
-    BLOCK_BEGIN(GP_THIN_BOLD, width, "", st, bg);
-  }
   void BLOCK_THIN_BEGIN(const String& width = "") {
     BLOCK_BEGIN(GP_THIN, width);
   }
   void BLOCK_THIN_TAB_BEGIN(const String& label, const String& width = "") {
     BLOCK_BEGIN(GP_THIN, width, label);
+  }
+
+  void BLOCK_THIN_BOLD_BEGIN(const String& width = "", PGM_P st = GP_DEFAULT, PGM_P bg = GP_DEFAULT) {
+    BLOCK_BEGIN(GP_THIN_BOLD, width, "", st, bg);
   }
 
   void BLOCK_SHADOW_BEGIN(void) {
@@ -2345,6 +2346,8 @@ struct Builder {
     if (local) *_GPP += F("<script src='/gp_data/PLOT_STOCK.js'></script>\n<script src='/gp_data/PLOT_STOCK_DARK.js'></script>\n<script src='/gp_data/PLOT_STOCK_EXPORT.js'></script>\n");
     else *_GPP += F("<script src='https://code.highcharts.com/stock/highstock.js'></script>\n<script src='https://code.highcharts.com/themes/dark-unica.js'></script>\n<script src='https://code.highcharts.com/modules/exporting.js'></script>\n");
     if (lang) *_GPP += F("<script>Highcharts.setOptions({lang:{contextButtonTitle:'Меню',viewFullscreen:'Во весь экран',exitFullscreen:'Свернуть',printChart:'Печать...',resetZoom:'Сбросить',resetZoomTitle:'Сбросить маштаб'}});</script>\n");
+    *_GPP += F("<style>.highcharts-button-box{fill:#2c2c2c;}.highcharts-button-symbol{fill:#999999;stroke:#999999;}.highcharts-menu{border-radius:8px!important;background:#3c3c3c!important;}"
+               ".highcharts-menu-item{background:#3c3c3c!important;color:#b7b7b7!important;}.highcharts-menu-item:hover{border-radius:6px!important;background:#323232!important}</style>\n");
     send();
   }
 

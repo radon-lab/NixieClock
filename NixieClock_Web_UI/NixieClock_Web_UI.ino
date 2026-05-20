@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_023 бета от 07.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_024 бета от 20.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -28,6 +28,9 @@
   Подключение к часам производится по шине I2C, внешнюю подтяжку необходимо подключить к источнику питания 3.3в(подтяжка на шине должна быть строго только в одном месте!)
   Питать модуль ESP8266 от вывода 3v3 ардуино нельзя! Нужно использовать линейный стабилизатор или DC-DC преобразователь на 3.3в!
 */
+
+#define ESP_FIRMWARE_VER "1.3.0_024" //версия прошивки модуля esp
+
 #include "config.h"
 #include "languages.h"
 
@@ -86,276 +89,49 @@ uint32_t sysCycleCount = 0; //счетчик циклов процессора
 
 #include "WIFI.h"
 
-const char ledColorList[] = {"#FE0100,#E11E00,#C33C00,#A55A00,#877800,#699600,#4BB400,#2DD200,#0FF000,#00F00F,#00D22D,#00B44B,#009669,#007887,#005AA5,#003CC3,#001EE1,#0000FF,#1E00E1,#3C00C3,#5A00A5,#780087,#960069,#B4004B,#D2002D,#F0000F,#FE9A3B,#FECFA9,#FEFEFE"};
+#include "utils.h"
 
-const char *climateNamesMain[] = {LANG_CLIMATE_TEMP, LANG_CLIMATE_HUM};
-const char *climateNamesExt[] = {LANG_CLIMATE_PRESS};
-
-const char *climateFsData[] = {"/gp_data/PLOT_STOCK.js.gz"};
-const char *alarmFsData[] = {"/alarm_add.svg", "/alarm_set.svg", "/alarm_dis.svg"};
-const char *timerFsData[] = {"/timer_play.svg", "/timer_stop.svg", "/timer_pause.svg", "/timer_up.svg", "/timer_down.svg"};
-const char *radioFsData[] = {"/radio_backward.svg", "/radio_left.svg", "/radio_right.svg", "/radio_forward.svg", "/radio_mode.svg", "/radio_power.svg"};
-
-const char *alarmModeList[] = {LANG_ALARM_MODE_1, LANG_ALARM_MODE_2, LANG_ALARM_MODE_3, LANG_ALARM_MODE_4};
-const char *alarmDaysList[] = {LANG_ALARM_DAYS_1, LANG_ALARM_DAYS_2, LANG_ALARM_DAYS_3, LANG_ALARM_DAYS_4, LANG_ALARM_DAYS_5, LANG_ALARM_DAYS_6, LANG_ALARM_DAYS_7};
-const char *statusTimerList[] = {LANG_TIMER_OFF, LANG_TIMER_MODE_1, LANG_TIMER_MODE_2, LANG_TIMER_ERROR};
-
-const char *failureDataList[] = {
-  LANG_FAIL_DATA_1, LANG_FAIL_DATA_2, LANG_FAIL_DATA_3, LANG_FAIL_DATA_4, LANG_FAIL_DATA_5,
-  LANG_FAIL_DATA_6, LANG_FAIL_DATA_7, LANG_FAIL_DATA_8, LANG_FAIL_DATA_9, LANG_FAIL_DATA_10,
-  LANG_FAIL_DATA_11, LANG_FAIL_DATA_12, LANG_FAIL_DATA_13, LANG_FAIL_DATA_14, LANG_FAIL_DATA_15
-};
-
-//--------------------------------------------------------------------
-String stringLengthConstrain(String str, uint8_t size) {
-  if (str.length() > size) {
-    str.remove(size);
-    str += F("…");
-  }
-  return str;
-}
-//--------------------------------------------------------------------
-String stringGetPercent(uint8_t num) {
-  String str;
-  str.reserve(10);
-  str = num;
-  str += '%';
-  return str;
-}
-//--------------------------------------------------------------------
-String stringGetFreq(uint32_t num) {
-  String str;
-  str.reserve(15);
-  str = num;
-  str += F(" MHz");
-  return str;
-}
-//--------------------------------------------------------------------
-String stringGetHex(uint32_t num) {
-  String str;
-  str.reserve(15);
-  str = String(num, HEX);
-  str.toUpperCase();
-  str = "0x" + str;
-  return str;
-}
-//--------------------------------------------------------------------
-String stringGetKilobyte(uint32_t num, uint8_t dec) {
-  String str;
-  str.reserve(15);
-  str = String(num / 1000.0, dec);
-  str += F(" kB");
-  return str;
-}
-//--------------------------------------------------------------------
-String stringGetTimeFromMs(uint32_t data) {
-  data /= 1000;
-
-  uint8_t second = data % 60;
-  data /= 60;
-  uint8_t minute = data % 60;
-  data /= 60;
-  uint16_t hour = data % 24;
-  data /= 24;
-
-  String str;
-  str.reserve(20);
-
-  str = data;
-  str += ':';
-  str += hour;
-  str += ':';
-  str += minute / 10;
-  str += minute % 10;
-  str += ':';
-  str += second / 10;
-  str += second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String stringEncodeTime(GPtime data) {
-  String str;
-  str.reserve(15);
-
-  if (mainSettings.timeFormat) {
-    if (data.hour > 12) data.hour -= 12;
-    else if (!data.hour) data.hour = 12;
-  }
-
-  str = data.hour / 10;
-  str += data.hour % 10;
-  str += ':';
-  str += data.minute / 10;
-  str += data.minute % 10;
-  str += ':';
-  str += data.second / 10;
-  str += data.second % 10;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String getClockFirmwareVersion(void) {
-  String str;
-  str.reserve(10);
-  str = deviceInformation[FIRMWARE_VERSION_1];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_2];
-  str += '.';
-  str += deviceInformation[FIRMWARE_VERSION_3];
-  return str;
-}
-//----------------------------Получить состояние таймера---------------------------------
-String getTimerState(void) { //получить состояние таймера
-  String str;
-  str.reserve(50);
-
-  str = statusTimerList[timer.mode & 0x03];
-  if (((timer.mode & 0x03) == 2) && !timer.count) str += LANG_TIMER_STATUS_ALARM;
-  else if (timer.mode & 0x80) str += LANG_TIMER_STATUS_PAUSE;
-
-  return str;
-}
-//------------------------Преобразовать время в формат ЧЧ:ММ:СС--------------------------
-String convertTimerTime(void) { //преобразовать время в формат ЧЧ:ММ:СС
-  String str;
-  str.reserve(15);
-  str = "";
-
-  uint8_t buff = 0;
-  if (timer.mode) buff = timer.count / 3600;
-  else buff = timer.hour;
-  if (buff < 10) str += '0';
-  str += buff;
-  str += ':';
-
-  if (timer.mode) buff = (timer.count / 60) % 60;
-  else buff = timer.mins;
-  if (buff < 10) str += '0';
-  str += buff;
-  str += ':';
-
-  if (timer.mode) buff = timer.count % 60;
-  else buff = timer.secs;
-  if (buff < 10) str += '0';
-  str += buff;
-
-  return str;
-}
-//--------------------------------------------------------------------
-String backlModeList(void) { //список режимов подсветки
-  String str;
-  str.reserve(500);
-  if (deviceInformation[BACKL_TYPE]) {
-    str = F(LANG_BACKL_MODE_1);
-    if (deviceInformation[BACKL_TYPE] >= 3) {
-      str += F(LANG_BACKL_MODE_2);
-    }
-  }
-  else {
-    str = F(LANG_BACKL_DISABLE);
-  }
-  return str;
-}
-//--------------------------------------------------------------------
-String dotModeList(boolean alm) { //список режимов основных разделительных точек
-  String str;
-  str.reserve(500);
-  str = F(LANG_DOTS_MODE_1);
-  if (deviceInformation[NEON_DOT] < 3) {
-    str += F(LANG_DOTS_MODE_2);
-  }
-  if (deviceInformation[NEON_DOT] == 2) {
-    str += F(LANG_DOTS_MODE_3);
-  }
-  if (deviceInformation[NEON_DOT] == 4) {
-    str += F(LANG_DOTS_MODE_4);
-  }
-  if (deviceInformation[DOTS_PORT_ENABLE]) {
-    str += F(LANG_DOTS_MODE_5);
-    if ((deviceInformation[DOTS_NUM] > 4) || (deviceInformation[DOTS_TYPE] == 2)) {
-      str += F(LANG_DOTS_MODE_6);
-    }
-    if ((deviceInformation[DOTS_NUM] > 4) && (deviceInformation[DOTS_TYPE] == 2)) {
-      str += F(LANG_DOTS_MODE_7);
-    }
-  }
-  if (alm) {
-    str += F(LANG_DOTS_MODE_8);
-  }
-  return str;
-}
-//--------------------------------------------------------------------
-String neonDotModeList(void) { //список режимов неоновых разделительных точек
-  String str;
-  str.reserve(400);
-  if (deviceInformation[NEON_DOT] < 3) {
-    if (!deviceInformation[DOTS_PORT_ENABLE]) {
-      str = F(LANG_INDI_DOTS_MODE_1);
-    }
-    else {
-      str = F(LANG_INDI_DOTS_MODE_2);
-      if (deviceInformation[NEON_DOT] == 2) {
-        str += F(LANG_INDI_DOTS_MODE_3);
-      }
-    }
-  }
-  else {
-    str = F(LANG_INDI_DOTS_DISABLE);
-  }
-  return str;
-}
-//--------------------------------------------------------------------
-String flipModeList(boolean set) { //список режимов смены минут
-  String str;
-  str.reserve(370);
-  str = (set) ? F(LANG_FLIP_MODE_1) : F(LANG_FLIP_MODE_2);
-  str += F(LANG_FLIP_MODE_3);
-  return str;
-}
-//--------------------------------------------------------------------
-String secsModeList(void) { //список режимов смены секунд
-  String str;
-  str.reserve(200);
-  if (deviceInformation[LAMP_NUM] < 6) {
-    str = F(LANG_SECS_DISABLE);
-  }
-  else {
-    str = F(LANG_SECS_MODE_1);
-  }
-  return str;
-}
-//--------------------------------------------------------------------
-String playerVoiceList(void) { //список голосов для озвучки
-  String str;
-  str.reserve(100);
-  if (deviceInformation[PLAYER_TYPE]) {
-    str = F(LANG_PLAYER_VOICE_MAIN);
-    for (uint8_t i = 2; i < deviceInformation[PLAYER_MAX_VOICE]; i++) {
-      str += F(LANG_PLAYER_VOICE_OTHER);
-      str += i;
-    }
-  }
-  else {
-    str = F(LANG_PLAYER_DISABLE);
-  }
-  return str;
-}
 //--------------------------------------------------------------------
 void PAGE_TITLE_NAME(const String& title) {
   String str;
   str.reserve(70);
   str = "";
-  if (settings.namePrefix) {
-    str += settings.nameDevice;
-    str += F(" - ");
+  if (settings.nameDevice[0] != '\0') {
+    if (settings.nameTab) {
+      str += settings.nameDevice;
+      str += F(" - ");
+    }
   }
   str += title;
-  if (settings.namePostfix) {
-    str += settings.nameDevice;
-    str += F(" - ");
-  }
   GP.PAGE_TITLE(str);
+}
+//--------------------------------------------------------------------
+void PAGE_WEATHER_BLOCK(const String& title, const String& temp, const String& hum, const String& press) {
+  GP.BLOCK_BEGIN(GP_DIV_RAW, "100%;width:100%");
+  GP.BLOCK_BEGIN(GP_TAB, "100%;height:300px;margin-top:10px", title, UI_WEATHER_TITLE_COLOR, UI_WEATHER_BLOCK_COLOR);
+
+  GP.BREAK();
+
+  GP.LABEL(LANG_WEATHER_SUMMARY_TEMP, "", UI_WEATHER_HINT_COLOR, 14);
+  GP.BREAK();
+  GP.LABEL(temp, "", UI_WEATHER_TEMP_COLOR);
+
+  GP.BREAK(); GP.BREAK(); GP.BREAK();
+
+  GP.LABEL(LANG_WEATHER_SUMMARY_HUM, "", UI_WEATHER_HINT_COLOR, 14);
+  GP.BREAK();
+  GP.LABEL(hum, "", UI_WEATHER_HUM_COLOR);
+
+  GP.BREAK(); GP.BREAK(); GP.BREAK();
+
+  GP.LABEL(LANG_WEATHER_SUMMARY_PRESS, "", UI_WEATHER_HINT_COLOR, 14);
+  GP.BREAK();
+  GP.LABEL(press, "", UI_WEATHER_PRESS_COLOR);
+
+  GP.BREAK(); GP.BREAK(); GP.BREAK();
+
+  GP.BLOCK_END();
+  GP.BLOCK_END();
 }
 //--------------------------------------------------------------------
 void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc, const String& sign = "", boolean rl = false, boolean al = false) {
@@ -374,6 +150,132 @@ void PAGE_ALERT_BLOCK(const String& id, const String& title, const String& desc,
   GP.POPUP_END();
 
   GP.POPUP_CLOSE(id + "Cancel," + id + "Ok");
+}
+//--------------------------------------------------------------------
+void webShowUpdateInfo(void) {
+  GP.BREAK();
+  GP.SPAN(LANG_PAGE_UPDATE_INFO_FW, GP_CENTER, "", UI_INFO_COLOR); //описание
+  GP.BREAK();
+  if (fsUpdate) {
+    GP.SPAN(LANG_PAGE_UPDATE_INFO_FS, GP_CENTER, "", UI_INFO_COLOR); //описание
+    GP.BREAK();
+  }
+  String formatText;
+  formatText.reserve(100);
+  formatText = F(LANG_PAGE_UPDATE_INFO_FORMAT);
+  if (clockUpdate) formatText += F(LANG_PAGE_UPDATE_INFO_HEX);
+  if (fsUpdate || otaUpdate) {
+    if (clockUpdate) formatText += F(", ");
+    formatText += F(LANG_PAGE_UPDATE_INFO_BIN);
+  }
+  else formatText += '.';
+  GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
+  GP.BREAK();
+}
+void webShowUpdateUI(void) {
+  GP.HR_TEXT(LANG_PAGE_UPDATE_HR_FILE, UI_LINE_COLOR, UI_HINT_COLOR);
+  if (clockUpdate) {
+    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FW_CLOCK, "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "📟", ".hex", UI_BUTTON_COLOR););
+  }
+  if (otaUpdate) {
+    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FW_ESP, "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("📥", UI_BUTTON_COLOR, true););
+  }
+  if (fsUpdate) {
+    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FS_ESP, "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("📼", UI_BUTTON_COLOR, true););
+  }
+  GP.VOID_BOX("0;height:10px");
+}
+void webShowUpdateAuth(void) {
+  GP.HR_TEXT(LANG_PAGE_UPDATE_HR_AUTH, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
+  if (!passGetWriteTimeout()) {
+    M_BOX(GP_CENTER, GP.PASS_EYE("extOtaPass", LANG_PAGE_UPDATE_GUI_PASS, "", 8); GP.BUTTON_MINI("extOtaCheck", LANG_PAGE_UPDATE_GUI_LOGIN, "extOtaPass", UI_BUTTON_COLOR, "200px!important", false, true););
+    if (passGetCheckError()) GP.SPAN(LANG_PAGE_UPDATE_WARN_PASS, GP_CENTER, "", GP_RED); //описание
+    else GP.SPAN(LANG_PAGE_UPDATE_INFO_AUTH, GP_CENTER, "", GP_YELLOW); //описание
+  }
+  else {
+    M_BOX(GP_CENTER, GP.TEXT("", "", LANG_PAGE_UPDATE_GUI_PASS, "", 0, "", true); GP.BUTTON_MINI("", LANG_PAGE_UPDATE_GUI_LOGIN, "", GP_GRAY, "200px!important", true););
+    GP.SPAN(String((passGetCheckError()) ? LANG_PAGE_UPDATE_WARN_PASS : "") + LANG_PAGE_UPDATE_WARN_TIME, GP_CENTER, "", GP_RED); //описание
+  }
+  GP.VOID_BOX("0;height:10px");
+}
+//--------------------------------------------------------------------
+boolean webShowUpdateState(void) {
+  if (updaterState()) {
+    PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
+
+    GP.PAGE_MIDDLE_ALIGN();
+
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    if (!updaterFlash()) {
+      GP.SPAN(updaterGetState(), GP_CENTER, "extUpdate", GP_YELLOW); //описание
+    }
+    else {
+      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
+      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[CLOCKBUS_VER]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "extWarn", GP_RED); //описание
+      GP.UPDATE("extUpdate,extWarn", 300);
+    }
+    GP.BLOCK_END();
+    GP.HR(UI_LINE_COLOR);
+    GP.BOX_BEGIN(GP_CENTER);
+    GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
+    GP.BOX_END();
+    GP.BLOCK_END();
+
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean webShowHardwareInfo(void) {
+  if (deviceInformation[CLOCKBUS_VER] && (deviceInformation[CLOCKBUS_VER] != CLOCKBUS_VERSION)) {
+    PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
+
+    GP.PAGE_MIDDLE_ALIGN();
+
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
+    GP.BREAK();
+    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_C + String(deviceInformation[CLOCKBUS_VER], HEX));
+    GP.BREAK();
+    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(CLOCKBUS_VERSION, HEX));
+    GP.BLOCK_END();
+    if (otaUpdate) {
+      GP.HR(UI_LINE_COLOR);
+      GP.BOX_BEGIN(GP_CENTER);
+      GP.BUTTON_MINI_LINK("/ota_update", LANG_PAGE_COMPATIBILITY_UPDATE, UI_BUTTON_COLOR);
+      GP.BOX_END();
+    }
+    GP.BLOCK_END();
+
+    passSetOtaState();
+    return true;
+  }
+  return false;
+}
+//--------------------------------------------------------------------
+boolean webShowReloadInfo(void) {
+  if (busRebootState()) {
+    PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
+
+    GP.PAGE_MIDDLE_ALIGN();
+
+    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
+    GP.BLOCK_OFFSET_BEGIN();
+    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
+    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "extWarn", GP_RED); //описание
+    GP.BLOCK_END();
+    GP.HR(UI_LINE_COLOR);
+    GP.BOX_BEGIN(GP_CENTER);
+    GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
+    GP.BOX_END();
+    GP.UPDATE("extReboot,extWarn");
+    GP.BLOCK_END();
+
+    return true;
+  }
+  return false;
 }
 //--------------------------------------------------------------------
 void build(void) {
@@ -434,7 +336,7 @@ void build(void) {
       GP.LINE_LED("barSens", (wirelessGetSensorStatus()), UI_MENU_SENS_1_COLOR, UI_MENU_SENS_2_COLOR);
       GP.BLOCK_SHADOW_END();
     }
-    if (!deviceInformation[DS3231_ENABLE] && rtcGetFoundStatus()) {
+    if (!deviceInformation[RTC_ENABLE] && rtcGetFoundStatus()) {
       updateList += F(",barRtc");
       GP.BLOCK_SHADOW_BEGIN();
       GP.LABEL(LANG_PAGE_MENU_STATE_RTC, "", UI_MENU_TEXT_COLOR, 15);
@@ -716,7 +618,7 @@ void build(void) {
               }
             }
 
-            GP.BLOCK_THIN_BOLD("90%", UI_ALARM_BLOCK_COLOR);
+            GP.BLOCK_THIN_BOLD_BEGIN("90%", UI_ALARM_BLOCK_COLOR);
             lableList = F("alarmSet/");
             lableList += i;
             GP.BOX_BEGIN();
@@ -765,7 +667,7 @@ void build(void) {
 
           GP.BLOCK_BEGIN(GP_THIN, "", LANG_TIMER_BLOCK, UI_BLOCK_COLOR);
 
-          GP.BLOCK_THIN_BOLD("280px", UI_TIMER_BLOCK_COLOR);
+          GP.BLOCK_THIN_BOLD_BEGIN("280px", UI_TIMER_BLOCK_COLOR);
           GP.LABEL(getTimerState(), "timerState", UI_TIMER_INFO_COLOR, 0, 1);
 
           GP.TABLE_BEGIN("15%,15%,15%", GP_ALS(GP_CENTER, GP_CENTER, GP_CENTER), "200px");
@@ -821,7 +723,7 @@ void build(void) {
       showModeList.reserve(350);
       showModeList = F(LANG_PAGE_SETTINGS_GUI_SHOW_D_MODE);
       if (deviceInformation[LAMP_NUM] < 6) showModeList += F(GP_ITEM_DISABLE);
-      if (deviceInformation[SENS_TEMP]) {
+      if (deviceInformation[TEMP_SENS_ENABLE]) {
         showModeList += climateGetShowDataList((climateAvailableTemp(SENS_CLOCK)) ? SENS_CLOCK : SENS_MAX_DATA);
       }
       else if (climateAvailableTemp(settings.climateSend[0])) {
@@ -847,7 +749,7 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_WEATHER, UI_BLOCK_COLOR);
       M_BOX(
         GP.LABEL(LANG_PAGE_SETTINGS_GUI_ON_BUTTON, "", UI_LABEL_COLOR);
-        GP.SELECT_LIST("climateMainSens", (!deviceInformation[BTN_EASY_MAIN_MODE]) ? climateGetSendDataList() : LANG_PAGE_SETTINGS_GUI_SENS_DISABLE, extendedSettings.tempMainSensor, 0, (boolean)(deviceInformation[BTN_EASY_MAIN_MODE] || sensorGetDisabledStatus()));
+        GP.SELECT_LIST("climateMainSens", (!deviceInformation[BTN_EASY_MODE]) ? climateGetSendDataList() : LANG_PAGE_SETTINGS_GUI_SENS_DISABLE, extendedSettings.tempMainSensor, 0, (boolean)(deviceInformation[BTN_EASY_MODE] || sensorGetDisabledStatus()));
       );
       M_BOX(
         GP.LABEL(LANG_PAGE_SETTINGS_GUI_ONCE_HOUR, "", UI_LABEL_COLOR);
@@ -911,12 +813,12 @@ void build(void) {
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_DOTS, UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[NEON_DOT] >= 3) || !deviceInformation[DOTS_PORT_ENABLE])););
+      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_NEON, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsNeonDot", neonDotModeList(), fastSettings.neonDotMode, 0, (boolean)((deviceInformation[SECS_TYPE] >= 3) || !deviceInformation[DOTS_ENABLE])););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsDot", dotModeList(false), fastSettings.dotMode););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)(deviceInformation[NEON_DOT] >= 3)););
-      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[NEON_DOT] >= 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[NEON_DOT] >= 3) ? 1 : 10), 0, (deviceInformation[NEON_DOT] >= 3) ? 1 : 25, 1, UI_SLIDER_COLOR););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtDay", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightDay / 10, 1, 25, 1, UI_SLIDER_COLOR, (boolean)(deviceInformation[SECS_TYPE] >= 3)););
+      M_BOX(GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52, GP_LEFT); GP.SLIDER_C("setsDotBrtNight", LANG_PAGE_SETTINGS_GUI_DISABLE, (deviceInformation[SECS_TYPE] >= 3) ? LANG_PAGE_SETTINGS_GUI_ENABLE : LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.dotBrightNight / ((deviceInformation[SECS_TYPE] >= 3) ? 1 : 10), 0, (deviceInformation[SECS_TYPE] >= 3) ? 1 : 25, 1, UI_SLIDER_COLOR););
       GP.BLOCK_END();
       GP.GRID_END();
       GP.NAV_BLOCK_END();
@@ -981,7 +883,7 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_SENS, UI_BLOCK_COLOR);
       M_BOX(
         GP.LABEL(LANG_PAGE_SETTINGS_GUI_SENS_1, "", UI_LABEL_COLOR);
-        GP.SELECT_LIST("climateSend/0", (deviceInformation[SENS_TEMP]) ? LANG_PAGE_SETTINGS_GUI_SENS_CLOCK : climateGetMainDataList(SENS_MAIN, SENS_MAX_DATA), settings.climateSend[0] - 1, 0, (boolean)(deviceInformation[SENS_TEMP]), true);
+        GP.SELECT_LIST("climateSend/0", (deviceInformation[TEMP_SENS_ENABLE]) ? LANG_PAGE_SETTINGS_GUI_SENS_CLOCK : climateGetMainDataList(SENS_MAIN, SENS_MAX_DATA), settings.climateSend[0] - 1, 0, (boolean)(deviceInformation[TEMP_SENS_ENABLE]), true);
       );
       M_BOX(
         GP.LABEL(LANG_PAGE_SETTINGS_GUI_SENS_2, "", UI_LABEL_COLOR);
@@ -1079,22 +981,45 @@ void build(void) {
         GP.BLOCK_END();
 
         uint8_t time_start = (weatherDates[0] % 86400UL) / 3600UL;
+        uint8_t time_block = time_start / 6;
+        uint8_t block_start = (time_block + 2) % 4;
 
-        GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_HOURS, UI_BLOCK_COLOR);
+        int16_t temp_min = 1000; //температура
+        int16_t temp_max = -1000; //температура
+        uint8_t hum_min = 100; //влажность
+        uint8_t hum_max = 0; //влажность
+        uint16_t press_min = 20000; //давление
+        uint16_t press_max = 0; //давление
+
+        GP.SEND("<style>.grid4,.grid2{justify-content:space-evenly;max-width:100%;}"
+                "@media screen and (max-width:1100px){.grid4{display:block;}}@media screen and (max-width:450px){.grid2{display:block;}}</style>\n");
+
+        GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_SUMMARY, UI_BLOCK_COLOR);
+        GP.SEND("<div style='max-width:98%;' class='inliner grid4'><div class='inliner grid2'>");
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
-          GP.BLOCK_THIN_BOLD("90%", UI_WEATHER_BLOCK_COLOR);
-          M_BOX(GP_EDGES,
-                GP.LABEL(((time_start < 10) ? '0' : '\0') + String(time_start) + F(":00"), "", UI_WEATHER_TIME_COLOR, 40);
-                GP.BLOCK_BEGIN(GP_DIV_RAW);
-                GP.LABEL(String(weatherArrMain[0][i] / 10.0, 1) + F("°С"), "", UI_WEATHER_TEMP_COLOR);
-                GP.LABEL(String(weatherArrMain[1][i]) + '%', "", UI_WEATHER_HUM_COLOR);
-                GP.BREAK();
-                GP.LABEL(String(weatherArrExt[0][i] / 10) + F("mm.Hg"), "", UI_WEATHER_PRESS_COLOR);
-                GP.BLOCK_END();
-               );
-          GP.BLOCK_END();
+          if (temp_min > weatherArrMain[0][i]) temp_min = weatherArrMain[0][i];
+          if (temp_max < weatherArrMain[0][i]) temp_max = weatherArrMain[0][i];
+          if (hum_min > weatherArrMain[1][i]) hum_min = weatherArrMain[1][i];
+          if (hum_max < weatherArrMain[1][i]) hum_max = weatherArrMain[1][i];
+          if (press_min > weatherArrExt[0][i]) press_min = weatherArrExt[0][i];
+          if (press_max < weatherArrExt[0][i]) press_max = weatherArrExt[0][i];
+
           if (++time_start > 23) time_start = 0;
+          if (time_block != (time_start / 6)) {
+            if (time_block == block_start) GP.SEND("</div><div class='inliner grid2'>");
+
+            PAGE_WEATHER_BLOCK(weatherSummaryList[time_block], String(temp_min / 10.0, 1) + ".." + String(temp_max / 10.0, 1), hum_min + String("..") + hum_max, String(press_min / 10) + ".." + String(press_max / 10));
+
+            time_block = time_start / 6;
+            temp_min = 1000;
+            temp_max = -1000;
+            hum_min = 100;
+            hum_max = 0;
+            press_min = 20000;
+            press_max = 0;
+          }
         }
+        GP.SEND("</div></div>\n");
       }
       else {
         GP.BLOCK_BEGIN(GP_TAB, "93%;padding:20% 5px", "", GP_DEFAULT);
@@ -1224,8 +1149,8 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_GP, "", UI_LABEL_COLOR); GP.LABEL(GP_VERSION, "", UI_INFO_COLOR););
 
       GP.BREAK();
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ESP, "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VERSION, "", UI_INFO_COLOR););
-      if (deviceInformation[HARDWARE_VERSION]) {
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_ESP, "", UI_LABEL_COLOR); GP.LABEL(ESP_FIRMWARE_VER, "", UI_INFO_COLOR););
+      if (deviceInformation[CLOCKBUS_VER]) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CLOCK, "", UI_LABEL_COLOR); GP.LABEL(getClockFirmwareVersion(), "", UI_INFO_COLOR););
       }
 
@@ -1250,12 +1175,11 @@ void build(void) {
 
       GP.NAV_BLOCK_BEGIN("extInfoTab", 1, navInfoTab);
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_INFO_BLOCK_DEVICE, UI_BLOCK_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NAME, "", UI_LABEL_COLOR); GP.TEXT_EN("extDeviceName", LANG_PAGE_INFO_GUI_NONE, settings.nameDevice, "", 19););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_DEVICE_NAME, "", UI_LABEL_COLOR); GP.TEXT_EN("extDeviceName", LANG_PAGE_INFO_GUI_UNNAMED, settings.nameDevice, "", 19););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_SHOW, UI_LINE_COLOR, UI_HINT_COLOR);
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MENU, "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_PREFIX, "", UI_LABEL_COLOR); GP.SWITCH("extDevicePrefix", settings.namePrefix, UI_SWITCH_COLOR););
-      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_POSTFIX, "", UI_LABEL_COLOR); GP.SWITCH("extDevicePostfix", settings.namePostfix, UI_SWITCH_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_MENU_NAME, "", UI_LABEL_COLOR); GP.SWITCH("extDeviceMenu", settings.nameMenu, UI_SWITCH_COLOR););
+      M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_TAB_NAME, "", UI_LABEL_COLOR); GP.SWITCH("extDevicePrefix", settings.nameTab, UI_SWITCH_COLOR););
       M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_AP_NAME, "", UI_LABEL_COLOR); GP.SWITCH("extDeviceAp", settings.nameAp, UI_SWITCH_COLOR););
 
       GP.BREAK();
@@ -1278,7 +1202,7 @@ void build(void) {
       rtcStatus = F(LANG_RTC_STATUS_1);
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_INFO_HR_RTC, UI_LINE_COLOR, UI_HINT_COLOR);
-      if (deviceInformation[DS3231_ENABLE] && !(device.failure & 0x8000)) {
+      if (deviceInformation[RTC_ENABLE] && !(device.failure & 0x8000)) {
         if (!(device.failure & 0x03)) rtcStatus = F(LANG_RTC_STATUS_3);
         else if (device.failure & 0x02) rtcStatus = F(LANG_RTC_STATUS_2);
       }
@@ -1302,7 +1226,7 @@ void build(void) {
 
       GP.UPDATE_CLICK("alertReset", "resetButton");
       GP.UPDATE_CLICK("alertReboot", "rebootButton");
-      GP.RELOAD_CLICK(String("extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.namePrefix || settings.namePostfix) ? ",extDeviceName" : ""));
+      GP.RELOAD_CLICK(String("extDeviceMenu,extDevicePrefix,extDevicePostfix") + ((settings.nameMenu || settings.nameTab) ? ",extDeviceName" : ""));
     }
     else { //сетевые настройки
       PAGE_TITLE_NAME(LANG_PAGE_NETWORK_TITLE);
@@ -1445,132 +1369,6 @@ void buildUpdate(bool UpdateEnd, const String& UpdateError) {
 
   GP.PAGE_BLOCK_END();
   GP.BUILD_END();
-}
-//--------------------------------------------------------------------
-void webShowUpdateInfo(void) {
-  GP.BREAK();
-  GP.SPAN(LANG_PAGE_UPDATE_INFO_FW, GP_CENTER, "", UI_INFO_COLOR); //описание
-  GP.BREAK();
-  if (fsUpdate) {
-    GP.SPAN(LANG_PAGE_UPDATE_INFO_FS, GP_CENTER, "", UI_INFO_COLOR); //описание
-    GP.BREAK();
-  }
-  String formatText;
-  formatText.reserve(100);
-  formatText = F(LANG_PAGE_UPDATE_INFO_FORMAT);
-  if (clockUpdate) formatText += F(LANG_PAGE_UPDATE_INFO_HEX);
-  if (fsUpdate || otaUpdate) {
-    if (clockUpdate) formatText += F(", ");
-    formatText += F(LANG_PAGE_UPDATE_INFO_BIN);
-  }
-  else formatText += '.';
-  GP.SPAN(formatText, GP_CENTER, "", UI_INFO_COLOR); //описание
-  GP.BREAK();
-}
-void webShowUpdateUI(void) {
-  GP.HR_TEXT(LANG_PAGE_UPDATE_HR_FILE, UI_LINE_COLOR, UI_HINT_COLOR);
-  if (clockUpdate) {
-    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FW_CLOCK, "", UI_LABEL_COLOR); GP.FILE_UPLOAD("updater", "📟", ".hex", UI_BUTTON_COLOR););
-  }
-  if (otaUpdate) {
-    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FW_ESP, "", UI_LABEL_COLOR); GP.OTA_FIRMWARE("📥", UI_BUTTON_COLOR, true););
-  }
-  if (fsUpdate) {
-    M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FS_ESP, "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("📼", UI_BUTTON_COLOR, true););
-  }
-  GP.VOID_BOX("0;height:10px");
-}
-void webShowUpdateAuth(void) {
-  GP.HR_TEXT(LANG_PAGE_UPDATE_HR_AUTH, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
-  if (!passGetWriteTimeout()) {
-    M_BOX(GP_CENTER, GP.PASS_EYE("extOtaPass", LANG_PAGE_UPDATE_GUI_PASS, "", 8); GP.BUTTON_MINI("extOtaCheck", LANG_PAGE_UPDATE_GUI_LOGIN, "extOtaPass", UI_BUTTON_COLOR, "200px!important", false, true););
-    if (passGetCheckError()) GP.SPAN(LANG_PAGE_UPDATE_WARN_PASS, GP_CENTER, "", GP_RED); //описание
-    else GP.SPAN(LANG_PAGE_UPDATE_INFO_AUTH, GP_CENTER, "", GP_YELLOW); //описание
-  }
-  else {
-    M_BOX(GP_CENTER, GP.TEXT("", "", LANG_PAGE_UPDATE_GUI_PASS, "", 0, "", true); GP.BUTTON_MINI("", LANG_PAGE_UPDATE_GUI_LOGIN, "", GP_GRAY, "200px!important", true););
-    GP.SPAN(String((passGetCheckError()) ? LANG_PAGE_UPDATE_WARN_PASS : "") + LANG_PAGE_UPDATE_WARN_TIME, GP_CENTER, "", GP_RED); //описание
-  }
-  GP.VOID_BOX("0;height:10px");
-}
-//--------------------------------------------------------------------
-boolean webShowUpdateState(void) {
-  if (updaterState()) {
-    PAGE_TITLE_NAME(LANG_PAGE_UPDATE_CLOCK_TITLE);
-
-    GP.PAGE_MIDDLE_ALIGN();
-
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_UPDATE_CLOCK_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    if (!updaterFlash()) {
-      GP.SPAN(getUpdaterState(), GP_CENTER, "extUpdate", GP_YELLOW); //описание
-    }
-    else {
-      GP.SPAN(LANG_PAGE_UPDATE_CLOCK_CONNECT, GP_CENTER, "extUpdate", UI_INFO_COLOR); //описание
-      GP.SPAN(String(LANG_PAGE_UPDATE_CLOCK_WARN) + ((deviceInformation[HARDWARE_VERSION]) ? "" : LANG_PAGE_UPDATE_CLOCK_HINT), GP_CENTER, "extWarn", GP_RED); //описание
-      GP.UPDATE("extUpdate,extWarn", 300);
-    }
-    GP.BLOCK_END();
-    GP.HR(UI_LINE_COLOR);
-    GP.BOX_BEGIN(GP_CENTER);
-    GP.BUTTON_MINI_LINK("/", LANG_PAGE_UPDATE_CLOCK_HOME, UI_BUTTON_COLOR);
-    GP.BOX_END();
-    GP.BLOCK_END();
-
-    return true;
-  }
-  return false;
-}
-//--------------------------------------------------------------------
-boolean webShowHardwareInfo(void) {
-  if (deviceInformation[HARDWARE_VERSION] && (deviceInformation[HARDWARE_VERSION] != HW_VERSION)) {
-    PAGE_TITLE_NAME(LANG_PAGE_COMPATIBILITY_TITLE);
-
-    GP.PAGE_MIDDLE_ALIGN();
-
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_COMPATIBILITY_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    GP.SPAN(LANG_PAGE_COMPATIBILITY_WARN, GP_CENTER, "", UI_INFO_COLOR);
-    GP.BREAK();
-    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_C + String(deviceInformation[HARDWARE_VERSION], HEX));
-    GP.BREAK();
-    GP.LABEL(LANG_PAGE_COMPATIBILITY_HW_W + String(HW_VERSION, HEX));
-    GP.BLOCK_END();
-    if (otaUpdate) {
-      GP.HR(UI_LINE_COLOR);
-      GP.BOX_BEGIN(GP_CENTER);
-      GP.BUTTON_MINI_LINK("/ota_update", LANG_PAGE_COMPATIBILITY_UPDATE, UI_BUTTON_COLOR);
-      GP.BOX_END();
-    }
-    GP.BLOCK_END();
-
-    passSetOtaState();
-    return true;
-  }
-  return false;
-}
-//--------------------------------------------------------------------
-boolean webShowReloadInfo(void) {
-  if (busRebootState()) {
-    PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
-
-    GP.PAGE_MIDDLE_ALIGN();
-
-    GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_RELOAD_BLOCK, UI_BLOCK_COLOR);
-    GP.BLOCK_OFFSET_BEGIN();
-    GP.SPAN(LANG_PAGE_RELOAD_WAIT, GP_CENTER, "extReboot", UI_INFO_COLOR); //описание
-    GP.SPAN(LANG_PAGE_RELOAD_HINT, GP_CENTER, "extWarn", GP_RED); //описание
-    GP.BLOCK_END();
-    GP.HR(UI_LINE_COLOR);
-    GP.BOX_BEGIN(GP_CENTER);
-    GP.BUTTON_MINI_LINK("/", LANG_PAGE_RELOAD_HOME, UI_BUTTON_COLOR);
-    GP.BOX_END();
-    GP.UPDATE("extReboot,extWarn");
-    GP.BLOCK_END();
-
-    return true;
-  }
-  return false;
 }
 //--------------------------------------------------------------------
 void action() {
@@ -1777,7 +1575,7 @@ void action() {
         busSetCommand(WRITE_FAST_SET, FAST_DOT_MODE);
       }
       if (ui.clickInt("setsNeonDot", fastSettings.neonDotMode)) {
-        busSetCommand(WRITE_FAST_SET, FAST_NEON_DOT_MODE);
+        busSetCommand(WRITE_FAST_SET, FAST_SECS_TYPE_MODE);
       }
       if (ui.clickInt("setsFlip", fastSettings.flipMode)) {
         busSetCommand(WRITE_FAST_SET, FAST_FLIP_MODE);
@@ -1857,7 +1655,7 @@ void action() {
       }
       if (ui.click("setsDotBrtNight")) {
         mainSettings.dotBrightNight = constrain(ui.getInt("setsDotBrtNight"), 0, 25);
-        if (deviceInformation[NEON_DOT] < 3) mainSettings.dotBrightNight *= 10;
+        if (deviceInformation[SECS_TYPE] < 3) mainSettings.dotBrightNight *= 10;
         busSetCommand(WRITE_MAIN_SET, MAIN_DOT_BRIGHT_N);
       }
 
@@ -1961,10 +1759,7 @@ void action() {
         if (ui.clickBool("extDeviceMenu", settings.nameMenu)) {
           memorySaveSettings(); //обновить данные в памяти
         }
-        if (ui.clickBool("extDevicePrefix", settings.namePrefix)) {
-          memorySaveSettings(); //обновить данные в памяти
-        }
-        if (ui.clickBool("extDevicePostfix", settings.namePostfix)) {
+        if (ui.clickBool("extDevicePrefix", settings.nameTab)) {
           memorySaveSettings(); //обновить данные в памяти
         }
 
@@ -2230,7 +2025,7 @@ void action() {
     //--------------------------------------------------------------------
     if (ui.updateSub("ext")) {
       if (ui.update("extUpdate")) { //если было обновление
-        ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? getUpdaterState() : LANG_PAGE_RELOAD_WAIT));
+        ui.answer((busRebootFail()) ? " " : ((!busRebootState()) ? updaterGetState() : LANG_PAGE_RELOAD_WAIT));
       }
       if (ui.update("extReboot") && !busRebootState()) { //если было обновление
         ui.answer((busRebootFail()) ? " " : LANG_PAGE_RELOAD_END);
@@ -2343,8 +2138,8 @@ void action() {
     if (ui.fileName().endsWith(".hex") || ui.fileName().endsWith(".HEX")) {
       updaterSetIdle(); //сбросили флаг ошибки
       Serial.println("Updater load file: " + ui.fileName());
-      if (deviceInformation[HARDWARE_VERSION]) busSetCommand(UPDATE_FIRMWARE);
-      else updaterStart(); //запуск обновления
+      if (deviceInformation[CLOCKBUS_VER]) busSetCommand(UPDATE_FIRMWARE);
+      else updaterStartFlash(); //запуск обновления
     }
     else {
       updaterSetStatus(UPDATER_NOT_HEX); //установили флаг ошибки расширения
@@ -2360,13 +2155,13 @@ void action() {
 }
 //--------------------------------------------------------------------
 void sensorSendData(uint8_t sens) {
-  if (!deviceInformation[SENS_TEMP] && (settings.climateSend[0] == sens)) busSetCommand(WRITE_SENS_1_DATA, settings.climateSend[0]); //отправить данные
+  if (!deviceInformation[TEMP_SENS_ENABLE] && (settings.climateSend[0] == sens)) busSetCommand(WRITE_SENS_1_DATA, settings.climateSend[0]); //отправить данные
   if (settings.climateSend[1] == sens) busSetCommand(WRITE_SENS_2_DATA, settings.climateSend[1]); //отправить данные
   if (settings.climateChart == sens) climateUpdate(CLIMATE_UPDATE); //обновляем показания графиков
 }
 //--------------------------------------------------------------------
 void sensorUpdateData(void) {
-  if (deviceInformation[SENS_TEMP]) busSetCommand(WRITE_CHECK_SENS);
+  if (deviceInformation[TEMP_SENS_ENABLE]) busSetCommand(WRITE_CHECK_SENS);
   else sens.update |= SENS_EXT;
   sens.status = 0;
 }
@@ -2374,7 +2169,7 @@ void sensorUpdateData(void) {
 void sensorInitData(void) {
   static boolean sens_init = false;
   if (!sens_init) {
-    if (deviceInformation[SENS_TEMP]) settings.climateSend[0] = SENS_CLOCK; //установить сенсор в часах
+    if (deviceInformation[TEMP_SENS_ENABLE]) settings.climateSend[0] = SENS_CLOCK; //установить сенсор в часах
     else if (settings.climateSend[0] == SENS_CLOCK) settings.climateSend[0] = SENS_MAIN; //иначе сенсор в есп
     sens.search = sens.status; //установить показания датчиков
     sens_init = true;
@@ -2518,7 +2313,7 @@ void deviceUpdate(void) {
           case STATUS_UPDATE_ALARM_SET: busSetCommand(READ_ALARM_ALL); break;
           case STATUS_UPDATE_TIME_SET: busSetCommand(READ_TIME_DATE, 1); break;
           case STATUS_UPDATE_SENS_DATA:
-            if (deviceInformation[SENS_TEMP]) {
+            if (deviceInformation[TEMP_SENS_ENABLE]) {
               busSetCommand(READ_SENS_INFO);
               busSetCommand(READ_SENS_DATA);
             }
@@ -2682,8 +2477,7 @@ void memoryResetSettings(void) {
 
   settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
   settings.nameMenu = DEFAULT_NAME_MENU; //установить отображение имени в меню по умолчанию
-  settings.namePrefix = DEFAULT_NAME_PREFIX; //установить отображение имени перед названием вкладки по умолчанию
-  settings.namePostfix = DEFAULT_NAME_POSTFIX; //установить отображение имени после названием вкладки по умолчанию
+  settings.nameTab = DEFAULT_NAME_TAB; //установить отображение имени перед названием вкладки по умолчанию
 
   strncpy(settings.nameDevice, DEFAULT_NAME, 20); //установить имя по умолчанию
   settings.nameDevice[19] = '\0'; //устанавливаем последний символ
@@ -2726,7 +2520,7 @@ void setup() {
   Serial.println F("");
   Serial.println F("Startup...");
   Serial.print F("Firmware version ");
-  Serial.print F(ESP_FIRMWARE_VERSION);
+  Serial.print F(ESP_FIRMWARE_VER);
   Serial.println F("...");
 
   //устанавливаем указатель будильниака
@@ -2795,7 +2589,7 @@ void loop() {
   wifiUpdate(); //обработка состояния wifi
   groupUpdate(); //обработка группового взаимодействия
 
-  if (deviceInformation[HARDWARE_VERSION] == HW_VERSION) { //если связь с часами установлена
+  if (deviceInformation[CLOCKBUS_VER] == CLOCKBUS_VERSION) { //если связь с часами установлена
     timeUpdate(); //обработка событий времени
     serviceUpdate(); //обработка интеренет сервисов
     deviceUpdate(); //обработка статусов устройства
@@ -2804,7 +2598,7 @@ void loop() {
   if (wirelessUpdate()) sensorSendData(SENS_WIRELESS); //обработка беспроводного датчика
 
   if (!updaterFlash()) busUpdate(); //обработка шины
-  else if (updaterRun()) busRebootDevice(SYSTEM_REBOOT); //загрузчик прошивки
+  else if (updaterRunFlash()) busRebootDevice(SYSTEM_REBOOT); //загрузчик прошивки
 
   memoryUpdate(); //обработка памяти настроек
   systemUpdate(); //обработка системных функций

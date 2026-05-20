@@ -11,17 +11,16 @@
 
 #define DEFAULT_WEATHER_CITY 37 //номер города из списка для получения данных о погоде по умолчанию(0..82)
 
+#define CLIMATE_BUFFER 100 //размер буфера памяти данных микроклимата на графике(50..250)
 #define DEFAULT_CLIMATE_AVG 1 //усреднение данных микроклимата на графике за указанный интервал по умолчанию(0 - добавлять текущие данные | 1 - добавлять усредненные данные)
 #define DEFAULT_CLIMATE_TIME 30 //интервал отображения данных микроклимата на графике по умолчанию(1..60)(мин)
-#define CLIMATE_BUFFER 100 //размер буфера памяти данных микроклимата на графике(50..250)
 
 #define DEFAULT_GROUP_FOUND 1 //обнаружение устройств поблизости по умолчанию(0 - обнаружение запрещено | 1 - обнаружение разрешено)
 
-#define DEFAULT_NAME "" //имя для отображения в веб интерфейсе по умолчанию(максимум 20 символов)
+#define DEFAULT_NAME "" //имя для отображения в веб интерфейсе по умолчанию(максимум 20 символов)(только EN)
 #define DEFAULT_NAME_AP 0 //отображать имя после названия точки доступа wifi по умолчанию(0 - не отображается | 1 - отображается)
+#define DEFAULT_NAME_TAB 0 //отображать имя перед названием вкладки по умолчанию(0 - не отображается | 1 - отображается)
 #define DEFAULT_NAME_MENU 0 //отображать в боковом меню по умолчанию(0 - не отображается | 1 - отображается)
-#define DEFAULT_NAME_PREFIX 0 //отображать имя перед названием вкладки по умолчанию(0 - не отображается | 1 - отображается)
-#define DEFAULT_NAME_POSTFIX 0 //отображать имя после названия вкладки по умолчанию(0 - не отображается | 1 - отображается)
 
 #define AP_IP 192, 168, 4, 4 //адрес точки доступа(по умолчанию - 192, 168, 4, 4)
 #define AP_SSID "NixieClockAP" //имя точки доступа(минимум 1 символ)(без пробелов)
@@ -29,7 +28,7 @@
 #define AP_CHANNEL 5 //канал точки доступа(1..13)
 
 #define WIFI_PHY_MODE WIFI_PHY_MODE_11G //режим работы wifi(WIFI_PHY_MODE_11B | WIFI_PHY_MODE_11G | WIFI_PHY_MODE_11N)
-#define WIFI_OUTPUT_POWER 0 //максимальная мощность передачи wifi сигнала(0 - по умолчанию)(0.25..20.5)(шаг - 0.25)(дБм)
+#define WIFI_OUTPUT_POWER 0 //максимальная мощность передачи wifi сигнала(0 - авто)(0.25..20.5)(шаг - 0.25)(дБм)
 
 #define STATUS_LED 1 //тип работы индикации состояния(0 - выключить | 1 - состояние wifi | 2 - индикация работы)
 
@@ -42,7 +41,7 @@
 #define TWI_SDA_PIN 4 //пин SDA шины I2C
 #define TWI_SCL_PIN 5 //пин SCL шины I2C
 
-//Настройки цветовой схемы, доступные цвета по умолчанию(GP_RED, GP_RED_B, GP_PINK, GP_PINK_B, GP_VIOL, GP_VIOL_B, GP_BLUE, GP_BLUE_B, GP_CYAN, GP_CYAN_B, GP_GREEN, GP_GREEN_B, GP_YELLOW, GP_YELLOW_B, GP_ORANGE, GP_ORANGE_B, GP_GRAY, GP_GRAY_B, GP_BLACK, GP_WHITE) или цвет в формате PSTR("#rrggbb")
+//Настройки цветовой схемы, доступные цвета по умолчанию - (GP_RED, GP_RED_B, GP_PINK, GP_PINK_B, GP_VIOL, GP_VIOL_B, GP_BLUE, GP_BLUE_B, GP_CYAN, GP_CYAN_B, GP_GREEN, GP_GREEN_B, GP_YELLOW, GP_YELLOW_B, GP_ORANGE, GP_ORANGE_B, GP_GRAY, GP_GRAY_B, GP_BLACK, GP_WHITE) или цвет в формате - ("#rrggbb")
 #define UI_SPINNER_COLOR "#e67b09" //цвет спинеров веб интерфейса
 #define UI_BUTTON_COLOR "#e67b09" //цвет кнопок веб интерфейса
 #define UI_SWITCH_COLOR "#e67b09" //цвет переключателей веб интерфейса
@@ -95,12 +94,12 @@
 #define UI_TIMER_SET_COLOR "#e67b09" //цвет кнопок настройки таймера/секундомера
 #define UI_TIMER_CTRL_COLOR "#e67b09" //цвет кнопок управления таймером/секундомером
 
-#define UI_WEATHER_TIME_COLOR "#e9c46a" //цвет времени в расшифровке погоды
-#define UI_WEATHER_LINE_COLOR "#2a2d35" //цвет горизонтальной линии в расшифровке погоды
-#define UI_WEATHER_TEMP_COLOR "#07b379" //цвет температуры в расшифровке погоды
-#define UI_WEATHER_HUM_COLOR "#07b379" //цвет влажности в расшифровке погоды
-#define UI_WEATHER_PRESS_COLOR "#07b379" //цвет давления в расшифровке погоды
-#define UI_WEATHER_BLOCK_COLOR "#2a2d35" //цвет блока информации в расшифровке погоды
+#define UI_WEATHER_TITLE_COLOR "#e67b09" //цвет заголовка в сводке погоды
+#define UI_WEATHER_HINT_COLOR "#999999" //цвет подсказки в сводке погоды
+#define UI_WEATHER_TEMP_COLOR "#e0e0e3" //цвет температуры в сводке погоды
+#define UI_WEATHER_HUM_COLOR "#e0e0e3" //цвет влажности в сводке погоды
+#define UI_WEATHER_PRESS_COLOR "#e0e0e3" //цвет давления в сводке погоды
+#define UI_WEATHER_BLOCK_COLOR "#2c2c2c" //цвет блока в сводке погоды
 
 #define UI_BAR_CLOCK_COLOR GP_WHITE //цвет времени в статус баре
 #define UI_BAR_TEMP_COLOR GP_GREEN //цвет температуры в статус баре
@@ -114,6 +113,3 @@
 #define OTA_PASS "0000" //пароль для активации обновления прошивки("" - отключить)(4..8)(символов)
 #define OTA_PASS_ATTEMPT 3 //количество попыток ввода пароля(1..5)
 #define OTA_PASS_TIMEOUT 30000 //таймаут ввода нового пароля(5000..60000)(мс)
-
-#define CLOCK_ADDRESS 127 //адрес шины часов
-#define ESP_FIRMWARE_VERSION "1.3.0_023" //версия прошивки модуля esp

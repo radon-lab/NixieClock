@@ -30,9 +30,12 @@ String wifiGetApSSID(void) {
   String str;
   str.reserve(70);
   str = F(AP_SSID);
-  if (settings.nameAp) {
-    str += F(" - ");
-    str += settings.nameDevice;
+  if (settings.nameDevice[0] != '\0') {
+    if (settings.nameAp) {
+      str += '[';
+      str += settings.nameDevice;
+      str += ']';
+    }
   }
   return str;
 }

@@ -1,5 +1,6 @@
 //Информация о интефейсе
-#define HW_VERSION 0x13 //версия прошивки для интерфейса wire
+#define CLOCK_ADDRESS 127 //адрес шины часов(127)
+#define CLOCKBUS_VERSION 0x13 //версия протокола шины часов(0x13)
 
 //Команды интерфейса
 #define BUS_WRITE_TIME 0x01
@@ -149,21 +150,21 @@ enum {
 uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
 
 enum {
-  FIRMWARE_VERSION_1,
-  FIRMWARE_VERSION_2,
-  FIRMWARE_VERSION_3,
-  HARDWARE_VERSION,
-  SENS_TEMP,
-  BTN_EASY_MAIN_MODE,
+  FIRMWARE_VER_H,
+  FIRMWARE_VER_M,
+  FIRMWARE_VER_L,
+  CLOCKBUS_VER,
+  TEMP_SENS_ENABLE,
+  BTN_EASY_MODE,
   LAMP_NUM,
   BACKL_TYPE,
-  NEON_DOT,
-  DOTS_PORT_ENABLE,
+  SECS_TYPE,
+  DOTS_ENABLE,
   DOTS_NUM,
   DOTS_TYPE,
   LIGHT_SENS_ENABLE,
   EXT_BTN_ENABLE,
-  DS3231_ENABLE,
+  RTC_ENABLE,
   TIMER_ENABLE,
   RADIO_ENABLE,
   ALARM_TYPE,
@@ -218,7 +219,7 @@ enum {
   FAST_DOT_MODE,
   FAST_BACKL_MODE,
   FAST_BACKL_COLOR,
-  FAST_NEON_DOT_MODE
+  FAST_SECS_TYPE_MODE
 };
 
 enum {
@@ -462,7 +463,7 @@ void busSetCommand(uint8_t cmd, uint8_t arg) {
 void busRebootDevice(uint8_t arg) {
   bus.bufferStart = bus.bufferEnd = 0;
   bus.status = BUS_STATUS_REBOOT;
-  if (deviceInformation[HARDWARE_VERSION] && (arg != SYSTEM_REBOOT)) busSetCommand(CONTROL_DEVICE, arg);
+  if (deviceInformation[CLOCKBUS_VER] && (arg != SYSTEM_REBOOT)) busSetCommand(CONTROL_DEVICE, arg);
   else busSetCommand(CONTROL_SYSTEM, SYSTEM_REBOOT);
   busTimerSetInterval(500);
 }
@@ -605,7 +606,7 @@ void busUpdate(void) {
               case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break;
               case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break;
               case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break;
-              case FAST_NEON_DOT_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break;
+              case FAST_SECS_TYPE_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break;
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
@@ -1188,21 +1189,21 @@ void busUpdate(void) {
           break;
         case READ_DEVICE:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_DEVICE)) { //начинаем передачу
-            deviceInformation[FIRMWARE_VERSION_1] = twi_read_byte(TWI_ACK);
-            deviceInformation[FIRMWARE_VERSION_2] = twi_read_byte(TWI_ACK);
-            deviceInformation[FIRMWARE_VERSION_3] = twi_read_byte(TWI_ACK);
-            deviceInformation[HARDWARE_VERSION] = twi_read_byte(TWI_ACK);
-            deviceInformation[SENS_TEMP] = twi_read_byte(TWI_ACK);
-            deviceInformation[BTN_EASY_MAIN_MODE] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_H] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_M] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_L] = twi_read_byte(TWI_ACK);
+            deviceInformation[CLOCKBUS_VER] = twi_read_byte(TWI_ACK);
+            deviceInformation[TEMP_SENS_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[BTN_EASY_MODE] = twi_read_byte(TWI_ACK);
             deviceInformation[LAMP_NUM] = twi_read_byte(TWI_ACK);
             deviceInformation[BACKL_TYPE] = twi_read_byte(TWI_ACK);
-            deviceInformation[NEON_DOT] = twi_read_byte(TWI_ACK);
-            deviceInformation[DOTS_PORT_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[SECS_TYPE] = twi_read_byte(TWI_ACK);
+            deviceInformation[DOTS_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[DOTS_NUM] = twi_read_byte(TWI_ACK);
             deviceInformation[DOTS_TYPE] = twi_read_byte(TWI_ACK);
             deviceInformation[LIGHT_SENS_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[EXT_BTN_ENABLE] = twi_read_byte(TWI_ACK);
-            deviceInformation[DS3231_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[RTC_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[TIMER_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[RADIO_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[ALARM_TYPE] = twi_read_byte(TWI_ACK);
@@ -1290,7 +1291,7 @@ void busUpdate(void) {
             twi_write_byte(BUS_CONTROL_DEVICE); //регистр команды
             twi_write_byte(DEVICE_UPDATE);
             if (!twi_error()) { //если передача была успешной
-              updaterStart(); //запуск обновления
+              updaterStartFlash(); //запуск обновления
               busShiftBuffer(); //сместили буфер команд
             }
           }

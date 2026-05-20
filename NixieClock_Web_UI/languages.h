@@ -29,17 +29,17 @@
 #define LANG_NTP_ATTEMPT "Попытка подключения"
 
 //-------------------------------------------------------//
-#define LANG_RTC_STATUS_1 "Не обнаружен..."
+#define LANG_RTC_STATUS_1 "Не обнаружен"
 #define LANG_RTC_STATUS_2 "Батарея разряжена"
 #define LANG_RTC_STATUS_3 "Подключен к часам"
 #define LANG_RTC_STATUS_4 "Работает исправно"
 
 //-------------------------------------------------------//
-#define LANG_WIRELESS_STATUS_1 "Ошибка..."
-#define LANG_WIRELESS_STATUS_2 "Не обнаружен..."
+#define LANG_WIRELESS_STATUS_1 "Ошибка"
+#define LANG_WIRELESS_STATUS_2 "Не обнаружен"
 #define LANG_WIRELESS_STATUS_3 "Подключен"
-#define LANG_WIRELESS_STATUS_4 "Потеряна связь..."
-#define LANG_WIRELESS_STATUS_5 "Нет сенсора..."
+#define LANG_WIRELESS_STATUS_4 "Потеряна связь"
+#define LANG_WIRELESS_STATUS_5 "Нет сенсора"
 
 #define LANG_WIRELESS_ALERT_TITLE "Оповещение"
 #define LANG_WIRELESS_ALERT_FOUND "Обнаружен беспроводной датчик температуры, подключить?"
@@ -104,6 +104,16 @@
 #define LANG_CLIMATE_PRESS "Давление"
 
 #define LANG_CLIMATE_NO_DATA "Нет данных"
+
+//-------------------------------------------------------//
+#define LANG_WEATHER_SUMMARY_1 "Ночь"
+#define LANG_WEATHER_SUMMARY_2 "Утро"
+#define LANG_WEATHER_SUMMARY_3 "День"
+#define LANG_WEATHER_SUMMARY_4 "Вечер"
+
+#define LANG_WEATHER_SUMMARY_TEMP "Температура °С"
+#define LANG_WEATHER_SUMMARY_HUM "Влажность %"
+#define LANG_WEATHER_SUMMARY_PRESS "Давление mm.Hg"
 
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Выключена,Статичная,Дыхание"
@@ -381,8 +391,8 @@
 //-------------------------------------------------------//
 #define LANG_PAGE_WEATHER_TITLE "Погода"
 
-#define LANG_PAGE_WEATHER_BLOCK_CHART "Погода на сутки"
-#define LANG_PAGE_WEATHER_BLOCK_HOURS "Погода по часам"
+#define LANG_PAGE_WEATHER_BLOCK_CHART "Динамика погоды"
+#define LANG_PAGE_WEATHER_BLOCK_SUMMARY "Сводка погоды"
 #define LANG_PAGE_WEATHER_NULL "Нет актуальных данных..."
 
 //-------------------------------------------------------//
@@ -481,19 +491,17 @@
 #define LANG_PAGE_INFO_GUI_CLOCK "Прошивка часов"
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Связь с часами"
-#define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально..."
-#define LANG_PAGE_INFO_GUI_STATE_NULL "Отсутствует..."
+#define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Отсутствует"
 #define LANG_PAGE_INFO_GUI_STATE_ERROR "Ошибка 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Сигнал"
 #define LANG_PAGE_INFO_GUI_BATTERY "Батарея"
 
-#define LANG_PAGE_INFO_GUI_NAME "Имя"
-#define LANG_PAGE_INFO_GUI_NONE "Без названия"
-#define LANG_PAGE_INFO_GUI_MENU "Меню"
-#define LANG_PAGE_INFO_GUI_PREFIX "Префикс"
-#define LANG_PAGE_INFO_GUI_POSTFIX "Постфикс"
+#define LANG_PAGE_INFO_GUI_DEVICE_NAME "Имя"
+#define LANG_PAGE_INFO_GUI_MENU_NAME "Меню"
+#define LANG_PAGE_INFO_GUI_TAB_NAME "Вкладка"
 #define LANG_PAGE_INFO_GUI_AP_NAME "Точка доступа"
 #define LANG_PAGE_INFO_GUI_DETECT "Обнаружение"
 #define LANG_PAGE_INFO_GUI_STATE "Состояние"
@@ -501,6 +509,7 @@
 #define LANG_PAGE_INFO_GUI_RESET "Сброс настроек"
 #define LANG_PAGE_INFO_GUI_REBOOT "Перезагрузка"
 
+#define LANG_PAGE_INFO_GUI_UNNAMED "Без названия"
 #define LANG_PAGE_INFO_GUI_EXECUTE "Выполнить"
 
 //-------------------------------------------------------//
@@ -581,17 +590,17 @@
 #define LANG_NTP_ATTEMPT "Attempting to connect"
 
 //-------------------------------------------------------//
-#define LANG_RTC_STATUS_1 "Not found..."
+#define LANG_RTC_STATUS_1 "Not found"
 #define LANG_RTC_STATUS_2 "Low battery"
 #define LANG_RTC_STATUS_3 "Connected to clock"
 #define LANG_RTC_STATUS_4 "Working fine"
 
 //-------------------------------------------------------//
-#define LANG_WIRELESS_STATUS_1 "Error..."
-#define LANG_WIRELESS_STATUS_2 "Not found..."
+#define LANG_WIRELESS_STATUS_1 "Error"
+#define LANG_WIRELESS_STATUS_2 "Not found"
 #define LANG_WIRELESS_STATUS_3 "Connected"
-#define LANG_WIRELESS_STATUS_4 "Connection lost..."
-#define LANG_WIRELESS_STATUS_5 "No sensor..."
+#define LANG_WIRELESS_STATUS_4 "Connection lost"
+#define LANG_WIRELESS_STATUS_5 "No sensor"
 
 #define LANG_WIRELESS_ALERT_TITLE "Notification"
 #define LANG_WIRELESS_ALERT_FOUND "Wireless temperature sensor detected, connect?"
@@ -656,6 +665,16 @@
 #define LANG_CLIMATE_PRESS "Pressure"
 
 #define LANG_CLIMATE_NO_DATA "No data"
+
+//-------------------------------------------------------//
+#define LANG_WEATHER_SUMMARY_1 "Night"
+#define LANG_WEATHER_SUMMARY_2 "Morning"
+#define LANG_WEATHER_SUMMARY_3 "Day"
+#define LANG_WEATHER_SUMMARY_4 "Evening"
+
+#define LANG_WEATHER_SUMMARY_TEMP "Temperature °С"
+#define LANG_WEATHER_SUMMARY_HUM "Humidity %"
+#define LANG_WEATHER_SUMMARY_PRESS "Pressure mm.Hg"
 
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Off,Static,Breathing"
@@ -933,8 +952,8 @@
 //-------------------------------------------------------//
 #define LANG_PAGE_WEATHER_TITLE "Weather"
 
-#define LANG_PAGE_WEATHER_BLOCK_CHART "Weather for the day"
-#define LANG_PAGE_WEATHER_BLOCK_HOURS "Weather by the hour"
+#define LANG_PAGE_WEATHER_BLOCK_CHART "Weather dynamics"
+#define LANG_PAGE_WEATHER_BLOCK_SUMMARY "Weather summary"
 #define LANG_PAGE_WEATHER_NULL "No actual data..."
 
 //-------------------------------------------------------//
@@ -1033,19 +1052,17 @@
 #define LANG_PAGE_INFO_GUI_CLOCK "Clock firmware"
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Connection with clock"
-#define LANG_PAGE_INFO_GUI_STATE_OK "Working fine..."
-#define LANG_PAGE_INFO_GUI_STATE_NULL "Missing..."
+#define LANG_PAGE_INFO_GUI_STATE_OK "Working fine"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Missing"
 #define LANG_PAGE_INFO_GUI_STATE_ERROR "Error 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Sygnal"
 #define LANG_PAGE_INFO_GUI_BATTERY "Battery"
 
-#define LANG_PAGE_INFO_GUI_NAME "Name"
-#define LANG_PAGE_INFO_GUI_NONE "Untitled"
-#define LANG_PAGE_INFO_GUI_MENU "Menu"
-#define LANG_PAGE_INFO_GUI_PREFIX "Prefix"
-#define LANG_PAGE_INFO_GUI_POSTFIX "Postfix"
+#define LANG_PAGE_INFO_GUI_DEVICE_NAME "Name"
+#define LANG_PAGE_INFO_GUI_MENU_NAME "Menu"
+#define LANG_PAGE_INFO_GUI_TAB_NAME "Brouser tab"
 #define LANG_PAGE_INFO_GUI_AP_NAME "Access point"
 #define LANG_PAGE_INFO_GUI_DETECT "Detection"
 #define LANG_PAGE_INFO_GUI_STATE "State"
@@ -1053,6 +1070,7 @@
 #define LANG_PAGE_INFO_GUI_RESET "Reset settings"
 #define LANG_PAGE_INFO_GUI_REBOOT "Restart device"
 
+#define LANG_PAGE_INFO_GUI_UNNAMED "Untitled"
 #define LANG_PAGE_INFO_GUI_EXECUTE "Execute"
 
 //-------------------------------------------------------//

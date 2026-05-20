@@ -27,7 +27,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 .blockSpace{display:block;padding:0;flex-grow:1;}
 .blockOfst{padding-bottom:10px;padding-top:5px;}
 .blockTab{padding-top:0;}
-.blockHeader{padding:4px;margin:0 -10px 10px -10px;border-radius:10px 10px 0 0;color:#13161a;font-size:22px;text-align:center;background-color:#4caf50;}
+.blockHeader{padding:4px;margin:0 -10px 10px -10px;border-radius:20px 20px 0 0;color:#13161a;font-size:22px;text-align:center;background-color:#4caf50;}
 .chartBlock{margin:3px;width:90%;border-radius:10px;}
 .thinBlock{background:#13161a;border:2px solid #3c4048;}
 .thinBold{padding:5px 5px 5px 15px;border-width:4px;border-radius:25px;}

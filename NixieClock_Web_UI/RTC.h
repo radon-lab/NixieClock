@@ -148,7 +148,7 @@ uint8_t rtcInitTime(void) //инициализируем модуль RTC
 
   rtc_status = RTC_NOT_FOUND; //модуль RTC не обнаружен
 
-  if (deviceInformation[DS3231_ENABLE]) return 2; //выходим
+  if (deviceInformation[RTC_ENABLE]) return 2; //выходим
 
   if (attemptsRTC < 5) attemptsRTC++; //попытка запроса температуры
   else return 2; //иначе выходим
