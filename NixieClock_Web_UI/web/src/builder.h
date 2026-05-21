@@ -749,14 +749,6 @@ struct Builder {
   void VOID_BOX_BEGIN(void) {
     SEND(F("<div>\n"));
   }
-  void VOID_BOX(const String& w) {
-    if (w.length()) {
-      *_GPP += F("<div style='width:");
-      *_GPP += w;
-      *_GPP += F("'></div>\n");
-      send();
-    }
-  }
   void BOX_END(void) {
     SEND(F("</div>\n"));
   }
@@ -768,15 +760,29 @@ struct Builder {
     SEND(F("</footer>"));
   }
 
-  void BREAK(const String& h = "") {
-    *_GPP += F("<br");
-    if (h.length()) {
-      *_GPP += F(" style='line-height:");
-      *_GPP += h;
-      *_GPP += '\'';
+  void BREAK(void) {
+    SEND(F("<br>\n"));
+  }
+  void BREAK(const String& w, const String& h) {
+    *_GPP += F("<div style='");
+    if (w.length()) {
+      *_GPP += F("width:");
+      *_GPP += w;
+      *_GPP += ';';
     }
-    *_GPP += F(">\n");
+    if (h.length()) {
+      *_GPP += F("height:");
+      *_GPP += h;
+      *_GPP += ';';
+    }
+    *_GPP += F("'></div>\n");
     send();
+  }
+  void BREAK_W(const String& w) {
+    BREAK(w, "");
+  }
+  void BREAK_H(const String& h) {
+    BREAK("", h);
   }
 
   void VR(PGM_P st = GP_DEFAULT, int height = 0) {

@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_024 бета от 20.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_024 бета от 21.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -106,27 +106,42 @@ void PAGE_TITLE_NAME(const String& title) {
   GP.PAGE_TITLE(str);
 }
 //--------------------------------------------------------------------
-void PAGE_WEATHER_BLOCK(const String& title, const String& temp, const String& hum, const String& press) {
+void PAGE_WEATHER_BLOCK(const String& title, float temp_min, float temp_max, uint8_t hum_min, uint8_t hum_max, uint16_t press_min, uint16_t press_max) {
+  String str;
+  str.reserve(70);
+
   GP.BLOCK_BEGIN(GP_DIV_RAW, "100%;width:100%");
   GP.BLOCK_BEGIN(GP_TAB, "100%;height:300px;margin-top:10px", title, UI_WEATHER_TITLE_COLOR, UI_WEATHER_BLOCK_COLOR);
 
   GP.BREAK();
 
+  str = String(temp_min, 1);
+  str += F("…");
+  str += String(temp_max, 1);
+
   GP.LABEL(LANG_WEATHER_SUMMARY_TEMP, "", UI_WEATHER_HINT_COLOR, 14);
   GP.BREAK();
-  GP.LABEL(temp, "", UI_WEATHER_TEMP_COLOR);
+  GP.LABEL(str, "", UI_WEATHER_TEMP_COLOR);
 
   GP.BREAK(); GP.BREAK(); GP.BREAK();
+
+  str = hum_min;
+  str += F("…");
+  str += hum_max;
 
   GP.LABEL(LANG_WEATHER_SUMMARY_HUM, "", UI_WEATHER_HINT_COLOR, 14);
   GP.BREAK();
-  GP.LABEL(hum, "", UI_WEATHER_HUM_COLOR);
+  GP.LABEL(str, "", UI_WEATHER_HUM_COLOR);
 
   GP.BREAK(); GP.BREAK(); GP.BREAK();
 
+  str = press_min;
+  str += F("…");
+  str += press_max;
+
   GP.LABEL(LANG_WEATHER_SUMMARY_PRESS, "", UI_WEATHER_HINT_COLOR, 14);
   GP.BREAK();
-  GP.LABEL(press, "", UI_WEATHER_PRESS_COLOR);
+  GP.LABEL(str, "", UI_WEATHER_PRESS_COLOR);
 
   GP.BREAK(); GP.BREAK(); GP.BREAK();
 
@@ -183,7 +198,7 @@ void webShowUpdateUI(void) {
   if (fsUpdate) {
     M_BOX(GP.LABEL(LANG_PAGE_UPDATE_GUI_FS_ESP, "", UI_LABEL_COLOR); GP.OTA_FILESYSTEM("📼", UI_BUTTON_COLOR, true););
   }
-  GP.VOID_BOX("0;height:10px");
+  GP.BREAK_H("10px");
 }
 void webShowUpdateAuth(void) {
   GP.HR_TEXT(LANG_PAGE_UPDATE_HR_AUTH, UI_LINE_COLOR, UI_HINT_COLOR, "", GP_CENTER);
@@ -196,7 +211,7 @@ void webShowUpdateAuth(void) {
     M_BOX(GP_CENTER, GP.TEXT("", "", LANG_PAGE_UPDATE_GUI_PASS, "", 0, "", true); GP.BUTTON_MINI("", LANG_PAGE_UPDATE_GUI_LOGIN, "", GP_GRAY, "200px!important", true););
     GP.SPAN(String((passGetCheckError()) ? LANG_PAGE_UPDATE_WARN_PASS : "") + LANG_PAGE_UPDATE_WARN_TIME, GP_CENTER, "", GP_RED); //описание
   }
-  GP.VOID_BOX("0;height:10px");
+  GP.BREAK_H("10px");
 }
 //--------------------------------------------------------------------
 boolean webShowUpdateState(void) {
@@ -784,7 +799,7 @@ void build(void) {
       GP.HINT_NOTIFY("id_2", LANG_PAGE_SETTINGS_GUI_HINT_LIGHT); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsTimeBrightS", mainSettings.timeBrightStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
-            GP.VOID_BOX("20px");
+            GP.BREAK_W("20px");
             GP.SPINNER("setsTimeBrightE", mainSettings.timeBrightEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
       GP.HINT_BOX("id_3", "setsTimeBrightS", "setsTimeBrightE", lightHint);
@@ -792,7 +807,7 @@ void build(void) {
       GP.HINT_NOTIFY("id_4", LANG_PAGE_SETTINGS_GUI_HINT_SLEEP); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_DAY, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsSleepD", mainSettings.timeSleepDay, 0, 90, 15, 0, UI_SPINNER_COLOR);
-            GP.VOID_BOX("20px");
+            GP.BREAK_W("20px");
             GP.SPINNER("setsSleepN", mainSettings.timeSleepNight, 0, 30, 5, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_NIGHT, "", UI_LABEL_COLOR, 52);
            );
       GP.BREAK();
@@ -840,7 +855,7 @@ void build(void) {
       GP.HINT_NOTIFY("id_5", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
       M_BOX(GP_CENTER,
             GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
-            GP.VOID_BOX("20px");
+            GP.BREAK_W("20px");
             GP.SPINNER("setsHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
       GP.HINT_BOX("id_6", "setsHourSoundS", "setsHourSoundE", LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1);
@@ -913,7 +928,7 @@ void build(void) {
 #else
         GP.PLOT_STOCK_BEGIN(climateLocal);
 #endif
-
+        GP.BREAK_H("8px");
         if (climateGetChartHum()) {
           GP.PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], climateArrMain[1], CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
@@ -921,6 +936,7 @@ void build(void) {
           GP.PLOT_STOCK_DARK("climateDataMain", climateNamesMain, climateDates, climateArrMain[0], NULL, CLIMATE_BUFFER, 1, 10, heightSize, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
         }
         if (climateGetChartPress()) {
+          GP.BREAK_H("8px");
           GP.PLOT_STOCK_DARK("climateDataExt", climateNamesExt, climateDates, climateArrExt[0], NULL, CLIMATE_BUFFER, 2, 0, heightSize, UI_BAR_PRESS_COLOR);
         }
       }
@@ -962,7 +978,7 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_TIME, "", UI_LABEL_COLOR); GP.TEXT("", "", String(wirelessGetInterval()) + LANG_PAGE_CLIMATE_GUI_SENS_MINS, "", 0, "", true););
       }
 
-      GP.BREAK("35px");
+      GP.BREAK();
       GP.BLOCK_END();
     }
     else if (ui.uri("/weather")) { //погода
@@ -975,7 +991,9 @@ void build(void) {
 #else
         GP.PLOT_STOCK_BEGIN(climateLocal);
 #endif
+        GP.BREAK_H("8px");
         GP.PLOT_STOCK_DARK("weatherDataMain", climateNamesMain, weatherDates, weatherArrMain[0], weatherArrMain[1], WEATHER_BUFFER, 1, 10, 300, UI_BAR_TEMP_COLOR, UI_BAR_HUM_COLOR);
+        GP.BREAK_H("8px");
         GP.PLOT_STOCK_DARK("weatherDataExt", climateNamesExt, weatherDates, weatherArrExt[0], NULL, WEATHER_BUFFER, 2, 10, 300, UI_BAR_PRESS_COLOR);
         GP.BREAK();
         GP.BLOCK_END();
@@ -991,11 +1009,12 @@ void build(void) {
         uint16_t press_min = 20000; //давление
         uint16_t press_max = 0; //давление
 
-        GP.SEND("<style>.grid4,.grid2{justify-content:space-evenly;max-width:100%;}"
-                "@media screen and (max-width:1100px){.grid4{display:block;}}@media screen and (max-width:450px){.grid2{display:block;}}</style>\n");
+        GP.SEND(F("<style>.grid4,.grid2{justify-content:space-evenly;align-content:normal;max-width:100%;}"
+                  "@media screen and (max-width:1150px){.grid4{display:block;}}"
+                  "@media screen and (max-width:450px){.grid2{display:block;}.grid4{margin-top:15px;)}</style>\n"));
 
         GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_WEATHER_BLOCK_SUMMARY, UI_BLOCK_COLOR);
-        GP.SEND("<div style='max-width:98%;' class='inliner grid4'><div class='inliner grid2'>");
+        GP.SEND(F("<div style='max-width:98%;' class='inliner grid4'><div class='inliner grid2'>"));
         for (uint8_t i = 0; i < WEATHER_BUFFER; i++) {
           if (temp_min > weatherArrMain[0][i]) temp_min = weatherArrMain[0][i];
           if (temp_max < weatherArrMain[0][i]) temp_max = weatherArrMain[0][i];
@@ -1006,9 +1025,9 @@ void build(void) {
 
           if (++time_start > 23) time_start = 0;
           if (time_block != (time_start / 6)) {
-            if (time_block == block_start) GP.SEND("</div><div class='inliner grid2'>");
+            if (time_block == block_start) GP.SEND(F("</div><div class='inliner grid2'>"));
 
-            PAGE_WEATHER_BLOCK(weatherSummaryList[time_block], String(temp_min / 10.0, 1) + ".." + String(temp_max / 10.0, 1), hum_min + String("..") + hum_max, String(press_min / 10) + ".." + String(press_max / 10));
+            PAGE_WEATHER_BLOCK(weatherSummaryList[time_block], temp_min / 10.0, temp_max / 10.0, hum_min, hum_max, press_min / 10, press_max / 10);
 
             time_block = time_start / 6;
             temp_min = 1000;
@@ -1019,7 +1038,7 @@ void build(void) {
             press_max = 0;
           }
         }
-        GP.SEND("</div></div>\n");
+        GP.SEND(F("</div></div>\n"));
       }
       else {
         GP.BLOCK_BEGIN(GP_TAB, "93%;padding:20% 5px", "", GP_DEFAULT);
@@ -1077,7 +1096,7 @@ void build(void) {
         );
       }
       GP.TABLE_END();
-      GP.VOID_BOX("0;height:10px");
+      GP.BREAK_H("10px");
       GP.BLOCK_END();
 
       GP.UPDATE_CLICK("radioSta/0,radioSta/1,radioSta/2,radioSta/3,radioSta/4,radioSta/5,radioSta/6,radioSta/7,radioSta/8,radioSta/9,radioFreq",
@@ -1217,7 +1236,7 @@ void build(void) {
       GP.HR_TEXT(LANG_PAGE_INFO_HR_CONTROL, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_RESET, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("resetButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
       M_BOX(GP_JUSTIFY, M_BOX(GP_LEFT, "200px", GP.LABEL(LANG_PAGE_INFO_GUI_REBOOT, "", UI_LABEL_COLOR);); GP.BUTTON_MINI("rebootButton", LANG_PAGE_INFO_GUI_EXECUTE, "", UI_BUTTON_COLOR, "200px"););
-      GP.VOID_BOX("0;height:8px");
+      GP.BREAK_H("8px");
       GP.BLOCK_END();
       GP.NAV_BLOCK_END();
 
