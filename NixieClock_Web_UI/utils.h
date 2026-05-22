@@ -157,6 +157,14 @@ String convertTimerTime(void) { //преобразовать время в фо�
   return str;
 }
 //--------------------------------------------------------------------
+uint8_t backlGetColorCode(uint8_t color) {
+  return (color < 253) ? (color / 10) : (color - 227);
+}
+//--------------------------------------------------------------------
+uint8_t backlConvertColorCode(uint8_t color) {
+  return (color > 25) ? (color + 227) : (color * 10);
+}
+//--------------------------------------------------------------------
 String backlModeList(void) { //список режимов подсветки
   String str;
   str.reserve(500);

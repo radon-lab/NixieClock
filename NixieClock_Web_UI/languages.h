@@ -117,7 +117,7 @@
 
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Выключена,Статичная,Дыхание"
-#define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти"
+#define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти,Свечи"
 #define LANG_BACKL_DISABLE "Не используется"
 
 //-------------------------------------------------------//
@@ -678,7 +678,7 @@
 
 //-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Off,Static,Breathing"
-#define LANG_BACKL_MODE_2 ",Breathing with color change when fading,Running fire,Running fire with color change,Running fire with rainbow,Running fire with confetti,Wave,Wave with color change,Wave with rainbow,Wave with confetti,Smooth color change,Rainbow,Confetti"
+#define LANG_BACKL_MODE_2 ",Breathing with color change when fading,Running fire,Running fire with color change,Running fire with rainbow,Running fire with confetti,Wave,Wave with color change,Wave with rainbow,Wave with confetti,Smooth color change,Rainbow,Confetti,Candles"
 #define LANG_BACKL_DISABLE "Not used"
 
 //-------------------------------------------------------//

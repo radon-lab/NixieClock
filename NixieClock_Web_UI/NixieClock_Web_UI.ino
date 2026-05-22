@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_024 бета от 21.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_025 бета от 22.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -29,7 +29,7 @@
   Питать модуль ESP8266 от вывода 3v3 ардуино нельзя! Нужно использовать линейный стабилизатор или DC-DC преобразователь на 3.3в!
 */
 
-#define ESP_FIRMWARE_VER "1.3.0_024" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.0_025" //версия прошивки модуля esp
 
 #include "config.h"
 #include "languages.h"
@@ -454,7 +454,7 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SECS, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSecsFlip", secsModeList(), fastSettings.secsMode, 0, (boolean)(deviceInformation[LAMP_NUM] < 6)););
         GP.HR(UI_LINE_COLOR);
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_BACKL, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_COLOR_C("setsColor", ledColorList, (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_COLOR_C("setsColor", ledColorList, backlGetColorCode(fastSettings.backlColor), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
         GP.HR(UI_LINE_COLOR);
         if (!deviceInformation[PLAYER_TYPE]) {
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
@@ -819,7 +819,7 @@ void build(void) {
 
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_BRIGHT, UI_BLOCK_COLOR);
-      M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_COLOR_C("setsColor", ledColorList, (fastSettings.backlColor < 253) ? (fastSettings.backlColor / 10) : (fastSettings.backlColor - 227), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
+      M_BOX(GP_JUSTIFY, "100%;height:52px", GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); GP.SLIDER_COLOR_C("setsColor", ledColorList, backlGetColorCode(fastSettings.backlColor), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3)););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_MODE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsBackl", backlModeList(), fastSettings.backlMode, 0, (boolean)!deviceInformation[BACKL_TYPE]););
       GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_BRIGHT, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1606,8 +1606,7 @@ void action() {
         busSetCommand(WRITE_FAST_SET, FAST_BACKL_MODE);
       }
       if (ui.click("setsColor")) {
-        uint8_t color = constrain(ui.getInt("setsColor"), 0, 28);
-        fastSettings.backlColor = (color > 25) ? (color + 227) : (color * 10);
+        fastSettings.backlColor = backlConvertColorCode(constrain(ui.getInt("setsColor"), 0, 28));
         busSetCommand(WRITE_FAST_SET, FAST_BACKL_COLOR);
       }
 
