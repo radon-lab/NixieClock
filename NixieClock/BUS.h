@@ -1,3 +1,5 @@
+#define HARDWARE_VERSION 0x13 //версия протокола шины часов(0x13)
+
 #define BUS_WAIT_DATA 0x00
 
 #define BUS_WRITE_TIME 0x01

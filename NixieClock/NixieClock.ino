@@ -1,11 +1,15 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_023 бета от 12.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_025 бета от 22.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
   Исходник - https://github.com/radon-lab/NixieClock
   Автор Radon-lab.
 */
+
+
+//--------------Версия прошивки-------------
+#define FIRMWARE_VERSION "0.2.5"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -308,11 +312,17 @@ void INIT_SYSTEM(void) //инициализация
 #endif
       debugMenu(); //запускаем отладку
   }
+#if !TEST_START_MODE
   else if (!RIGHT_CHK) testSystem(); //если правая кнопка зажата запускаем тест системы
+#endif
 #if FLIP_ANIM_START == 1
   else animShow = ANIM_MAIN; //установили флаг анимации
 #elif FLIP_ANIM_START > 1
   else animShow = (ANIM_OTHER + FLIP_ANIM_START); //установили флаг анимации
+#endif
+
+#if TEST_START_MODE
+  testSystem(); //если правая кнопка зажата запускаем тест системы
 #endif
 
   checkErrors(); //проверка на наличие ошибок
@@ -1018,6 +1028,7 @@ void changeBright(void) //установка яркости от времени 
           case BACKL_SMOOTH_COLOR_CHANGE:
           case BACKL_RAINBOW:
           case BACKL_CONFETTI:
+          case BACKL_CANDLE:
             wsBacklSetLedBright(backl.maxBright); //устанавливаем максимальную яркость
             break;
         }
@@ -1034,14 +1045,14 @@ void changeBright(void) //установка яркости от времени 
         backl.minBright = (backl.maxBright > (BACKL_MIN_BRIGHT + 10)) ? BACKL_MIN_BRIGHT : 0;
         uint8_t backlNowBright = (backl.maxBright > BACKL_MIN_BRIGHT) ? (backl.maxBright - BACKL_MIN_BRIGHT) : backl.maxBright;
 
-        backl.mode_2_time = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт периода шага яркости
-        backl.mode_2_step = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
+        backl.mode.pulseTime = setBrightTime((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт периода шага яркости
+        backl.mode.pulseStep = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_TYPE == 3
-        backl.mode_4_step = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
-        if (!backl.mode_4_step) backl.mode_4_step = 1; //если шаг слишком мал
-        backl.mode_8_time = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт периода шага яркости
-        backl.mode_8_step = setBrightStep((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
+        backl.mode.runStep = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
+        if (!backl.mode.runStep) backl.mode.runStep = 1; //если шаг слишком мал
+        backl.mode.waveTime = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт периода шага яркости
+        backl.mode.waveStep = setBrightStep((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
 #endif
       }
     }
@@ -1068,12 +1079,12 @@ void backlEffect(void) //анимация подсветки
           return; //выходим
         case BACKL_PULS:
         case BACKL_PULS_COLOR: { //дыхание подсветки
-            _timer_ms[TMR_BACKL] = backl.mode_2_time; //установили таймер
+            _timer_ms[TMR_BACKL] = backl.mode.pulseTime; //установили таймер
             if (backl.drive) { //если светодиоды в режиме разгорания
-              if (wsBacklIncLedBright(backl.mode_2_step, backl.maxBright)) backl.drive = 0; //прибавили шаг яркости
+              if (wsBacklIncLedBright(backl.mode.pulseStep, backl.maxBright)) backl.drive = 0; //прибавили шаг яркости
             }
             else { //иначе светодиоды в режиме затухания
-              if (wsBacklDecLedBright(backl.mode_2_step, backl.minBright)) { //уменьшаем яркость
+              if (wsBacklDecLedBright(backl.mode.pulseStep, backl.minBright)) { //уменьшаем яркость
                 backl.drive = 1;
                 if (fastSettings.backlMode == BACKL_PULS_COLOR) backl.color += BACKL_MODE_3_COLOR; //меняем цвет
                 else backl.color = fastSettings.backlColor; //иначе статичный цвет
@@ -1089,7 +1100,7 @@ void backlEffect(void) //анимация подсветки
         case BACKL_RUNNING_FIRE_CONFETTI: { //бегущий огонь
             _timer_ms[TMR_BACKL] = BACKL_MODE_4_TIME / LEDS_NUM / BACKL_MODE_4_FADING; //установили таймер
             if (backl.steps) { //если есть шаги затухания
-              wsBacklDecLedsBright(backl.position - 1, backl.mode_4_step); //уменьшаем яркость
+              wsBacklDecLedsBright(backl.position - 1, backl.mode.runStep); //уменьшаем яркость
               backl.steps--; //уменьшаем шаги затухания
             }
             else { //иначе двигаем голову
@@ -1112,16 +1123,16 @@ void backlEffect(void) //анимация подсветки
         case BACKL_WAVE_COLOR:
         case BACKL_WAVE_RAINBOW:
         case BACKL_WAVE_CONFETTI: { //волна
-            _timer_ms[TMR_BACKL] = backl.mode_8_time; //установили таймер
+            _timer_ms[TMR_BACKL] = backl.mode.waveTime; //установили таймер
             switch (backl.steps) { //в зависимости от текущего шага анимации
               case 0:
               case 2:
-                if (wsBacklIncLedBright(backl.position, backl.mode_8_step, backl.maxBright)) { //прибавили шаг яркости
+                if (wsBacklIncLedBright(backl.position, backl.mode.waveStep, backl.maxBright)) { //прибавили шаг яркости
                   backl.drive = 1; //установили флаг завершения анимации
                 }
                 break;
               default:
-                if (wsBacklDecLedBright(backl.position, backl.mode_8_step, backl.minBright)) { //убавили шаг яркости
+                if (wsBacklDecLedBright(backl.position, backl.mode.waveStep, backl.minBright)) { //убавили шаг яркости
                   backl.drive = 1; //установили флаг завершения анимации
                 }
                 break;
@@ -1164,6 +1175,13 @@ void backlEffect(void) //анимация подсветки
             }
           }
           break;
+        case BACKL_CANDLE:
+          _timer_ms[TMR_BACKL] = BACKL_MODE_15_TIME; //установили таймер
+          for (uint8_t i = 0; i < LEDS_NUM; i++) {
+            backl.mode.candleState[i] = ((backl.mode.candleState[i] * (255 - BACKL_MODE_15_SMOOTH)) + ((backl.mode.candleMove[i] * 10) * BACKL_MODE_15_SMOOTH)) >> 8;
+            wsBacklSetHeatColor(i, (((uint16_t)((CONSTRAIN(backl.mode.candleState[i], 20, 60) - 20) * BACKL_MODE_15_CAST) * 26) >> 8) + BACKL_MODE_15_COLOR);
+          }
+          break;
       }
     }
     if (!_timer_ms[TMR_COLOR]) { //если время пришло
@@ -1173,7 +1191,7 @@ void backlEffect(void) //анимация подсветки
         case BACKL_RAINBOW: { //радуга
             _timer_ms[TMR_COLOR] = BACKL_MODE_13_TIME; //установили таймер
             backl.color += BACKL_MODE_13_STEP; //прибавили шаг
-            for (uint8_t f = 0; f < LEDS_NUM; f++) wsBacklSetLedHue(f, backl.color + (f * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
+            for (uint8_t i = 0; i < LEDS_NUM; i++) wsBacklSetLedHue(i, backl.color + (i * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
           }
           break;
         case BACKL_RUNNING_FIRE_CONFETTI:
@@ -1191,20 +1209,26 @@ void backlEffect(void) //анимация подсветки
             wsBacklSetLedHue(backl.color, WHITE_OFF); //установили цвет
           }
           break;
+        case BACKL_CANDLE:
+          _timer_ms[TMR_COLOR] = BACKL_MODE_15_MOVE_TIME; //установили таймер
+          for (uint8_t i = 0; i < LEDS_NUM; i++) {
+            backl.mode.candleMove[i] = random(0, 10); //задаем направление
+          }
+          break;
       }
     }
   }
 #elif BACKL_TYPE != 3
   if (backl.maxBright && fastSettings.backlMode == BACKL_PULS) {
     if (!_timer_ms[TMR_BACKL]) {
-      _timer_ms[TMR_BACKL] = backl.mode_2_time;
+      _timer_ms[TMR_BACKL] = backl.mode.pulseTime;
       if (backl.drive) {
-        if (ledBacklDecBright(backl.mode_2_step, backl.minBright)) {
+        if (ledBacklDecBright(backl.mode.pulseStep, backl.minBright)) {
           _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE;
           backl.drive = 0;
         }
       }
-      else if (ledBacklIncBright(backl.mode_2_step, backl.maxBright)) backl.drive = 1;
+      else if (ledBacklIncBright(backl.mode.pulseStep, backl.maxBright)) backl.drive = 1;
     }
   }
 #endif
@@ -2606,27 +2630,43 @@ void testSystem(void) //проверка системы
 #endif
 
   while (1) {
-#if INDI_SYMB_TYPE
+#if INDI_SYMB_TYPE || TEST_START_MODE
     indiClr(); //очистка индикаторов
     for (uint8_t symb = 0; symb < 10; symb++) {
+#if INDI_SYMB_TYPE
       indiSetSymb(ID(symb)); //установка индикатора символов
+#endif
+#if TEST_START_MODE
+      indiPrintNum(symb, 0, LAMP_NUM, symb); //отрисовываем цифру
+#if BACKL_TYPE == 3
+      wsBacklSetLedBright(TEST_BACKL_BRIGHT); //включаем светодиоды
+      wsBacklSetRangeHue(0, LEDS_NUM, symb * 25); //устанавливаем статичный цвет
+#endif
+#endif
       for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
         dataUpdate(); //обработка данных
         if (buttonState()) return; //выходим если нажата кнопка
       }
+#if TEST_START_MODE
+      if (symb >= 9) return; //выходим
+#endif
     }
+#if INDI_SYMB_TYPE
     indiClrSymb(); //очистка индикатора символов
 #endif
+#endif
+
+#if !TEST_START_MODE
     for (uint8_t indi = 0; indi < LAMP_NUM; indi++) {
       indiClr(); //очистка индикаторов
 #if BACKL_TYPE == 3
       wsBacklSetLedBright(0); //выключаем светодиоды
-      wsBacklSetLedBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
+      wsBacklSetDigitBright(indi, TEST_BACKL_BRIGHT); //включаем светодиод
 #endif
       for (uint8_t digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_TYPE == 3
-        wsBacklSetLedHue(indi, digit * 25, WHITE_OFF); //устанавливаем статичный цвет
+        wsBacklSetDigitHue(indi, digit * 25); //устанавливаем статичный цвет
 #endif
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
           dataUpdate(); //обработка данных
@@ -2634,6 +2674,7 @@ void testSystem(void) //проверка системы
         }
       }
     }
+#endif
   }
 }
 //-----------------------------Отладка------------------------------------
@@ -4712,7 +4753,7 @@ boolean radioMainMenu(void) //меню настроек радио
       indiPrintNum(_station, (LAMP_NUM / 2), 2, 0); //вывод настройки
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
       wsBacklSetMultiHue((LAMP_NUM / 2), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
-      wsBacklSetLedHue(((LAMP_NUM / 2) - 2), RADIO_BACKL_COLOR_1, WHITE_ON);
+      wsBacklSetDigitHue(((LAMP_NUM / 2) - 2), RADIO_BACKL_COLOR_1);
 #endif
       _state = 1; //установили флаг бездействия
     }
@@ -4889,7 +4930,7 @@ uint8_t radioScreen(void) //радиоприемник
         if (!radio.seekRun) { //если не идет поиск
           boolean freq_backl = (radioSettings.stationsFreq >= 1000);
           wsBacklSetMultiHue((freq_backl) ? 0 : 1, (freq_backl) ? 3 : 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
-          wsBacklSetLedHue(3, RADIO_BACKL_COLOR_3, WHITE_ON);
+          wsBacklSetDigitHue(3, RADIO_BACKL_COLOR_3);
         }
         else wsBacklSetMultiHue((radio.seekAnim >> 1) - 1, 1, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2); //иначе анимация
 #endif
@@ -4897,7 +4938,7 @@ uint8_t radioScreen(void) //радиоприемник
         if (radioSettings.stationNum < RADIO_MAX_STATIONS) {
           indiPrintNum(radioSettings.stationNum, 5); //номер станции
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-          wsBacklSetLedHue(5, RADIO_BACKL_COLOR_3, WHITE_ON);
+          wsBacklSetDigitHue(5, RADIO_BACKL_COLOR_3);
 #endif
         }
 #endif
@@ -5526,7 +5567,7 @@ uint8_t showDate(void) //показать дату
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
           wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
 #if SHOW_DATE_WEEK
-          wsBacklSetLedHue(5, SHOW_DATE_BACKL_DW, WHITE_ON);
+          wsBacklSetDigitHue(5, SHOW_DATE_BACKL_DW);
 #endif
 #endif
           break;
@@ -5634,8 +5675,8 @@ void autoShowMenu(void) //меню автоматического показа
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
-          wsBacklSetMultiHue(4, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_COLOR_T); //установили цвет температуры и влажности
-          wsBacklSetLedHue(3, SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет пустого сегмента
+          wsBacklSetMultiHue(0, 3, SHOW_TEMP_COLOR_T, SHOW_DATE_BACKL_N); //установили цвет температуры и влажности
+          wsBacklSetRangeHue(4, 2, SHOW_TEMP_COLOR_H); //установили цвет пустого сегмента
         }
         else wsBacklSetLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
 #else
@@ -5701,7 +5742,7 @@ void autoShowMenu(void) //меню автоматического показа
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
         wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
 #if SHOW_DATE_WEEK
-        wsBacklSetLedHue(5, SHOW_DATE_BACKL_DW, WHITE_ON);
+        wsBacklSetDigitHue(5, SHOW_DATE_BACKL_DW);
 #endif
 #endif
         break;

@@ -112,6 +112,7 @@ enum {
   BACKL_SMOOTH_COLOR_CHANGE, //плавная смена цвета
   BACKL_RAINBOW, //радуга
   BACKL_CONFETTI, //конфетти
+  BACKL_CANDLE, //свечи
 #endif
   BACKL_EFFECT_NUM //максимум эффектов подсветки
 };
@@ -280,11 +281,17 @@ struct backlightData {
   uint8_t maxBright; //максимальная яркость подсветки
   uint8_t minBright; //минимальная яркость подсветки
   uint8_t menuBright; //максимальная яркость подсветки в меню
-  uint8_t mode_2_step; //шаг эффекта номер 2
-  uint16_t mode_2_time; //время эффекта номер 2
-  uint8_t mode_4_step; //шаг эффекта номер 4
-  uint8_t mode_8_step; //шаг эффекта номер 6
-  uint16_t mode_8_time; //время эффекта номер 6
+  struct backlightMode {
+    uint8_t pulseStep; //шаг эффекта дыхание
+    uint16_t pulseTime; //время эффекта дыхание
+#if BACKL_TYPE == 3
+    uint8_t runStep; //шаг эффекта бегущий огонь
+    uint8_t waveStep; //шаг эффекта волна
+    uint16_t waveTime; //время эффекта волна
+    uint8_t candleState[LEDS_NUM]; //массив состояний режима свечи
+    uint8_t candleMove[LEDS_NUM]; //массив смещений режима свечи
+#endif
+  } mode;
 } backl;
 
 //переменные работы с индикаторами
@@ -808,7 +815,7 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
 boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверка данных в памяти
 {
   uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
-  
+
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
   return (boolean)(crc != EEPROM_ReadByte(cell_crc));
 }
@@ -816,7 +823,7 @@ boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверк
 void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //обновление данных в памяти
 {
   uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
-  
+
   for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
   EEPROM_UpdateBlock((uint16_t)str, cell, size);
   EEPROM_UpdateByte(cell_crc, crc);
