@@ -1023,7 +1023,7 @@ void changeBright(void) //установка яркости от времени 
           case BACKL_OFF: wsBacklClearLeds(); break; //выключили светодиоды
           case BACKL_STATIC:
             wsBacklSetLedBright(backl.maxBright); //устанавливаем максимальную яркость
-            wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+            wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
             break;
           case BACKL_SMOOTH_COLOR_CHANGE:
           case BACKL_RAINBOW:
@@ -1088,7 +1088,7 @@ void backlEffect(void) //анимация подсветки
                 backl.drive = 1;
                 if (fastSettings.backlMode == BACKL_PULS_COLOR) backl.color += BACKL_MODE_3_COLOR; //меняем цвет
                 else backl.color = fastSettings.backlColor; //иначе статичный цвет
-                wsBacklSetLedHue(backl.color, WHITE_ON); //установили цвет
+                wsBacklSetLedColor(backl.color); //установили цвет
                 _timer_ms[TMR_BACKL] = BACKL_MODE_2_PAUSE; //установили таймер
               }
             }
@@ -1115,7 +1115,7 @@ void backlEffect(void) //анимация подсветки
             }
             if (fastSettings.backlMode == BACKL_RUNNING_FIRE) {
               backl.color = fastSettings.backlColor; //статичный цвет
-              wsBacklSetLedHue(backl.color, WHITE_ON); //установили цвет
+              wsBacklSetLedColor(backl.color); //установили цвет
             }
           }
           break;
@@ -1171,7 +1171,7 @@ void backlEffect(void) //анимация подсветки
             }
             if (fastSettings.backlMode == BACKL_WAVE) { //если режим статичного цвета
               backl.color = fastSettings.backlColor; //статичный цвет
-              wsBacklSetLedHue(backl.color, WHITE_ON); //установили цвет
+              wsBacklSetLedColor(backl.color); //установили цвет
             }
           }
           break;
@@ -1191,14 +1191,14 @@ void backlEffect(void) //анимация подсветки
         case BACKL_RAINBOW: { //радуга
             _timer_ms[TMR_COLOR] = BACKL_MODE_13_TIME; //установили таймер
             backl.color += BACKL_MODE_13_STEP; //прибавили шаг
-            for (uint8_t i = 0; i < LEDS_NUM; i++) wsBacklSetLedHue(i, backl.color + (i * BACKL_MODE_13_STEP), WHITE_OFF); //установили цвет
+            for (uint8_t i = 0; i < LEDS_NUM; i++) wsBacklSetLedHue(i, backl.color + (i * BACKL_MODE_13_STEP)); //установили цвет
           }
           break;
         case BACKL_RUNNING_FIRE_CONFETTI:
         case BACKL_WAVE_CONFETTI:
         case BACKL_CONFETTI: { //рандомный цвет
             _timer_ms[TMR_COLOR] = BACKL_MODE_14_TIME; //установили таймер
-            wsBacklSetLedHue(random(0, LEDS_NUM), random(0, 256), WHITE_ON); //установили цвет
+            wsBacklSetLedColor(random(0, LEDS_NUM), random(0, 256)); //установили цвет
           }
           break;
         case BACKL_RUNNING_FIRE_COLOR:
@@ -1206,7 +1206,7 @@ void backlEffect(void) //анимация подсветки
         case BACKL_SMOOTH_COLOR_CHANGE: { //плавная смена цвета
             _timer_ms[TMR_COLOR] = BACKL_MODE_12_TIME; //установили таймер
             backl.color += BACKL_MODE_12_COLOR;
-            wsBacklSetLedHue(backl.color, WHITE_OFF); //установили цвет
+            wsBacklSetLedHue(backl.color); //установили цвет
           }
           break;
         case BACKL_CANDLE:
@@ -2363,7 +2363,7 @@ uint8_t alarmWarn(void) //тревога будильника
 #if ALARM_BACKL_TYPE == 1
   changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
 #endif
-  wsBacklSetLedHue(ALARM_BACKL_COLOR, WHITE_ON); //установили цвет будильника
+  wsBacklSetLedColor(ALARM_BACKL_COLOR); //установили цвет будильника
 #endif
 
   _timer_ms[TMR_MS] = 0; //сбросили таймер
@@ -2640,7 +2640,7 @@ void testSystem(void) //проверка системы
       indiPrintNum(symb, 0, LAMP_NUM, symb); //отрисовываем цифру
 #if BACKL_TYPE == 3
       wsBacklSetLedBright(TEST_BACKL_BRIGHT); //включаем светодиоды
-      wsBacklSetRangeHue(0, LEDS_NUM, symb * 25); //устанавливаем статичный цвет
+      wsBacklSetRangeColor(0, LEDS_NUM, symb * 25); //устанавливаем статичный цвет
 #endif
 #endif
       for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
@@ -2666,7 +2666,7 @@ void testSystem(void) //проверка системы
       for (uint8_t digit = 0; digit < 10; digit++) {
         indiPrintNum(digit, indi); //отрисовываем цифру
 #if BACKL_TYPE == 3
-        wsBacklSetDigitHue(indi, digit * 25); //устанавливаем статичный цвет
+        wsBacklSetDigitColor(indi, digit * 25); //устанавливаем статичный цвет
 #endif
         for (_timer_ms[TMR_MS] = TEST_LAMP_TIME; _timer_ms[TMR_MS];) { //ждем
           dataUpdate(); //обработка данных
@@ -3030,7 +3030,7 @@ uint8_t timeSettings(void) //настройки времени
           break;
       }
 #if BACKL_TYPE == 3
-      wsBacklSetMultiHue((cur_mode & 0x01) * 2, (cur_mode != 4) ? 2 : 4, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+      wsBacklSetMultiColor((cur_mode & 0x01) * 2, (cur_mode != 4) ? 2 : 4, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
 #endif
       blink_data = !blink_data; //мигание сигментами
     }
@@ -3206,19 +3206,19 @@ uint8_t singleAlarmSettings(void) //настройка будильника
       }
 #if BACKL_TYPE == 3
       switch (cur_mode) {
-        case 1: wsBacklSetMultiHue(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-        case 2: wsBacklSetMultiHue((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 1: wsBacklSetMultiColor(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 2: wsBacklSetMultiColor((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if !PLAYER_TYPE
         case 3:
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-          if (alarm[ALARM_RADIO]) wsBacklSetMultiHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
-          else wsBacklSetMultiHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+          if (alarm[ALARM_RADIO]) wsBacklSetMultiColor(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+          else wsBacklSetMultiColor(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
 #else
-          wsBacklSetMultiHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+          wsBacklSetMultiColor(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
 #endif
           break;
 #endif
-        default: wsBacklSetMultiHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        default: wsBacklSetMultiColor(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
       }
 #endif
       blink_data = !blink_data; //мигание сигментами
@@ -3576,20 +3576,20 @@ uint8_t multiAlarmSettings(void) //настройка будильников
       }
 #if BACKL_TYPE == 3
       switch (cur_mode) {
-        case 0: wsBacklSetMultiHue(0, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-        case 2: wsBacklSetMultiHue(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-        case 3: wsBacklSetMultiHue((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 0: wsBacklSetMultiColor(0, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 2: wsBacklSetMultiColor(0, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        case 3: wsBacklSetMultiColor((cur_indi) ? 3 : 2, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #if !PLAYER_TYPE
         case 4:
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
-          if (alarm[ALARM_RADIO]) wsBacklSetMultiHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
-          else wsBacklSetMultiHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+          if (alarm[ALARM_RADIO]) wsBacklSetMultiColor(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+          else wsBacklSetMultiColor(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
 #else
-          wsBacklSetMultiHue(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
+          wsBacklSetMultiColor(2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2);  //подсветка активных разрядов
 #endif
           break;
 #endif
-        default: wsBacklSetMultiHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+        default: wsBacklSetMultiColor(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
       }
 #endif
       blink_data = !blink_data; //мигание сигментами
@@ -3933,14 +3933,14 @@ uint8_t mainMenu(void) //настроки основные
       if (!set) {
         indiPrintNum(cur_mode + 1, (LAMP_NUM / 2 - 1), 2, 0); //вывод режима
 #if BACKL_TYPE == 3
-        wsBacklSetMultiHue((LAMP_NUM / 2 - 1), 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
+        wsBacklSetMultiColor((LAMP_NUM / 2 - 1), 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); //подсветка активных разрядов
 #endif
       }
       else {
         if (anim_demo == 1) { //если нужно отобразить демонстрацию эффекта
           anim_demo = 0; //сбросили флаг демонстрации
 #if BACKL_TYPE == 3
-          wsBacklSetLedHue(BACKL_MENU_COLOR_1, WHITE_ON); //подсветка активных разрядов
+          wsBacklSetLedColor(BACKL_MENU_COLOR_1); //подсветка активных разрядов
 #endif
           switch (cur_mode) {
             case SET_AUTO_SHOW: animIndi(mainSettings.autoShowFlip, FLIP_DEMO); break; //демонстрация анимации показа температуры
@@ -4027,7 +4027,7 @@ uint8_t mainMenu(void) //настроки основные
             case SET_TIME_FORMAT:
             case SET_GLITCH_MODE:
             case SET_BTN_SOUND:
-              wsBacklSetMultiHue((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              wsBacklSetMultiColor((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
 #if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4)
             case SET_DOT_BRIGHT:
@@ -4037,13 +4037,13 @@ uint8_t mainMenu(void) //настроки основные
             case SET_BTN_SOUND:
 #endif
 #if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4) || !PLAYER_TYPE
-              wsBacklSetMultiHue(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              wsBacklSetMultiColor(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-            case SET_CORRECT_SENS: wsBacklSetMultiHue(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+            case SET_CORRECT_SENS: wsBacklSetMultiColor(0, 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
-            case SET_BURN_MODE: wsBacklSetMultiHue((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
-            default: wsBacklSetMultiHue(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+            case SET_BURN_MODE: wsBacklSetMultiColor((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 3, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+            default: wsBacklSetMultiColor(cur_indi * 2, 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
           }
 #endif
           blink_data = !blink_data; //мигание сигментами
@@ -4603,7 +4603,7 @@ uint8_t radioFastMenu(void) //быстрые настройки радио
 #endif
 
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-      wsBacklSetMultiHue(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+      wsBacklSetMultiColor(((LAMP_NUM / 2) - 1), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
 #endif
 
       dotSetBright(0); //выключаем точки
@@ -4752,8 +4752,8 @@ boolean radioMainMenu(void) //меню настроек радио
       indiPrintNum((boolean)radioSettings.stationsSave[_station], ((LAMP_NUM / 2) - 2)); //вывод настройки
       indiPrintNum(_station, (LAMP_NUM / 2), 2, 0); //вывод настройки
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-      wsBacklSetMultiHue((LAMP_NUM / 2), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
-      wsBacklSetDigitHue(((LAMP_NUM / 2) - 2), RADIO_BACKL_COLOR_1);
+      wsBacklSetMultiColor((LAMP_NUM / 2), 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+      wsBacklSetDigitColor(((LAMP_NUM / 2) - 2), RADIO_BACKL_COLOR_1);
 #endif
       _state = 1; //установили флаг бездействия
     }
@@ -4929,16 +4929,16 @@ uint8_t radioScreen(void) //радиоприемник
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
         if (!radio.seekRun) { //если не идет поиск
           boolean freq_backl = (radioSettings.stationsFreq >= 1000);
-          wsBacklSetMultiHue((freq_backl) ? 0 : 1, (freq_backl) ? 3 : 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
-          wsBacklSetDigitHue(3, RADIO_BACKL_COLOR_3);
+          wsBacklSetMultiColor((freq_backl) ? 0 : 1, (freq_backl) ? 3 : 2, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2);
+          wsBacklSetDigitColor(3, RADIO_BACKL_COLOR_3);
         }
-        else wsBacklSetMultiHue((radio.seekAnim >> 1) - 1, 1, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2); //иначе анимация
+        else wsBacklSetMultiColor((radio.seekAnim >> 1) - 1, 1, RADIO_BACKL_COLOR_1, RADIO_BACKL_COLOR_2); //иначе анимация
 #endif
 #if LAMP_NUM > 4
         if (radioSettings.stationNum < RADIO_MAX_STATIONS) {
           indiPrintNum(radioSettings.stationNum, 5); //номер станции
 #if (BACKL_TYPE == 3) && RADIO_BACKL_TYPE
-          wsBacklSetDigitHue(5, RADIO_BACKL_COLOR_3);
+          wsBacklSetDigitColor(5, RADIO_BACKL_COLOR_3);
 #endif
         }
 #endif
@@ -5041,7 +5041,7 @@ uint8_t timerWarn(void) //тревога таймера
 #if TIMER_WARN_BACKL_TYPE == 1
   changeBrightDisable(CHANGE_DYNAMIC_BACKL); //разрешить смену яркости динамичной подсветки
 #endif
-  wsBacklSetLedHue(TIMER_WARN_COLOR, WHITE_ON); //установили цвет
+  wsBacklSetLedColor(TIMER_WARN_COLOR); //установили цвет
 #endif
   while (!buttonState()) { //ждем
     dataUpdate(); //обработка данных
@@ -5120,7 +5120,7 @@ void timerSettings(void) //настройки таймера
       indiPrintMenuData(blink_data, mode, mins, 0, secs, 2); //вывод минут/секунд
 
 #if (BACKL_TYPE == 3) && TIMER_BACKL_TYPE
-      wsBacklSetMultiHue(mode * 2, 2, TIMER_MENU_COLOR_1, TIMER_MENU_COLOR_2);
+      wsBacklSetMultiColor(mode * 2, 2, TIMER_MENU_COLOR_1, TIMER_MENU_COLOR_2);
 #endif
       blink_data = !blink_data;
     }
@@ -5236,10 +5236,10 @@ uint8_t timerScreen(void) //таймер-секундомер
 
 #if (BACKL_TYPE == 3) && TIMER_BACKL_TYPE
       switch (timer.mode) {
-        case 0: wsBacklSetLedHue(TIMER_STOP_COLOR, WHITE_ON); break; //установили цвет остановки
-        case 1: wsBacklSetLedHue(TIMER_RUN_COLOR_1, WHITE_ON); break; //установили цвет секундомера
-        case 2: wsBacklSetLedHue(TIMER_RUN_COLOR_2, WHITE_ON); break; //установили цвет таймера
-        default: wsBacklSetLedHue(TIMER_PAUSE_COLOR, WHITE_ON); break; //установили цвет паузы
+        case 0: wsBacklSetLedColor(TIMER_STOP_COLOR); break; //установили цвет остановки
+        case 1: wsBacklSetLedColor(TIMER_RUN_COLOR_1); break; //установили цвет секундомера
+        case 2: wsBacklSetLedColor(TIMER_RUN_COLOR_2); break; //установили цвет таймера
+        default: wsBacklSetLedColor(TIMER_PAUSE_COLOR); break; //установили цвет паузы
       }
 #endif
     }
@@ -5426,7 +5426,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(getTemperatureSign() ? SYMB_NEGATIVE : SYMB_POSITIVE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+          wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
 #endif
           break;
         case 1:
@@ -5435,7 +5435,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
+          wsBacklSetLedColor(SHOW_TEMP_COLOR_H); //установили цвет влажности
 #endif
           break;
         case 2:
@@ -5444,7 +5444,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
+          wsBacklSetLedColor(SHOW_TEMP_COLOR_P); //установили цвет давления
 #endif
           break;
       }
@@ -5546,7 +5546,7 @@ uint8_t showDate(void) //показать дату
 #endif
       indiPrintNum(RTC.YY - 2000, 4, 2, 0); //вывод года
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
-      wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
+      wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
 #endif
 #else
 #if (LAMP_NUM > 4) && MENU_SHOW_NUMBER && !SHOW_DATE_WEEK
@@ -5565,16 +5565,16 @@ uint8_t showDate(void) //показать дату
           indiPrintNum(RTC.DW, 5); //день недели
 #endif
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
-          wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
+          wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
 #if SHOW_DATE_WEEK
-          wsBacklSetDigitHue(5, SHOW_DATE_BACKL_DW);
+          wsBacklSetDigitColor(5, SHOW_DATE_BACKL_DW);
 #endif
 #endif
           break;
         case 1:
           indiPrintNum(RTC.YY, 0); //вывод года
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
-          wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
+          wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
 #endif
           break;
       }
@@ -5675,12 +5675,12 @@ void autoShowMenu(void) //меню автоматического показа
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
-          wsBacklSetMultiHue(0, 3, SHOW_TEMP_COLOR_T, SHOW_DATE_BACKL_N); //установили цвет температуры и влажности
-          wsBacklSetRangeHue(4, 2, SHOW_TEMP_COLOR_H); //установили цвет пустого сегмента
+          wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_DATE_BACKL_N); //установили цвет температуры и пустого сегмента
+          wsBacklSetRangeColor(4, 2, SHOW_TEMP_COLOR_H); //установили цвет влажности
         }
-        else wsBacklSetLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+        else wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
 #else
-        wsBacklSetLedHue(SHOW_TEMP_COLOR_T, WHITE_ON); //установили цвет температуры
+        wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
 #endif
 #endif
         break;
@@ -5700,7 +5700,7 @@ void autoShowMenu(void) //меню автоматического показа
         indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
-        wsBacklSetLedHue(SHOW_TEMP_COLOR_H, WHITE_ON); //установили цвет влажности
+        wsBacklSetLedColor(SHOW_TEMP_COLOR_H); //установили цвет влажности
 #endif
         break;
 
@@ -5719,7 +5719,7 @@ void autoShowMenu(void) //меню автоматического показа
         indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
-        wsBacklSetLedHue(SHOW_TEMP_COLOR_P, WHITE_ON); //установили цвет давления
+        wsBacklSetLedColor(SHOW_TEMP_COLOR_P); //установили цвет давления
 #endif
         break;
 #endif
@@ -5740,9 +5740,9 @@ void autoShowMenu(void) //меню автоматического показа
         setDotDate(1); //включили разделительную точку
 
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
-        wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
+        wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_NN);
 #if SHOW_DATE_WEEK
-        wsBacklSetDigitHue(5, SHOW_DATE_BACKL_DW);
+        wsBacklSetDigitColor(5, SHOW_DATE_BACKL_DW);
 #endif
 #endif
         break;
@@ -5751,7 +5751,7 @@ void autoShowMenu(void) //меню автоматического показа
         animPrintNum(RTC.YY, 0); //вывод года
         animIndi(autoShowAnimMode(), FLIP_NORMAL); //анимация цифр
 #if (BACKL_TYPE == 3) && SHOW_DATE_BACKL_TYPE
-        wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
+        wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_YY, SHOW_DATE_BACKL_NN);
 #endif
         break;
 
@@ -5770,7 +5770,7 @@ void autoShowMenu(void) //меню автоматического показа
         setDotDate(2); //включили разделительные точки
 
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
-        wsBacklSetMultiHue(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
+        wsBacklSetMultiColor(0, 4, SHOW_DATE_BACKL_DM, SHOW_DATE_BACKL_YY);
 #endif
         break;
 #endif
@@ -5893,7 +5893,7 @@ void changeFastSetBackl(void) //сменить режим анимации по�
       else fastSettings.backlColor++;
 
       if (fastSettings.backlColor) { //если не начальный цвет
-        wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+        wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
         return; //выходим
       }
       break;
@@ -5908,19 +5908,19 @@ void changeFastSetBackl(void) //сменить режим анимации по�
       break;
     case BACKL_STATIC:
       wsBacklSetLedBright(backl.maxBright); //устанавливаем максимальную яркость
-      wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+      wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
       break;
     case BACKL_PULS:
       wsBacklSetLedBright(backl.maxBright ? backl.minBright : 0); //устанавливаем минимальную яркость
-      wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+      wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
       break;
     case BACKL_RUNNING_FIRE:
       wsBacklSetLedBright(0); //устанавливаем минимальную яркость
-      wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+      wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
       break;
     case BACKL_WAVE:
       wsBacklSetLedBright(backl.maxBright ? backl.minBright : 0); //устанавливаем минимальную яркость
-      wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+      wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
       break;
     case BACKL_SMOOTH_COLOR_CHANGE:
       wsBacklSetLedBright(backl.maxBright); //устанавливаем максимальную яркость
@@ -5938,7 +5938,7 @@ void changeFastSetColor(void) //сменить цвет режима анима�
   if (fastSettings.backlColor < 250) fastSettings.backlColor += 10;
   else if (fastSettings.backlColor == 250) fastSettings.backlColor = 253;
   else fastSettings.backlColor++;
-  wsBacklSetLedHue(fastSettings.backlColor, WHITE_ON); //устанавливаем статичный цвет
+  wsBacklSetLedColor(fastSettings.backlColor); //устанавливаем статичный цвет
 }
 //-------------------------------Получить значение быстрых настроек---------------------------------
 uint8_t getFastSetData(uint8_t pos) //получить значение быстрых настроек

@@ -207,6 +207,70 @@ void wsBacklClearLeds(void)
   ledUpdate = 1; //устанавливаем флаг обновления
   for (uint8_t i = 0; i < LEDS_NUM; i++) ledBright[i] = 0;
 }
+//---------------------------------Установка цвета в формате HV-------------------------------------
+void wsBacklSetLedHue(uint8_t _led, uint8_t _color)
+{
+  if (_led < LEDS_NUM) {
+    ledUpdate = 1; //устанавливаем флаг обновления
+    ledMode[_led] = WHITE_OFF;
+    ledColor[_led] = _color;
+  }
+}
+//---------------------------------Установка цвета в формате HV-------------------------------------
+void wsBacklSetLedHue(uint8_t _color)
+{
+  ledUpdate = 1; //устанавливаем флаг обновления
+  for (uint8_t i = 0; i < LEDS_NUM; i++) {
+    ledMode[i] = WHITE_OFF;
+    ledColor[i] = _color;
+  }
+}
+//---------------------------------Установка цвета в формате HV-------------------------------------
+void wsBacklSetLedColor(uint8_t _led, uint8_t _color)
+{
+  if (_led < LEDS_NUM) {
+    ledUpdate = 1; //устанавливаем флаг обновления
+    ledMode[_led] = WHITE_ON;
+    ledColor[_led] = _color;
+  }
+}
+//---------------------------------Установка цвета в формате HV-------------------------------------
+void wsBacklSetLedColor(uint8_t _color)
+{
+  ledUpdate = 1; //устанавливаем флаг обновления
+  for (uint8_t i = 0; i < LEDS_NUM; i++) {
+    ledMode[i] = WHITE_ON;
+    ledColor[i] = _color;
+  }
+}
+//---------------------------------Установка цвета в формате HV-------------------------------------
+void wsBacklSetDigitColor(uint8_t _digit, uint8_t _color)
+{
+  if (_digit < LAMP_NUM) {
+    ledUpdate = 1; //устанавливаем флаг обновления
+    ledMode[pgm_read_byte(&ledMask[_digit])] = WHITE_ON;
+    ledColor[pgm_read_byte(&ledMask[_digit])] = _color;
+  }
+}
+//---------------------------Установка диапазона цветов в формате HV--------------------------------
+void wsBacklSetRangeColor(uint8_t _start, uint8_t _count, uint8_t _color)
+{
+  ledUpdate = 1; //устанавливаем флаг обновления
+  while (_count) {
+    if (_start < LAMP_NUM) {
+      ledMode[pgm_read_byte(&ledMask[_start])] = WHITE_ON;
+      ledColor[pgm_read_byte(&ledMask[_start])] = _color;
+      _start++;
+    }
+    _count--;
+  }
+}
+//------------------------------Установка двух цветов в формате HV----------------------------------
+void wsBacklSetMultiColor(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_fill)
+{
+  wsBacklSetLedColor(_color_fill);
+  wsBacklSetRangeColor(_start, _count, _color);
+}
 //---------------------------------Установка цвета в формате K-------------------------------------
 void wsBacklSetHeatColor(uint8_t _led, uint8_t _heat) {
   if (_led < LEDS_NUM) {
@@ -222,52 +286,6 @@ void wsBacklSetHeatColor(uint8_t _heat) {
     ledMode[i] = HEAT_ON;
     ledColor[i] = _heat;
   }
-}
-//---------------------------------Установка цвета в формате HV-------------------------------------
-void wsBacklSetLedHue(uint8_t _led, uint8_t _color, boolean _mode)
-{
-  if (_led < LEDS_NUM) {
-    ledUpdate = 1; //устанавливаем флаг обновления
-    ledMode[_led] = _mode;
-    ledColor[_led] = _color;
-  }
-}
-//---------------------------------Установка цвета в формате HV-------------------------------------
-void wsBacklSetLedHue(uint8_t _color, boolean _mode)
-{
-  ledUpdate = 1; //устанавливаем флаг обновления
-  for (uint8_t i = 0; i < LEDS_NUM; i++) {
-    ledMode[i] = _mode;
-    ledColor[i] = _color;
-  }
-}
-//---------------------------------Установка цвета в формате HV-------------------------------------
-void wsBacklSetDigitHue(uint8_t _digit, uint8_t _color)
-{
-  if (_digit < LAMP_NUM) {
-    ledUpdate = 1; //устанавливаем флаг обновления
-    ledMode[pgm_read_byte(&ledMask[_digit])] = WHITE_ON;
-    ledColor[pgm_read_byte(&ledMask[_digit])] = _color;
-  }
-}
-//---------------------------Установка диапазона цветов в формате HV--------------------------------
-void wsBacklSetRangeHue(uint8_t _start, uint8_t _count, uint8_t _color)
-{
-  ledUpdate = 1; //устанавливаем флаг обновления
-  while (_count) {
-    if (_start < LAMP_NUM) {
-      ledMode[pgm_read_byte(&ledMask[_start])] = WHITE_ON;
-      ledColor[pgm_read_byte(&ledMask[_start])] = _color;
-      _start++;
-    }
-    _count--;
-  }
-}
-//------------------------------Установка двух цветов в формате HV----------------------------------
-void wsBacklSetMultiHue(uint8_t _start, uint8_t _count, uint8_t _color, uint8_t _color_fill)
-{
-  wsBacklSetLedHue(_color_fill, WHITE_ON);
-  wsBacklSetRangeHue(_start, _count, _color);
 }
 //--------------------------------------Уменьшение яркости------------------------------------------
 void wsBacklDecLedsBright(uint8_t _led, uint8_t _step)
