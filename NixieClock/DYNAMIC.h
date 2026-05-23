@@ -19,7 +19,10 @@ const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS, INDI_4_POS, INDI_5_POS, INDI_6_POS}; //порядок индикации ламп
 
 #if INDI_PORT_TYPE
-const uint8_t regMask[] = {(INDI_DOT_TYPE && (SECS_DOT == 1)) ? (0x01 << SECL_PIN) : (((INDI_SYMB_TYPE == 2) && (SECS_DOT != 1) && (SECS_DOT != 2)) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+#define REG_BIT(pin) (0x01 << pin)
+const uint8_t regMask[] = {(INDI_DOT_TYPE && (SECS_DOT == 1)) ? REG_BIT(SECL_PIN) : (((INDI_SYMB_TYPE == 2) && (SECS_DOT != 1) && (SECS_DOT != 2)) ? REG_BIT(ANODE_0_PIN) : INDI_ANODE_OFF),
+                           REG_BIT(ANODE_1_PIN), REG_BIT(ANODE_2_PIN), REG_BIT(ANODE_3_PIN), REG_BIT(ANODE_4_PIN), REG_BIT(ANODE_5_PIN), REG_BIT(ANODE_6_PIN)
+                          }; //таблица бит анодов ламп
 #endif
 
 #if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE

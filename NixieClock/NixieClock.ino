@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_025 бета от 22.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_025 бета от 23.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -5675,7 +5675,7 @@ void autoShowMenu(void) //меню автоматического показа
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
-          wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_DATE_BACKL_N); //установили цвет температуры и пустого сегмента
+          wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_TEMP_BACKL_N); //установили цвет температуры и пустого сегмента
           wsBacklSetRangeColor(4, 2, SHOW_TEMP_COLOR_H); //установили цвет влажности
         }
         else wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры

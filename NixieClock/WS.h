@@ -1,13 +1,12 @@
 #if BACKL_REVERSE
-#define LED_START_DIGITS (LEDS_NUM - LAMP_NUM)
-const uint8_t ledMask[] PROGMEM = {CONSTRAIN_MAX(LED_DIGIT_H1 + LED_START_DIGITS, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_H2 + LED_START_DIGITS, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_M1 + LED_START_DIGITS, LEDS_NUM),
-                                   CONSTRAIN_MAX(LED_DIGIT_M2 + LED_START_DIGITS, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_S1 + LED_START_DIGITS, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_S2 + LED_START_DIGITS, LEDS_NUM)
-                                  };
+#define LED_DIGIT(digit) (CONSTRAIN_MAX(digit + (LEDS_NUM - LAMP_NUM), (LEDS_NUM - 1)))
 #else
-const uint8_t ledMask[] PROGMEM = {CONSTRAIN_MAX(LED_DIGIT_H1, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_H2, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_M1, LEDS_NUM),
-                                   CONSTRAIN_MAX(LED_DIGIT_M2, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_S1, LEDS_NUM), CONSTRAIN_MAX(LED_DIGIT_S2, LEDS_NUM)
-                                  };
+#define LED_DIGIT(digit) (CONSTRAIN_MAX(digit, (LEDS_NUM - 1)))
 #endif
+
+const uint8_t ledMask[] PROGMEM = {LED_DIGIT(LED_DIGIT_H1), LED_DIGIT(LED_DIGIT_H2), LED_DIGIT(LED_DIGIT_M1),
+                                   LED_DIGIT(LED_DIGIT_M2), LED_DIGIT(LED_DIGIT_S1), LED_DIGIT(LED_DIGIT_S2)
+                                  }; //маска разрядов для светодиодов
 
 boolean ledUpdate = 0; //флаг отрисовки светодиодов
 
@@ -99,8 +98,8 @@ void wsBacklShowLeds(void)
       diff = ledMode[led];
 
       switch (diff) {
-        case WHITE_OFF:
-        case WHITE_ON:
+        case WHITE_OFF: //режим палитры без белого цвета
+        case WHITE_ON: //режим палитры с белым цветом
           if ((diff == WHITE_OFF) || (pallet < 253)) {
             diff = 0;
 
@@ -158,7 +157,7 @@ void wsBacklShowLeds(void)
             *ledLink++ = (uint8_t)((bright * ledWhiteTable[pallet][2]) >> 8); //B
           }
           break;
-        case HEAT_ON:
+        case HEAT_ON: //режим температуры цвета
           diff = CONSTRAIN_MAX(pallet, 191);
 
           pallet = (diff & 0x3F) << 2;
@@ -174,7 +173,7 @@ void wsBacklShowLeds(void)
 #endif
             *ledLink++ = pallet; //B
           }
-          else if (diff >= 0x40) { //средне
+          else if (diff >= 0x40) { //нейтрально
 #if BACKL_COLORS
             *ledLink++ = bright; //R
             *ledLink++ = pallet; //G
@@ -195,6 +194,11 @@ void wsBacklShowLeds(void)
             *ledLink++ = 0; //B
           }
           break;
+          //default: //режим принудительного отключения
+          //  *ledLink++ = 0;
+          //  *ledLink++ = 0;
+          //  *ledLink++ = 0;
+          //  break;
       }
     }
 
