@@ -1027,7 +1027,7 @@ void changeBright(void) //установка яркости от времени 
         backl.mode.pulseStep = setBrightStep((uint16_t)backlNowBright * 2, BACKL_MODE_2_STEP_TIME, BACKL_MODE_2_TIME); //расчёт шага яркости
 
 #if BACKL_TYPE == 3
-        backl.mode.runStep = ceil((float)backl.maxBright / (float)BACKL_MODE_4_TAIL / (float)BACKL_MODE_4_FADING); //расчёт шага яркости
+        backl.mode.runStep = ((((uint16_t)backl.maxBright * 100) / BACKL_MODE_4_TAIL / BACKL_MODE_4_FADING) + 99) / 100; //расчёт шага яркости
         if (!backl.mode.runStep) backl.mode.runStep = 1; //если шаг слишком мал
         backl.mode.waveTime = setBrightTime((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт периода шага яркости
         backl.mode.waveStep = setBrightStep((uint16_t)backlNowBright * LEDS_NUM, BACKL_MODE_8_STEP_TIME, BACKL_MODE_8_TIME); //расчёт шага яркости
