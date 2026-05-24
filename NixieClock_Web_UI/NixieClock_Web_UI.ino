@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_025 бета от 22.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_026 бета от 24.05.26
   Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -29,8 +29,11 @@
   Питать модуль ESP8266 от вывода 3v3 ардуино нельзя! Нужно использовать линейный стабилизатор или DC-DC преобразователь на 3.3в!
 */
 
-#define ESP_FIRMWARE_VER "1.3.0_025" //версия прошивки модуля esp
 
+//--------------Версия прошивки-------------
+#define ESP_FIRMWARE_VER "1.3.0_026" //версия прошивки модуля esp
+
+//---------------Конфигурации---------------
 #include "config.h"
 #include "languages.h"
 
@@ -38,13 +41,14 @@
 #define GP_NO_MDNS
 #define GP_NO_PRESS
 
+//----------------Библиотеки----------------
 #include <LittleFS.h>
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui(&LittleFS);
 
 #include "MEMORY.h"
 
-//переменные
+//----------------Переменные----------------
 boolean clockUpdate = false; //флаг запрета обновления часов
 boolean otaUpdate = false; //флаг запрета обновления есп
 boolean fsUpdate = false; //флаг запрета обновления фс
@@ -76,6 +80,7 @@ uint32_t sysCycleCount = 0; //счетчик циклов процессора
 #define STATUS_LED -1
 #endif
 
+//----------------Периферия----------------
 #include "TIME.h"
 
 #include "NTP.h"
@@ -851,17 +856,22 @@ void build(void) {
         M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
       }
       GP.BREAK();
-      GP.HR_TEXT(GP.ICON_INFO(LANG_PAGE_SETTINGS_GUI_HR_HOUR), UI_LINE_COLOR, UI_HINT_COLOR, "id_5");
-      GP.HINT_NOTIFY("id_5", LANG_PAGE_SETTINGS_GUI_HINT_HOUR); //всплывающая подсказка
+      GP.HR_TEXT(GP.ICON_INFO(LANG_PAGE_SETTINGS_GUI_HR_MUTE), UI_LINE_COLOR, UI_HINT_COLOR, "id_5");
+      GP.HINT_NOTIFY("id_5", LANG_PAGE_SETTINGS_GUI_HINT_MUTE); //всплывающая подсказка
       M_BOX(GP_CENTER,
-            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsHourSoundS", mainSettings.timeHourStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
+            GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_START, "", UI_LABEL_COLOR, 52); GP.SPINNER("setsTimeMuteS", mainSettings.timeMuteStart, 0, 23, 1, 0, UI_SPINNER_COLOR);
             GP.BREAK_W("20px");
-            GP.SPINNER("setsHourSoundE", mainSettings.timeHourEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
+            GP.SPINNER("setsTimeMuteE", mainSettings.timeMuteEnd, 0, 23, 1, 0, UI_SPINNER_COLOR); GP.LABEL_W(LANG_PAGE_SETTINGS_GUI_END, "", UI_LABEL_COLOR, 52);
            );
-      GP.HINT_BOX("id_6", "setsHourSoundS", "setsHourSoundE", LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1);
+      GP.HINT_BOX("id_6", "setsTimeMuteS", "setsTimeMuteE", LANG_PAGE_SETTINGS_GUI_HINT_MUTE_1);
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP, "", UI_LABEL_COLOR); GP.SWITCH("setsHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)(!deviceInformation[PLAYER_TYPE] || sensorGetDisabledStatus())););
-      M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsHourSound", LANG_PAGE_SETTINGS_GUI_HOUR_MODE, mainSettings.hourSound & 0x03, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
+      if (deviceInformation[PLAYER_TYPE]) {
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsHourSound", LANG_PAGE_SETTINGS_GUI_MUTE_MODE, mainSettings.hourSound & 0x03, 0););
+      }
+      else {
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SWITCH("setsHourSound", mainSettings.hourSound & 0x03, UI_SWITCH_COLOR););
+      }
       GP.BLOCK_END();
 
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_ALARM, UI_BLOCK_COLOR);
@@ -1653,11 +1663,11 @@ void action() {
         busSetCommand(WRITE_MAIN_SET, MAIN_TIME_BRIGHT_E);
       }
 
-      if (ui.clickInt("setsHourSoundS", mainSettings.timeHourStart)) {
-        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_S);
+      if (ui.clickInt("setsTimeMuteS", mainSettings.timeMuteStart)) {
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_MUTE_S);
       }
-      if (ui.clickInt("setsHourSoundE", mainSettings.timeHourEnd)) {
-        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_HOUR_E);
+      if (ui.clickInt("setsTimeMuteE", mainSettings.timeMuteEnd)) {
+        busSetCommand(WRITE_MAIN_SET, MAIN_TIME_MUTE_E);
       }
 
       if (ui.clickInt("setsSleepD", mainSettings.timeSleepDay)) {

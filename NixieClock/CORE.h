@@ -135,6 +135,7 @@ enum {
   DOT_DECATRON_STEPS,
   DOT_DECATRON_TIMER,
   DOT_DECATRON_SWAY,
+  DOT_DECATRON_MOON,
 #endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
@@ -146,6 +147,7 @@ enum {
 #endif
 #if (DOTS_NUM > 4) && (DOTS_TYPE == 2)
   DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
+  DOT_SHIFT_TURN_BLINK, //мигание двумя точками со смещением
 #endif
 #endif
   DOT_EFFECT_NUM //количество эффектов точек
@@ -306,6 +308,9 @@ uint8_t changeBrightState; //флаг состояния смены яркост
 uint8_t changeAnimState; //флаг состояния анимаций
 uint8_t animShow; //флаг анимации смены времени
 
+//флаги звуков
+boolean soundMute; //флаг запрета воспроизведения звуков
+
 
 //перечисления основных программ
 enum {
@@ -337,12 +342,16 @@ uint8_t mainTask = INIT_PROGRAM; //переключатель подпрогра
 #define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
 #define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
 
-uint8_t pwm_coef; //коэффициент линейного регулирования
-uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
+struct convData {
+  uint8_t pwmCoef = 0; //коэффициент линейного регулирования ВВ
+  uint16_t hvTreshold = HV_ADC(5); //буфер порога удержания напряжения ВВ
+} conv;
 
-uint8_t light_adc; //значение АЦП сенсора яркости освещения
-uint8_t light_state = 2; //состояние сенсора яркости освещения
-boolean light_update = 0; //флаг обновления яркости
+struct lightData {
+  uint8_t adc = 0; //значение АЦП сенсора яркости освещения
+  uint8_t state = 2; //состояние сенсора яркости освещения
+} light;
+boolean brightUpdate = 0; //флаг обновления яркости
 
 
 //-----------------Ошибки-----------------
@@ -428,7 +437,7 @@ struct buttonData {
   uint8_t adc; //результат опроса аналоговых кнопок
 } btn;
 uint8_t analogState; //флаги обновления аналоговых портов
-uint16_t vcc_adc; //напряжение питания
+uint16_t analogVccAdc; //напряжение питания ацп
 
 #define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
 #define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
@@ -512,11 +521,11 @@ struct Settings_1 {
   uint8_t backlBright[2] = {DEFAULT_BACKL_BRIGHT_N, DEFAULT_BACKL_BRIGHT}; //яркость подсветки
   uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT}; //яркость точек
   uint8_t timeBright[2] = {DEFAULT_NIGHT_START, DEFAULT_NIGHT_END}; //время перехода яркости
-  uint8_t timeHour[2] = {DEFAULT_HOUR_SOUND_START, DEFAULT_HOUR_SOUND_END}; //время звукового оповещения нового часа
+  uint8_t timeSound[2] = {DEFAULT_SOUND_MUTE_START, DEFAULT_SOUND_MUTE_END}; //время приглушения всех звуков
   uint8_t timeSleep[2] = {DEFAULT_SLEEP_WAKE_TIME_N, DEFAULT_SLEEP_WAKE_TIME}; //время режима сна
   boolean timeFormat = DEFAULT_TIME_FORMAT; //формат времени
   uint8_t baseSound = DEFAULT_BASE_SOUND; //основные звуки
-  uint8_t hourSound = (DEFAULT_HOUR_SOUND_TYPE & 0x03) | ((DEFAULT_HOUR_SOUND_TEMP) ? 0x80 : 0x00); //тип озвучки смены часа
+  uint8_t hourSound = (DEFAULT_HOUR_SOUND_TYPE & 0x03) | ((DEFAULT_HOUR_SOUND_TEMP) ? 0x80 : 0x00); //озвучка смены часа
   uint8_t volumeSound = DEFAULT_PLAYER_VOLUME; //громкость озвучки
   uint8_t voiceSound = DEFAULT_VOICE_SOUND; //голос озвучки
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
@@ -559,11 +568,11 @@ struct Settings_4 { //расширенные настройки
 struct Settings_5 {
   uint16_t irButtons[KEY_MAX_ITEMS - 1]; //коды кнопок пульта
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-  uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
-  uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
-  uint8_t light_zone[2][3]; //зоны яркости датчика освещения
+  uint8_t minPwm = DEFAULT_MIN_PWM; //минимальный шим
+  uint8_t maxPwm = DEFAULT_MAX_PWM; //максимальный шим
+  uint8_t lightZone[2][3]; //зоны яркости датчика освещения
   int8_t hvCorrect; //коррекция напряжения
-  int8_t aging; //коррекция регистра старения
+  int8_t rtcAging; //коррекция регистра старения
 } debugSettings;
 
 enum {
@@ -757,10 +766,10 @@ void coreInit(void) //инициализация периферии ядра
 
 #if GEN_ENABLE
 #if CONV_PIN == 9
-  OCR1A = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
+  OCR1A = CONSTRAIN(debugSettings.minPwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #elif CONV_PIN == 10
-  OCR1B = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
+  OCR1B = CONSTRAIN(debugSettings.minPwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #endif
@@ -842,7 +851,7 @@ void updateByte(uint8_t data, uint8_t cell, uint8_t cell_crc) //обновлен
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
-  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
+  conv.hvTreshold = HV_ADC(GET_VCC(REFERENCE, analogVccAdc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
 }
 //------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
@@ -858,13 +867,13 @@ void analogUpdate(void) //обработка аналоговых входов
           if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
             adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
 #if CONV_PIN == 9
-            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
+            if (adc_temp < conv.hvTreshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
             else {
               TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
               CONV_OFF; //выключаем пин преобразователя
             }
 #elif CONV_PIN == 10
-            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
+            if (adc_temp < conv.hvTreshold) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
             else {
               TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
               CONV_OFF; //выключаем пин преобразователя
@@ -890,9 +899,9 @@ void analogUpdate(void) //обработка аналоговых входов
 #if LIGHT_SENS_ENABLE
       case ANALOG_LIGHT_PIN:
 #if !LIGHT_SENS_PULL
-        light_adc = ADCH; //записываем результат опроса
+        light.adc = ADCH; //записываем результат опроса
 #else
-        light_adc = 255 - ADCH; //записываем результат опроса
+        light.adc = 255 - ADCH; //записываем результат опроса
 #endif
         ADMUX = 0; //сбросли признак чтения АЦП
         break;
@@ -959,9 +968,9 @@ void checkVCC(void) //чтение напряжения питания
     while (ADCSRA & (0x01 << ADSC)); //ждем окончания преобразования
     temp += ADCL | ((uint16_t)ADCH << 8); //записали результат
   }
-  vcc_adc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
+  analogVccAdc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
 
-  if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(ERROR_VCC_RANGE); //устанвливаем ошибку по питанию
+  if (GET_VCC(REFERENCE, analogVccAdc) < MIN_VCC || GET_VCC(REFERENCE, analogVccAdc) > MAX_VCC) SET_ERROR(ERROR_VCC_RANGE); //устанвливаем ошибку по питанию
 
 #if BTN_TYPE
   ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
@@ -981,34 +990,34 @@ void checkVCC(void) //чтение напряжения питания
 //----------------Обновление зон  сенсора яркости освещения------------------------
 void lightSensZoneUpdate(uint8_t min, uint8_t max) //обновление зон сенсора яркости освещения
 {
-  debugSettings.light_zone[0][2] = min;
-  debugSettings.light_zone[1][0] = max;
+  debugSettings.lightZone[0][2] = min;
+  debugSettings.lightZone[1][0] = max;
 
   min = (max - min) / 3;
   max = min * 2;
 
-  debugSettings.light_zone[1][2] = min + LIGHT_SENS_GIST;
-  debugSettings.light_zone[0][1] = min - LIGHT_SENS_GIST;
-  debugSettings.light_zone[1][1] = max + LIGHT_SENS_GIST;
-  debugSettings.light_zone[0][0] = max - LIGHT_SENS_GIST;
+  debugSettings.lightZone[1][2] = min + LIGHT_SENS_GIST;
+  debugSettings.lightZone[0][1] = min - LIGHT_SENS_GIST;
+  debugSettings.lightZone[1][1] = max + LIGHT_SENS_GIST;
+  debugSettings.lightZone[0][0] = max - LIGHT_SENS_GIST;
 }
 //-------------------Обработка сенсора яркости освещения---------------------------
 void lightSensUpdate(void) //обработка сенсора яркости освещения
 {
-  static uint8_t now_light_state;
+  static uint8_t light_prev;
   if (mainSettings.timeBright[0] == mainSettings.timeBright[1]) { //если разрешена робота сенсора
     _timer_ms[TMR_LIGHT] = (1000 - LIGHT_SENS_TIME); //установили таймер
 
-    if (light_adc < debugSettings.light_zone[0][now_light_state]) {
-      if (now_light_state < 2) now_light_state++;
+    if (light.adc < debugSettings.lightZone[0][light_prev]) {
+      if (light_prev < 2) light_prev++;
     }
-    else if (light_adc > debugSettings.light_zone[1][now_light_state]) {
-      if (now_light_state) now_light_state--;
+    else if (light.adc > debugSettings.lightZone[1][light_prev]) {
+      if (light_prev) light_prev--;
     }
 
-    if (now_light_state != light_state) {
-      light_state = now_light_state;
-      light_update = 1; //устанавливаем флаг изменения яркости
+    if (light_prev != light.state) {
+      light.state = light_prev;
+      brightUpdate = 1; //устанавливаем флаг изменения яркости
     }
   }
 }
@@ -1019,6 +1028,11 @@ void lightSensCheck(void) //проверка сенсора яркости ос�
     _timer_ms[TMR_LIGHT] = 1000; //установили таймер
     analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
   }
+}
+//-----------------Проверка возможности воспроизвести звук-------------------------
+inline boolean soundPlayEnable(void) //проверка возможности воспроизвести звук
+{
+  return (!soundMute && mainSettings.baseSound);
 }
 //---------------------------Проверка кнопок---------------------------------------
 inline uint8_t buttonState(void) //проверка кнопок
@@ -1099,7 +1113,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
-        if (mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+        if (soundPlayEnable()) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
         melodyStop(); //сброс воспроизведения мелодии
 #endif
         switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса

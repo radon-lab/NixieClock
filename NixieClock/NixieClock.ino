@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_025 бета от 23.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_026 бета от 24.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.2.5"
+#define FIRMWARE_VERSION "0.2.6"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -480,6 +480,8 @@ void systemTask(void) //системная задача
     timerUpdate(); //обработка таймера
 #endif
 
+    boolean hourPlay = 0; //флаг воспроизведения звука часа
+
     //счет времени
     if (++RTC.s > 59) { //секунды
       RTC.s = 0; //сбросили секунды
@@ -498,14 +500,15 @@ void systemTask(void) //системная задача
             }
           }
         }
-        hourSound(); //звук смены часа
-        light_update = 1; //устанавливаем флаг изменения яркости
+        hourPlay = 1; //запустить воспроизведение звука смены часа
+        brightUpdate = 1; //устанавливаем флаг обновления состояния яркости
       }
       if (fastSettings.flipMode && (animShow < ANIM_MAIN)) animShow = ANIM_MINS; //показать анимацию переключения цифр
 #if ALARM_TYPE
       alarmCheck(ALARM_CHECK_MAIN); //проверяем будильники на совпадение
 #endif
     }
+
 #if LIGHT_SENS_ENABLE
     lightSensUpdate(); //обработка сенсора яркости освещения
 #endif
@@ -516,17 +519,19 @@ void systemTask(void) //системная задача
     }
 #endif
 
-    if (light_update) { //если нужно изменить яркость
-      light_update = 0; //сбрасываем флаг изменения яркости
-      changeBright(); //установка текущей яркости
+    if (brightUpdate) { //если нужно обновить яркость
+      brightUpdate = 0; //сбрасываем флаг
+      changeBright(); //обновление текущей яркости
     }
 
 #if (SECS_DOT != 3) && (SECS_DOT != 4) && DOTS_PORT_ENABLE && (ESP_ENABLE || DEFAULT_DOT_EXT_MODE)
     dotFlash(); //мигание точек
 #endif
 
+    if (hourPlay) hourSound(); //запустили звук смены часа
+
 #if !PLAYER_TYPE
-    if (mainSettings.baseSound == 2) { //если звук включен
+    if (!soundMute && (mainSettings.baseSound == 2)) { //если звук включен
       if (mainTask == MAIN_PROGRAM) { //если в режиме часов
         if (!melodyState()) { //если мелодия не воспроизводится
           if (RTC.s & 0x01) buzzPulse(SECS_UNEVEN_SOUND_FREQ, SECS_UNEVEN_SOUND_TIME); //щелчок пищалкой
@@ -600,7 +605,7 @@ void checkRealTimeClock(void) //проверка модуля часов реа�
 
 #if DS3231_ENABLE
   if (!rtcGetTime(RTC_CLEAR_OSF)) { //считываем время из RTC
-    rtcWriteAging(debugSettings.aging); //восстанавливаем коррекцию хода
+    rtcWriteAging(debugSettings.rtcAging); //восстанавливаем коррекцию хода
     rtcSendTime(); //отправляем последнее сохраненное время в RTC
   }
 #if ESP_ENABLE
@@ -859,75 +864,48 @@ void changeBrightDisable(uint8_t _state) //запретить смену ярк�
 //-----------------------------Расчет шага яркости-----------------------------
 uint8_t setBrightStep(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет шага яркости
 {
-  uint8_t temp = ceil((float)_brt / (float)_time * (float)_step); //расчёт шага яркости точки
+  uint8_t temp = (((((uint16_t)_brt * 100) / _time) * _step) + 99) / 100; //расчёт шага яркости точки
   if (!temp) temp = 1; //если шаг слишком мал, устанавливаем минимум
   return temp;
 }
 //-------------------------Расчет периода шага яркости--------------------------
 uint16_t setBrightTime(uint16_t _brt, uint16_t _step, uint16_t _time) //расчет периода шага яркости
 {
-  uint16_t temp = ceil((float)_time / (float)_brt); //расчёт шага яркости точки
+  uint16_t temp = ((((uint32_t)_time * 100) / _brt) + 99) / 100; //расчёт шага яркости точки
   if (temp < _step) temp = _step; //если шаг слишком мал то устанавливаем минимум
   return temp;
 }
 //---------------------Получить усредненную яркость-----------------------------
-uint8_t getMidBright(uint8_t night, uint8_t day) //получить усредненную яркость
+uint8_t getMidBright(uint8_t _night, uint8_t _day) //получить усредненную яркость
 {
-  return night + ((day - night) >> 1);
+  return _night + ((_day - _night) >> 1);
 }
 //---------------------Установка яркости от времени суток-----------------------------
 boolean checkHourStrart(uint8_t _start, uint8_t _end) //установка яркости от времени суток
 {
-  return ((_start > _end && (RTC.h >= _start || RTC.h < _end)) || (_start < _end && RTC.h >= _start && RTC.h < _end));
+  return (((_start > _end) && ((RTC.h >= _start) || (RTC.h < _end))) || ((_start < _end) && (RTC.h >= _start) && (RTC.h < _end)));
 }
 //---------------------------------Получить время со сдвигом фазы-----------------------------------------
-uint16_t getPhaseTime(uint8_t time, int8_t phase) //получить время со сдвигом фазы
+uint16_t getPhaseTime(uint8_t _time, int8_t _phase) //получить время со сдвигом фазы
 {
-  return ((uint16_t)time * 60) + (phase - RTC.s) - ((RTC.s >= phase) ? 0 : 60);  //возвращаем результат
-}
-//------------------------------------Звук смены часа------------------------------------
-void hourSound(void) //звук смены часа
-{
-  if (checkHourStrart(mainSettings.timeHour[0], mainSettings.timeHour[1])) {
-    if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
-#if PLAYER_TYPE
-      uint8_t temp = mainSettings.hourSound;
-      if (!(temp & 0x03)) {
-        if (mainSettings.baseSound) temp |= 0x02;
-        else temp = 0x01;
-      }
-      playerStop(); //сброс воспроизведения плеера
-      if (temp & 0x01) playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
-      if (temp & 0x02) speakTime(temp & 0x01); //воспроизвести время
-#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-      if (temp & 0x80) { //воспроизвести температуру
-#if ESP_ENABLE
-        if (getTemperature(getHourSens()) <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
-#else
-        if (getTemperature() <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
-#endif
-      }
-#endif
-#else
-      melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
-#endif
-    }
-  }
+  return ((uint16_t)_time * 60) + (_phase - RTC.s) - ((RTC.s >= _phase) ? 0 : 60);  //возвращаем результат
 }
 //---------------------Установка яркости от времени суток-----------------------------
 void changeBright(void) //установка яркости от времени суток
 {
   indi.sleepMode = SLEEP_DISABLE; //сбросили флаг режима сна индикаторов
 
+  soundMute = checkHourStrart(mainSettings.timeSound[0], mainSettings.timeSound[1]); //установили состояние приглушения звуков
+
 #if LIGHT_SENS_ENABLE || ESP_ENABLE
   if (mainSettings.timeBright[TIME_NIGHT] != mainSettings.timeBright[TIME_DAY])
 #endif
-    light_state = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
+    light.state = (checkHourStrart(mainSettings.timeBright[TIME_NIGHT], mainSettings.timeBright[TIME_DAY])) ? 2 : 0;
 #if !LIGHT_SENS_ENABLE && ESP_ENABLE
-  else light_state = device.light;
+  else light.state = device.light;
 #endif
 
-  switch (light_state) {
+  switch (light.state) {
     case 0: //дневной режим
 #if ((SECS_DOT != 3) || !DOTS_PORT_ENABLE) && (SECS_DOT != 4)
       dot.menuBright = dot.maxBright = mainSettings.dotBright[TIME_DAY]; //установка максимальной яркости точек
@@ -1332,6 +1310,14 @@ void dotEffect(void) //анимации точек
             }
           }
           break;
+        case DOT_DECATRON_MOON:
+          if (!RTC.s) decatronSetDot(0); //установка точки декатрона
+          else if (RTC.s <= 15) decatronSetLine(30 - RTC.s, RTC.s); //установка линии декатрона
+          else if (RTC.s <= 30) decatronSetLine(RTC.s - 15, 45 - RTC.s); //установка линии декатрона
+          else if (RTC.s <= 45) decatronSetLine(45 - RTC.s, RTC.s - 15); //установка линии декатрона
+          else decatronSetLine(RTC.s - 30, 60 - RTC.s); //установка линии декатрона
+          dot.update = 1; //сбросили флаг обновления точек
+          break;
 #endif
 #if DOTS_PORT_ENABLE
         case DOT_BLINK:
@@ -1468,6 +1454,24 @@ void dotEffect(void) //анимации точек
           switch (dot.drive) {
             case 0: indiSetDotL(2); indiSetDotR(3); indiClrDotR(1); indiClrDotL(4); dot.drive = 1; break; //включаем левую точку
             case 1: indiSetDotR(1); indiSetDotL(4); indiClrDotL(2); indiClrDotR(3); dot.drive = 0; break; //включаем правую точку
+          }
+          break;
+        case DOT_SHIFT_TURN_BLINK: //мигание двумя точками со смещением
+#if DOT_SHIFT_TURN_TIME
+          if (dot.count < ((1000 / DOT_SHIFT_TURN_TIME) - 1)) {
+            dot.count++; //прибавили шаг
+            _timer_ms[TMR_DOT] = DOT_SHIFT_TURN_TIME; //установили таймер
+          }
+          else {
+            dot.count = 0; //сбросили счетчик
+            dot.update = 1; //сбросили флаг секунд
+          }
+#else
+          dot.update = 1; //сбросили флаг секунд
+#endif
+          switch (dot.drive) {
+            case 0: indiSetDotL(2); indiSetDotL(4); indiClrDotR(1); indiClrDotR(3); dot.drive = 1; break; //включаем левую точку
+            case 1: indiSetDotR(1); indiSetDotR(3); indiClrDotL(2); indiClrDotL(4); dot.drive = 0; break; //включаем правую точку
           }
           break;
 #endif
@@ -2154,9 +2158,9 @@ void alarmInit(void) //инициализация будильника
 void alarmDisable(void) //отключение будильника
 {
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_ALARM_DISABLE_SOUND, PLAYER_GENERAL_FOLDER); //звук выключения будильника
 #else
-  melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
+  if (!soundMute) melodyPlay(SOUND_ALARM_DISABLE, SOUND_LINK(general_sound), REPLAY_ONCE); //звук выключения будильника
 #endif
   alarmReset(); //сброс будильника
 }
@@ -2446,9 +2450,9 @@ uint8_t alarmWarn(void) //тревога будильника
           _timer_sec[TMR_ALM_WAIT] = ((uint16_t)extendedSettings.alarmWaitTime * 60);
           _timer_sec[TMR_ALM_SOUND] = 0;
 #if PLAYER_TYPE
-          if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
+          if (soundPlayEnable()) playerSetTrackNow(PLAYER_ALARM_WAIT_SOUND, PLAYER_GENERAL_FOLDER); //звук ожидания будильника
 #else
-          melodyPlay(SOUND_ALARM_WAIT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
+          if (!soundMute) melodyPlay(SOUND_ALARM_WAIT, SOUND_LINK(general_sound), REPLAY_ONCE); //звук ожидания будильника
 #endif
         }
         else {
@@ -2723,8 +2727,8 @@ void debugMenu(void) //отладка
 #if LIGHT_SENS_ENABLE
         case DEB_LIGHT_SENS: //калибровка датчика освещения
           if (!_timer_ms[TMR_MS]) {
-            if (temp_min > light_adc) temp_min = light_adc;
-            if (temp_max < light_adc) temp_max = light_adc;
+            if (temp_min > light.adc) temp_min = light.adc;
+            if (temp_max < light.adc) temp_max = light.adc;
             analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
             _timer_ms[TMR_MS] = DEBUG_LIGHT_SENS_TIME; //установили таймер
             cur_update = 0; //обновление экрана
@@ -2749,14 +2753,14 @@ void debugMenu(void) //отладка
 #endif
           switch (cur_mode) {
 #if DS3231_ENABLE
-            case DEB_AGING_CORRECT: indiPrintNum(debugSettings.aging + 128, 0); break; //выводим коррекцию DS3231
+            case DEB_AGING_CORRECT: indiPrintNum(debugSettings.rtcAging + 128, 0); break; //выводим коррекцию DS3231
 #endif
             case DEB_TIME_CORRECT: indiPrintNum(debugSettings.timePeriod, 0); break; //выводим коррекцию внутреннего таймера
 #if GEN_ENABLE
-            case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.min_pwm, 0); break; //выводим минимальный шим
-            case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.max_pwm, 0); break; //выводим максимальный шим
+            case DEB_DEFAULT_MIN_PWM: indiPrintNum(debugSettings.minPwm, 0); break; //выводим минимальный шим
+            case DEB_DEFAULT_MAX_PWM: indiPrintNum(debugSettings.maxPwm, 0); break; //выводим максимальный шим
 #if GEN_FEEDBACK == 1
-            case DEB_HV_ADC: indiPrintNum(hv_treshold, 0); break; //выводим корекцию напряжения
+            case DEB_HV_ADC: indiPrintNum(conv.hvTreshold, 0); break; //выводим корекцию напряжения
 #endif
 #endif
 #if IR_PORT_ENABLE
@@ -2767,7 +2771,7 @@ void debugMenu(void) //отладка
 #endif
 #if LIGHT_SENS_ENABLE
             case DEB_LIGHT_SENS: //калибровка датчика освещения
-              indiPrintNum(light_adc, 1, 3); //выводим значение АЦП датчика освещения
+              indiPrintNum(light.adc, 1, 3); //выводим значение АЦП датчика освещения
               break;
 #endif
             case DEB_RESET: indiPrintNum(cur_reset, 0, 2, 0); break; //сброс настроек отладки
@@ -2790,16 +2794,16 @@ void debugMenu(void) //отладка
           case 1:
             switch (cur_mode) {
 #if DS3231_ENABLE
-              case DEB_AGING_CORRECT: if (debugSettings.aging > -127) debugSettings.aging--; else debugSettings.aging = 127; break; //коррекция хода
+              case DEB_AGING_CORRECT: if (debugSettings.rtcAging > -127) debugSettings.rtcAging--; else debugSettings.rtcAging = 127; break; //коррекция хода
 #endif
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod > US_PERIOD_MIN) debugSettings.timePeriod--; else debugSettings.timePeriod = US_PERIOD_MAX; break; //коррекция хода
 #if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
-                if (debugSettings.min_pwm > 100) debugSettings.min_pwm -= 5; //минимальное значение шим
+                if (debugSettings.minPwm > 100) debugSettings.minPwm -= 5; //минимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
-                if (debugSettings.max_pwm > 150) debugSettings.max_pwm -= 5; //максимальное значение шим
+                if (debugSettings.maxPwm > 150) debugSettings.maxPwm -= 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
 #if GEN_FEEDBACK == 1
@@ -2833,16 +2837,16 @@ void debugMenu(void) //отладка
           case 1:
             switch (cur_mode) {
 #if DS3231_ENABLE
-              case DEB_AGING_CORRECT: if (debugSettings.aging < 127) debugSettings.aging++; else debugSettings.aging = -127; break; //коррекция хода
+              case DEB_AGING_CORRECT: if (debugSettings.rtcAging < 127) debugSettings.rtcAging++; else debugSettings.rtcAging = -127; break; //коррекция хода
 #endif
               case DEB_TIME_CORRECT: if (debugSettings.timePeriod < US_PERIOD_MAX) debugSettings.timePeriod++; else debugSettings.timePeriod = US_PERIOD_MIN; break; //коррекция хода
 #if GEN_ENABLE
               case DEB_DEFAULT_MIN_PWM: //коррекция минимального значения шим
-                if (debugSettings.min_pwm < 190) debugSettings.min_pwm += 5; //минимальное значение шим
+                if (debugSettings.minPwm < 190) debugSettings.minPwm += 5; //минимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
               case DEB_DEFAULT_MAX_PWM: //коррекция максимального значения шим
-                if (debugSettings.max_pwm < 200) debugSettings.max_pwm += 5; //максимальное значение шим
+                if (debugSettings.maxPwm < 200) debugSettings.maxPwm += 5; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
                 break;
 #if GEN_FEEDBACK == 1
@@ -2870,7 +2874,7 @@ void debugMenu(void) //отладка
         if (cur_set) { //если в режиме настройки
           switch (cur_mode) {
 #if DS3231_ENABLE
-            case DEB_AGING_CORRECT: if (!rtcReadAging(&debugSettings.aging)) cur_set = 0; break; //чтение коррекции хода
+            case DEB_AGING_CORRECT: if (!rtcReadAging(&debugSettings.rtcAging)) cur_set = 0; break; //чтение коррекции хода
 #endif
             case DEB_TIME_CORRECT: break; //коррекция хода
 #if GEN_ENABLE
@@ -2900,7 +2904,7 @@ void debugMenu(void) //отладка
         }
         else { //иначе режим выбора пункта меню
           switch (cur_mode) {
-            case DEB_AGING_CORRECT: rtcWriteAging(debugSettings.aging); break; //запись коррекции хода
+            case DEB_AGING_CORRECT: rtcWriteAging(debugSettings.rtcAging); break; //запись коррекции хода
 #if IR_PORT_ENABLE
             case DEB_IR_BUTTONS: //програмирование кнопок
               irResetStatus(); //сбросить статус IR приемника
@@ -2913,12 +2917,12 @@ void debugMenu(void) //отладка
               if (cur_reset) { //подтверждение
                 cur_mode = 0; //перешли на первый пункт меню
 #if DS3231_ENABLE
-                debugSettings.aging = 0; //коррекции хода модуля часов
+                debugSettings.rtcAging = 0; //коррекции хода модуля часов
 #endif
                 debugSettings.timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
 #if GEN_ENABLE
-                debugSettings.min_pwm = DEFAULT_MIN_PWM; //минимальное значение шим
-                debugSettings.max_pwm = DEFAULT_MAX_PWM; //максимальное значение шим
+                debugSettings.minPwm = DEFAULT_MIN_PWM; //минимальное значение шим
+                debugSettings.maxPwm = DEFAULT_MAX_PWM; //максимальное значение шим
                 indiChangeCoef(); //обновление коэффициента линейного регулирования
 #if GEN_FEEDBACK == 1
                 debugSettings.hvCorrect = 0; //коррекция напряжения преобразователя
@@ -2929,7 +2933,7 @@ void debugMenu(void) //отладка
                 for (uint8_t i = 0; i < (KEY_MAX_ITEMS - 1); i++) debugSettings.irButtons[i] = 0; //сбрасываем значение ячеек кнопок пульта
 #endif
 #if DS3231_ENABLE
-                rtcWriteAging(debugSettings.aging); //запись коррекции хода
+                rtcWriteAging(debugSettings.rtcAging); //запись коррекции хода
 #endif
 #if LIGHT_SENS_ENABLE
                 lightSensZoneUpdate(LIGHT_SENS_START_MIN, LIGHT_SENS_START_MAX); //обновление зон сенсора яркости освещения
@@ -2981,7 +2985,7 @@ uint8_t timeSettings(void) //настройки времени
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_TIME_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
 #if INDI_SYMB_TYPE
@@ -3120,7 +3124,7 @@ uint8_t singleAlarmSettings(void) //настройка будильника
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
 #if INDI_SYMB_TYPE
@@ -3486,7 +3490,7 @@ uint8_t multiAlarmSettings(void) //настройка будильников
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_ALARM_SET_SOUND, PLAYER_GENERAL_FOLDER); //воспроизводим название меню
 #endif
 
 #if INDI_SYMB_TYPE
@@ -3903,7 +3907,7 @@ uint8_t mainMenu(void) //настроки основные
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_MAIN_MENU_START, PLAYER_MENU_FOLDER); //воспроизводим название меню
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_MAIN_MENU_START, PLAYER_MENU_FOLDER); //воспроизводим название меню
 #endif
 
 #if INDI_SYMB_TYPE
@@ -3961,22 +3965,22 @@ uint8_t mainMenu(void) //настроки основные
 #endif
           switch (cur_mode) {
 #if PLAYER_TYPE
-            case SET_TIME_FORMAT: //вывод формата времени
-              indiPrintMenuData(blink_data, cur_indi, (mainSettings.timeFormat) ? 12 : 24, 0, mainSettings.glitchMode, 3); //вывод формата времени/режима глюков
+            case SET_TIME_FORMAT: //вывод формата времени/режима глюков
+              indiPrintMenuData(blink_data, cur_indi, mainSettings.glitchMode, 0, (mainSettings.timeFormat) ? 12 : 24, 2); //вывод формата времени/режима глюков
               break;
-            case SET_GLITCH_MODE: //вывод озвучки
-              indiPrintMenuData(blink_data, cur_indi, mainSettings.volumeSound, 0, mainSettings.voiceSound, 3); //вывод громкости озвучки/голоса озвучки
+            case SET_GLITCH_MODE: //вывод громкости озвучки/голоса озвучки
+              indiPrintMenuData(blink_data, cur_indi, mainSettings.voiceSound, 0, mainSettings.volumeSound, 2); //вывод громкости озвучки/голоса озвучки
               break;
-            case SET_BTN_SOUND: //вывод озвучки
-              indiPrintMenuData(blink_data, cur_indi, (mainSettings.hourSound & 0x03) + ((mainSettings.hourSound & 0x80) ? 10 : 0), 0, mainSettings.baseSound, 3); //вывод озвучки смены часа/действий
+            case SET_BTN_SOUND: //вывод озвучки смены часа/действий
+              indiPrintMenuData(blink_data, cur_indi, mainSettings.baseSound, 0, (mainSettings.hourSound & 0x03) + ((mainSettings.hourSound & 0x80) ? 10 : 0), 2); //вывод озвучки смены часа/действий
               break;
 #else
             case SET_TIME_FORMAT: if (!blink_data) indiPrintNum((mainSettings.timeFormat) ? 12 : 24, 0); break; //вывод формата времени
             case SET_GLITCH_MODE: if (!blink_data) indiPrintNum(mainSettings.glitchMode, 3); break; //вывод глюков
-            case SET_BTN_SOUND: if (!blink_data) indiPrintNum(mainSettings.baseSound, 3); break; //звук кнопок или озвучка
+            case SET_BTN_SOUND: indiPrintMenuData(blink_data, cur_indi, mainSettings.baseSound, 1, mainSettings.hourSound, 3); break; //звук смены часа и кнопок/секунд
 #endif
             case SET_HOUR_TIME:
-              indiPrintMenuData(blink_data, cur_indi, mainSettings.timeHour[TIME_NIGHT], 0, mainSettings.timeHour[TIME_DAY], 2); //вывод часа начала звукового оповещения нового часа/окончания звукового оповещения нового часа
+              indiPrintMenuData(blink_data, cur_indi, mainSettings.timeSound[TIME_NIGHT], 0, mainSettings.timeSound[TIME_DAY], 2); //вывод часа начала звукового оповещения нового часа/окончания звукового оповещения нового часа
               break;
             case SET_BRIGHT_TIME:
               indiPrintMenuData(blink_data, cur_indi, mainSettings.timeBright[TIME_NIGHT], 0, mainSettings.timeBright[TIME_DAY], 2); //вывод часа начала ночной посветки/окончания ночной посветки
@@ -4027,14 +4031,13 @@ uint8_t mainMenu(void) //настроки основные
             case SET_TIME_FORMAT:
             case SET_GLITCH_MODE:
             case SET_BTN_SOUND:
-              wsBacklSetMultiColor((cur_indi) ? 3 : 0, (cur_indi) ? 1 : 2, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
+              wsBacklSetMultiColor((cur_indi) ? 2 : 0, (cur_indi) ? 2 : 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
 #endif
 #if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4)
             case SET_DOT_BRIGHT:
 #endif
 #if !PLAYER_TYPE
             case SET_GLITCH_MODE:
-            case SET_BTN_SOUND:
 #endif
 #if ((SECS_DOT == 3) && DOTS_PORT_ENABLE) || (SECS_DOT == 4) || !PLAYER_TYPE
               wsBacklSetMultiColor(3, 1, BACKL_MENU_COLOR_1, BACKL_MENU_COLOR_2); break; //подсветка активных разрядов
@@ -4059,7 +4062,7 @@ uint8_t mainMenu(void) //настроки основные
             if (cur_mode > 0) cur_mode--;
             else cur_mode = SET_MAX_ITEMS - 1;
 #if PLAYER_TYPE
-            if (mainSettings.baseSound) playerSetTrackNow(PLAYER_MAIN_MENU_START + cur_mode, PLAYER_MENU_FOLDER);
+            if (soundPlayEnable()) playerSetTrackNow(PLAYER_MAIN_MENU_START + cur_mode, PLAYER_MENU_FOLDER);
 #endif
             break;
           case 1:
@@ -4067,23 +4070,27 @@ uint8_t mainMenu(void) //настроки основные
               case SET_TIME_FORMAT:
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.timeFormat = 0; break; //формат времени
-                  case 1: mainSettings.glitchMode = 0; break; //глюки
+                  case 0: mainSettings.glitchMode = 0; break; //глюки
+                  case 1: mainSettings.timeFormat = 0; break; //формат времени
                 }
 #else
                 mainSettings.timeFormat = 0; //формат времени
 #endif
                 break;
-              case SET_GLITCH_MODE: //озвучка
+              case SET_GLITCH_MODE: //глюки/озвучка
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: if (mainSettings.volumeSound > MAIN_MIN_VOL) mainSettings.volumeSound--; playerSetVolNow(mainSettings.volumeSound); playerSetTrackNow(PLAYER_TEST_VOL_SOUND, PLAYER_GENERAL_FOLDER); break; //установили громкость
-                  case 1: //голос озвучки
+                  case 0: //голос озвучки
                     if (mainSettings.voiceSound > 0) {
                       mainSettings.voiceSound--;
                       playerSetVoice(mainSettings.voiceSound);
                       playerSetTrackNow(PLAYER_VOICE_SOUND, PLAYER_GENERAL_FOLDER);
                     }
+                    break;
+                  case 1: //громкость
+                    if (mainSettings.volumeSound > MAIN_MIN_VOL) mainSettings.volumeSound--;
+                    playerSetVolNow(mainSettings.volumeSound);
+                    playerSetTrackNow(PLAYER_TEST_VOL_SOUND, PLAYER_GENERAL_FOLDER);
                     break;
                 }
 #else
@@ -4094,20 +4101,25 @@ uint8_t mainMenu(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
+                  case 0: mainSettings.baseSound = 0; break; //выключили озвучку действий
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-                  case 0: if (mainSettings.hourSound & 0x80) mainSettings.hourSound &= ~0x80; else mainSettings.hourSound |= 0x80; break; //установили озвучку темепературы
+                  case 1: if (mainSettings.hourSound & 0x80) mainSettings.hourSound &= ~0x80; else mainSettings.hourSound |= 0x80; break; //установили озвучку темепературы
 #endif
-                  case 1: mainSettings.baseSound = 0; break; //выключили озвучку действий
                 }
 #else
-                if (!mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
-                if (mainSettings.baseSound > 0) mainSettings.baseSound--; //звук кнопок
+                switch (cur_indi) {
+                  case 0:
+                    if (!mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+                    if (mainSettings.baseSound > 0) mainSettings.baseSound--; //звук кнопок
+                    break;
+                  case 1: mainSettings.hourSound = 0; break; //звук смены часа
+                }
 #endif
                 break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeHour[TIME_NIGHT] > 0) mainSettings.timeHour[TIME_NIGHT]--; else mainSettings.timeHour[TIME_NIGHT] = 23; break;
-                  case 1: if (mainSettings.timeHour[TIME_DAY] > 0) mainSettings.timeHour[TIME_DAY]--; else mainSettings.timeHour[TIME_DAY] = 23; break;
+                  case 0: if (mainSettings.timeSound[TIME_NIGHT] > 0) mainSettings.timeSound[TIME_NIGHT]--; else mainSettings.timeSound[TIME_NIGHT] = 23; break;
+                  case 1: if (mainSettings.timeSound[TIME_DAY] > 0) mainSettings.timeSound[TIME_DAY]--; else mainSettings.timeSound[TIME_DAY] = 23; break;
                 }
                 break;
               case SET_BRIGHT_TIME: //время смены подсветки
@@ -4194,7 +4206,7 @@ uint8_t mainMenu(void) //настроки основные
             if (cur_mode < (SET_MAX_ITEMS - 1)) cur_mode++;
             else cur_mode = 0;
 #if PLAYER_TYPE
-            if (mainSettings.baseSound) playerSetTrackNow(PLAYER_MAIN_MENU_START + cur_mode, PLAYER_MENU_FOLDER);
+            if (soundPlayEnable()) playerSetTrackNow(PLAYER_MAIN_MENU_START + cur_mode, PLAYER_MENU_FOLDER);
 #endif
             break;
           case 1:
@@ -4202,23 +4214,27 @@ uint8_t mainMenu(void) //настроки основные
               case SET_TIME_FORMAT:
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.timeFormat = 1; break; //формат времени
-                  case 1: mainSettings.glitchMode = 1; break; //глюки
+                  case 0: mainSettings.glitchMode = 1; break; //глюки
+                  case 1: mainSettings.timeFormat = 1; break; //формат времени
                 }
 #else
                 mainSettings.timeFormat = 1; //формат времени
 #endif
                 break;
-              case SET_GLITCH_MODE: //глюки
+              case SET_GLITCH_MODE: //глюки/озвучка
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: if (mainSettings.volumeSound < MAIN_MAX_VOL) mainSettings.volumeSound++; playerSetVolNow(mainSettings.volumeSound); playerSetTrackNow(PLAYER_TEST_VOL_SOUND, PLAYER_GENERAL_FOLDER); break; //установили громкость
-                  case 1: //голос озвучки
+                  case 0: //голос озвучки
                     if (mainSettings.voiceSound < (PLAYER_VOICE_MAX - 1)) {
                       mainSettings.voiceSound++;
                       playerSetVoice(mainSettings.voiceSound);
                       playerSetTrackNow(PLAYER_VOICE_SOUND, PLAYER_GENERAL_FOLDER);
                     }
+                    break; //громкость
+                  case 1:
+                    if (mainSettings.volumeSound < MAIN_MAX_VOL) mainSettings.volumeSound++;
+                    playerSetVolNow(mainSettings.volumeSound);
+                    playerSetTrackNow(PLAYER_TEST_VOL_SOUND, PLAYER_GENERAL_FOLDER);
                     break;
                 }
 #else
@@ -4228,18 +4244,23 @@ uint8_t mainMenu(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: if ((mainSettings.hourSound & 0x7F) < 3) mainSettings.hourSound++; else mainSettings.hourSound = 0; break; //установили тип озвучки часа
-                  case 1: mainSettings.baseSound = 1; break; //включили озвучку действий
+                  case 0: mainSettings.baseSound = 1; break; //включили озвучку действий
+                  case 1: if ((mainSettings.hourSound & 0x7F) < 3) mainSettings.hourSound++; else mainSettings.hourSound = 0; break; //установили тип озвучки часа
                 }
 #else
-                if (!mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
-                if (mainSettings.baseSound < 2) mainSettings.baseSound++; //звук кнопок
+                switch (cur_indi) {
+                  case 0:
+                    if (!mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+                    if (mainSettings.baseSound < 2) mainSettings.baseSound++; //звук кнопок
+                    break;
+                  case 1: mainSettings.hourSound = 1; break; //звук смены часа
+                }
 #endif
                 break;
               case SET_HOUR_TIME: //время звука смены часа
                 switch (cur_indi) {
-                  case 0: if (mainSettings.timeHour[TIME_NIGHT] < 23) mainSettings.timeHour[TIME_NIGHT]++; else mainSettings.timeHour[TIME_NIGHT] = 0; break;
-                  case 1: if (mainSettings.timeHour[TIME_DAY] < 23) mainSettings.timeHour[TIME_DAY]++; else mainSettings.timeHour[TIME_DAY] = 0; break;
+                  case 0: if (mainSettings.timeSound[TIME_NIGHT] < 23) mainSettings.timeSound[TIME_NIGHT]++; else mainSettings.timeSound[TIME_NIGHT] = 0; break;
+                  case 1: if (mainSettings.timeSound[TIME_DAY] < 23) mainSettings.timeSound[TIME_DAY]++; else mainSettings.timeSound[TIME_DAY] = 0; break;
                 }
                 break;
               case SET_BRIGHT_TIME: //время смены подсветки
@@ -4357,7 +4378,7 @@ uint8_t mainMenu(void) //настроки основные
           }
           if (set) {
 #if PLAYER_TYPE
-            if (mainSettings.baseSound) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + TIME_NIGHT) + (cur_mode * 2), PLAYER_MENU_FOLDER);
+            if (soundPlayEnable()) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + TIME_NIGHT) + (cur_mode * 2), PLAYER_MENU_FOLDER);
 #endif
             changeBrightDisable(CHANGE_DISABLE); //запретить смену яркости
             dotSetBright((cur_mode != SET_DOT_BRIGHT) ? dot.menuBright : mainSettings.dotBright[TIME_NIGHT]); //включаем точки
@@ -4398,7 +4419,7 @@ uint8_t mainMenu(void) //настроки основные
 #endif
           }
 #if PLAYER_TYPE
-          if (mainSettings.baseSound) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + TIME_NIGHT) + (cur_mode * 2), PLAYER_MENU_FOLDER);
+          if (soundPlayEnable()) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + TIME_NIGHT) + (cur_mode * 2), PLAYER_MENU_FOLDER);
 #endif
         }
         _timer_ms[TMR_MS] = time_out = anim_demo = blink_data = 0; //сбрасываем флаги
@@ -4425,7 +4446,7 @@ uint8_t mainMenu(void) //настроки основные
 #endif
           }
 #if PLAYER_TYPE
-          if (mainSettings.baseSound) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + cur_indi) + (cur_mode * 2), PLAYER_MENU_FOLDER);
+          if (soundPlayEnable()) playerSetTrackNow((PLAYER_MAIN_MENU_OTHER + cur_indi) + (cur_mode * 2), PLAYER_MENU_FOLDER);
 #endif
         }
         _timer_ms[TMR_MS] = time_out = anim_demo = blink_data = 0; //сбрасываем флаги
@@ -4807,7 +4828,7 @@ uint8_t radioScreen(void) //радиоприемник
 
     if (getPowerStatusRDA() == RDA_OFF) { //если радио выключено
 #if PLAYER_TYPE
-      if (mainSettings.baseSound) playerSetTrackNow(PLAYER_RADIO_SOUND, PLAYER_GENERAL_FOLDER);
+      if (soundPlayEnable()) playerSetTrackNow(PLAYER_RADIO_SOUND, PLAYER_GENERAL_FOLDER);
       playerSetMute(PLAYER_MUTE_ON); //включаем приглушение звука плеера
       radio.powerState = RDA_OFF; //сбросили флаг питания радио
 #else
@@ -5099,7 +5120,7 @@ void timerSettings(void) //настройки таймера
   }
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) playerSetTrackNow(PLAYER_TIMER_SET_SOUND, PLAYER_GENERAL_FOLDER);
+  if (soundPlayEnable()) playerSetTrackNow(PLAYER_TIMER_SET_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
 
 #if INDI_SYMB_TYPE
@@ -5275,7 +5296,7 @@ uint8_t timerScreen(void) //таймер-секундомер
       case RIGHT_KEY_PRESS: //клик правой кнопкой
       case RIGHT_KEY_HOLD: //удержание правой кнопки
 #if PLAYER_TYPE
-        if (mainSettings.baseSound) playerSetTrackNow(PLAYER_TIMER_SOUND, PLAYER_GENERAL_FOLDER);
+        if (soundPlayEnable()) playerSetTrackNow(PLAYER_TIMER_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
         mode = 1; //переключаем режим
         timer.mode = 0; //деактивируем таймер
@@ -5287,7 +5308,7 @@ uint8_t timerScreen(void) //таймер-секундомер
       case LEFT_KEY_PRESS: //клик левой кнопкой
       case LEFT_KEY_HOLD: //удержание левой кнопки
 #if PLAYER_TYPE
-        if (mainSettings.baseSound) playerSetTrackNow(PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
+        if (soundPlayEnable()) playerSetTrackNow(PLAYER_STOPWATCH_SOUND, PLAYER_GENERAL_FOLDER);
 #endif
         mode = 0; //переключаем режим
         timer.mode = 0; //деактивируем таймер
@@ -5320,6 +5341,31 @@ uint8_t timerScreen(void) //таймер-секундомер
     }
   }
   return INIT_PROGRAM;
+}
+//------------------------------------Звук смены часа------------------------------------
+void hourSound(void) //звук смены часа
+{
+  if (!soundMute && (mainSettings.hourSound & 0x03)) { //если звук не отключен
+    if ((mainTask == MAIN_PROGRAM) || (mainTask == SLEEP_PROGRAM)) { //если в режиме часов или спим
+#if PLAYER_TYPE
+      uint8_t sound = mainSettings.hourSound;
+      playerStop(); //сброс воспроизведения плеера
+      if (sound & 0x01) playerSetTrackNow(PLAYER_HOUR_SOUND, PLAYER_GENERAL_FOLDER); //звук смены часа
+      if (sound & 0x02) speakTime(sound & 0x01); //воспроизвести время
+#if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
+      if (sound & 0x80) { //воспроизвести температуру
+#if ESP_ENABLE
+        if (getTemperature(getHourSens()) <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
+#else
+        if (getTemperature() <= 990) speakTemp(SPEAK_TEMP_HOUR); //воспроизвести целую температуру
+#endif
+      }
+#endif
+#else
+      melodyPlay(SOUND_HOUR, SOUND_LINK(general_sound), REPLAY_ONCE); //звук смены часа
+#endif
+    }
+  }
 }
 //----------------------------Воспроизвести температуру--------------------------------------
 void speakTemp(boolean mode) //воспроизвести температуру
@@ -5397,7 +5443,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) speakTemp(SPEAK_TEMP_MAIN); //воспроизвести температуру
+  if (soundPlayEnable()) speakTemp(SPEAK_TEMP_MAIN); //воспроизвести температуру
 #endif
 
   for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {
@@ -5473,7 +5519,7 @@ uint8_t showTemp(void) //показать температуру
           setDotTemp(0); //очистить точку температуры
         }
 #if PLAYER_TYPE
-        if (mainSettings.baseSound) {
+        if (soundPlayEnable()) {
           switch (mode) {
             case 0: speakTemp(SPEAK_TEMP_MAIN); break; //воспроизвести температуру
             case 1: speakHum(humidity); break; //воспроизвести влажность
@@ -5527,7 +5573,7 @@ uint8_t showDate(void) //показать дату
 #endif
 
 #if PLAYER_TYPE
-  if (mainSettings.baseSound) speakTime(0); //воспроизвести время
+  if (soundPlayEnable()) speakTime(0); //воспроизвести время
 #endif
 
   for (_timer_ms[TMR_MS] = SHOW_DATE_TIME; _timer_ms[TMR_MS];) {
@@ -5969,7 +6015,7 @@ uint8_t fastMenu(void) //переключение быстрых настрое�
       switch (show) {
         case 1:
 #if PLAYER_TYPE
-          if (mainSettings.baseSound) playerSetTrackNow(PLAYER_FAST_MENU_START + mode, PLAYER_MENU_FOLDER);
+          if (soundPlayEnable()) playerSetTrackNow(PLAYER_FAST_MENU_START + mode, PLAYER_MENU_FOLDER);
 #endif
           animClearBuff(); //очистка буфера анимации
           animPrintNum(getFastSetData(mode), (LAMP_NUM / 2 - 1), 2, 0); //вывод информации

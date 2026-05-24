@@ -516,7 +516,7 @@ uint8_t busUpdate(void) //обновление статуса шины
 #if DS3231_ENABLE
             bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
 #endif
-            light_update = 1;
+            brightUpdate = 1;
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
             break;
           case BUS_WRITE_FAST_SET: memoryUpdate |= (0x01 << MEM_UPDATE_FAST_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //быстрые настройки
@@ -572,7 +572,7 @@ uint8_t busUpdate(void) //обновление статуса шины
             break;
 #endif
 #if !LIGHT_SENS_ENABLE
-          case BUS_CHANGE_BRIGHT: light_update = 1; break; //смена яркости
+          case BUS_CHANGE_BRIGHT: brightUpdate = 1; break; //смена яркости
 #endif
           case BUS_TEST_FLIP: animShow = ANIM_DEMO; bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //тест анимации минут
           case BUS_TEST_SOUND: //тест звука

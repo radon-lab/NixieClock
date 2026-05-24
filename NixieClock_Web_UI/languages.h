@@ -124,10 +124,10 @@
 #define LANG_DOTS_MODE_1 "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"
 #define LANG_DOTS_MODE_2 ",Динамичные(плавно мигают)"
 #define LANG_DOTS_MODE_3 ",Маятник(мигают раз в секунду),Маятник(плавно мигают)"
-#define LANG_DOTS_MODE_4 ",Метроном,Шажки,Таймер,Часовой маятник"
+#define LANG_DOTS_MODE_4 ",Метроном,Шажки,Таймер,Часовой маятник,Луна"
 #define LANG_DOTS_MODE_5 ",Мигающие,Бегущие,Змейка,Резинка"
 #define LANG_DOTS_MODE_6 ",Одинарный маятник"
-#define LANG_DOTS_MODE_7 ",Двойной маятник"
+#define LANG_DOTS_MODE_7 ",Двойной маятник,Маятник со смещением"
 #define LANG_DOTS_MODE_8 ",Без реакции"
 
 //-------------------------------------------------------//
@@ -275,8 +275,8 @@
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Автоматическая смена яркости по датчику освещения"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Автоматическая смена яркости по времени суток"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Звук смены часа отключен"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE "Одинаковое время - отключить приглушение звуков по времени"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE_1 "Приглушение звуков отключено"
 
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Сброс статистики"
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Статистика микроклимата будет сброшена, продолжить?"
@@ -287,14 +287,14 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT "Время ночной яркости"
 #define LANG_PAGE_SETTINGS_GUI_HR_SLEEP "Режим сна"
 #define LANG_PAGE_SETTINGS_GUI_HR_BURN "Антиотравление"
-#define LANG_PAGE_SETTINGS_GUI_HR_HOUR "Звук смены часа"
+#define LANG_PAGE_SETTINGS_GUI_HR_MUTE "Беззвучный режим"
 #define LANG_PAGE_SETTINGS_GUI_HR_SOUND "Озвучка смены часа"
 #define LANG_PAGE_SETTINGS_GUI_HR_ADD "Дополнительно"
 #define LANG_PAGE_SETTINGS_GUI_HR_INDI "Индикация"
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Коррекция"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени"
-#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Автоматически,Только мелодия,Только озвучка,Мелодия и озвучка"
+#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Без оповещения,Только мелодия,Только озвучка,Мелодия и озвучка"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Включить"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Эффект"
@@ -836,8 +836,8 @@
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Automatic brightness change by light sensor"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Automatic brightness change by time of day"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Same time - disable hour change sound"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Hour change sound is disabled"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE "Same time - disable sound muting by time"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE_1 "Mute is disabled"
 
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Resetting statistics"
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Microclimate statistics will be reset, continue?"
@@ -848,14 +848,14 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT "Night brightness time"
 #define LANG_PAGE_SETTINGS_GUI_HR_SLEEP "Sleep mode"
 #define LANG_PAGE_SETTINGS_GUI_HR_BURN "Anti-poisoning"
-#define LANG_PAGE_SETTINGS_GUI_HR_HOUR "New hour sound time"
+#define LANG_PAGE_SETTINGS_GUI_HR_MUTE "Silent mode"
 #define LANG_PAGE_SETTINGS_GUI_HR_SOUND "Sound of hour change"
 #define LANG_PAGE_SETTINGS_GUI_HR_ADD "Additionally"
 #define LANG_PAGE_SETTINGS_GUI_HR_INDI "Indication"
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Correction"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Iterate over all indicators,Iterate over one indicator,Iterate over one indicator with time display"
-#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Automatic, Melody only, Voice acting only, Melody and voice acting"
+#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Without notifi, Melody only, Voice acting only, Melody and voice acting"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Enable"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Effect"

@@ -52,8 +52,8 @@ boolean dotIncBright(uint8_t _step, uint8_t _max, uint8_t _mode = DOT_ALL); //у
 //------------------------Обновление коэффициента линейного регулирования-------------------------
 void indiChangeCoef(void) //обновление коэффициента линейного регулирования
 {
-  if (debugSettings.max_pwm < (debugSettings.min_pwm + 10)) debugSettings.min_pwm = debugSettings.max_pwm - 10;
-  pwm_coef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * (LAMP_NUM + ((INDI_SYMB_TYPE) ? 1 : 0))) / CONSTRAIN(debugSettings.max_pwm - debugSettings.min_pwm, 10, 100));
+  if (debugSettings.maxPwm < (debugSettings.minPwm + 10)) debugSettings.minPwm = debugSettings.maxPwm - 10;
+  conv.pwmCoef = 255 / (uint8_t)(((uint16_t)LIGHT_MAX * (LAMP_NUM + ((INDI_SYMB_TYPE) ? 1 : 0))) / CONSTRAIN(debugSettings.maxPwm - debugSettings.minPwm, 10, 100));
 }
 //---------------------Установка нового значения шим линейного регулирования----------------------
 void indiChangePwm(void) //установка нового значения шим линейного регулирования
@@ -61,9 +61,9 @@ void indiChangePwm(void) //установка нового значения ши
   uint16_t dimm_all = 0;
   for (uint8_t i = (INDI_SYMB_TYPE) ? 0 : 1; i < (LAMP_NUM + 1); i++) if (indi_buf[i] != INDI_NULL) dimm_all += indi_dimm[i];
 #if CONV_PIN == 9
-  OCR1A = CONSTRAIN(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
+  OCR1A = CONSTRAIN(debugSettings.minPwm + (uint8_t)((dimm_all * conv.pwmCoef) >> 8), 100, 200);
 #elif CONV_PIN == 10
-  OCR1B = CONSTRAIN(debugSettings.min_pwm + (uint8_t)((dimm_all * pwm_coef) >> 8), 100, 200);
+  OCR1B = CONSTRAIN(debugSettings.minPwm + (uint8_t)((dimm_all * conv.pwmCoef) >> 8), 100, 200);
 #endif
 }
 //--------------------------------Очистка индикаторов--------------------------------------------

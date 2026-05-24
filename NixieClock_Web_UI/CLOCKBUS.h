@@ -70,8 +70,8 @@ struct Settings_1 {
   uint8_t dotBrightDay;
   uint8_t timeBrightStart; //время перехода яркости
   uint8_t timeBrightEnd;
-  uint8_t timeHourStart; //время звукового оповещения нового часа
-  uint8_t timeHourEnd;
+  uint8_t timeMuteStart; //время беззвучного режима
+  uint8_t timeMuteEnd;
   uint8_t timeSleepNight; //время режима сна
   uint8_t timeSleepDay;
   boolean timeFormat; //формат времени
@@ -196,8 +196,8 @@ enum {
   MAIN_DOT_BRIGHT_D,
   MAIN_TIME_BRIGHT_S,
   MAIN_TIME_BRIGHT_E,
-  MAIN_TIME_HOUR_S,
-  MAIN_TIME_HOUR_E,
+  MAIN_TIME_MUTE_S,
+  MAIN_TIME_MUTE_E,
   MAIN_TIME_SLEEP_N,
   MAIN_TIME_SLEEP_D,
   MAIN_TIME_FORMAT,
@@ -625,8 +625,8 @@ void busUpdate(void) {
             mainSettings.dotBrightDay = twi_read_byte(TWI_ACK);
             mainSettings.timeBrightStart = twi_read_byte(TWI_ACK);
             mainSettings.timeBrightEnd = twi_read_byte(TWI_ACK);
-            mainSettings.timeHourStart = twi_read_byte(TWI_ACK);
-            mainSettings.timeHourEnd = twi_read_byte(TWI_ACK);
+            mainSettings.timeMuteStart = twi_read_byte(TWI_ACK);
+            mainSettings.timeMuteEnd = twi_read_byte(TWI_ACK);
             mainSettings.timeSleepNight = twi_read_byte(TWI_ACK);
             mainSettings.timeSleepDay = twi_read_byte(TWI_ACK);
             mainSettings.timeFormat = twi_read_byte(TWI_ACK);
@@ -657,8 +657,8 @@ void busUpdate(void) {
               case MAIN_DOT_BRIGHT_D: busWriteTwiRegByte(mainSettings.dotBrightDay, BUS_WRITE_MAIN_SET, 5); break;
               case MAIN_TIME_BRIGHT_S: busWriteTwiRegByte(mainSettings.timeBrightStart, BUS_WRITE_MAIN_SET, 6); break;
               case MAIN_TIME_BRIGHT_E: busWriteTwiRegByte(mainSettings.timeBrightEnd, BUS_WRITE_MAIN_SET, 7); break;
-              case MAIN_TIME_HOUR_S: busWriteTwiRegByte(mainSettings.timeHourStart, BUS_WRITE_MAIN_SET, 8); break;
-              case MAIN_TIME_HOUR_E: busWriteTwiRegByte(mainSettings.timeHourEnd, BUS_WRITE_MAIN_SET, 9); break;
+              case MAIN_TIME_MUTE_S: busWriteTwiRegByte(mainSettings.timeMuteStart, BUS_WRITE_MAIN_SET, 8); break;
+              case MAIN_TIME_MUTE_E: busWriteTwiRegByte(mainSettings.timeMuteEnd, BUS_WRITE_MAIN_SET, 9); break;
               case MAIN_TIME_SLEEP_N: busWriteTwiRegByte(mainSettings.timeSleepNight, BUS_WRITE_MAIN_SET, 10); break;
               case MAIN_TIME_SLEEP_D: busWriteTwiRegByte(mainSettings.timeSleepDay, BUS_WRITE_MAIN_SET, 11); break;
               case MAIN_TIME_FORMAT: busWriteTwiRegByte(mainSettings.timeFormat, BUS_WRITE_MAIN_SET, 12); break;
