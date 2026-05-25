@@ -330,21 +330,27 @@ enum {
 };
 uint8_t mainTask = INIT_PROGRAM; //переключатель подпрограмм
 
+#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
+#define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
+#define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
+
+
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * TIME_TICK) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
 #define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
 
 #define R_COEF(low, high) (((float)(low) + (float)(high)) / (float)(low)) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
-#define GET_VCC(ref, adc) (float)(((ref) * 1023.0) / (float)(adc)) //расчет напряжения питания
+#define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
+#define GET_VCC(ref, adc) (float)(((ref) * 10.23) / (float)CONSTRAIN(adc, 150, 450)) //расчет напряжения питания
 
-#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
-#define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
-#define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
+#define GET_HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения ВВ
+#define GET_VP_ADC(ref, vcc) (uint16_t)(((ref) * (uint32_t)1023) / (uint16_t)CONSTRAIN(vcc, 250, 750)) //расчет напряжения питания
+
+#define GET_OVP_STATUS(adc, vmin, vmax) (boolean)((adc > GET_VP_ADC(REFERENCE, vmin)) || (adc < GET_VP_ADC(REFERENCE, vmax))) //проверка уровня напряжения питания
 
 struct convData {
   uint8_t pwmCoef = 0; //коэффициент линейного регулирования ВВ
-  uint16_t hvTreshold = HV_ADC(5); //буфер порога удержания напряжения ВВ
+  uint16_t hvTreshold = GET_HV_ADC(5); //буфер порога удержания напряжения ВВ
 } conv;
 
 struct lightData {
@@ -456,8 +462,6 @@ uint16_t analogVccAdc; //напряжение питания ацп
 #else
 #define BTN_CHECK_ADC(low, high) (!(((low) < btn.adc) && (btn.adc <= (high)))) //проверка аналоговой кнопки
 #endif
-
-#define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
 
 #define SET_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 #define SET_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
@@ -851,7 +855,7 @@ void updateByte(uint8_t data, uint8_t cell, uint8_t cell_crc) //обновлен
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
-  conv.hvTreshold = HV_ADC(GET_VCC(REFERENCE, analogVccAdc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
+  conv.hvTreshold = GET_HV_ADC(GET_VCC(REFERENCE, analogVccAdc)) + CONSTRAIN(debugSettings.hvCorrect, -30, 30);
 }
 //------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
@@ -970,7 +974,7 @@ void checkVCC(void) //чтение напряжения питания
   }
   analogVccAdc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
 
-  if (GET_VCC(REFERENCE, analogVccAdc) < MIN_VCC || GET_VCC(REFERENCE, analogVccAdc) > MAX_VCC) SET_ERROR(ERROR_VCC_RANGE); //устанвливаем ошибку по питанию
+  if (GET_OVP_STATUS(analogVccAdc, MIN_VCC, MAX_VCC)) SET_ERROR(ERROR_VCC_RANGE); //устанвливаем ошибку по питанию
 
 #if BTN_TYPE
   ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
