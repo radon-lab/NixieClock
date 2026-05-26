@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_026 бета от 24.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_027 бета от 26.05.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -31,7 +31,7 @@
 
 
 //--------------Версия прошивки-------------
-#define ESP_FIRMWARE_VER "1.3.0_026" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.0_027" //версия прошивки модуля esp
 
 //---------------Конфигурации---------------
 #include "config.h"
@@ -462,11 +462,11 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_COLOR, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER_COLOR_C("setsColor", ledColorList, backlGetColorCode(fastSettings.backlColor), 0, 28, UI_SLIDER_COLOR, (boolean)(deviceInformation[BACKL_TYPE] != 3));););
         GP.HR(UI_LINE_COLOR);
         if (!deviceInformation[PLAYER_TYPE]) {
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsSound", true););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsKnock", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsKnock", true););
         }
         else {
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR););
+          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0););
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
         }
         GP.BLOCK_END();
@@ -847,13 +847,13 @@ void build(void) {
       GP.GRID_BEGIN();
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_SOUND, UI_BLOCK_COLOR);
       if (!deviceInformation[PLAYER_TYPE]) {
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsSound", true););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_KNOCK, "", UI_LABEL_COLOR); GP.SWITCH("setsKnock", mainSettings.baseSound, UI_SWITCH_COLOR, false, "setsTick", false););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsKnock", true););
       }
       else {
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SWITCH("setsSound", mainSettings.baseSound, UI_SWITCH_COLOR););
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsVoice", playerVoiceList(), mainSettings.voiceSound, 0, (boolean)!deviceInformation[PLAYER_TYPE]););
-        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsVoice", playerVoiceList(), mainSettings.voiceSound, 0););
+        M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR););
       }
       GP.BREAK();
       GP.HR_TEXT(GP.ICON_INFO(LANG_PAGE_SETTINGS_GUI_HR_MUTE), UI_LINE_COLOR, UI_HINT_COLOR, "id_5");
@@ -877,12 +877,12 @@ void build(void) {
       GP.BLOCK_BEGIN(GP_THIN, "", LANG_PAGE_SETTINGS_BLOCK_ALARM, UI_BLOCK_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_AUTO_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmTimeout", extendedSettings.alarmTime, 1, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
-      GP.BREAK();
+      if (deviceInformation[PLAYER_TYPE]) GP.BREAK("", "22px"); GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_ADD, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_REPEAT_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SOUND_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
-      GP.BREAK();
+      if (deviceInformation[PLAYER_TYPE]) GP.BREAK("", "22px"); GP.BREAK(); 
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_INDI, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTIVE, "", UI_LABEL_COLOR); GP.SELECT_LIST("extAlarmDotOn", dotModeList(true), extendedSettings.alarmDotOn, 0, (boolean)!deviceInformation[ALARM_TYPE]););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_WAIT, "", UI_LABEL_COLOR); GP.SELECT_LIST("extAlarmDotWait", dotModeList(true), extendedSettings.alarmDotWait, 0, (boolean)!deviceInformation[ALARM_TYPE]););
@@ -1700,8 +1700,13 @@ void action() {
         mainSettings.baseSound = (ui.getBool("setsTick")) ? 2 : 1;
         busSetCommand(WRITE_MAIN_SET, MAIN_BASE_SOUND);
       }
+      if (ui.click("setsKnock")) {
+        mainSettings.baseSound = (ui.getBool("setsKnock")) ? 1 : 0;
+        busSetCommand(WRITE_MAIN_SET, MAIN_BASE_SOUND);
+      }
+
       if (ui.click("setsSound")) {
-        mainSettings.baseSound = (ui.getBool("setsSound")) ? 1 : 0;
+        mainSettings.baseSound = constrain(ui.getInt("setsSound"), 0, 2);
         busSetCommand(WRITE_MAIN_SET, MAIN_BASE_SOUND);
       }
       if (ui.clickInt("setsSoundVol", mainSettings.volumeSound)) {

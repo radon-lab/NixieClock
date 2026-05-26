@@ -359,6 +359,11 @@ struct lightData {
 } light;
 boolean brightUpdate = 0; //флаг обновления яркости
 
+#define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
+#define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
+
+#define ALARM_AUTO_VOL_TIMER (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN))
+
 
 //-----------------Ошибки-----------------
 enum {
@@ -444,11 +449,6 @@ struct buttonData {
 } btn;
 uint8_t analogState; //флаги обновления аналоговых портов
 uint16_t analogVccAdc; //напряжение питания ацп
-
-#define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
-#define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
-
-#define ALARM_AUTO_VOL_TIMER (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN))
 
 #define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
 #define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
@@ -1036,7 +1036,22 @@ void lightSensCheck(void) //проверка сенсора яркости ос�
 //-----------------Проверка возможности воспроизвести звук-------------------------
 inline boolean soundPlayEnable(void) //проверка возможности воспроизвести звук
 {
+#if !PLAYER_TYPE
   return (!soundMute && mainSettings.baseSound);
+#else
+  return (!soundMute && (mainSettings.baseSound == 1));
+#endif
+}
+//-----------------Проверка возможности воспроизвести звук-------------------------
+inline boolean soundExtPlayEnable(void) //проверка возможности воспроизвести звук
+{
+#if !PLAYER_TYPE
+  return (!soundMute && (mainSettings.baseSound == 2));
+#elif PLAYER_SPEAK_MUTE
+  return (!soundMute && mainSettings.baseSound);
+#else
+  return (mainSettings.baseSound);
+#endif
 }
 //---------------------------Проверка кнопок---------------------------------------
 inline uint8_t buttonState(void) //проверка кнопок
@@ -1051,7 +1066,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
   static boolean btn_check; //флаг разрешения опроса кнопки
   static boolean btn_state; //флаг текущего состояния кнопки
   static uint8_t btn_switch; //флаг мультиплексатора кнопок
-  static uint16_t btn_tmr; //таймер тиков обработки кнопок
+  static uint16_t btn_timer; //таймер тиков обработки кнопок
 
 #if BTN_TYPE
   analogState |= 0x02; //устанавливаем флаг обновления АЦП кнопок
@@ -1090,8 +1105,8 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
   switch (btn_state) { //переключаемся в зависимости от состояния кнопки
     case 0:
       if (btn_check) { //если разрешена провекрка кнопки
-        if (++btn_tmr > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
-          btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+        if (++btn_timer > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
+          btn_timer = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
           btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
           playerStop(); //сброс воспроизведения плеера
@@ -1111,8 +1126,8 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
       break;
 
     case 1:
-      if (btn_tmr > BTN_GIST_TICK) { //если таймер больше времени антидребезга
-        btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+      if (btn_timer > BTN_GIST_TICK) { //если таймер больше времени антидребезга
+        btn_timer = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
         btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
@@ -1129,11 +1144,11 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 #endif
         }
       }
-      else if (!btn_tmr) {
+      else if (!btn_timer) {
         btn_check = 1; //разрешаем проверку кнопки
         btn_switch = 0; //сбрасываем мультиплексатор кнопок
       }
-      else btn_tmr--; //убираем дребезг
+      else btn_timer--; //убираем дребезг
       break;
   }
 

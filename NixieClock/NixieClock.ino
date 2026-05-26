@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_026 бета от 25.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_027 бета от 26.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.2.6"
+#define FIRMWARE_VERSION "0.2.7"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -531,7 +531,7 @@ void systemTask(void) //системная задача
     if (hourPlay) hourSound(); //запустили звук смены часа
 
 #if !PLAYER_TYPE
-    if (!soundMute && (mainSettings.baseSound == 2)) { //если звук включен
+    if (soundExtPlayEnable()) { //если звук включен
       if (mainTask == MAIN_PROGRAM) { //если в режиме часов
         if (!melodyState()) { //если мелодия не воспроизводится
           if (RTC.s & 0x01) buzzPulse(SECS_UNEVEN_SOUND_FREQ, SECS_UNEVEN_SOUND_TIME); //щелчок пищалкой
@@ -4101,7 +4101,7 @@ uint8_t mainMenu(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.baseSound = 0; break; //выключили озвучку действий
+                  case 0: if (mainSettings.baseSound > 0) mainSettings.baseSound--; break; //выключили озвучку действий
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
                   case 1: if (mainSettings.hourSound & 0x80) mainSettings.hourSound &= ~0x80; else mainSettings.hourSound |= 0x80; break; //установили озвучку темепературы
 #endif
@@ -4244,7 +4244,7 @@ uint8_t mainMenu(void) //настроки основные
               case SET_BTN_SOUND: //звук кнопок
 #if PLAYER_TYPE
                 switch (cur_indi) {
-                  case 0: mainSettings.baseSound = 1; break; //включили озвучку действий
+                  case 0: if (mainSettings.baseSound < 2) mainSettings.baseSound++; break; //включили озвучку действий
                   case 1: if ((mainSettings.hourSound & 0x7F) < 3) mainSettings.hourSound++; else mainSettings.hourSound = 0; break; //установили тип озвучки часа
                 }
 #else
@@ -5443,7 +5443,7 @@ uint8_t showTemp(void) //показать температуру
 #endif
 
 #if PLAYER_TYPE
-  if (soundPlayEnable()) speakTemp(SPEAK_TEMP_MAIN); //воспроизвести температуру
+  if (soundExtPlayEnable()) speakTemp(SPEAK_TEMP_MAIN); //воспроизвести температуру
 #endif
 
   for (_timer_ms[TMR_MS] = SHOW_TEMP_TIME; _timer_ms[TMR_MS];) {
@@ -5519,7 +5519,7 @@ uint8_t showTemp(void) //показать температуру
           setDotTemp(0); //очистить точку температуры
         }
 #if PLAYER_TYPE
-        if (soundPlayEnable()) {
+        if (soundExtPlayEnable()) {
           switch (mode) {
             case 0: speakTemp(SPEAK_TEMP_MAIN); break; //воспроизвести температуру
             case 1: speakHum(humidity); break; //воспроизвести влажность
@@ -5573,7 +5573,7 @@ uint8_t showDate(void) //показать дату
 #endif
 
 #if PLAYER_TYPE
-  if (soundPlayEnable()) speakTime(0); //воспроизвести время
+  if (soundExtPlayEnable()) speakTime(0); //воспроизвести время
 #endif
 
   for (_timer_ms[TMR_MS] = SHOW_DATE_TIME; _timer_ms[TMR_MS];) {

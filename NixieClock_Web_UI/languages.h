@@ -295,6 +295,7 @@
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени"
 #define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Без оповещения,Только мелодия,Только озвучка,Мелодия и озвучка"
+#define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Отключена,Включена,Время и температура"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Включить"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Эффект"
@@ -365,7 +366,7 @@
 #define LANG_PAGE_SETTINGS_GUI_SECS "Секунды"
 #define LANG_PAGE_SETTINGS_GUI_BACKL "Подсветка"
 #define LANG_PAGE_SETTINGS_GUI_COLOR "Цвет"
-#define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучивать действия"
+#define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучка"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Голос озвучки"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Звук кнопок"
 #define LANG_PAGE_SETTINGS_GUI_TICK "Звук секунд"
@@ -856,6 +857,7 @@
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Iterate over all indicators,Iterate over one indicator,Iterate over one indicator with time display"
 #define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Without notifi, Melody only, Voice acting only, Melody and voice acting"
+#define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Disabled,Enabled,Time and Temperature"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Enable"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Effect"
@@ -926,7 +928,7 @@
 #define LANG_PAGE_SETTINGS_GUI_SECS "Seconds"
 #define LANG_PAGE_SETTINGS_GUI_BACKL "Backlight"
 #define LANG_PAGE_SETTINGS_GUI_COLOR "Color"
-#define LANG_PAGE_SETTINGS_GUI_ACTION "Voice actions"
+#define LANG_PAGE_SETTINGS_GUI_ACTION "Voiceover"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Voice acting"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Buttons sound"
 #define LANG_PAGE_SETTINGS_GUI_TICK "Seconds sound"
