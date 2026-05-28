@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_027 бета от 26.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_027 бета от 28.05.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -5472,7 +5472,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(getTemperatureSign() ? SYMB_NEGATIVE : SYMB_POSITIVE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
+          wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_TEMP_BACKL_N); //установили цвет температуры и пустого сегмента
 #endif
           break;
         case 1:
@@ -5481,7 +5481,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedColor(SHOW_TEMP_COLOR_H); //установили цвет влажности
+          wsBacklSetMultiColor(2, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_BACKL_N); //установили цвет влажности и пустого сегмента
 #endif
           break;
         case 2:
@@ -5490,7 +5490,7 @@ uint8_t showTemp(void) //показать температуру
           indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && SHOW_TEMP_BACKL_TYPE
-          wsBacklSetLedColor(SHOW_TEMP_COLOR_P); //установили цвет давления
+          wsBacklSetMultiColor(1, 3, SHOW_TEMP_COLOR_P, SHOW_TEMP_BACKL_N); //установили цвет давления и пустого сегмента
 #endif
           break;
       }
@@ -5719,14 +5719,11 @@ void autoShowMenu(void) //меню автоматического показа
 #endif
 #endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
+        wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_TEMP_BACKL_N); //установили цвет температуры и пустого сегмента
 #if LAMP_NUM > 4
         if (humidity && (show_mode != SHOW_TEMP) && (show_mode != SHOW_TEMP_ESP)) { //если режим отображения температуры и влажности
-          wsBacklSetMultiColor(0, 3, SHOW_TEMP_COLOR_T, SHOW_TEMP_BACKL_N); //установили цвет температуры и пустого сегмента
           wsBacklSetRangeColor(4, 2, SHOW_TEMP_COLOR_H); //установили цвет влажности
         }
-        else wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
-#else
-        wsBacklSetLedColor(SHOW_TEMP_COLOR_T); //установили цвет температуры
 #endif
 #endif
         break;
@@ -5746,7 +5743,7 @@ void autoShowMenu(void) //меню автоматического показа
         indiSetSymb(SYMB_HUMIDITY); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
-        wsBacklSetLedColor(SHOW_TEMP_COLOR_H); //установили цвет влажности
+        wsBacklSetMultiColor(2, 2, SHOW_TEMP_COLOR_H, SHOW_TEMP_BACKL_N); //установили цвет влажности и пустого сегмента
 #endif
         break;
 
@@ -5765,7 +5762,7 @@ void autoShowMenu(void) //меню автоматического показа
         indiSetSymb(SYMB_PRESSURE); //установка индикатора символов
 #endif
 #if (BACKL_TYPE == 3) && AUTO_SHOW_BACKL_TYPE
-        wsBacklSetLedColor(SHOW_TEMP_COLOR_P); //установили цвет давления
+        wsBacklSetMultiColor(1, 3, SHOW_TEMP_COLOR_P, SHOW_TEMP_BACKL_N); //установили цвет давления и пустого сегмента
 #endif
         break;
 #endif
