@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_027 бета от 26.05.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_028 бета от 31.05.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -31,7 +31,7 @@
 
 
 //--------------Версия прошивки-------------
-#define ESP_FIRMWARE_VER "1.3.0_027" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.0_028" //версия прошивки модуля esp
 
 //---------------Конфигурации---------------
 #include "config.h"
@@ -466,7 +466,11 @@ void build(void) {
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsKnock", true););
         }
         else {
-          M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0););
+          M_BOX(
+            GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR);
+            if (!deviceInformation[BTN_EASY_MODE]) GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0);
+            else GP.SWITCH("setsKnock", mainSettings.baseSound == 0x01, UI_SWITCH_COLOR);
+            );
           M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); M_BOX(GP_RIGHT, "330px", GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR, (boolean)!deviceInformation[PLAYER_TYPE]);););
         }
         GP.BLOCK_END();
@@ -851,7 +855,11 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TICK, "", UI_LABEL_COLOR); GP.SWITCH("setsTick", mainSettings.baseSound == 0x02, UI_SWITCH_COLOR, false, "setsKnock", true););
       }
       else {
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0););
+        M_BOX(
+          GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTION, "", UI_LABEL_COLOR);
+          if (!deviceInformation[BTN_EASY_MODE]) GP.SELECT_LIST("setsSound", LANG_PAGE_SETTINGS_GUI_SOUND_MODE, mainSettings.baseSound, 0);
+          else GP.SWITCH("setsKnock", mainSettings.baseSound == 0x01, UI_SWITCH_COLOR);
+          );
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOICE, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsVoice", playerVoiceList(), mainSettings.voiceSound, 0););
         M_BOX(GP_JUSTIFY, GP.LABEL(LANG_PAGE_SETTINGS_GUI_VOLUME, "", UI_LABEL_COLOR); GP.SLIDER("setsSoundVol", LANG_PAGE_SETTINGS_GUI_MIN, LANG_PAGE_SETTINGS_GUI_MAX, mainSettings.volumeSound, 0, 15, 1, UI_SLIDER_COLOR););
       }
@@ -882,7 +890,7 @@ void build(void) {
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_REPEAT_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmWaitTime", extendedSettings.alarmWaitTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_SOUND_DIS_MINS, "", UI_LABEL_COLOR); GP.SPINNER("extAlarmSoundTime", extendedSettings.alarmSoundTime, 0, 240, 1, 0, UI_SPINNER_COLOR, "", (boolean)!deviceInformation[ALARM_TYPE]););
 
-      if (deviceInformation[PLAYER_TYPE]) GP.BREAK("", "22px"); GP.BREAK(); 
+      if (deviceInformation[PLAYER_TYPE]) GP.BREAK("", "22px"); GP.BREAK();
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_INDI, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_ACTIVE, "", UI_LABEL_COLOR); GP.SELECT_LIST("extAlarmDotOn", dotModeList(true), extendedSettings.alarmDotOn, 0, (boolean)!deviceInformation[ALARM_TYPE]););
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_WAIT, "", UI_LABEL_COLOR); GP.SELECT_LIST("extAlarmDotWait", dotModeList(true), extendedSettings.alarmDotWait, 0, (boolean)!deviceInformation[ALARM_TYPE]););
