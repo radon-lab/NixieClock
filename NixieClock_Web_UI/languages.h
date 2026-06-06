@@ -173,7 +173,7 @@
 
 #define LANG_PAGE_RELOAD_BLOCK "Перезагрузка устройства"
 #define LANG_PAGE_RELOAD_END "<big><b>Перезагрузка завершена!</b></big>"
-#define LANG_PAGE_RELOAD_ERR "<big><b>Ошибка перезагрузки!</b></big>"
+#define LANG_PAGE_RELOAD_ERR "<big><b>Перезагрузка не удалась!</b></big>"
 #define LANG_PAGE_RELOAD_WAIT "<big><b>Выполняется перезагрузка, подождите...</b></big>"
 #define LANG_PAGE_RELOAD_HINT "<small>Не выключайте устройство до завершения перезагрузки!</small>"
 #define LANG_PAGE_RELOAD_HOME "Вернуться на главную"
@@ -735,7 +735,7 @@
 
 #define LANG_PAGE_RELOAD_BLOCK "Restsrting device"
 #define LANG_PAGE_RELOAD_END "<big><b>Restart complete!</b></big>"
-#define LANG_PAGE_RELOAD_ERR "<big><b>Restart error!</b></big>"
+#define LANG_PAGE_RELOAD_ERR "<big><b>Restart failed!</b></big>"
 #define LANG_PAGE_RELOAD_WAIT "<big><b>Restart in progress, please wait...</b></big>"
 #define LANG_PAGE_RELOAD_HINT "<small>Do not turn off the device until the reboot is complete!</small>"
 #define LANG_PAGE_RELOAD_HOME "Return to main page"
