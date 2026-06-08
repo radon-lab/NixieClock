@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_028 бета от 06.06.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_029 бета от 08.06.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -31,7 +31,7 @@
 
 
 //--------------Версия прошивки-------------
-#define ESP_FIRMWARE_VER "1.3.0_028" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.0_029" //версия прошивки модуля esp
 
 //---------------Конфигурации---------------
 #include "config.h"
@@ -1196,7 +1196,7 @@ void build(void) {
         GP.HR_TEXT(LANG_PAGE_INFO_HR_STATE, UI_LINE_COLOR, UI_HINT_COLOR);
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CONNECT, "", UI_LABEL_COLOR); GP.LABEL((busGetClockStatus()) ? LANG_PAGE_INFO_GUI_STATE_OK : LANG_PAGE_INFO_GUI_STATE_NULL, "", UI_INFO_COLOR););
 
-        if (!device.failure) {
+        if (device.failure) {
           GP.BREAK();
           for (uint8_t i = 0; i < 15; i++) {
             if (device.failure & (0x01 << i)) {
