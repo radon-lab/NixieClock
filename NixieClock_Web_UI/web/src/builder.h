@@ -1768,13 +1768,15 @@ struct Builder {
       *_GPP += value;
     }
     else *_GPP += place;
+    
+    *_GPP += F("' min='");
+    *_GPP += min;
+    *_GPP += F("' max='");
+    *_GPP += (max <= 99) ? max : 99;
+    
     *_GPP += F("' onchange='numNext(this,\"");
     *_GPP += next;
-    *_GPP += F("\",1)' oninput='numConst(this,");
-    *_GPP += min;
-    *_GPP += ',';
-    *_GPP += (max <= 99) ? max : 99;
-    *_GPP += F(");numNext(this,\"");
+    *_GPP += F("\",1)' oninput='numNext(this, \"");
     *_GPP += next;
     *_GPP += F("\",0)'");
     if (dis) *_GPP += F(" disabled");

@@ -78,8 +78,7 @@ function offlShow(s){getEl('offlAnim').style.display=s?'block':'none';}
 function saveNav(){window.sessionStorage.setItem('navpos',getEl('_nav').scrollLeft);}
 function restoreNav(){getEl('_nav').scrollLeft=window.sessionStorage.getItem('navpos')||0;}
 function barScroll(arg,ev){arg.scrollLeft+=ev.deltaY>0?50:-50;}
-function numNext(pr,nx,ch){if(ch)pr.value=0+pr.value;if(pr.value.length>=2){EVclick(pr);pr.placeholder=pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
-function numConst(arg,min,max){let data=arg.value.replaceAll('-','');if(data.length){if(data<min)data=min;else if(data>max)data=max;}arg.value=data;}
+function numNext(pr,nx,ch){pr.value=pr.value.replaceAll('-','');if((pr.value.length>=2)||ch){pr.value=limit(pr.value,pr.min,pr.max);EVclick(pr);pr.placeholder=((pr.value>9)?'':'0')+pr.value;pr.value='';pr.blur();if(nx)getEl(nx).focus();}}
 function logUpdate(arg,val){arg.value=arg.dataset.add?arg.value:''+val;if(!arg.dataset.scroll)arg.scrollTop=arg.scrollHeight;}
 function lineChange(arg,val=null){if(val!=null)arg.value=limit(val,arg.min,arg.max);const dsp=getEl(arg.id+'_dsp');dsp.style.backgroundSize=(arg.value-arg.min)*100/(arg.max-arg.min)+'% 100%';}
 function ledChange(arg,val){let set=Number(val);set=(isNaN(val))?val:(set?arg.dataset.on:arg.dataset.off);if(set){if(arg.dataset.type=='ledc')arg.style.boxShadow='0 0 10px 2px '+set;arg.style.backgroundColor=set;}else arg.removeAttribute('style');}
