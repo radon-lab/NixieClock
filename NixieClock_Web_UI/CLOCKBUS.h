@@ -1287,14 +1287,15 @@ void busUpdate(void) {
             twi_write_byte(busReadBufferArg());
             if (!twi_error()) { //если передача была успешной
               twi_write_stop(); //остановили шину
-              busShiftBuffer(); //сместили буфер команд
-              busShiftBuffer(); //сместили буфер команд
               if (!twi_running()) ESP.reset(); //перезагрузка
-              else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
             }
           }
           if (bus.rebootAttempt) bus.rebootAttempt--; //убавляем количество попыток
-          else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
+          else { //иначе устанавливаем ошибку
+            busShiftBuffer(); //сместили буфер команд
+            busShiftBuffer(); //сместили буфер команд
+            bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
+          }
           break;
         case UPDATE_FIRMWARE:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
