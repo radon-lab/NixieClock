@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_029 бета от 12.06.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_029 бета от 13.06.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -275,7 +275,7 @@ boolean webShowHardwareInfo(void) {
   return false;
 }
 //--------------------------------------------------------------------
-boolean webShowReloadInfo(void) {
+boolean webShowRebootInfo(void) {
   if (busRebootState()) {
     PAGE_TITLE_NAME(LANG_PAGE_RELOAD_TITLE);
 
@@ -309,7 +309,7 @@ void build(void) {
 
   GP.GRID_RESPONSIVE(1100);
 
-  if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowReloadInfo()) {
+  if (!webShowUpdateState() && !webShowHardwareInfo() && !webShowRebootInfo()) {
     //обновления блоков
     String updateList;
     updateList.reserve(500);

@@ -340,23 +340,6 @@ enum {
   CHECK_INTERNAL_BME
 };
 
-struct deviceData {
-  uint8_t light = 0xFF; //яркость подсветки часов
-  uint8_t status = 0x00; //флаги состояния часов
-  uint16_t failure = 0x00; //сбои при запуске часов
-} device;
-
-struct busData {
-  uint8_t buffer[256];
-  uint8_t bufferStart = 0;
-  uint8_t bufferEnd = 0;
-  uint8_t bufferLastCommand = 0;
-  uint8_t bufferLastArgument = 0;
-  uint8_t status = 0;
-  uint16_t timerInterval = 0;
-  uint32_t timerStart = 0;
-} bus;
-int8_t clockState = 0; //флаг состояния соединения с часами
 
 #define DEVICE_RESET 0xCC
 #define DEVICE_UPDATE 0xDD
@@ -364,8 +347,31 @@ int8_t clockState = 0; //флаг состояния соединения с ч�
 
 #define SYSTEM_REBOOT 100
 
-#define BUS_STATUS_REBOOT 100
-#define BUS_STATUS_REBOOT_FAIL 255
+struct deviceData {
+  uint8_t light = 0xFF; //яркость подсветки часов
+  uint8_t status = 0x00; //флаги состояния часов
+  uint16_t failure = 0x00; //флаги ошибок часов
+} device;
+
+
+#define BUS_REBOOT_ATTEMPTS 5
+
+#define BUS_REBOOT_STATUS 100
+#define BUS_REBOOT_STATUS_FAIL 255
+
+struct busData {
+  uint8_t buffer[256];
+  uint8_t bufferStart = 0;
+  uint8_t bufferEnd = 0;
+  uint8_t bufferLastCommand = 0;
+  uint8_t bufferLastArgument = 0;
+  uint8_t rebootStatus = 0;
+  uint8_t rebootAttempt = 0;
+  uint16_t timerInterval = 0;
+  uint32_t timerStart = 0;
+} bus;
+int8_t clockState = 0; //флаг состояния соединения с часами
+
 
 #include "CLIMATE.h"
 
@@ -374,6 +380,7 @@ int8_t clockState = 0; //флаг состояния соединения с ч�
 #include "BME.h"
 
 #include "RTC.h"
+
 
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos = 0x00);
 void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos = 0x00);
@@ -462,18 +469,19 @@ void busSetCommand(uint8_t cmd, uint8_t arg) {
 //--------------------------------------------------------------------
 void busRebootDevice(uint8_t arg) {
   bus.bufferStart = bus.bufferEnd = 0;
-  bus.status = BUS_STATUS_REBOOT;
+  bus.rebootStatus = BUS_REBOOT_STATUS;
+  bus.rebootAttempt = BUS_REBOOT_ATTEMPTS;
   if (deviceInformation[CLOCKBUS_VER] && (arg != SYSTEM_REBOOT)) busSetCommand(CONTROL_DEVICE, arg);
   else busSetCommand(CONTROL_SYSTEM, SYSTEM_REBOOT);
   busTimerSetInterval(500);
 }
 //--------------------------------------------------------------------
 boolean busRebootState(void) {
-  return bus.status == BUS_STATUS_REBOOT;
+  return (boolean)(bus.rebootStatus == BUS_REBOOT_STATUS);
 }
 //--------------------------------------------------------------------
 boolean busRebootFail(void) {
-  return bus.status == BUS_STATUS_REBOOT_FAIL;
+  return (boolean)(bus.rebootStatus == BUS_REBOOT_STATUS_FAIL);
 }
 //--------------------------------------------------------------------
 void busUpdate(void) {
@@ -1267,9 +1275,9 @@ void busUpdate(void) {
           if (busReadBufferArg() == SYSTEM_REBOOT) {
             twi_write_stop(); //остановили шину
             if (!twi_running()) ESP.reset(); //перезагрузка
-            else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
+            else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
           }
-          else bus.status = 0; //сбросили статус
+          else bus.rebootStatus = 0; //сбросили статус
           busShiftBuffer(); //сместили буфер команд
           busShiftBuffer(); //сместили буфер команд
           break;
@@ -1282,9 +1290,11 @@ void busUpdate(void) {
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
               if (!twi_running()) ESP.reset(); //перезагрузка
-              else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
+              else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
             }
           }
+          if (bus.rebootAttempt) bus.rebootAttempt--; //убавляем количество попыток
+          else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
           break;
         case UPDATE_FIRMWARE:
           if (!twi_beginTransmission(CLOCK_ADDRESS)) { //начинаем передачу
