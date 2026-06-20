@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_027 бета от 28.05.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_030 бета от 20.06.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.2.7"
+#define FIRMWARE_VERSION "0.3.0"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -46,7 +46,7 @@ int main(void) //главный цикл программ
 
   for (;;) {
 #if ESP_ENABLE
-    busCommand(); //проверка статуса шины
+    busHandleCommand(); //проверка статуса шины
 #endif
     dotReset(changeAnimState); //сброс анимации точек
 #if BACKL_TYPE
@@ -1644,7 +1644,7 @@ uint8_t sleepIndi(void) //режим сна индикаторов
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return MAIN_PROGRAM; //выходим
+    if (busHandleMainStatus()) return MAIN_PROGRAM; //выходим
 #endif
 
     if (!indi.update) { //если пришло время обновить индикаторы
@@ -1914,7 +1914,7 @@ void flipIndi(uint8_t mode, uint8_t type) //анимация цифр
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
+    if (busHandleMainStatus()) return; //обновление шины
 #endif
 
     if (type != FLIP_NORMAL) { //если анимация времени
@@ -2996,7 +2996,7 @@ uint8_t timeSettings(void) //настройки времени
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck()) return MAIN_PROGRAM;
+    if (busHandleStatus()) return MAIN_PROGRAM;
 #endif
 
     if (!indi.update) {
@@ -3135,7 +3135,7 @@ uint8_t singleAlarmSettings(void) //настройка будильника
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck()) {
+    if (busHandleStatus()) {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
       if ((cur_mode == 3) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
 #endif
@@ -3501,7 +3501,7 @@ uint8_t multiAlarmSettings(void) //настройка будильников
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck()) {
+    if (busHandleStatus()) {
 #if RADIO_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE || ESP_ENABLE)
       if ((cur_mode == 4) && alarm[ALARM_RADIO]) radioPowerRet(); //вернуть питание радиоприемника
 #endif
@@ -3918,7 +3918,7 @@ uint8_t mainMenu(void) //настроки основные
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck()) return MAIN_PROGRAM;
+    if (busHandleStatus()) return MAIN_PROGRAM;
 #endif
 
     if (!indi.update) { //если установлен флаг
@@ -4844,7 +4844,7 @@ uint8_t radioScreen(void) //радиоприемник
       dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновились настройки
+      if (busHandleMainStatus()) { //обновились настройки
         radioSeekStop(); //остановка автопоиска радиостанции
         return RADIO_PROGRAM;
       }
@@ -5214,7 +5214,7 @@ uint8_t timerScreen(void) //таймер-секундомер
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) {
+    if (busHandleMainStatus()) {
       if (!timer.mode || (timer.mode > 2)) return MAIN_PROGRAM; //выходим
       else return TIMER_PROGRAM; //выходим
     }
@@ -5865,7 +5865,7 @@ void autoShowMenu(void) //меню автоматического показа
       dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-      if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) return; //обновление шины
+      if (busHandleMainStatus()) return; //обновление шины
 #endif
 
 #if (ESP_ENABLE || SENS_PORT_ENABLE) && !INDI_SYMB_TYPE
@@ -6053,7 +6053,7 @@ uint8_t fastMenu(void) //переключение быстрых настрое�
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck()) return MAIN_PROGRAM;
+    if (busHandleStatus()) return MAIN_PROGRAM;
 #endif
 
     if (!_timer_ms[TMR_MS]) break; //выходим
@@ -6154,7 +6154,7 @@ uint8_t mainScreen(void) //главный экран
     dataUpdate(); //обработка данных
 
 #if ESP_ENABLE
-    if (busCheck() & ~(0x01 << BUS_COMMAND_WAIT)) { //обновление шины
+    if (busHandleMainStatus()) { //обновление шины
       if (!changeAnimState) changeAnimState = ANIM_RESET_CHANGE; //установили тип сброса анимации
       return MAIN_PROGRAM; //перезапуск основной программы
     }

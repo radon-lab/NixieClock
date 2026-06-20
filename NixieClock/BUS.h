@@ -101,9 +101,9 @@ enum {
 struct busData {
   uint8_t position; //текущая позиция
   uint8_t counter; //счетчик байт
-  uint8_t comand; //текущая команда
+  uint8_t command; //текущая команда
   uint8_t status; //статус шины
-  uint8_t statusExt; //статус шины
+  uint8_t execute; //выполнение команд шины
   uint8_t buffer[10]; //буфер шины
 } bus;
 
@@ -170,40 +170,45 @@ uint16_t getPhaseTime(uint8_t time, int8_t phase); //получить время
 
 #if ESP_ENABLE
 //-------------------------------------Проверка статуса шины-------------------------------------------
-uint8_t busCheck(void) //проверка статуса шины
+uint8_t busHandleStatus(void) //проверка статуса шины
 {
 #if RADIO_ENABLE || DS3231_ENABLE
-  if (bus.statusExt) {
-    uint8_t status = bus.statusExt;
-    bus.statusExt = 0; //сбросили статус
-    if (status) { //если установлены флаги радио
-      for (uint8_t i = 0; i < BUS_EXT_MAX_DATA; i++) { //проверяем все флаги
-        if (status & 0x01) { //если флаг установлен
-          switch (i) { //выбираем действие
+  if (bus.execute) {
+    uint8_t status = bus.execute;
+    bus.execute = 0; //сбросили статус
+    if (status) { //если установлены флаги выполнения
 #if DS3231_ENABLE
-            case BUS_EXT_COMMAND_SEND_TIME: rtcSendTime(); break; //отправить время в RTC
+      if (status & (0x01 << BUS_EXT_COMMAND_SEND_TIME)) rtcSendTime(); //отправить время в RTC
 #endif
 #if RADIO_ENABLE
-            case BUS_EXT_COMMAND_RADIO_VOL: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); setVolumeRDA(radioSettings.volume); break;
-            case BUS_EXT_COMMAND_RADIO_FREQ: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); setFreqRDA(radioSettings.stationsFreq); if (mainTask == RADIO_PROGRAM) radioSearchStation(); break;
-#endif
-          }
-        }
-        status >>= 1; //сместили флаги
+      if (status & (0x01 << BUS_EXT_COMMAND_RADIO_VOL)) { //установить громкость радио
+        memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); //сохранить настройки
+        setVolumeRDA(radioSettings.volume); //отправить громкость
       }
+      if (status & (0x01 << BUS_EXT_COMMAND_RADIO_FREQ)) { //установить частоту радио
+        memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); //сохранить настройки
+        setFreqRDA(radioSettings.stationsFreq); //отправить частоту
+        if (mainTask == RADIO_PROGRAM) radioSearchStation(); //найти номер ячейки радиостанции
+      }
+#endif
     }
   }
 #endif
-  return bus.status;
+  return bus.status; //вернули статус
+}
+//-------------------------------------Проверка статуса шины-------------------------------------------
+inline uint8_t busHandleMainStatus(void) //проверка статуса шины
+{
+  return (busHandleStatus() & ~(0x01 << BUS_COMMAND_WAIT)); //вернули статус
 }
 //-------------------------------------Проверка команды шины-------------------------------------------
-void busCommand(void) //проверка команды шины
+void busHandleCommand(void) //проверка команды шины
 {
   if (bus.status & ~(0x01 << BUS_COMMAND_WAIT)) {
 #if RADIO_ENABLE || (TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE))
     uint8_t status = bus.status & ~((0x01 << BUS_COMMAND_WAIT) | (0x01 << BUS_COMMAND_UPDATE));
     bus.status &= (0x01 << BUS_COMMAND_WAIT); //сбросили статус
-    if (status) { //если установлены флаги
+    if (status) { //если установлены флаги команд
       changeAnimState = ANIM_RESET_DOT; //установили сброс анимации
 
 #if PLAYER_TYPE
@@ -214,7 +219,10 @@ void busCommand(void) //проверка команды шины
 
       switch (status) { //выбираем действие
 #if RADIO_ENABLE
-        case BUS_COMMAND_RADIO_MODE: if (mainTask != RADIO_PROGRAM) mainTask = RADIO_PROGRAM; else mainTask = MAIN_PROGRAM; break;
+        case BUS_COMMAND_RADIO_MODE:
+          if (mainTask != RADIO_PROGRAM) mainTask = RADIO_PROGRAM;
+          else mainTask = MAIN_PROGRAM;
+          break;
         case BUS_COMMAND_RADIO_POWER:
           radioPowerSwitch(); //переключили питание радио
           if (radio.powerState == RDA_ON) { //если питание радио включено
@@ -224,8 +232,14 @@ void busCommand(void) //проверка команды шины
             if (mainTask == RADIO_PROGRAM) mainTask = MAIN_PROGRAM;
           }
           break;
-        case BUS_COMMAND_RADIO_SEEK_UP: radioSeekUp(); mainTask = RADIO_PROGRAM; break;
-        case BUS_COMMAND_RADIO_SEEK_DOWN: radioSeekDown(); mainTask = RADIO_PROGRAM; break;
+        case BUS_COMMAND_RADIO_SEEK_UP:
+          radioSeekUp();
+          mainTask = RADIO_PROGRAM;
+          break;
+        case BUS_COMMAND_RADIO_SEEK_DOWN:
+          radioSeekDown();
+          mainTask = RADIO_PROGRAM;
+          break;
 #endif
 #if TIMER_ENABLE && (BTN_ADD_TYPE || IR_PORT_ENABLE)
         case BUS_COMMAND_TIMER_MODE: mainTask = TIMER_PROGRAM; break;
@@ -247,22 +261,40 @@ uint8_t busUpdate(void) //обновление статуса шины
       case 0x20: //передан SLA+W - принят NACK
       case 0x30: //передан байт данных - принят NACK
       case 0x48: //передан SLA+R - принят NACK
-      case 0x38: //проигрыш арбитража
         wireEnd(); //остановка шины wire
         return 1; //возвращаем ошибку шины
+
+      case 0x38: //проигран арбитраж
+        wireIdle(); //режим ожидания шины wire
+        return 1; //возвращаем ошибку шины
+
+      case 0x08: //передан START
+      case 0x10: //передан REPEATED START
+      case 0x18: //передан SLA+W - принят ACK
+      case 0x28: //передан байт данных - принят ACK
+      case 0x40: //передан SLA+R - принят ACK
+      case 0x50: //принят байт данных - передан ACK
+      case 0x58: //принят байт данных - передан NACK
+        if (!wireGetState()) { //если шина не запущена
+          wireEnd(); //остановка шины wire
+          return 1; //возвращаем ошибку шины
+        }
+        return 2; //возвращаем статус готовности шины
+
 #if ESP_ENABLE
       case 0x60: //принят SLA+W - передан ACK
+      case 0x68: //проигран арбитраж и принят SLA+W - передан ACK
         bus.position = 0;
         bus.counter = 0;
-        bus.comand = BUS_WAIT_DATA;
-        TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
+        bus.command = BUS_WAIT_DATA;
         break;
+
       case 0x80: //принят байт данных - передан ACK
       case 0x88: //принят байт данных - передан NACK
-        switch (bus.comand) {
+        switch (bus.command) {
           case BUS_WAIT_DATA: //установка команды
-            bus.comand = TWDR; //записали команду
-            switch (bus.comand) {
+            bus.command = TWDR; //записали команду
+            switch (bus.command) {
               case BUS_WRITE_TIME: //настройки времени
               case BUS_READ_TIME: for (uint8_t i = 0; i < sizeof(RTC); i++) bus.buffer[i] = *((uint8_t*)&RTC + i); break; //копируем время
               case BUS_WRITE_FAST_SET: if (mainTask == FAST_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); break; //быстрые настройки
@@ -272,12 +304,10 @@ uint8_t busUpdate(void) //обновление статуса шины
               case BUS_WRITE_ALARM_DATA:
               case BUS_DEL_ALARM:
               case BUS_NEW_ALARM:
-#endif
 #if RADIO_ENABLE
               case BUS_WRITE_RADIO_VOL: //настройки радио
               case BUS_WRITE_RADIO_FREQ:
 #endif
-#if ALARM_TYPE || RADIO_ENABLE
                 if (mainTask == ALARM_SET_PROGRAM) bus.status |= (0x01 << BUS_COMMAND_WAIT); //настройки будильника
                 break;
 #endif
@@ -307,8 +337,8 @@ uint8_t busUpdate(void) //обновление статуса шины
             if (TWDR < alarms.num) bus.position = TWDR + 1; //выбрали номер будильника
 
             alarmReadBlock(bus.position, bus.buffer); //читаем блок данных
-            if (bus.comand == BUS_WRITE_SELECT_ALARM) bus.comand = BUS_WRITE_ALARM_DATA; //перешли в режим настроек будильника
-            else bus.comand = BUS_READ_ALARM_DATA; //перешли в режим настроек будильника
+            if (bus.command == BUS_WRITE_SELECT_ALARM) bus.command = BUS_WRITE_ALARM_DATA; //перешли в режим настроек будильника
+            else bus.command = BUS_READ_ALARM_DATA; //перешли в режим настроек будильника
             break;
           case BUS_WRITE_ALARM_DATA: //прием настроек будильника
             if (bus.counter < (ALARM_MAX_ARR - 1)) {
@@ -396,15 +426,16 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_SELECT_BYTE: //выбрать произвольное место записи
             if (!bus.counter) {
               bus.counter = TWDR; //установка места записи
-              bus.comand = BUS_WAIT_DATA; //установка команды
+              bus.command = BUS_WAIT_DATA; //установка команды
             }
             break;
         }
-        TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
+
       case 0xA8: //принят SLA+R - передан ACK
+      case 0xB0: //проигран арбитраж и принят SLA+R - передан ACK
       case 0xB8: //передан байт данных - принят ACK
-        switch (bus.comand) {
+        switch (bus.command) {
           case BUS_READ_TIME: //передача настроек времени
             if (bus.counter < sizeof(RTC)) {
               TWDR = bus.buffer[bus.counter];
@@ -493,28 +524,15 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
         }
-        TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
-      case 0xC0: //передан байт данных - принят NACK
-        TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
-        break;
-#endif
-      //case 0xA0: TWCR |= (0x01 << TWINT); break; //принят сигнал STOP
-      case 0x08: //передан START
-      case 0x10: //передан REPEATED START
-      case 0x18: //передан SLA+W - принят ACK
-      case 0x28: //передан байт данных - принят ACK
-      case 0x40: //передан SLA+R - принят ACK
-      case 0x50: //принят байт данных - передан ACK
-      case 0x58: //принят байт данных - передан NACK
-        return 2; //возвращаем статус готовности шины
-      default: //неизвестная ошибка шины или сигнал STOP
-#if ESP_ENABLE
+      //case 0xC0: break; //передан байт данных - принят NACK
+
+      case 0xA0: //принят сигнал STOP или REPEATED START
         bus.status &= ~(0x01 << BUS_COMMAND_WAIT); //сбросили статус
-        switch (bus.comand) {
+        switch (bus.command) {
           case BUS_WRITE_TIME: //настройки времени
 #if DS3231_ENABLE
-            bus.statusExt |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
+            bus.execute |= (0x01 << BUS_EXT_COMMAND_SEND_TIME);
 #endif
             brightUpdate = 1;
             for (uint8_t i = 0; i < sizeof(RTC); i++) *((uint8_t*)&RTC + i) = bus.buffer[i]; //устанавливаем время
@@ -525,7 +543,7 @@ uint8_t busUpdate(void) //обновление статуса шины
           case BUS_WRITE_ALARM_DATA:
           case BUS_DEL_ALARM:
           case BUS_NEW_ALARM:
-            switch (bus.comand) {
+            switch (bus.command) {
               case BUS_WRITE_ALARM_DATA: bus.buffer[ALARM_STATUS] = 255; alarmWriteBlock(bus.position, bus.buffer); break; //записываем настройки будильника
               case BUS_DEL_ALARM: alarmRemove(bus.position); break; //удаляем выбранный будильник
               case BUS_NEW_ALARM: alarmCreate(); break; //добавляем новый будильник
@@ -538,8 +556,8 @@ uint8_t busUpdate(void) //обновление статуса шины
 #endif
 #if RADIO_ENABLE
           case BUS_WRITE_RADIO_STA: memoryUpdate |= (0x01 << MEM_UPDATE_RADIO_SET); bus.status |= (0x01 << BUS_COMMAND_UPDATE); break; //настройки радио
-          case BUS_WRITE_RADIO_VOL: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_VOL); break; //настройка громкости радио
-          case BUS_WRITE_RADIO_FREQ: bus.statusExt |= (0x01 << BUS_EXT_COMMAND_RADIO_FREQ); break; //настройка частоты радио
+          case BUS_WRITE_RADIO_VOL: bus.execute |= (0x01 << BUS_EXT_COMMAND_RADIO_VOL); break; //настройка громкости радио
+          case BUS_WRITE_RADIO_FREQ: bus.execute |= (0x01 << BUS_EXT_COMMAND_RADIO_FREQ); break; //настройка частоты радио
           case BUS_WRITE_RADIO_MODE: bus.status |= BUS_COMMAND_RADIO_MODE; break; //переключение режима радио
           case BUS_WRITE_RADIO_POWER: bus.status |= BUS_COMMAND_RADIO_POWER; break; //переключение питания радио
           case BUS_SEEK_RADIO_UP: bus.status |= BUS_COMMAND_RADIO_SEEK_UP; break; //запуск автопоиска радио
@@ -624,10 +642,11 @@ uint8_t busUpdate(void) //обновление статуса шины
             }
             break;
         }
-#endif
-        TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
         break;
+#endif
     }
+
+    TWCR |= (0x01 << TWINT); //сбросили флаг прерывания
   }
   return 0; //возвращаем статус ожидания шины
 }
