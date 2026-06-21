@@ -26,27 +26,27 @@ void readTempSHT(void) //чтение температуры/влажности
       typeSHT = SHT20_ADDR; //установлили тип датчика
       wireWrite(SHT20_WRITE_REG); //устанавливаем адрес записи
       wireWrite(0xC1); //записываем настройку
-      wireEnd(); //остановка шины wire
+      wireEndTransmission(); //остановка шины wire
     }
 #elif SENS_SHT_ENABLE == 2
     if (!wireBeginTransmission(SHT30_ADDR)) { //если SHT30
       typeSHT = SHT30_ADDR; //установлили тип датчика
       wireWrite(0x30); //записываем настройку
       wireWrite(0x66); //записываем настройку
-      wireEnd(); //остановка шины wire
+      wireEndTransmission(); //остановка шины wire
     }
 #else
     if (!wireBeginTransmission(SHT20_ADDR)) { //если SHT20
       typeSHT = SHT20_ADDR; //установлили тип датчика
       wireWrite(SHT20_WRITE_REG); //устанавливаем адрес записи
       wireWrite(0xC1); //записываем настройку
-      wireEnd(); //остановка шины wire
+      wireEndTransmission(); //остановка шины wire
     }
     else if (!wireBeginTransmission(SHT30_ADDR)) { //если SHT30
       typeSHT = SHT30_ADDR; //установлили тип датчика
       wireWrite(0x30); //записываем настройку
       wireWrite(0x66); //записываем настройку
-      wireEnd(); //остановка шины wire
+      wireEndTransmission(); //остановка шины wire
     }
 #endif
     else return; //иначе выходим
@@ -60,7 +60,7 @@ void readTempSHT(void) //чтение температуры/влажности
     case SHT20_ADDR: {
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
         wireWrite(SHT20_READ_TEMP); //устанавливаем адрес записи
-        wireEnd(); //остановка шины wire
+        wireEndTransmission(); //остановка шины wire
 
         _timer_ms[TMR_SENS] = SHT20_TEMP_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
@@ -74,7 +74,7 @@ void readTempSHT(void) //чтение температуры/влажности
 
         if (wireBeginTransmission(SHT20_ADDR)) return; //начало передачи
         wireWrite(SHT20_READ_HUM); //устанавливаем адрес записи
-        wireEnd(); //остановка шины wire
+        wireEndTransmission(); //остановка шины wire
 
         _timer_ms[TMR_SENS] = SHT20_HUM_TIME; //установили таймер
         while (wireBeginTransmission(SHT20_ADDR, 1)) { //ждем окончания преобразования
@@ -93,7 +93,7 @@ void readTempSHT(void) //чтение температуры/влажности
         if (wireBeginTransmission(SHT30_ADDR)) return; //начало передачи
         wireWrite(SHT30_READ_DATA); //устанавливаем адрес записи
         wireWrite(SHT30_RESOLUTION); //записываем настройку
-        wireEnd(); //остановка шины wire
+        wireEndTransmission(); //остановка шины wire
 
         _timer_ms[TMR_SENS] = SHT30_MEAS_TIME; //установили таймер
         while (wireBeginTransmission(SHT30_ADDR, 1)) { //ждем окончания преобразования

@@ -36,7 +36,7 @@ void writeRegRDA(uint8_t _reg)
   wireWrite(_reg); //устанавливаем адрес записи
   wireWrite(rda.highReg); //отправляем старший байт
   wireWrite(rda.lowReg); //отправляем младший байт
-  wireEnd(); //конец передачи
+  wireEndTransmission(); //конец передачи
 }
 //-------------------------------Получить статус настройки на радиостанцию------------------------------------
 boolean getStationStatusRDA(void)

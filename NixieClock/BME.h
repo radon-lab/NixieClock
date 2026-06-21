@@ -69,7 +69,7 @@ void writeREG(uint8_t _addr, uint8_t _reg, uint8_t _data) //Запись одн�
   if (wireBeginTransmission(_addr)) return; //начало передачи
   wireWrite(_reg); //устанавливаем адрес записи
   wireWrite(_data); //записываем байт
-  wireEnd(); //конец передачи
+  wireEndTransmission(); //конец передачи
 }
 //--------------------------------------Чтение калибровок датчика------------------------------------------
 boolean readCalibrationBMP180(void) //чтение калибровок датчика

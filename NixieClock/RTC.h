@@ -65,7 +65,7 @@ void rtcWriteAging(int8_t data) //запись коррекции хода
   if (wireBeginTransmission(RTC_ADDR)) return; //начало передачи
   wireWrite(0x10); //устанавливаем адрес записи
   wireWrite(data); //записываем коррекцию хода
-  wireEnd(); //остановка шины wire
+  wireEndTransmission(); //остановка шины wire
 }
 //--------------------------------Проверка флага OSF--------------------------------------
 boolean rtcGetOSF(boolean mode) //проверка флага OSF
@@ -83,7 +83,7 @@ boolean rtcGetOSF(boolean mode) //проверка флага OSF
         ctrlReg &= 0x7F; //очистили флаг OSF
         wireWrite(0x0F); //устанавливаем адрес записи
         wireWrite(ctrlReg); //отправляем настройку OSF
-        wireEnd(); //конец передачи
+        wireEndTransmission(); //конец передачи
       }
     }
     SET_ERROR(ERROR_OSF_RTC); //установили ошибку осцилятора модуля RTC
@@ -104,7 +104,7 @@ boolean rtcSetSQW(void) //настройка SQW
   else { //иначе отправляем данные
     wireWrite(0x0E); //устанавливаем адрес записи
     wireWrite(ctrlReg); //отправляем настройку SQW
-    wireEnd(); //конец передачи
+    wireEndTransmission(); //конец передачи
     return 1; //выходим
   }
   return 0; //выходим
@@ -122,7 +122,7 @@ boolean rtcDisable32K(void) //отключение вывода 32K
   else { //иначе отправляем данные
     wireWrite(0x0F); //устанавливаем адрес записи
     wireWrite(ctrlReg); //отправляем настройку SQW
-    wireEnd(); //конец передачи
+    wireEndTransmission(); //конец передачи
     return 1; //выходим
   }
   return 0; //выходим
@@ -151,7 +151,7 @@ void rtcSendTime(void) //отправить время в RTC
     wireWrite(packREG(RTC.DD)); //отправляем дату
     wireWrite(packREG(RTC.MM)); //отправляем месяц
     wireWrite(packREG(RTC.YY - 2000)); //отправляем год
-    wireEnd(); //конец передачи
+    wireEndTransmission(); //конец передачи
   }
 }
 //--------------------------------------Запрашиваем время из RTC------------------------------------------
