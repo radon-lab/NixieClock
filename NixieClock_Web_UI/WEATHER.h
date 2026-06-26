@@ -138,6 +138,45 @@ void weatherDisconnect(void) {
   weather_state = WEATHER_STOPPED;
 }
 //--------------------------------------------------------------------
+boolean weatherTryConnect(void) {
+  String host;
+  host.reserve(40);
+
+  uint16_t port = 0;
+
+  if (settings.weatherHost[0] != '\0') {
+    host = settings.weatherHost;
+    uint8_t div = host.indexOf(":");
+    if (div > 0) {
+      port = host.substring(div + 1).toInt();
+      if (port > 0) {
+        host = host.substring(0, div);
+      }
+    }
+  }
+
+  if (!port) {
+    host = F("api.open-meteo.com");
+    port = 80;
+  }
+
+  if (client.connect(host, port)) {
+    if (client.connected()) {
+      client.print F("GET ");
+      if (settings.weatherHost[0] != '\0') client.print F("http://api.open-meteo.com");
+      client.print F("/v1/forecast?latitude=");
+      client.print(weather_latitude, 4);
+      client.print F("&longitude=");
+      client.print(weather_longitude, 4);
+      client.println F("&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 "
+                       "HTTP/1.1\r\nAccept: */*\r\nAccept-Language: ru,en;q=0.9\r\nHost: api.open-meteo.com\r\nConnection: close\r\n"
+                       "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36\r\n");
+      return true;
+    }
+  }
+  return false;
+}
+//--------------------------------------------------------------------
 const char* weatherGetParseType(uint8_t mod) {
   switch (mod) {
     case WEATHER_GET_TEMP: return "\"temperature_2m\":[";
@@ -261,20 +300,10 @@ boolean weatherUpdate(void) {
       else weather_state = WEATHER_ERROR;
       break;
     case WEATHER_SEND_REQUEST:
-      if (client.connect("api.open-meteo.com", 80)) {
-        if (client.connected()) {
-          client.print F("GET /v1/forecast?latitude=");
-          client.print(weather_latitude, 4);
-          client.print F("&longitude=");
-          client.print(weather_longitude, 4);
-          client.println F("&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 "
-                           "HTTP/1.1\r\nAccept: */*\r\nAccept-Language: ru,en;q=0.9\r\nHost: api.open-meteo.com\r\nConnection: close\r\n"
-                           "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36\r\n");
-          weather_answer = "";
-          weather_timer = millis();
-          weather_state = WEATHER_WAIT_ANSWER;
-        }
-        else weatherWaitRequest();
+      if (weatherTryConnect()) {
+        weather_answer = "";
+        weather_timer = millis();
+        weather_state = WEATHER_WAIT_ANSWER;
       }
       else weatherWaitRequest();
       break;
