@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_031 бета от 25.06.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_031 бета от 27.06.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -1340,7 +1340,7 @@ void build(void) {
             GP.NUMBER_F("weatherLat", LANG_PAGE_NETWORK_GUI_LAT, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
             GP.NUMBER_F("weatherLon", LANG_PAGE_NETWORK_GUI_LON, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
            );
-      GP.TEXT("weatherHost", "Прокси", settings.weatherHost, "", 40);
+      GP.TEXT("weatherHost", LANG_PAGE_NETWORK_GUI_PROXY, settings.weatherHost, "", 40);
       GP.SPAN(weatherGetState(), GP_CENTER, "extWeather", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.BUTTON("weatherUpdate", LANG_PAGE_NETWORK_GUI_UPDATE, "", (!weatherGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%", (boolean)(!weatherGetRunStatus() || !wifiGetConnectStatus()));

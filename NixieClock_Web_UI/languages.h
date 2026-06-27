@@ -536,6 +536,7 @@
 #define LANG_PAGE_NETWORK_GUI_HOST "Хост"
 #define LANG_PAGE_NETWORK_GUI_LAT "Широта"
 #define LANG_PAGE_NETWORK_GUI_LON "Долгота"
+#define LANG_PAGE_NETWORK_GUI_PROXY "Прокси"
 
 //-------------------------------------------------------//
 #define LANG_FAIL_ALERT_TITLE "Предупреждение"
@@ -1098,6 +1099,7 @@
 #define LANG_PAGE_NETWORK_GUI_HOST "Host"
 #define LANG_PAGE_NETWORK_GUI_LAT "Latitude"
 #define LANG_PAGE_NETWORK_GUI_LON "Longitude"
+#define LANG_PAGE_NETWORK_GUI_PROXY "Proxy"
 
 //-------------------------------------------------------//
 #define LANG_FAIL_ALERT_TITLE "Warning"
