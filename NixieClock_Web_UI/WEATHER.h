@@ -144,6 +144,7 @@ boolean weatherTryConnect(void) {
 
   uint16_t port = 0;
 
+#if WEATHER_USE_PROXY
   if (settings.weatherHost[0] != '\0') {
     host = settings.weatherHost;
     uint8_t div = host.indexOf(":");
@@ -154,6 +155,7 @@ boolean weatherTryConnect(void) {
       }
     }
   }
+#endif
 
   if (!port) {
     host = F("api.open-meteo.com");
@@ -163,7 +165,9 @@ boolean weatherTryConnect(void) {
   if (client.connect(host, port)) {
     if (client.connected()) {
       client.print F("GET ");
+#if WEATHER_USE_PROXY
       if (settings.weatherHost[0] != '\0') client.print F("http://api.open-meteo.com");
+#endif
       client.print F("/v1/forecast?latitude=");
       client.print(weather_latitude, 4);
       client.print F("&longitude=");

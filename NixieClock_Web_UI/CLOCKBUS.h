@@ -3,6 +3,8 @@
 #define CLOCKBUS_VERSION 0x13 //версия протокола шины часов(0x13)
 
 //Команды интерфейса
+#define BUS_SELECT_BYTE 0xFD
+
 #define BUS_WRITE_TIME 0x01
 #define BUS_READ_TIME 0x02
 
@@ -47,6 +49,8 @@
 
 #define BUS_READ_FAILURE 0xA0
 
+#define BUS_READ_BOARD_INFO 0xB0
+
 #define BUS_ALARM_DISABLE 0xDA
 #define BUS_CHANGE_BRIGHT 0xDC
 
@@ -56,7 +60,6 @@
 
 #define BUS_CONTROL_DEVICE 0xFA
 
-#define BUS_SELECT_BYTE 0xFD
 #define BUS_READ_STATUS 0xFE
 #define BUS_READ_DEVICE 0xFF
 
@@ -148,33 +151,6 @@ enum {
   ALARM_DATA_MAX //всего данных
 };
 uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
-
-enum {
-  FIRMWARE_VER_H,
-  FIRMWARE_VER_M,
-  FIRMWARE_VER_L,
-  CLOCKBUS_VER,
-  TEMP_SENS_ENABLE,
-  BTN_EASY_MODE,
-  LAMP_NUM,
-  BACKL_TYPE,
-  SECS_TYPE,
-  DOTS_ENABLE,
-  DOTS_NUM,
-  DOTS_TYPE,
-  LIGHT_SENS_ENABLE,
-  EXT_BTN_ENABLE,
-  RTC_ENABLE,
-  TIMER_ENABLE,
-  RADIO_ENABLE,
-  ALARM_TYPE,
-  PLAYER_TYPE,
-  PLAYER_MAX_SOUND,
-  PLAYER_MAX_VOICE,
-  ALARM_AUTO_VOL_MAX,
-  INFORMATION_MAX
-};
-uint8_t deviceInformation[INFORMATION_MAX]; //информация о часах
 
 enum {
   STATUS_UPDATE_MAIN_SET,
@@ -322,6 +298,8 @@ enum {
   READ_DEVICE,
   READ_FAILURE,
 
+  READ_BOARD_INFO,
+
   WRITE_SENS_1_DATA,
   WRITE_SENS_2_DATA,
 
@@ -352,6 +330,36 @@ struct deviceData {
   uint8_t status = 0x00; //флаги состояния часов
   uint16_t failure = 0x00; //флаги ошибок часов
 } device;
+
+enum {
+  FIRMWARE_VER_H,
+  FIRMWARE_VER_M,
+  FIRMWARE_VER_L,
+  CLOCKBUS_VER,
+  TEMP_SENS_ENABLE,
+  BTN_EASY_MODE,
+  LAMP_NUM,
+  BACKL_TYPE,
+  SECS_TYPE,
+  DOTS_ENABLE,
+  DOTS_NUM,
+  DOTS_TYPE,
+  LIGHT_SENS_ENABLE,
+  EXT_BTN_ENABLE,
+  RTC_ENABLE,
+  TIMER_ENABLE,
+  RADIO_ENABLE,
+  ALARM_TYPE,
+  PLAYER_TYPE,
+  PLAYER_MAX_SOUND,
+  PLAYER_MAX_VOICE,
+  ALARM_AUTO_VOL_MAX,
+  INFORMATION_MAX
+};
+uint8_t deviceInformation[INFORMATION_MAX]; //конфигурация часов
+
+char clockBoardModel[16]; //модель платы часов
+char clockBoardSn[6]; //серийный номер платы часов
 
 
 #define BUS_REBOOT_ATTEMPTS 5
@@ -1227,6 +1235,18 @@ void busUpdate(void) {
         case READ_FAILURE:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_FAILURE)) { //начинаем передачу
             device.failure = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+        case READ_BOARD_INFO:
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_BOARD_INFO)) { //начинаем передачу
+            for (uint8_t i = 0; i < (sizeof(clockBoardModel) - 1); i++) clockBoardModel[i] = twi_read_byte(TWI_ACK);
+            clockBoardModel[(sizeof(clockBoardModel) - 1)] = '\0';
+            twi_read_byte(TWI_ACK);
+            for (uint8_t i = 0; i < (sizeof(clockBoardSn) - 1); i++) clockBoardSn[i] = twi_read_byte((i < 4) ? TWI_ACK : TWI_NACK);
+            clockBoardSn[(sizeof(clockBoardSn) - 1)] = '\0';
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }

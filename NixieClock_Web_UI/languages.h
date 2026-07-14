@@ -452,7 +452,8 @@
 
 #define LANG_PAGE_INFO_HR_MEMORY "Память устройства"
 #define LANG_PAGE_INFO_HR_NETWORK "Локальная сеть"
-#define LANG_PAGE_INFO_HR_VERSION "Версия ПО"
+#define LANG_PAGE_INFO_HR_VERSION "Версия программы"
+#define LANG_PAGE_INFO_HR_MODEL "Модель часов"
 #define LANG_PAGE_INFO_HR_STATE "Состояние"
 #define LANG_PAGE_INFO_HR_SHOW "Отображение"
 #define LANG_PAGE_INFO_HR_GROUP "Групповое управление"
@@ -470,11 +471,13 @@
 #define LANG_PAGE_INFO_GUI_CPU "Частота процессора"
 #define LANG_PAGE_INFO_GUI_USAGE "Загрузка процессора"
 #define LANG_PAGE_INFO_GUI_UPTIME "Время работы"
+
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Фрагментировано(Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Свободно(Heap)"
 #define LANG_PAGE_INFO_GUI_FLASH_ALL "Всего(Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FULL "Занято(Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FREE "Свободно(Flash)"
+
 #define LANG_PAGE_INFO_GUI_STRENGTH "Уровень сигнала"
 #define LANG_PAGE_INFO_GUI_MODE "Режим модема"
 #define LANG_PAGE_INFO_GUI_MAC "MAC адрес"
@@ -485,11 +488,16 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Время соединения"
 #define LANG_PAGE_INFO_GUI_AP_SSID "SSID точки доступа"
 #define LANG_PAGE_INFO_GUI_AP_IP "IP точки доступа"
+
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"
 #define LANG_PAGE_INFO_GUI_ESP "Прошивка ESP"
 #define LANG_PAGE_INFO_GUI_CLOCK "Прошивка часов"
+
+#define LANG_PAGE_INFO_GUI_NAME "Название"
+#define LANG_PAGE_INFO_GUI_SN "Серийный номер"
+#define LANG_PAGE_INFO_GUI_NA "n/a"
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Связь с часами"
 #define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально"
@@ -1014,8 +1022,9 @@
 #define LANG_PAGE_INFO_BLOCK_DEVICE "Device"
 
 #define LANG_PAGE_INFO_HR_MEMORY "Device memory"
-#define LANG_PAGE_INFO_HR_NETWORK "Network"
+#define LANG_PAGE_INFO_HR_NETWORK "Local network"
 #define LANG_PAGE_INFO_HR_VERSION "Firmware version"
+#define LANG_PAGE_INFO_HR_MODEL "Clock model"
 #define LANG_PAGE_INFO_HR_STATE "State"
 #define LANG_PAGE_INFO_HR_SHOW "Display"
 #define LANG_PAGE_INFO_HR_GROUP "Group management"
@@ -1033,11 +1042,13 @@
 #define LANG_PAGE_INFO_GUI_CPU "Processor frequency"
 #define LANG_PAGE_INFO_GUI_USAGE "Processor usage"
 #define LANG_PAGE_INFO_GUI_UPTIME "Uptime"
+
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Fragmented (Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Free (Heap)"
 #define LANG_PAGE_INFO_GUI_FLASH_ALL "Total (Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FULL "Busy (Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FREE "Free (Flash)"
+
 #define LANG_PAGE_INFO_GUI_STRENGTH "Signal level"
 #define LANG_PAGE_INFO_GUI_MODE "Modem mode"
 #define LANG_PAGE_INFO_GUI_MAC "MAC address"
@@ -1048,11 +1059,16 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Connect time"
 #define LANG_PAGE_INFO_GUI_AP_SSID "Access point SSID"
 #define LANG_PAGE_INFO_GUI_AP_IP "Access point IP"
+
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"
 #define LANG_PAGE_INFO_GUI_ESP "ESP firmware"
 #define LANG_PAGE_INFO_GUI_CLOCK "Clock firmware"
+
+#define LANG_PAGE_INFO_GUI_NAME "Identifier"
+#define LANG_PAGE_INFO_GUI_SN "Serial number"
+#define LANG_PAGE_INFO_GUI_NA "n/a"
 
 #define LANG_PAGE_INFO_GUI_CONNECT "Connection with clock"
 #define LANG_PAGE_INFO_GUI_STATE_OK "Working fine"

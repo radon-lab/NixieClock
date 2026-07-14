@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.0_031 бета от 27.06.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.0_032 бета от 14.07.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -31,7 +31,7 @@
 
 
 //--------------Версия прошивки-------------
-#define ESP_FIRMWARE_VER "1.3.0_031" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.0_032" //версия прошивки модуля esp
 
 //---------------Конфигурации---------------
 #include "config.h"
@@ -1191,6 +1191,13 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_CLOCK, "", UI_LABEL_COLOR); GP.LABEL(getClockFirmwareVersion(), "", UI_INFO_COLOR););
       }
 
+      if (stringCheckCorrect(clockBoardModel, sizeof(clockBoardModel)) || stringCheckCorrect(clockBoardSn, sizeof(clockBoardSn))) {
+        GP.BREAK();
+        GP.HR_TEXT(LANG_PAGE_INFO_HR_MODEL, UI_LINE_COLOR, UI_HINT_COLOR);
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_NAME, "", UI_LABEL_COLOR); GP.LABEL(stringCheckCorrect(clockBoardModel, sizeof(clockBoardModel)) ? clockBoardModel : LANG_PAGE_INFO_GUI_NA, "", UI_INFO_COLOR););
+        M_BOX(GP.LABEL(LANG_PAGE_INFO_GUI_SN, "", UI_LABEL_COLOR); GP.LABEL(stringCheckCorrect(clockBoardSn, sizeof(clockBoardSn)) ? clockBoardSn : LANG_PAGE_INFO_GUI_NA, "", UI_INFO_COLOR););
+      }
+
       if (!(device.failure & 0x8000)) {
         GP.BREAK();
         GP.HR_TEXT(LANG_PAGE_INFO_HR_STATE, UI_LINE_COLOR, UI_HINT_COLOR);
@@ -1340,7 +1347,9 @@ void build(void) {
             GP.NUMBER_F("weatherLat", LANG_PAGE_NETWORK_GUI_LAT, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[0][settings.weatherCity] : settings.weatherLat, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
             GP.NUMBER_F("weatherLon", LANG_PAGE_NETWORK_GUI_LON, (settings.weatherCity < WEATHER_CITY_ARRAY) ? weatherCoordinatesList[1][settings.weatherCity] : settings.weatherLon, 4, "", (boolean)(settings.weatherCity < WEATHER_CITY_ARRAY));
            );
+#if WEATHER_USE_PROXY
       GP.TEXT("weatherHost", LANG_PAGE_NETWORK_GUI_PROXY, settings.weatherHost, "", 40);
+#endif
       GP.SPAN(weatherGetState(), GP_CENTER, "extWeather", UI_INFO_COLOR); //описание
       GP.HR(UI_LINE_COLOR);
       GP.BUTTON("weatherUpdate", LANG_PAGE_NETWORK_GUI_UPDATE, "", (!weatherGetRunStatus() || !wifiGetConnectStatus()) ? GP_GRAY : UI_BUTTON_COLOR, "90%", (boolean)(!weatherGetRunStatus() || !wifiGetConnectStatus()));
@@ -1472,11 +1481,13 @@ void action() {
     }
     //--------------------------------------------------------------------
     if (ui.clickSub("weather")) {
+#if WEATHER_USE_PROXY
       if (ui.click("weatherHost")) {
         strncpy(settings.weatherHost, ui.getString("weatherHost").c_str(), 40); //копируем себе
         settings.weatherHost[39] = '\0'; //устанавливаем последний символ
         memorySaveSettings(); //обновить данные в памяти
       }
+#endif
 
       if (ui.click("weatherCity")) {
         settings.weatherCity = ui.getInt("weatherCity");
@@ -2521,6 +2532,12 @@ void memoryResetSettings(void) {
   strncpy(settings.ntpHost, DEFAULT_NTP_HOST, 20); //установить хост по умолчанию
   settings.ntpHost[19] = '\0'; //устанавливаем последний символ
 
+  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
+  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
+  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
+  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
+  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
+
   settings.groupFind = DEFAULT_GROUP_FOUND; //обнаружение устройств поблизости
 
   settings.nameAp = DEFAULT_NAME_AP; //установить отображение имени после названия точки доступа wifi по умолчанию
@@ -2530,22 +2547,22 @@ void memoryResetSettings(void) {
   strncpy(settings.nameDevice, DEFAULT_NAME, 20); //установить имя по умолчанию
   settings.nameDevice[19] = '\0'; //устанавливаем последний символ
 
+#if WEATHER_USE_PROXY
+  settings.weatherHost[0] = '\0'; //установить прокси по умолчанию
+#endif
+
   settings.weatherCity = DEFAULT_WEATHER_CITY; //установить город по умолчанию
   settings.weatherLat = NAN; //установить широту по умолчанию
   settings.weatherLon = NAN; //установить долготу по умолчанию
 
   for (uint8_t i = 0; i < sizeof(settings.wirelessId); i++) settings.wirelessId[i] = 0; //сбрасываем id беспроводного датчика
+
   settings.climateSend[0] = SENS_MAIN; //сбрасываем тип датчика
   settings.climateSend[1] = SENS_WEATHER; //сбрасываем тип датчика
   settings.climateBar = SENS_MAIN; //установить режим по умолчанию
   settings.climateChart = SENS_MAIN; //установить режим по умолчанию
   settings.climateTime = DEFAULT_CLIMATE_TIME; //установить период по умолчанию
   settings.climateAvg = DEFAULT_CLIMATE_AVG; //установить усреднение по умолчанию
-  settings.ntpGMT = DEFAULT_GMT; //установить часовой по умолчанию
-  settings.ntpSync = DEFAULT_SYNC; //выключаем авто-синхронизацию
-  settings.ntpDst = DEFAULT_DST; //установить учет летнего времени по умолчанию
-  settings.ntpTime = DEFAULT_NTP_TIME; //установить период по умолчанию
-  if (settings.ntpTime > (sizeof(ntpSyncTime) - 1)) settings.ntpTime = sizeof(ntpSyncTime) - 1;
 }
 //--------------------------------------------------------------------
 void setup() {
@@ -2625,6 +2642,7 @@ void setup() {
   busSetCommand(READ_RADIO_SET);
   busSetCommand(READ_ALARM_ALL);
   busSetCommand(READ_TIME_DATE, 0);
+  busSetCommand(READ_BOARD_INFO);
   busSetCommand(READ_FAILURE);
   busSetCommand(READ_DEVICE);
 

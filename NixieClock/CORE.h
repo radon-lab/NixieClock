@@ -826,7 +826,7 @@ boolean checkDebugSettingsCRC(void) //проверка контрольной с
   return 1;
 }
 //------------------------Проверка данных в памяти-------------------------------
-boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверка данных в памяти
+boolean checkData(uint8_t size, uint16_t cell, uint16_t cell_crc) //проверка данных в памяти
 {
   uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
 
@@ -834,7 +834,7 @@ boolean checkData(uint8_t size, uint8_t cell, uint8_t cell_crc) //проверк
   return (boolean)(crc != EEPROM_ReadByte(cell_crc));
 }
 //-----------------------Обновление данных в памяти-------------------------------
-void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //обновление данных в памяти
+void updateData(uint8_t* str, uint8_t size, uint16_t cell, uint16_t cell_crc) //обновление данных в памяти
 {
   uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
 
@@ -843,12 +843,12 @@ void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cell_crc) //о
   EEPROM_UpdateByte(cell_crc, crc);
 }
 //------------------------Проверка байта в памяти-------------------------------
-boolean checkByte(uint8_t cell, uint8_t cell_crc) //проверка байта в памяти
+boolean checkByte(uint16_t cell, uint16_t cell_crc) //проверка байта в памяти
 {
   return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cell_crc));
 }
 //-----------------------Обновление байта в памяти-------------------------------
-void updateByte(uint8_t data, uint8_t cell, uint8_t cell_crc) //обновление байта в памяти
+void updateByte(uint8_t data, uint16_t cell, uint16_t cell_crc) //обновление байта в памяти
 {
   EEPROM_UpdateByte(cell, data);
   EEPROM_UpdateByte(cell_crc, data ^ 0xFF);

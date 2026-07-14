@@ -21,6 +21,16 @@ const char *failureDataList[] = {
 };
 
 //--------------------------------------------------------------------
+boolean stringCheckCorrect(char* str, uint8_t size) {
+  uint8_t data = 0;
+  for (uint8_t i = 0; i < size; i++) {
+    data = str[i];
+    if (!data) return (boolean)i;
+    else if ((data < 32) || (data > 126)) return false;
+  }
+  return true;
+}
+//--------------------------------------------------------------------
 String stringLengthConstrain(String str, uint8_t size) {
   if (str.length() > size) {
     str.remove(size);
