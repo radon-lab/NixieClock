@@ -460,8 +460,8 @@ inline void busReadData(void) //чтение данных из памяти
       device.status = 0;
       break;
     case BUS_READ_BOARD_INFO: //передача информации о плате
-      if (bus.counter < (sizeof(deviceInformation) + 22)) {
-        TWDR = EEPROM_ReadByte(bus.counter + 1001);
+      if (bus.counter < 22) {
+        TWDR = EEPROM_ReadByte(1001 + bus.counter);
       }
       break;
     case BUS_READ_DEVICE: //передача комплектации
