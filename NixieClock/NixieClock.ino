@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_032 бета от 14.07.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0_033 бета от 15.07.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.3.2"
+#define FIRMWARE_VERSION "0.3.3"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -201,12 +201,12 @@ void INIT_SYSTEM(void) //инициализация
 #endif
 
 #ifdef CLOCK_BOARD_MODEL
-  static char model[16] = CLOCK_BOARD_MODEL;
-  if (checkData(15, 1001, 1016)) updateData((uint8_t*)model, 15, 1001, 1016);
+  static const char model[EEPROM_BOARD_MODEL_SIZE + 1] = CLOCK_BOARD_MODEL;
+  if (checkData(EEPROM_BOARD_MODEL_SIZE, EEPROM_BLOCK_BOARD_MODEL, EEPROM_BLOCK_BOARD_MODEL_CRC)) updateData((uint8_t*)model, EEPROM_BOARD_MODEL_SIZE, EEPROM_BLOCK_BOARD_MODEL, EEPROM_BLOCK_BOARD_MODEL_CRC);
 #endif
 #ifdef CLOCK_BOARD_SN
-  static char sn[6] = CLOCK_BOARD_SN;
-  if (checkData(5, 1017, 1022)) updateData((uint8_t*)sn, 5, 1017, 1022);
+  static const char sn[EEPROM_BOARD_SN_SIZE + 1] = CLOCK_BOARD_SN;
+  if (checkData(EEPROM_BOARD_SN_SIZE, EEPROM_BLOCK_BOARD_SN, EEPROM_BLOCK_BOARD_SN_CRC)) updateData((uint8_t*)sn, EEPROM_BOARD_SN_SIZE, EEPROM_BLOCK_BOARD_SN, EEPROM_BLOCK_BOARD_SN_CRC);
 #endif
 
   if (checkByte(EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR)) updateByte(0x00, EEPROM_BLOCK_ERROR, EEPROM_BLOCK_CRC_ERROR); //если контрольная сумма ошибок не совпала

@@ -592,6 +592,14 @@ uint8_t memoryUpdate;
 
 #define EEPROM_START_CRC 0xDB //начальная контрольная сумма
 
+#define EEPROM_BOARD_MODEL_SIZE 15 //размер блока памяти модели часов
+#define EEPROM_BOARD_SN_SIZE 5 //размер блока памяти серийного номера часов
+
+#define EEPROM_BLOCK_BOARD_MODEL (EEPROM_BLOCK_INFO) //блок памяти модели часов
+#define EEPROM_BLOCK_BOARD_MODEL_CRC (EEPROM_BLOCK_BOARD_MODEL + EEPROM_BOARD_MODEL_SIZE) //блок контрольной суммы модели часов
+#define EEPROM_BLOCK_BOARD_SN (EEPROM_BLOCK_BOARD_MODEL_CRC + 1) //блок памяти серийного номера часов
+#define EEPROM_BLOCK_BOARD_SN_CRC (EEPROM_BLOCK_BOARD_SN + EEPROM_BOARD_SN_SIZE) //блок контрольной суммы серийного номера часов
+
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_NULL + 8) //блок памяти быстрых настроек
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио

@@ -267,7 +267,7 @@
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Датчики"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник отображения данных и время отображения в секундах"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "День - время в миинутах<br>Ночь - время в секундах<br><br>0 - отключить режим сна для выбранного промежутка времени"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "День - время в минутах<br>Ночь - время в секундах<br><br>0 - отключить режим сна для выбранного промежутка времени"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "Одинаковое время - отключить смену яркости по времени"
 
@@ -838,7 +838,7 @@
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Sensors"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Data display source and display time in seconds"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "Day - time in minutes<br>Midnight - time in seconds<br><br>0 - disable sleep mode for the selected time interval"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "Day - time in minutes<br>Night - time in seconds<br><br>0 - disable sleep mode for the selected time interval"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "The same time - turn off the brightness change by time"
 
