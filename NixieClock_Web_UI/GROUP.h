@@ -184,7 +184,7 @@ void groupReady(void) {
 void groupLocal(void) {
   if (group_status != GROUP_STOPPED) {
     group_time = 0;
-    group_list = "";
+    group_list = "local";
     group_update = true;
     group_status = GROUP_LOCAL;
   }
@@ -200,7 +200,7 @@ void groupStart(boolean search) {
   }
   else if (group.begin(GROUP_LOCAL_PORT)) {
     group_time = 0;
-    group_list = "";
+    group_list = "local";
     group_update = true;
     group_status = GROUP_LOCAL;
   }

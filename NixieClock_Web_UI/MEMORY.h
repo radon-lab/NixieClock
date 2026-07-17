@@ -6,8 +6,7 @@
 struct settingsData { //структура настроек
   boolean nameAp;
   boolean nameMenu;
-  boolean namePrefix;
-  boolean namePostfix;
+  boolean nameTab;
   boolean groupFind;
   uint8_t wirelessId[6];
   uint8_t weatherCity;
@@ -24,6 +23,7 @@ struct settingsData { //структура настроек
   int8_t ntpGMT;
   char ntpHost[20];
   char nameDevice[20];
+  char weatherHost[40];
   char wifiSSID[64];
   char wifiPASS[64];
 } settings;

@@ -5,15 +5,38 @@
 
 #define DDR_REG(portx) (*(&portx - 1))
 #define PIN_REG(portx) (*(&portx - 2))
+
 #define BIT_READ_INV(value, bit) (((value) ^ (0x01 << (bit))) & (0x01 << (bit)))
 #define BIT_READ(value, bit) ((value) & (0x01 << (bit)))
 #define BIT_INV(value, bit) ((value) ^= (0x01 << (bit)))
 #define BIT_SET(value, bit) ((value) |= (0x01 << (bit)))
 #define BIT_CLEAR(value, bit) ((value) &= ~(0x01 << (bit)))
-#define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
+#define BIT_WRITE(value, bit) ((value) = (0x01 << (bit)))
 
 #define CONSTRAIN(value, min, max) (((value) > (max)) ? (max) : (((value) < (min)) ? (min) : (value)))
 #define CONSTRAIN_MAX(value, max) (((value) > (max)) ? (max) : (value))
+
+#ifdef DIGIT_MASK
+#undef DECODER_MASK
+#define DECODER_MASK DIGIT_MASK
+#endif
+
+#ifdef DECODER_1
+#undef DECODER_1_PIN
+#define DECODER_1_PIN DECODER_1
+#endif
+#ifdef DECODER_2
+#undef DECODER_2_PIN
+#define DECODER_2_PIN DECODER_2
+#endif
+#ifdef DECODER_3
+#undef DECODER_3_PIN
+#define DECODER_3_PIN DECODER_3
+#endif
+#ifdef DECODER_4
+#undef DECODER_4_PIN
+#define DECODER_4_PIN DECODER_4
+#endif
 
 #if INDI_MODE != 0
 #define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : (((pin) < 14) ? PCMSK0 : PCMSK1))
@@ -176,6 +199,20 @@
 #define SQW_BIT   DECODE_BIT(SQW_PIN)
 #define SQW_PORT  DECODE_PORT(SQW_PIN)
 
+#if SQW_PIN == 2
+#define SQW_INT       INT0_vect
+#define SQW_INT_EN   (BIT_WRITE(EIMSK, INT0))
+#define SQW_INT_CLR  (BIT_SET(EIFR, INTF0))
+#define SQW_INT_CHK  (BIT_READ(EIFR, INTF0))
+#define SQW_INT_INIT (BIT_WRITE(EICRA, ISC01))
+#elif SQW_PIN == 3
+#define SQW_INT       INT1_vect
+#define SQW_INT_EN   (BIT_WRITE(EIMSK, INT1))
+#define SQW_INT_CLR  (BIT_SET(EIFR, INTF1))
+#define SQW_INT_CHK  (BIT_READ(EIFR, INTF1))
+#define SQW_INT_INIT (BIT_WRITE(EICRA, ISC11))
+#endif
+
 #define SQW_SET   (BIT_SET(SQW_PORT, SQW_BIT))
 #define SQW_INP   (BIT_CLEAR(DDR_REG(SQW_PORT), SQW_BIT))
 
@@ -197,8 +234,9 @@
 #define FB_BIT   DECODE_BIT(ANALOG_DET_PIN)
 #define FB_PORT  DECODE_PORT(ANALOG_DET_PIN)
 
-#define FB_CLEAR (BIT_CLEAR(FB_PORT, FB_BIT))
-#define FB_INP   (BIT_CLEAR(DDR_REG(FB_PORT), FB_BIT))
+#define FB_ENABLE (BIT_WRITE(ACSR, ACBG))
+#define FB_CLEAR  (BIT_CLEAR(FB_PORT, FB_BIT))
+#define FB_INP    (BIT_CLEAR(DDR_REG(FB_PORT), FB_BIT))
 
 #define FB_INIT  FB_CLEAR; FB_INP
 

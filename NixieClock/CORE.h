@@ -112,6 +112,7 @@ enum {
   BACKL_SMOOTH_COLOR_CHANGE, //плавная смена цвета
   BACKL_RAINBOW, //радуга
   BACKL_CONFETTI, //конфетти
+  BACKL_CANDLE, //свечи
 #endif
   BACKL_EFFECT_NUM //максимум эффектов подсветки
 };
@@ -134,6 +135,7 @@ enum {
   DOT_DECATRON_STEPS,
   DOT_DECATRON_TIMER,
   DOT_DECATRON_SWAY,
+  DOT_DECATRON_MOON,
 #endif
 #if DOTS_PORT_ENABLE
   DOT_BLINK, //одиночное мигание
@@ -145,6 +147,7 @@ enum {
 #endif
 #if (DOTS_NUM > 4) && (DOTS_TYPE == 2)
   DOT_DUAL_TURN_BLINK, //мигание двумя точками по очереди
+  DOT_SHIFT_TURN_BLINK, //мигание двумя точками со смещением
 #endif
 #endif
   DOT_EFFECT_NUM //количество эффектов точек
@@ -280,11 +283,17 @@ struct backlightData {
   uint8_t maxBright; //максимальная яркость подсветки
   uint8_t minBright; //минимальная яркость подсветки
   uint8_t menuBright; //максимальная яркость подсветки в меню
-  uint8_t mode_2_step; //шаг эффекта номер 2
-  uint16_t mode_2_time; //время эффекта номер 2
-  uint8_t mode_4_step; //шаг эффекта номер 4
-  uint8_t mode_8_step; //шаг эффекта номер 6
-  uint16_t mode_8_time; //время эффекта номер 6
+  struct backlightMode {
+    uint8_t pulseStep; //шаг эффекта дыхание
+    uint16_t pulseTime; //время эффекта дыхание
+#if BACKL_TYPE == 3
+    uint8_t runStep; //шаг эффекта бегущий огонь
+    uint8_t waveStep; //шаг эффекта волна
+    uint16_t waveTime; //время эффекта волна
+    uint8_t candleState[LEDS_NUM]; //массив состояний режима свечи
+    uint8_t candleMove[LEDS_NUM]; //массив смещений режима свечи
+#endif
+  } mode;
 } backl;
 
 //переменные работы с индикаторами
@@ -298,6 +307,9 @@ struct indiData {
 uint8_t changeBrightState; //флаг состояния смены яркости подсветки
 uint8_t changeAnimState; //флаг состояния анимаций
 uint8_t animShow; //флаг анимации смены времени
+
+//флаги звуков
+boolean soundMute; //флаг запрета воспроизведения звуков
 
 
 //перечисления основных программ
@@ -318,41 +330,58 @@ enum {
 };
 uint8_t mainTask = INIT_PROGRAM; //переключатель подпрограмм
 
+#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
+#define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
+#define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
+
+
 #define US_PERIOD (uint16_t)(((uint16_t)FREQ_TICK + 1) * TIME_TICK) //период тика таймера в мкс
 #define US_PERIOD_MIN (uint16_t)(US_PERIOD - (US_PERIOD % 100) - 400) //минимальный период тика таймера
 #define US_PERIOD_MAX (uint16_t)(US_PERIOD - (US_PERIOD % 100) + 400) //максимальный период тика таймера
 
 #define R_COEF(low, high) (((float)(low) + (float)(high)) / (float)(low)) //коэффициент делителя напряжения
-#define HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения
-#define GET_VCC(ref, adc) (float)(((ref) * 1023.0) / (float)(adc)) //расчет напряжения питания
+#define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
+#define GET_VCC(ref, adc) (float)(((ref) * 10.23) / (float)CONSTRAIN(adc, 150, 450)) //расчет напряжения питания
 
-#define RESET_BOOTLOADER __asm__ __volatile__ ("JMP 0x7E00") //загрузчик
-#define RESET_SYSTEM __asm__ __volatile__ ("JMP 0x0000") //перезагрузка
-#define RESET_WDT __asm__ __volatile__ ("WDR") //сброс WDT
+#define GET_HV_ADC(vcc) (uint16_t)((1023.0 / (float)(vcc)) * ((float)GEN_HV_VCC / (float)R_COEF(GEN_HV_R_LOW, GEN_HV_R_HIGH))) //значение ацп удержания напряжения ВВ
+#define GET_VP_ADC(ref, vcc) (uint16_t)(((ref) * (uint32_t)1023) / (uint16_t)CONSTRAIN(vcc, 250, 750)) //расчет напряжения питания
 
-uint8_t pwm_coef; //коэффициент линейного регулирования
-uint16_t hv_treshold = HV_ADC(5); //буфер сравнения напряжения
+#define GET_OVP_STATUS(adc, vmin, vmax) (boolean)((adc > GET_VP_ADC(REFERENCE, vmin)) || (adc < GET_VP_ADC(REFERENCE, vmax))) //проверка уровня напряжения питания
 
-uint8_t light_adc; //значение АЦП сенсора яркости освещения
-uint8_t light_state = 2; //состояние сенсора яркости освещения
-boolean light_update = 0; //флаг обновления яркости
+struct convData {
+  uint8_t pwmCoef = 0; //коэффициент линейного регулирования ВВ
+  uint16_t hvTreshold = GET_HV_ADC(5); //буфер порога удержания напряжения ВВ
+} conv;
+
+struct lightData {
+  uint8_t adc = 0; //значение АЦП сенсора яркости освещения
+  uint8_t state = 2; //состояние сенсора яркости освещения
+} light;
+boolean brightUpdate = 0; //флаг обновления яркости
+
+#define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
+#define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
+
+#define ALARM_AUTO_VOL_TIMER (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN))
 
 
 //-----------------Ошибки-----------------
 enum {
-  DS3231_ERROR,        //0001 - нет связи с модулем DS3231
-  DS3231_OSF_ERROR,    //0002 - сбой осцилятора модуля DS3231
-  SQW_SHORT_ERROR,     //0003 - слишком короткий сигнал SQW
-  SQW_LONG_ERROR,      //0004 - сигнал SQW отсутсвует или слишком длинный сигнал SQW
-  TEMP_SENS_ERROR,     //0005 - выбранный датчик температуры не обнаружен
-  VCC_ERROR,           //0006 - напряжения питания вне рабочего диапазона
-  MEMORY_ERROR,        //0007 - сбой памяти еепром
-  RESET_ERROR,         //0008 - софтовая перезагрузка
-  CONVERTER_ERROR,     //0009 - сбой работы преобразователя
-  PWM_OVF_ERROR,       //0010 - переполнение заполнения шим преобразователя
-  STACK_OVF_ERROR,     //0011 - переполнение стека
-  TICK_OVF_ERROR,      //0012 - переполнение тиков времени
-  INDI_ERROR           //0013 - сбой работы динамической индикации
+  ERROR_WIRE_RTC,      //0001 - нет связи с модулем RTC
+  ERROR_OSF_RTC,       //0002 - сбой осцилятора модуля RTC
+  ERROR_SHORT_SQW,     //0003 - слишком короткий сигнал SQW
+  ERROR_LONG_SQW,      //0004 - сигнал SQW отсутсвует или слишком длинный сигнал SQW
+  ERROR_SENS_TEMP,     //0005 - выбранный датчик температуры не обнаружен
+  ERROR_VCC_RANGE,     //0006 - напряжения питания вне рабочего диапазона
+  ERROR_MEMORY_FAIL,   //0007 - сбой памяти еепром
+  ERROR_SOFT_RESET,    //0008 - софтовая перезагрузка
+  ERROR_CONV_HV,       //0009 - сбой работы преобразователя
+  ERROR_PWM_OVF,       //0010 - переполнение заполнения шим преобразователя
+  ERROR_STACK_OVF,     //0011 - переполнение стека
+  ERROR_TICK_OVF,      //0012 - переполнение тиков времени
+  ERROR_INDI_FAIL,     //0013 - сбой работы динамической индикации
+  ERROR_RADIO_ANSW,    //0014 - модуль радиоприемника не отвечает
+  ERROR_PLAYER_ANSW    //0015 - модуль плеера звуков не отвечает
 };
 
 //-----------------Таймеры------------------
@@ -419,12 +448,7 @@ struct buttonData {
   uint8_t adc; //результат опроса аналоговых кнопок
 } btn;
 uint8_t analogState; //флаги обновления аналоговых портов
-uint16_t vcc_adc; //напряжение питания
-
-#define CONVERT_NUM(x) ((x[0] - 48) * 100 + (x[2] - 48) * 10 + (x[4] - 48)) //преобразовать строку в число
-#define CONVERT_CHAR(x) (x - 48) //преобразовать символ в число
-
-#define ALARM_AUTO_VOL_TIMER (uint16_t)(((uint16_t)ALARM_AUTO_VOL_TIME * 1000) / (ALARM_AUTO_VOL_MAX - ALARM_AUTO_VOL_MIN))
+uint16_t analogVccAdc; //напряжение питания ацп
 
 #define BTN_GIST_TICK (BTN_GIST_TIME / (US_PERIOD / 1000.0)) //количество циклов для защиты от дребезга
 #define BTN_HOLD_TICK (BTN_HOLD_TIME / (US_PERIOD / 1000.0)) //количество циклов после которого считается что кнопка зажата
@@ -438,8 +462,6 @@ uint16_t vcc_adc; //напряжение питания
 #else
 #define BTN_CHECK_ADC(low, high) (!(((low) < btn.adc) && (btn.adc <= (high)))) //проверка аналоговой кнопки
 #endif
-
-#define GET_ADC(low, high) (int16_t)(255.0 / (float)R_COEF(low, high)) //рассчет значения ацп кнопок
 
 #define SET_MIN_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) - BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
 #define SET_MAX_ADC (uint8_t)(CONSTRAIN(GET_ADC(BTN_R_LOW, BTN_SET_R_HIGH) + BTN_ANALOG_GIST, BTN_MIN_RANGE, BTN_MAX_RANGE))
@@ -503,11 +525,11 @@ struct Settings_1 {
   uint8_t backlBright[2] = {DEFAULT_BACKL_BRIGHT_N, DEFAULT_BACKL_BRIGHT}; //яркость подсветки
   uint8_t dotBright[2] = {DEFAULT_DOT_BRIGHT_N, DEFAULT_DOT_BRIGHT}; //яркость точек
   uint8_t timeBright[2] = {DEFAULT_NIGHT_START, DEFAULT_NIGHT_END}; //время перехода яркости
-  uint8_t timeHour[2] = {DEFAULT_HOUR_SOUND_START, DEFAULT_HOUR_SOUND_END}; //время звукового оповещения нового часа
+  uint8_t timeSound[2] = {DEFAULT_SOUND_MUTE_START, DEFAULT_SOUND_MUTE_END}; //время приглушения всех звуков
   uint8_t timeSleep[2] = {DEFAULT_SLEEP_WAKE_TIME_N, DEFAULT_SLEEP_WAKE_TIME}; //время режима сна
   boolean timeFormat = DEFAULT_TIME_FORMAT; //формат времени
   uint8_t baseSound = DEFAULT_BASE_SOUND; //основные звуки
-  uint8_t hourSound = (DEFAULT_HOUR_SOUND_TYPE & 0x03) | ((DEFAULT_HOUR_SOUND_TEMP) ? 0x80 : 0x00); //тип озвучки смены часа
+  uint8_t hourSound = (DEFAULT_HOUR_SOUND_TYPE & 0x03) | ((DEFAULT_HOUR_SOUND_TEMP) ? 0x80 : 0x00); //озвучка смены часа
   uint8_t volumeSound = DEFAULT_PLAYER_VOLUME; //громкость озвучки
   uint8_t voiceSound = DEFAULT_VOICE_SOUND; //голос озвучки
   int8_t tempCorrect = DEFAULT_TEMP_CORRECT; //коррекция температуры
@@ -550,11 +572,11 @@ struct Settings_4 { //расширенные настройки
 struct Settings_5 {
   uint16_t irButtons[KEY_MAX_ITEMS - 1]; //коды кнопок пульта
   uint16_t timePeriod = US_PERIOD; //коррекция хода внутреннего осцилятора
-  uint8_t min_pwm = DEFAULT_MIN_PWM; //минимальный шим
-  uint8_t max_pwm = DEFAULT_MAX_PWM; //максимальный шим
-  uint8_t light_zone[2][3]; //зоны яркости датчика освещения
+  uint8_t minPwm = DEFAULT_MIN_PWM; //минимальный шим
+  uint8_t maxPwm = DEFAULT_MAX_PWM; //максимальный шим
+  uint8_t lightZone[2][3]; //зоны яркости датчика освещения
   int8_t hvCorrect; //коррекция напряжения
-  int8_t aging; //коррекция регистра старения
+  int8_t rtcAging; //коррекция регистра старения
 } debugSettings;
 
 enum {
@@ -568,6 +590,16 @@ uint8_t memoryUpdate;
 
 #define CELL(x) (0x01 << x) //выбор ячейки памяти
 
+#define EEPROM_START_CRC 0xDB //начальная контрольная сумма
+
+#define EEPROM_BOARD_MODEL_SIZE 15 //размер блока памяти модели часов
+#define EEPROM_BOARD_SN_SIZE 5 //размер блока памяти серийного номера часов
+
+#define EEPROM_BLOCK_BOARD_MODEL (EEPROM_BLOCK_INFO) //блок памяти модели часов
+#define EEPROM_BLOCK_BOARD_MODEL_CRC (EEPROM_BLOCK_BOARD_MODEL + EEPROM_BOARD_MODEL_SIZE) //блок контрольной суммы модели часов
+#define EEPROM_BLOCK_BOARD_SN (EEPROM_BLOCK_BOARD_MODEL_CRC + 1) //блок памяти серийного номера часов
+#define EEPROM_BLOCK_BOARD_SN_CRC (EEPROM_BLOCK_BOARD_SN + EEPROM_BOARD_SN_SIZE) //блок контрольной суммы серийного номера часов
+
 #define EEPROM_BLOCK_SETTINGS_FAST (EEPROM_BLOCK_NULL + 8) //блок памяти быстрых настроек
 #define EEPROM_BLOCK_SETTINGS_MAIN (EEPROM_BLOCK_SETTINGS_FAST + sizeof(fastSettings)) //блок памяти основных настроек
 #define EEPROM_BLOCK_SETTINGS_RADIO (EEPROM_BLOCK_SETTINGS_MAIN + sizeof(mainSettings)) //блок памяти настроек радио
@@ -578,15 +610,16 @@ uint8_t memoryUpdate;
 #define EEPROM_BLOCK_ALARM (EEPROM_BLOCK_EXT_ERROR + 1) //блок памяти количества будильников
 
 #define EEPROM_BLOCK_CRC_DEFAULT (EEPROM_BLOCK_ALARM + 1) //блок памяти контрольной суммы настроек
-#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_DEFAULT + 2) //блок памяти контрольной суммы быстрых настроек
+#define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEFAULT + 1) //блок памяти контрольной суммы настроек отладки
+#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок памяти контрольной суммы настроек отладки
+#define EEPROM_BLOCK_CRC_FAST (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы быстрых настроек
 #define EEPROM_BLOCK_CRC_MAIN (EEPROM_BLOCK_CRC_FAST + 1) //блок памяти контрольной суммы основных настроек
 #define EEPROM_BLOCK_CRC_RADIO (EEPROM_BLOCK_CRC_MAIN + 1) //блок памяти контрольной суммы настроек радио
-#define EEPROM_BLOCK_CRC_DEBUG (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_CRC_DEBUG_DEFAULT (EEPROM_BLOCK_CRC_DEBUG + 1) //блок памяти контрольной суммы настроек отладки
-#define EEPROM_BLOCK_CRC_EXTENDED (EEPROM_BLOCK_CRC_DEBUG_DEFAULT + 1) //блок памяти контрольной суммы расширеных настроек
+#define EEPROM_BLOCK_CRC_EXTENDED (EEPROM_BLOCK_CRC_RADIO + 1) //блок памяти контрольной суммы расширеных настроек
 #define EEPROM_BLOCK_CRC_ERROR (EEPROM_BLOCK_CRC_EXTENDED + 1) //блок контрольной суммы памяти ошибок
 #define EEPROM_BLOCK_CRC_EXT_ERROR (EEPROM_BLOCK_CRC_ERROR + 1) //блок контрольной суммы памяти расширеных ошибок
 #define EEPROM_BLOCK_CRC_ALARM (EEPROM_BLOCK_CRC_EXT_ERROR + 1) //блок контрольной суммы количества будильников
+
 #define EEPROM_BLOCK_ALARM_DATA (EEPROM_BLOCK_CRC_ALARM + 1) //первая ячейка памяти будильников
 
 #define MAX_ALARMS ((EEPROM_BLOCK_MAX - EEPROM_BLOCK_ALARM_DATA) / ALARM_MAX_ARR) //максимальное количество будильников
@@ -599,6 +632,7 @@ void melodyStop(void); //остановка воспроизведения ме�
 void playerStop(void); //остановка воспроизведения трека
 
 void systemTask(void); //процедура системной задачи
+uint8_t busUpdate(void); //обновление статуса шины
 
 //-----------------------------Установка ошибки---------------------------------
 void SET_ERROR(uint8_t err) //установка ошибки
@@ -635,8 +669,8 @@ inline void mainEnableWDT(void) //основной запуск WDT
 inline void tickCheck(void) //проверка переполнения тиков
 {
   if (!++tick_ms) { //если превышено количество тиков
-    SET_ERROR(TICK_OVF_ERROR); //устанавливаем ошибку переполнения тиков времени
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
+    SET_ERROR(ERROR_TICK_OVF); //устанавливаем ошибку переполнения тиков времени
+    SET_ERROR(ERROR_SOFT_RESET); //устанавливаем ошибку аварийной перезагрузки
     RESET_SYSTEM; //перезагрузка
   }
 }
@@ -644,8 +678,8 @@ inline void tickCheck(void) //проверка переполнения тико
 inline void stackCheck(void) //проверка переполнения стека
 {
   if (!(SPH & 0xFC)) { //если стек переполнен
-    SET_ERROR(STACK_OVF_ERROR); //устанавливаем ошибку переполнения стека
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
+    SET_ERROR(ERROR_STACK_OVF); //устанавливаем ошибку переполнения стека
+    SET_ERROR(ERROR_SOFT_RESET); //устанавливаем ошибку аварийной перезагрузки
     RESET_SYSTEM; //перезагрузка
   }
 }
@@ -670,19 +704,19 @@ void converterCheck(void) //проверка состояния преобраз
   {
     TCCR1A = TCCR1B = 0; //выключаем шим
     CONV_DISABLE; //выключаем преобразователь
-    SET_ERROR(CONVERTER_ERROR); //устанавливаем ошибку сбоя работы преобразователя
-    SET_ERROR(RESET_ERROR); //устанавливаем ошибку аварийной перезагрузки
+    SET_ERROR(ERROR_CONV_HV); //устанавливаем ошибку сбоя работы преобразователя
+    SET_ERROR(ERROR_SOFT_RESET); //устанавливаем ошибку аварийной перезагрузки
     RESET_SYSTEM; //перезагрузка
   }
 #if CONV_PIN == 9
   if (OCR1A > 200) { //если вышли за предел
     OCR1A = 200; //установили максимум
-    SET_ERROR(PWM_OVF_ERROR); //устанавливаем ошибку переполнения заполнения шим преобразователя
+    SET_ERROR(ERROR_PWM_OVF); //устанавливаем ошибку переполнения заполнения шим преобразователя
   }
 #elif CONV_PIN == 10
   if (OCR1B > 200) { //если вышли за предел
     OCR1B = 200; //установили максимум
-    SET_ERROR(PWM_OVF_ERROR); //устанавливаем ошибку переполнения заполнения шим преобразователя
+    SET_ERROR(ERROR_PWM_OVF); //устанавливаем ошибку переполнения заполнения шим преобразователя
   }
 #endif
 #endif
@@ -745,10 +779,10 @@ void coreInit(void) //инициализация периферии ядра
 
 #if GEN_ENABLE
 #if CONV_PIN == 9
-  OCR1A = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
+  OCR1A = CONSTRAIN(debugSettings.minPwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1A1); //подключаем D9
 #elif CONV_PIN == 10
-  OCR1B = CONSTRAIN(debugSettings.min_pwm, 100, 200); //устанавливаем первичное значение шим
+  OCR1B = CONSTRAIN(debugSettings.minPwm, 100, 200); //устанавливаем первичное значение шим
   TCCR1A |= (0x01 << COM1B1); //подключаем D10
 #endif
 #endif
@@ -770,65 +804,67 @@ void coreInit(void) //инициализация периферии ядра
 void checkCRC(uint8_t* crc, uint8_t data) //сверка контрольной суммы
 {
   for (uint8_t i = 0; i < 8; i++) { //считаем для всех бит
-    *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
+    *crc = ((*crc ^ data) & 0x01) ? ((*crc >> 0x01) ^ 0x8C) : (*crc >> 0x01); //рассчитываем значение
     data >>= 0x01; //сдвигаем буфер
   }
-}
-//------------------------Проверка байта в памяти-------------------------------
-boolean checkByte(uint8_t cell, uint8_t cellCRC) //проверка байта в памяти
-{
-  return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cellCRC));
-}
-//-----------------------Обновление байта в памяти-------------------------------
-void updateByte(uint8_t data, uint8_t cell, uint8_t cellCRC) //обновление байта в памяти
-{
-  EEPROM_UpdateByte(cell, data);
-  EEPROM_UpdateByte(cellCRC, data ^ 0xFF);
-}
-//------------------------Проверка данных в памяти-------------------------------
-boolean checkData(uint8_t size, uint8_t cell, uint8_t cellCRC) //проверка данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
-  return (boolean)(crc != EEPROM_ReadByte(cellCRC));
-}
-//-----------------------Обновление данных в памяти-------------------------------
-void updateData(uint8_t* str, uint8_t size, uint8_t cell, uint8_t cellCRC) //обновление данных в памяти
-{
-  uint8_t crc = 0;
-  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
-  EEPROM_UpdateBlock((uint16_t)str, cell, size);
-  EEPROM_UpdateByte(cellCRC, crc);
 }
 //--------------------Проверка контрольной суммы настроек--------------------------
 boolean checkSettingsCRC(void) //проверка контрольной суммы настроек
 {
-  uint8_t CRC = 0; //буфер контрольной суммы
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
 
-  for (uint8_t i = 0; i < sizeof(fastSettings); i++) checkCRC(&CRC, *((uint8_t*)&fastSettings + i));
-  for (uint8_t i = 0; i < sizeof(mainSettings); i++) checkCRC(&CRC, *((uint8_t*)&mainSettings + i));
-  for (uint8_t i = 0; i < sizeof(radioSettings); i++) checkCRC(&CRC, *((uint8_t*)&radioSettings + i));
+  for (uint8_t n = 0; n < sizeof(fastSettings); n++) checkCRC(&crc, *((uint8_t*)&fastSettings + n));
+  for (uint8_t n = 0; n < sizeof(mainSettings); n++) checkCRC(&crc, *((uint8_t*)&mainSettings + n));
+  for (uint8_t n = 0; n < sizeof(radioSettings); n++) checkCRC(&crc, *((uint8_t*)&radioSettings + n));
 
 
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, CRC);
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEFAULT) == crc) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEFAULT, crc);
   return 1;
 }
 //------------------Проверка контрольной суммы настроек отладки---------------------
 boolean checkDebugSettingsCRC(void) //проверка контрольной суммы настроек отладки
 {
-  uint8_t CRC = 0; //буфер контрольной суммы
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
 
-  for (uint8_t i = 0; i < sizeof(debugSettings); i++) checkCRC(&CRC, *((uint8_t*)&debugSettings + i));
+  for (uint8_t n = 0; n < sizeof(debugSettings); n++) checkCRC(&crc, *((uint8_t*)&debugSettings + n));
 
-  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == CRC) return 0;
-  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, CRC);
+  if (EEPROM_ReadByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT) == crc) return 0;
+  else EEPROM_UpdateByte(EEPROM_BLOCK_CRC_DEBUG_DEFAULT, crc);
   return 1;
+}
+//------------------------Проверка данных в памяти-------------------------------
+boolean checkData(uint8_t size, uint16_t cell, uint16_t cell_crc) //проверка данных в памяти
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, EEPROM_ReadByte(cell + n));
+  return (boolean)(crc != EEPROM_ReadByte(cell_crc));
+}
+//-----------------------Обновление данных в памяти-------------------------------
+void updateData(uint8_t* str, uint8_t size, uint16_t cell, uint16_t cell_crc) //обновление данных в памяти
+{
+  uint8_t crc = EEPROM_START_CRC; //буфер контрольной суммы
+
+  for (uint8_t n = 0; n < size; n++) checkCRC(&crc, str[n]);
+  EEPROM_UpdateBlock((uint16_t)str, cell, size);
+  EEPROM_UpdateByte(cell_crc, crc);
+}
+//------------------------Проверка байта в памяти-------------------------------
+boolean checkByte(uint16_t cell, uint16_t cell_crc) //проверка байта в памяти
+{
+  return (boolean)((EEPROM_ReadByte(cell) ^ 0xFF) != EEPROM_ReadByte(cell_crc));
+}
+//-----------------------Обновление байта в памяти-------------------------------
+void updateByte(uint8_t data, uint16_t cell, uint16_t cell_crc) //обновление байта в памяти
+{
+  EEPROM_UpdateByte(cell, data);
+  EEPROM_UpdateByte(cell_crc, data ^ 0xFF);
 }
 //-----------------Обновление предела удержания напряжения-------------------------
 void updateTresholdADC(void) //обновление предела удержания напряжения
 {
-  hv_treshold = HV_ADC(GET_VCC(REFERENCE, vcc_adc)) + CONSTRAIN(debugSettings.hvCorrect, -25, 25);
+  conv.hvTreshold = GET_HV_ADC(GET_VCC(REFERENCE, analogVccAdc)) + CONSTRAIN(debugSettings.hvCorrect, -30, 30);
 }
 //------------------------Обработка аналоговых входов------------------------------
 void analogUpdate(void) //обработка аналоговых входов
@@ -844,13 +880,13 @@ void analogUpdate(void) //обработка аналоговых входов
           if (++adc_cycle >= CYCLE_HV_CHECK) { //если буфер заполнен
             adc_temp /= CYCLE_HV_CHECK; //находим среднее значение
 #if CONV_PIN == 9
-            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
+            if (adc_temp < conv.hvTreshold) TCCR1A |= (0x01 << COM1A1); //включаем шим преобразователя
             else {
               TCCR1A &= ~(0x01 << COM1A1); //выключаем шим преобразователя
               CONV_OFF; //выключаем пин преобразователя
             }
 #elif CONV_PIN == 10
-            if (adc_temp < hv_treshold) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
+            if (adc_temp < conv.hvTreshold) TCCR1A |= (0x01 << COM1B1); //включаем шим преобразователя
             else {
               TCCR1A &= ~(0x01 << COM1B1); //выключаем шим преобразователя
               CONV_OFF; //выключаем пин преобразователя
@@ -876,9 +912,9 @@ void analogUpdate(void) //обработка аналоговых входов
 #if LIGHT_SENS_ENABLE
       case ANALOG_LIGHT_PIN:
 #if !LIGHT_SENS_PULL
-        light_adc = ADCH; //записываем результат опроса
+        light.adc = ADCH; //записываем результат опроса
 #else
-        light_adc = 255 - ADCH; //записываем результат опроса
+        light.adc = 255 - ADCH; //записываем результат опроса
 #endif
         ADMUX = 0; //сбросли признак чтения АЦП
         break;
@@ -945,9 +981,9 @@ void checkVCC(void) //чтение напряжения питания
     while (ADCSRA & (0x01 << ADSC)); //ждем окончания преобразования
     temp += ADCL | ((uint16_t)ADCH << 8); //записали результат
   }
-  vcc_adc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
+  analogVccAdc = temp / CYCLE_VCC_CHECK; //получаем напряжение питания
 
-  if (GET_VCC(REFERENCE, vcc_adc) < MIN_VCC || GET_VCC(REFERENCE, vcc_adc) > MAX_VCC) SET_ERROR(VCC_ERROR); //устанвливаем ошибку по питанию
+  if (GET_OVP_STATUS(analogVccAdc, MIN_VCC, MAX_VCC)) SET_ERROR(ERROR_VCC_RANGE); //устанвливаем ошибку по питанию
 
 #if BTN_TYPE
   ADMUX = (0x01 << REFS0) | (0x01 << ADLAR) | ANALOG_BTN_PIN; //настройка мультиплексатора АЦП
@@ -967,34 +1003,34 @@ void checkVCC(void) //чтение напряжения питания
 //----------------Обновление зон  сенсора яркости освещения------------------------
 void lightSensZoneUpdate(uint8_t min, uint8_t max) //обновление зон сенсора яркости освещения
 {
-  debugSettings.light_zone[0][2] = min;
-  debugSettings.light_zone[1][0] = max;
+  debugSettings.lightZone[0][2] = min;
+  debugSettings.lightZone[1][0] = max;
 
   min = (max - min) / 3;
   max = min * 2;
 
-  debugSettings.light_zone[1][2] = min + LIGHT_SENS_GIST;
-  debugSettings.light_zone[0][1] = min - LIGHT_SENS_GIST;
-  debugSettings.light_zone[1][1] = max + LIGHT_SENS_GIST;
-  debugSettings.light_zone[0][0] = max - LIGHT_SENS_GIST;
+  debugSettings.lightZone[1][2] = min + LIGHT_SENS_GIST;
+  debugSettings.lightZone[0][1] = min - LIGHT_SENS_GIST;
+  debugSettings.lightZone[1][1] = max + LIGHT_SENS_GIST;
+  debugSettings.lightZone[0][0] = max - LIGHT_SENS_GIST;
 }
 //-------------------Обработка сенсора яркости освещения---------------------------
 void lightSensUpdate(void) //обработка сенсора яркости освещения
 {
-  static uint8_t now_light_state;
+  static uint8_t light_prev;
   if (mainSettings.timeBright[0] == mainSettings.timeBright[1]) { //если разрешена робота сенсора
     _timer_ms[TMR_LIGHT] = (1000 - LIGHT_SENS_TIME); //установили таймер
 
-    if (light_adc < debugSettings.light_zone[0][now_light_state]) {
-      if (now_light_state < 2) now_light_state++;
+    if (light.adc < debugSettings.lightZone[0][light_prev]) {
+      if (light_prev < 2) light_prev++;
     }
-    else if (light_adc > debugSettings.light_zone[1][now_light_state]) {
-      if (now_light_state) now_light_state--;
+    else if (light.adc > debugSettings.lightZone[1][light_prev]) {
+      if (light_prev) light_prev--;
     }
 
-    if (now_light_state != light_state) {
-      light_state = now_light_state;
-      light_update = 1; //устанавливаем флаг изменения яркости
+    if (light_prev != light.state) {
+      light.state = light_prev;
+      brightUpdate = 1; //устанавливаем флаг изменения яркости
     }
   }
 }
@@ -1005,6 +1041,26 @@ void lightSensCheck(void) //проверка сенсора яркости ос�
     _timer_ms[TMR_LIGHT] = 1000; //установили таймер
     analogState |= 0x01; //установили флаг обновления АЦП сенсора яркости
   }
+}
+//-----------------Проверка возможности воспроизвести звук-------------------------
+inline boolean soundPlayEnable(void) //проверка возможности воспроизвести звук
+{
+#if !PLAYER_TYPE
+  return (!soundMute && mainSettings.baseSound);
+#else
+  return (!soundMute && (mainSettings.baseSound == 1));
+#endif
+}
+//-----------------Проверка возможности воспроизвести звук-------------------------
+inline boolean soundExtPlayEnable(void) //проверка возможности воспроизвести звук
+{
+#if !PLAYER_TYPE
+  return (!soundMute && (mainSettings.baseSound == 2));
+#elif PLAYER_SPEAK_MUTE
+  return (!soundMute && mainSettings.baseSound);
+#else
+  return (mainSettings.baseSound);
+#endif
 }
 //---------------------------Проверка кнопок---------------------------------------
 inline uint8_t buttonState(void) //проверка кнопок
@@ -1019,7 +1075,7 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
   static boolean btn_check; //флаг разрешения опроса кнопки
   static boolean btn_state; //флаг текущего состояния кнопки
   static uint8_t btn_switch; //флаг мультиплексатора кнопок
-  static uint16_t btn_tmr; //таймер тиков обработки кнопок
+  static uint16_t btn_timer; //таймер тиков обработки кнопок
 
 #if BTN_TYPE
   analogState |= 0x02; //устанавливаем флаг обновления АЦП кнопок
@@ -1027,40 +1083,40 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 
   switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
     case 0:
-      if (!SET_CHK) { //если нажата кл. ок
+      if (!SET_CHK) { //если нажата кнопка ок
         btn_switch = 1; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!LEFT_CHK) { //если нажата левая кл.
+      else if (!LEFT_CHK) { //если нажата левая кнопка
         btn_switch = 2; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
-      else if (!RIGHT_CHK) { //если нажата правая кл.
+      else if (!RIGHT_CHK) { //если нажата правая кнопка
         btn_switch = 3; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
 #if BTN_ADD_TYPE
-      else if (!ADD_CHK) { //если нажата дополнительная кл.
+      else if (!ADD_CHK) { //если нажата дополнительная кнопка
         btn_switch = 4; //выбираем клавишу опроса
         btn_state = 0; //обновляем текущее состояние кнопки
       }
 #endif
       else btn_state = 1; //обновляем текущее состояние кнопки
       break;
-    case 1: btn_state = SET_CHK; break; //опрашиваем клавишу ок
-    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую клавишу
-    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую клавишу
+    case 1: btn_state = SET_CHK; break; //опрашиваем кнопку ок
+    case 2: btn_state = LEFT_CHK; break; //опрашиваем левую кнопку
+    case 3: btn_state = RIGHT_CHK; break; //опрашиваем правую кнопку
 #if BTN_ADD_TYPE
-    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную клавишу
+    case 4: btn_state = ADD_CHK; break; //опрашиваем дополнительную кнопку
 #endif
   }
 
-  switch (btn_state) { //переключаемся в зависимости от состояния клавиши
+  switch (btn_state) { //переключаемся в зависимости от состояния кнопки
     case 0:
       if (btn_check) { //если разрешена провекрка кнопки
-        if (++btn_tmr > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
-          btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-          btn_check = 0; //запрещем проврку кнопки
+        if (++btn_timer > BTN_HOLD_TICK) { //если таймер больше длительности удержания кнопки
+          btn_timer = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+          btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
           playerStop(); //сброс воспроизведения плеера
 #else
@@ -1079,13 +1135,13 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
       break;
 
     case 1:
-      if (btn_tmr > BTN_GIST_TICK) { //если таймер больше времени антидребезга
-        btn_tmr = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
-        btn_check = 0; //запрещем проврку кнопки
+      if (btn_timer > BTN_GIST_TICK) { //если таймер больше времени антидребезга
+        btn_timer = BTN_GIST_TICK; //сбрасываем таймер на антидребезг
+        btn_check = 0; //запрещаем проверку кнопки
 #if PLAYER_TYPE
         playerStop(); //сброс воспроизведения плеера
 #else
-        if (mainSettings.baseSound) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
+        if (soundPlayEnable()) buzzPulse(KNOCK_SOUND_FREQ, KNOCK_SOUND_TIME); //щелчок пищалкой
         melodyStop(); //сброс воспроизведения мелодии
 #endif
         switch (btn_switch) { //переключаемся в зависимости от состояния мультиопроса
@@ -1097,11 +1153,11 @@ inline uint8_t buttonStateUpdate(void) //обновление кнопок
 #endif
         }
       }
-      else if (!btn_tmr) {
-        btn_check = 1; //разрешаем проврку кнопки
+      else if (!btn_timer) {
+        btn_check = 1; //разрешаем проверку кнопки
         btn_switch = 0; //сбрасываем мультиплексатор кнопок
       }
-      else btn_tmr--; //убираем дребезг
+      else btn_timer--; //убираем дребезг
       break;
   }
 

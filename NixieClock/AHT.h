@@ -22,7 +22,7 @@ void readTempAHT(void) //чтение температуры/влажности
       wireWrite(AHT10_CALIBRATE_START); //начинаем калибровку для AHT10
       wireWrite(AHT10_CALIBRATE_DATA); //записываем настройку
       wireWrite(AHT10_NOP_DATA); //записываем настройку
-      wireEnd(); //остановка шины wire
+      wireEndTransmission(); //остановка шины wire
 
       _timer_ms[TMR_SENS] = AHT10_CALIBRATE_TIME; //установили таймер
       while (1) { //ждем окончания калибровки
@@ -40,7 +40,7 @@ void readTempAHT(void) //чтение температуры/влажности
   wireWrite(AHT10_MEASURE_START); //записываем настройку
   wireWrite(AHT10_MEASURE_DATA); //записываем настройку
   wireWrite(AHT10_NOP_DATA); //записываем настройку
-  wireEnd(); //остановка шины wire
+  wireEndTransmission(); //остановка шины wire
 
   _timer_ms[TMR_SENS] = AHT10_MEASURE_TIME; //установили таймер
   while (1) { //ждем окончания калибровки

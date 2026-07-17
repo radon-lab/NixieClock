@@ -36,7 +36,7 @@ void writeRegRDA(uint8_t _reg)
   wireWrite(_reg); //устанавливаем адрес записи
   wireWrite(rda.highReg); //отправляем старший байт
   wireWrite(rda.lowReg); //отправляем младший байт
-  wireEnd(); //конец передачи
+  wireEndTransmission(); //конец передачи
 }
 //-------------------------------Получить статус настройки на радиостанцию------------------------------------
 boolean getStationStatusRDA(void)
@@ -85,7 +85,10 @@ void clrSeekCompleteStatusRDA(void)
 //----------------------------------Получить статус питания модуля радио--------------------------------------
 uint8_t getPowerStatusRDA(void)
 {
-  if (readRegRDA(RDA_CONFIG_REG)) return 255; //запрашиваем чтение данных, если нет ответа то выходим
+  if (readRegRDA(RDA_CONFIG_REG)) { //запрашиваем чтение данных, если нет ответа то выходим
+    SET_ERROR(ERROR_RADIO_ANSW); //устанавливаем ошибку модуля RDA
+    return 255; //выходим с кодом ошибки
+  }
   return (rda.lowReg & 0x01); //читаем бит ENABLE
 }
 //-------------------------------------Установить питание модуля радио----------------------------------------

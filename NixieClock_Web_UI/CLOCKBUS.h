@@ -1,7 +1,10 @@
 //Информация о интефейсе
-#define HW_VERSION 0x13 //версия прошивки для интерфейса wire
+#define CLOCK_ADDRESS 127 //адрес шины часов(127)
+#define CLOCKBUS_VERSION 0x13 //версия протокола шины часов(0x13)
 
 //Команды интерфейса
+#define BUS_SELECT_BYTE 0xFD
+
 #define BUS_WRITE_TIME 0x01
 #define BUS_READ_TIME 0x02
 
@@ -46,6 +49,8 @@
 
 #define BUS_READ_FAILURE 0xA0
 
+#define BUS_READ_BOARD_INFO 0xB0
+
 #define BUS_ALARM_DISABLE 0xDA
 #define BUS_CHANGE_BRIGHT 0xDC
 
@@ -55,7 +60,6 @@
 
 #define BUS_CONTROL_DEVICE 0xFA
 
-#define BUS_SELECT_BYTE 0xFD
 #define BUS_READ_STATUS 0xFE
 #define BUS_READ_DEVICE 0xFF
 
@@ -69,8 +73,8 @@ struct Settings_1 {
   uint8_t dotBrightDay;
   uint8_t timeBrightStart; //время перехода яркости
   uint8_t timeBrightEnd;
-  uint8_t timeHourStart; //время звукового оповещения нового часа
-  uint8_t timeHourEnd;
+  uint8_t timeMuteStart; //время беззвучного режима
+  uint8_t timeMuteEnd;
   uint8_t timeSleepNight; //время режима сна
   uint8_t timeSleepDay;
   boolean timeFormat; //формат времени
@@ -149,33 +153,6 @@ enum {
 uint8_t alarm_data[MAX_ALARMS][ALARM_DATA_MAX];
 
 enum {
-  FIRMWARE_VERSION_1,
-  FIRMWARE_VERSION_2,
-  FIRMWARE_VERSION_3,
-  HARDWARE_VERSION,
-  SENS_TEMP,
-  BTN_EASY_MAIN_MODE,
-  LAMP_NUM,
-  BACKL_TYPE,
-  NEON_DOT,
-  DOTS_PORT_ENABLE,
-  DOTS_NUM,
-  DOTS_TYPE,
-  LIGHT_SENS_ENABLE,
-  EXT_BTN_ENABLE,
-  DS3231_ENABLE,
-  TIMER_ENABLE,
-  RADIO_ENABLE,
-  ALARM_TYPE,
-  PLAYER_TYPE,
-  PLAYER_MAX_SOUND,
-  PLAYER_MAX_VOICE,
-  ALARM_AUTO_VOL_MAX,
-  INFORMATION_MAX
-};
-uint8_t deviceInformation[INFORMATION_MAX]; //информация о часах
-
-enum {
   STATUS_UPDATE_MAIN_SET,
   STATUS_UPDATE_FAST_SET,
   STATUS_UPDATE_RADIO_SET,
@@ -195,8 +172,8 @@ enum {
   MAIN_DOT_BRIGHT_D,
   MAIN_TIME_BRIGHT_S,
   MAIN_TIME_BRIGHT_E,
-  MAIN_TIME_HOUR_S,
-  MAIN_TIME_HOUR_E,
+  MAIN_TIME_MUTE_S,
+  MAIN_TIME_MUTE_E,
   MAIN_TIME_SLEEP_N,
   MAIN_TIME_SLEEP_D,
   MAIN_TIME_FORMAT,
@@ -218,7 +195,7 @@ enum {
   FAST_DOT_MODE,
   FAST_BACKL_MODE,
   FAST_BACKL_COLOR,
-  FAST_NEON_DOT_MODE
+  FAST_SECS_TYPE_MODE
 };
 
 enum {
@@ -321,6 +298,8 @@ enum {
   READ_DEVICE,
   READ_FAILURE,
 
+  READ_BOARD_INFO,
+
   WRITE_SENS_1_DATA,
   WRITE_SENS_2_DATA,
 
@@ -339,23 +318,6 @@ enum {
   CHECK_INTERNAL_BME
 };
 
-struct deviceData {
-  uint8_t light = 0xFF; //яркость подсветки часов
-  uint8_t status = 0x00; //флаги состояния часов
-  uint16_t failure = 0x00; //сбои при запуске часов
-} device;
-
-struct busData {
-  uint8_t buffer[256];
-  uint8_t bufferStart = 0;
-  uint8_t bufferEnd = 0;
-  uint8_t bufferLastCommand = 0;
-  uint8_t bufferLastArgument = 0;
-  uint8_t status = 0;
-  uint16_t timerInterval = 0;
-  uint32_t timerStart = 0;
-} bus;
-int8_t clockState = 0; //флаг состояния соединения с часами
 
 #define DEVICE_RESET 0xCC
 #define DEVICE_UPDATE 0xDD
@@ -363,8 +325,61 @@ int8_t clockState = 0; //флаг состояния соединения с ч�
 
 #define SYSTEM_REBOOT 100
 
-#define BUS_STATUS_REBOOT 100
-#define BUS_STATUS_REBOOT_FAIL 255
+struct deviceData {
+  uint8_t light = 0xFF; //яркость подсветки часов
+  uint8_t status = 0x00; //флаги состояния часов
+  uint16_t failure = 0x00; //флаги ошибок часов
+} device;
+
+enum {
+  FIRMWARE_VER_H,
+  FIRMWARE_VER_M,
+  FIRMWARE_VER_L,
+  CLOCKBUS_VER,
+  TEMP_SENS_ENABLE,
+  BTN_EASY_MODE,
+  LAMP_NUM,
+  BACKL_TYPE,
+  SECS_TYPE,
+  DOTS_ENABLE,
+  DOTS_NUM,
+  DOTS_TYPE,
+  LIGHT_SENS_ENABLE,
+  EXT_BTN_ENABLE,
+  RTC_ENABLE,
+  TIMER_ENABLE,
+  RADIO_ENABLE,
+  ALARM_TYPE,
+  PLAYER_TYPE,
+  PLAYER_MAX_SOUND,
+  PLAYER_MAX_VOICE,
+  ALARM_AUTO_VOL_MAX,
+  INFORMATION_MAX
+};
+uint8_t deviceInformation[INFORMATION_MAX]; //конфигурация часов
+
+char clockBoardModel[16]; //модель платы часов
+char clockBoardSn[6]; //серийный номер платы часов
+
+
+#define BUS_REBOOT_ATTEMPTS 5
+
+#define BUS_REBOOT_STATUS 100
+#define BUS_REBOOT_STATUS_FAIL 255
+
+struct busData {
+  uint8_t buffer[256];
+  uint8_t bufferStart = 0;
+  uint8_t bufferEnd = 0;
+  uint8_t bufferLastCommand = 0;
+  uint8_t bufferLastArgument = 0;
+  uint8_t rebootStatus = 0;
+  uint8_t rebootAttempt = 0;
+  uint16_t timerInterval = 0;
+  uint32_t timerStart = 0;
+} bus;
+int8_t clockState = 0; //флаг состояния соединения с часами
+
 
 #include "CLIMATE.h"
 
@@ -373,6 +388,7 @@ int8_t clockState = 0; //флаг состояния соединения с ч�
 #include "BME.h"
 
 #include "RTC.h"
+
 
 void busWriteTwiRegByte(uint8_t data, uint8_t command, uint8_t pos = 0x00);
 void busWriteTwiRegWord(uint16_t data, uint8_t command, uint8_t pos = 0x00);
@@ -461,18 +477,19 @@ void busSetCommand(uint8_t cmd, uint8_t arg) {
 //--------------------------------------------------------------------
 void busRebootDevice(uint8_t arg) {
   bus.bufferStart = bus.bufferEnd = 0;
-  bus.status = BUS_STATUS_REBOOT;
-  if (deviceInformation[HARDWARE_VERSION] && (arg != SYSTEM_REBOOT)) busSetCommand(CONTROL_DEVICE, arg);
+  bus.rebootStatus = BUS_REBOOT_STATUS;
+  bus.rebootAttempt = BUS_REBOOT_ATTEMPTS;
+  if (deviceInformation[CLOCKBUS_VER] && (arg != SYSTEM_REBOOT)) busSetCommand(CONTROL_DEVICE, arg);
   else busSetCommand(CONTROL_SYSTEM, SYSTEM_REBOOT);
   busTimerSetInterval(500);
 }
 //--------------------------------------------------------------------
 boolean busRebootState(void) {
-  return bus.status == BUS_STATUS_REBOOT;
+  return (boolean)(bus.rebootStatus == BUS_REBOOT_STATUS);
 }
 //--------------------------------------------------------------------
 boolean busRebootFail(void) {
-  return bus.status == BUS_STATUS_REBOOT_FAIL;
+  return (boolean)(bus.rebootStatus == BUS_REBOOT_STATUS_FAIL);
 }
 //--------------------------------------------------------------------
 void busUpdate(void) {
@@ -480,39 +497,14 @@ void busUpdate(void) {
     if (busStatusBuffer()) { //если есть новая команда
       switch (busReadBuffer()) {
         case SYNC_TIME_DATE: {
-            if ((timeState != 0x03) || ntpCheckTime(GPunix(mainDate, mainTime, settings.ntpGMT), syncState)) {
+            if ((timeGetValidState()) || ntpCheckTime(timeGetUnix(), syncState)) {
 
-              time_t unix = ntpGetUnix() + (settings.ntpGMT * 3600UL);
-              secondsTimer = millis() - ntpGetMillis();
+              timeSetUnix(ntpGetUnix() + (settings.ntpGMT * 3600UL));
+              timeSetMillis(millis() - ntpGetMillis());
 
-              tm time; //буфер времени
-              gmtime_r(&unix, &time);
-
-              mainTime.second = time.tm_sec;
-              mainTime.minute = time.tm_min;
-              mainTime.hour = time.tm_hour;
-              uint8_t dayWeek = time.tm_wday;
-              if (!dayWeek) dayWeek = 7;
-              mainDate.day = time.tm_mday;
-              mainDate.month = time.tm_mon + 1;
-              mainDate.year = time.tm_year + 1900;
-
-              if (settings.ntpDst && DST(mainDate.month, mainDate.day, dayWeek, mainTime.hour)) { //если учет летнего времени включен
+              if (settings.ntpDst && timeGetDST(mainDate.month, mainDate.day, timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day), mainTime.hour)) { //если учет летнего времени включен
                 syncState = 1; //летнее время
-                if (mainTime.hour != 23) mainTime.hour += 1; //прибавили час
-                else {
-                  mainTime.hour = 0; //сбросили час
-                  if (++dayWeek > 7) dayWeek = 1; //день недели
-                  if (++mainDate.day > maxDays(mainDate.year, mainDate.month)) { //день
-                    mainDate.day = 1; //сбросили день
-                    if (++mainDate.month > 12) { //месяц
-                      mainDate.month = 1; //сбросили месяц
-                      if (++mainDate.year > 2099) { //год
-                        mainDate.year = 2000; //сбросили год
-                      }
-                    }
-                  }
-                }
+                timeSetDST(); //установили летнее время
               }
               else syncState = 2; //зимнее время
 
@@ -525,11 +517,11 @@ void busUpdate(void) {
                 twi_write_byte(mainDate.month);
                 twi_write_byte(mainDate.year & 0xFF);
                 twi_write_byte((mainDate.year >> 8) & 0xFF);
-                twi_write_byte(dayWeek); //отправляем день недели
+                twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day)); //отправляем день недели
                 if (!twi_error()) { //если передача была успешной
                   if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-                  if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-                  timeState = 0x03; //установили флаги актуального времени
+                  if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+                  timeSetState(0x03); //установили флаги актуального времени
                   busShiftBuffer(); //сместили буфер команд
                 }
               }
@@ -550,8 +542,8 @@ void busUpdate(void) {
             if (!twi_error()) { //если передача была успешной
               if (busReadBufferArg()) { //если время обновлено в часах
                 if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-                if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-                timeState = 0x03; //установили флаги актуального времени
+                if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+                timeSetState(0x03); //установили флаги актуального времени
               }
               busShiftBuffer(); //сместили буфер команд
               busShiftBuffer(); //сместили буфер команд
@@ -568,10 +560,10 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
-            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
+            twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState = 0x03; //установили флаги актуального времени
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x03); //установили флаги актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
           }
@@ -584,8 +576,8 @@ void busUpdate(void) {
             twi_write_byte(mainTime.hour);
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState |= 0x01; //установили флаг актуального времени
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x01); //установили флаг актуального времени
               busShiftBuffer(); //сместили буфер команд
             }
           }
@@ -599,11 +591,11 @@ void busUpdate(void) {
             twi_write_byte(mainDate.month);
             twi_write_byte(mainDate.year & 0xFF);
             twi_write_byte((mainDate.year >> 8) & 0xFF);
-            twi_write_byte(getWeekDay(mainDate.year, mainDate.month, mainDate.day));
+            twi_write_byte(timeGetWeekDay(mainDate.year, mainDate.month, mainDate.day));
             if (!twi_error()) { //если передача была успешной
               if (rtcGetFoundStatus()) busSetCommand(WRITE_RTC_TIME); //отправить время в RTC
-              if (timeState != 0x03) sensorTimer = 0; //обновляем состояние микроклимата
-              timeState |= 0x02; //установили флаг актуальной даты
+              if (timeGetValidState()) sensorTimer = 0; //обновляем состояние микроклимата
+              timeSetState(0x02); //установили флаг актуальной даты
               busShiftBuffer(); //сместили буфер команд
             }
           }
@@ -630,7 +622,7 @@ void busUpdate(void) {
               case FAST_DOT_MODE: busWriteTwiRegByte(fastSettings.dotMode, BUS_WRITE_FAST_SET, 2); break;
               case FAST_BACKL_MODE: busWriteTwiRegByte(fastSettings.backlMode, BUS_WRITE_FAST_SET, 3); break;
               case FAST_BACKL_COLOR: busWriteTwiRegByte(fastSettings.backlColor, BUS_WRITE_FAST_SET, 4); break;
-              case FAST_NEON_DOT_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break;
+              case FAST_SECS_TYPE_MODE: busWriteTwiRegByte(fastSettings.neonDotMode, BUS_WRITE_FAST_SET, 5); break;
             }
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
@@ -649,8 +641,8 @@ void busUpdate(void) {
             mainSettings.dotBrightDay = twi_read_byte(TWI_ACK);
             mainSettings.timeBrightStart = twi_read_byte(TWI_ACK);
             mainSettings.timeBrightEnd = twi_read_byte(TWI_ACK);
-            mainSettings.timeHourStart = twi_read_byte(TWI_ACK);
-            mainSettings.timeHourEnd = twi_read_byte(TWI_ACK);
+            mainSettings.timeMuteStart = twi_read_byte(TWI_ACK);
+            mainSettings.timeMuteEnd = twi_read_byte(TWI_ACK);
             mainSettings.timeSleepNight = twi_read_byte(TWI_ACK);
             mainSettings.timeSleepDay = twi_read_byte(TWI_ACK);
             mainSettings.timeFormat = twi_read_byte(TWI_ACK);
@@ -681,8 +673,8 @@ void busUpdate(void) {
               case MAIN_DOT_BRIGHT_D: busWriteTwiRegByte(mainSettings.dotBrightDay, BUS_WRITE_MAIN_SET, 5); break;
               case MAIN_TIME_BRIGHT_S: busWriteTwiRegByte(mainSettings.timeBrightStart, BUS_WRITE_MAIN_SET, 6); break;
               case MAIN_TIME_BRIGHT_E: busWriteTwiRegByte(mainSettings.timeBrightEnd, BUS_WRITE_MAIN_SET, 7); break;
-              case MAIN_TIME_HOUR_S: busWriteTwiRegByte(mainSettings.timeHourStart, BUS_WRITE_MAIN_SET, 8); break;
-              case MAIN_TIME_HOUR_E: busWriteTwiRegByte(mainSettings.timeHourEnd, BUS_WRITE_MAIN_SET, 9); break;
+              case MAIN_TIME_MUTE_S: busWriteTwiRegByte(mainSettings.timeMuteStart, BUS_WRITE_MAIN_SET, 8); break;
+              case MAIN_TIME_MUTE_E: busWriteTwiRegByte(mainSettings.timeMuteEnd, BUS_WRITE_MAIN_SET, 9); break;
               case MAIN_TIME_SLEEP_N: busWriteTwiRegByte(mainSettings.timeSleepNight, BUS_WRITE_MAIN_SET, 10); break;
               case MAIN_TIME_SLEEP_D: busWriteTwiRegByte(mainSettings.timeSleepDay, BUS_WRITE_MAIN_SET, 11); break;
               case MAIN_TIME_FORMAT: busWriteTwiRegByte(mainSettings.timeFormat, BUS_WRITE_MAIN_SET, 12); break;
@@ -1213,21 +1205,21 @@ void busUpdate(void) {
           break;
         case READ_DEVICE:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_DEVICE)) { //начинаем передачу
-            deviceInformation[FIRMWARE_VERSION_1] = twi_read_byte(TWI_ACK);
-            deviceInformation[FIRMWARE_VERSION_2] = twi_read_byte(TWI_ACK);
-            deviceInformation[FIRMWARE_VERSION_3] = twi_read_byte(TWI_ACK);
-            deviceInformation[HARDWARE_VERSION] = twi_read_byte(TWI_ACK);
-            deviceInformation[SENS_TEMP] = twi_read_byte(TWI_ACK);
-            deviceInformation[BTN_EASY_MAIN_MODE] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_H] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_M] = twi_read_byte(TWI_ACK);
+            deviceInformation[FIRMWARE_VER_L] = twi_read_byte(TWI_ACK);
+            deviceInformation[CLOCKBUS_VER] = twi_read_byte(TWI_ACK);
+            deviceInformation[TEMP_SENS_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[BTN_EASY_MODE] = twi_read_byte(TWI_ACK);
             deviceInformation[LAMP_NUM] = twi_read_byte(TWI_ACK);
             deviceInformation[BACKL_TYPE] = twi_read_byte(TWI_ACK);
-            deviceInformation[NEON_DOT] = twi_read_byte(TWI_ACK);
-            deviceInformation[DOTS_PORT_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[SECS_TYPE] = twi_read_byte(TWI_ACK);
+            deviceInformation[DOTS_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[DOTS_NUM] = twi_read_byte(TWI_ACK);
             deviceInformation[DOTS_TYPE] = twi_read_byte(TWI_ACK);
             deviceInformation[LIGHT_SENS_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[EXT_BTN_ENABLE] = twi_read_byte(TWI_ACK);
-            deviceInformation[DS3231_ENABLE] = twi_read_byte(TWI_ACK);
+            deviceInformation[RTC_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[TIMER_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[RADIO_ENABLE] = twi_read_byte(TWI_ACK);
             deviceInformation[ALARM_TYPE] = twi_read_byte(TWI_ACK);
@@ -1243,6 +1235,18 @@ void busUpdate(void) {
         case READ_FAILURE:
           if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_FAILURE)) { //начинаем передачу
             device.failure = twi_read_byte(TWI_ACK) | ((uint16_t)twi_read_byte(TWI_NACK) << 8);
+            if (!twi_error()) { //если передача была успешной
+              busShiftBuffer(); //сместили буфер команд
+            }
+          }
+          break;
+        case READ_BOARD_INFO:
+          if (!twi_requestFrom(CLOCK_ADDRESS, BUS_READ_BOARD_INFO)) { //начинаем передачу
+            for (uint8_t i = 0; i < (sizeof(clockBoardModel) - 1); i++) clockBoardModel[i] = twi_read_byte(TWI_ACK);
+            clockBoardModel[(sizeof(clockBoardModel) - 1)] = '\0';
+            twi_read_byte(TWI_ACK);
+            for (uint8_t i = 0; i < (sizeof(clockBoardSn) - 1); i++) clockBoardSn[i] = twi_read_byte((i < 4) ? TWI_ACK : TWI_NACK);
+            clockBoardSn[(sizeof(clockBoardSn) - 1)] = '\0';
             if (!twi_error()) { //если передача была успешной
               busShiftBuffer(); //сместили буфер команд
             }
@@ -1291,9 +1295,9 @@ void busUpdate(void) {
           if (busReadBufferArg() == SYSTEM_REBOOT) {
             twi_write_stop(); //остановили шину
             if (!twi_running()) ESP.reset(); //перезагрузка
-            else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
+            else bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
           }
-          else bus.status = 0; //сбросили статус
+          else bus.rebootStatus = 0; //сбросили статус
           busShiftBuffer(); //сместили буфер команд
           busShiftBuffer(); //сместили буфер команд
           break;
@@ -1303,11 +1307,14 @@ void busUpdate(void) {
             twi_write_byte(busReadBufferArg());
             if (!twi_error()) { //если передача была успешной
               twi_write_stop(); //остановили шину
-              busShiftBuffer(); //сместили буфер команд
-              busShiftBuffer(); //сместили буфер команд
               if (!twi_running()) ESP.reset(); //перезагрузка
-              else bus.status = BUS_STATUS_REBOOT_FAIL; //сбросили статус
             }
+          }
+          if (bus.rebootAttempt) bus.rebootAttempt--; //убавляем количество попыток
+          else { //иначе устанавливаем ошибку
+            busShiftBuffer(); //сместили буфер команд
+            busShiftBuffer(); //сместили буфер команд
+            bus.rebootStatus = BUS_REBOOT_STATUS_FAIL; //установили статус ошибки
           }
           break;
         case UPDATE_FIRMWARE:
@@ -1315,7 +1322,7 @@ void busUpdate(void) {
             twi_write_byte(BUS_CONTROL_DEVICE); //регистр команды
             twi_write_byte(DEVICE_UPDATE);
             if (!twi_error()) { //если передача была успешной
-              updaterStart(); //запуск обновления
+              updaterStartFlash(); //запуск обновления
               busShiftBuffer(); //сместили буфер команд
             }
           }

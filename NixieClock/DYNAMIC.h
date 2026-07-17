@@ -5,21 +5,24 @@
 #include "CORE.h"
 
 #define _BIT(value, bit) (((value) >> (bit)) & 0x01)
-#define ID(digit) ((_BIT(digit, 0) << DECODER_1) | (_BIT(digit, 1) << DECODER_2) | (_BIT(digit, 2) << DECODER_3) | (_BIT(digit, 3) << DECODER_4))
-#define INDI_NULL ((0x01 << DECODER_2) | (0x01 << DECODER_4)) //пустой символ(отключеный индикатор)
+#define ID(digit) ((_BIT(digit, 0) << DECODER_1_PIN) | (_BIT(digit, 1) << DECODER_2_PIN) | (_BIT(digit, 2) << DECODER_3_PIN) | (_BIT(digit, 3) << DECODER_4_PIN))
+#define INDI_NULL ((0x01 << DECODER_2_PIN) | (0x01 << DECODER_4_PIN)) //пустой символ(отключеный индикатор)
 #define INDI_ANODE_OFF 0x00 //выключенный анод
 
 #define LIGHT_MAX (uint8_t)(FREQ_TICK - INDI_DEAD_TIME) //расчет максимального шага яркости
 #define DOT_LIGHT_MAX (uint8_t)(CONSTRAIN_MAX(((uint16_t)FREQ_TICK - 2) + (FREQ_TICK >> 5), 255)) //расчет максимального шага яркости для точек
 #define INDI_LIGHT_MAX (uint16_t)(((uint16_t)LIGHT_MAX * 8) + (LIGHT_MAX >> 1)) //расчет максимального шага яркости для индикаторов
 
-const uint8_t digitMask[] = {DIGIT_MASK}; //порядок пинов лампы
+const uint8_t digitMask[] = {DECODER_MASK}; //порядок пинов лампы
 const uint8_t cathodeMask[] = {CATHODE_MASK}; //порядок катодов
 
 enum {INDI_0_POS, INDI_1_POS, INDI_2_POS, INDI_3_POS, INDI_4_POS, INDI_5_POS, INDI_6_POS}; //порядок индикации ламп
 
 #if INDI_PORT_TYPE
-const uint8_t regMask[] = {(INDI_DOT_TYPE && (SECS_DOT == 1)) ? (0x01 << SECL_PIN) : (((INDI_SYMB_TYPE == 2) && (SECS_DOT != 1) && (SECS_DOT != 2)) ? (0x01 << ANODE_0_PIN) : INDI_ANODE_OFF), (0x01 << ANODE_1_PIN), (0x01 << ANODE_2_PIN), (0x01 << ANODE_3_PIN), (0x01 << ANODE_4_PIN), (0x01 << ANODE_5_PIN), (0x01 << ANODE_6_PIN)}; //таблица бит анодов ламп
+#define REG_BIT(pin) (0x01 << pin)
+const uint8_t regMask[] = {(INDI_DOT_TYPE && (SECS_DOT == 1)) ? REG_BIT(SECL_PIN) : (((INDI_SYMB_TYPE == 2) && (SECS_DOT != 1) && (SECS_DOT != 2)) ? REG_BIT(ANODE_0_PIN) : INDI_ANODE_OFF),
+                           REG_BIT(ANODE_1_PIN), REG_BIT(ANODE_2_PIN), REG_BIT(ANODE_3_PIN), REG_BIT(ANODE_4_PIN), REG_BIT(ANODE_5_PIN), REG_BIT(ANODE_6_PIN)
+                          }; //таблица бит анодов ламп
 #endif
 
 #if (SECS_DOT == 1) || (SECS_DOT == 2) || INDI_SYMB_TYPE
@@ -183,11 +186,11 @@ void indiStateCheck(void) //проверка состояния динамиче
 {
   if (TIMSK0 != ((0x01 << OCIE0B) | (0x01 << OCIE0A))) { //если настройка изменилась
     TIMSK0 = (0x01 << OCIE0B) | (0x01 << OCIE0A); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+    SET_ERROR(ERROR_INDI_FAIL); //устанавливаем ошибку сбоя работы динамической индикации
   }
   if (OCR0B >= FREQ_TICK) { //если вышли за предел
     OCR0B = (FREQ_TICK - 1); //установили максимум
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+    SET_ERROR(ERROR_INDI_FAIL); //устанавливаем ошибку сбоя работы динамической индикации
   }
 }
 //------------------------Проверка состояния динамической индикации-------------------------------
@@ -195,15 +198,15 @@ void indiCheck(void) //проверка состояния динамическ�
 {
   if (TCCR0A != (0x01 << WGM01)) { //если настройка изменилась
     TCCR0A = (0x01 << WGM01); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+    SET_ERROR(ERROR_INDI_FAIL); //устанавливаем ошибку сбоя работы динамической индикации
   }
   if (TCCR0B != (0x01 << CS02)) { //если настройка изменилась
     TCCR0B = (0x01 << CS02); //установили настройку
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+    SET_ERROR(ERROR_INDI_FAIL); //устанавливаем ошибку сбоя работы динамической индикации
   }
   if (OCR0A != FREQ_TICK) { //если вышли за предел
     OCR0A = FREQ_TICK; //установили максимум
-    SET_ERROR(INDI_ERROR); //устанавливаем ошибку сбоя работы динамической индикации
+    SET_ERROR(ERROR_INDI_FAIL); //устанавливаем ошибку сбоя работы динамической индикации
   }
 }
 //----------------------------Инициализация портов индикации------------------------------------

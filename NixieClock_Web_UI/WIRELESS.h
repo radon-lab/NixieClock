@@ -56,18 +56,18 @@ boolean wirelessGetFoundSuccessState(void) {
   return wireless_found_success;
 }
 //--------------------------------------------------------------------
-uint8_t wirelessGetStastus(void) {
+uint8_t wirelessGetStatus(void) {
   return wireless_status;
 }
-boolean wirelessGetOnlineStastus(void) {
+boolean wirelessGetSensorStatus(void) {
   return (wireless_status == WIRELESS_ONLINE);
 }
-boolean wirelessGetSensorStastus(void) {
+boolean wirelessGetOnlineStatus(void) {
   return (wireless_status >= WIRELESS_ONLINE);
 }
 //--------------------------------------------------------------------
-const char* wirelessGetStrStastus(void) {
-  return wirelessStatusList[wirelessGetStastus()];
+const char* wirelessGetStrStatus(void) {
+  return wirelessStatusList[wirelessGetStatus()];
 }
 //--------------------------------------------------------------------
 uint8_t wirelessGetBattery(void) {

@@ -30,9 +30,12 @@ String wifiGetApSSID(void) {
   String str;
   str.reserve(70);
   str = F(AP_SSID);
-  if (settings.nameAp) {
-    str += F(" - ");
-    str += settings.nameDevice;
+  if (settings.nameDevice[0] != '\0') {
+    if (settings.nameAp) {
+      str += '[';
+      str += settings.nameDevice;
+      str += ']';
+    }
   }
   return str;
 }
@@ -70,9 +73,9 @@ String wifiGetCurrentMode(void) {
   String str;
   str.reserve(30);
 
-  if (WiFi.getMode() == WIFI_AP) str = F(LANG_PAGE_INFO_GUI_MODE_AP);
-  else if (WiFi.getMode() == WIFI_STA) str = F(LANG_PAGE_INFO_GUI_MODE_STA);
-  else str = F(LANG_PAGE_INFO_GUI_MODE_AP_STA);
+  if (WiFi.getMode() == WIFI_AP) str = F(LANG_WIFI_MODE_AP);
+  else if (WiFi.getMode() == WIFI_STA) str = F(LANG_WIFI_MODE_STA);
+  else str = F(LANG_WIFI_MODE_AP_STA);
 
   switch (WiFi.getPhyMode()) {
     case WIFI_PHY_MODE_11B: str += F("_11B"); break;
@@ -180,7 +183,7 @@ void wifiServiceRun(boolean run) {
   if (state != run) { //если нужно изменить состояние сервисов
     state = run; //запомнили текущее состояние сервисов
     if (run) { //если нужно запустить сервисы
-      ntpStart(); //запустить ntp
+      ntpRequest(); //запросить время ntp
       weatherCheck(); //запросить прогноз погоды
       groupStart(settings.groupFind); //запустить обнаружение устройств поблизости
       Serial.println F("Wifi services startup...");

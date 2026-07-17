@@ -351,6 +351,7 @@ void playerUpdate(void)
       playback.bufferEnd = playback.bufferStart = 0;
       playerSendDataReg(PLAYER_CMD_RESET, 0x00, _RESET_REG);
       playerSendDataReg(PLAYER_CMD_SET_VOL, playback.volume, _VOL_REG);
+      SET_ERROR(ERROR_PLAYER_ANSW); //устанавливаем ошибку модуля плеера
     }
 
 #if AMP_PORT_ENABLE
@@ -516,5 +517,6 @@ void sdPlayerInit(void)
     }
     else buffer.cardType = 0; //иначе ошибка инициализации
   }
+  if (!buffer.cardType) SET_ERROR(ERROR_PLAYER_ANSW); //устанавливаем ошибку модуля плеера
   playerSetVolNow(PLAYER_START_VOL);
 }

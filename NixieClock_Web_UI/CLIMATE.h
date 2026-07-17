@@ -86,7 +86,7 @@ String climateGetSensDataStr(float temp, uint16_t press, uint8_t hum) {
 String climateGetSendDataList(void) {
   String str;
   str.reserve(100);
-  str = climateMainList[(!deviceInformation[SENS_TEMP]) ? settings.climateSend[0] : 0];
+  str = climateMainList[(!deviceInformation[TEMP_SENS_ENABLE]) ? settings.climateSend[0] : 0];
   str += ',';
   str += climateMainList[settings.climateSend[1]];
   return str;
@@ -204,8 +204,8 @@ void climateUpdate(boolean mode) {
   if (climateGetChartTemp() != 0x7FFF) {
     uint32_t unix_now = GPunix(mainDate.year, mainDate.month, mainDate.day, mainTime.hour, mainTime.minute, 0, 0);
 
-    if ((first_start < timeState) || (mode == CLIMATE_RESET)) {
-      first_start = timeState;
+    if ((first_start < timeGetState()) || (mode == CLIMATE_RESET)) {
+      first_start = timeGetState();
       climateDefault(climateGetChartTemp(), climateGetChartHum(), climateGetChartPress(), unix_now);
       climateReset(); //сброс усреднения
     }

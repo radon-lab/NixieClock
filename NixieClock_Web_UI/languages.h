@@ -12,28 +12,34 @@
 #define LANG_WIFI_SSID_NULL "unset"
 #define LANG_WIFI_SSID_LOCK " 🔒"
 
+#define LANG_WIFI_MODE_AP "AP"
+#define LANG_WIFI_MODE_STA "STA"
+#define LANG_WIFI_MODE_AP_STA "AP_STA"
+
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "Отсутствует подключение к сети"
 #define LANG_NTP_STATUS_2 "Подключение к серверу..."
 #define LANG_NTP_STATUS_3 "Ожидание ответа..."
 #define LANG_NTP_STATUS_4 "Синхронизировано"
 #define LANG_NTP_STATUS_5 "Рассинхронизация"
-#define LANG_NTP_STATUS_6 "Сервер не отвечает"
+#define LANG_NTP_STATUS_6 "Сервер не синхронизирован"
+#define LANG_NTP_STATUS_7 "Некорректный ответ сервера"
+#define LANG_NTP_STATUS_8 "Сервер не отвечает"
 
 #define LANG_NTP_ATTEMPT "Попытка подключения"
 
 //-------------------------------------------------------//
-#define LANG_RTC_STATUS_1 "Не обнаружен..."
+#define LANG_RTC_STATUS_1 "Не обнаружен"
 #define LANG_RTC_STATUS_2 "Батарея разряжена"
 #define LANG_RTC_STATUS_3 "Подключен к часам"
 #define LANG_RTC_STATUS_4 "Работает исправно"
 
 //-------------------------------------------------------//
-#define LANG_WIRELESS_STATUS_1 "Ошибка..."
-#define LANG_WIRELESS_STATUS_2 "Не обнаружен..."
+#define LANG_WIRELESS_STATUS_1 "Ошибка"
+#define LANG_WIRELESS_STATUS_2 "Не обнаружен"
 #define LANG_WIRELESS_STATUS_3 "Подключен"
-#define LANG_WIRELESS_STATUS_4 "Потеряна связь..."
-#define LANG_WIRELESS_STATUS_5 "Нет сенсора..."
+#define LANG_WIRELESS_STATUS_4 "Потеряна связь"
+#define LANG_WIRELESS_STATUS_5 "Нет сенсора"
 
 #define LANG_WIRELESS_ALERT_TITLE "Оповещение"
 #define LANG_WIRELESS_ALERT_FOUND "Обнаружен беспроводной датчик температуры, подключить?"
@@ -100,18 +106,28 @@
 #define LANG_CLIMATE_NO_DATA "Нет данных"
 
 //-------------------------------------------------------//
+#define LANG_WEATHER_SUMMARY_1 "Ночь"
+#define LANG_WEATHER_SUMMARY_2 "Утро"
+#define LANG_WEATHER_SUMMARY_3 "День"
+#define LANG_WEATHER_SUMMARY_4 "Вечер"
+
+#define LANG_WEATHER_SUMMARY_TEMP "Температура °С"
+#define LANG_WEATHER_SUMMARY_HUM "Влажность %"
+#define LANG_WEATHER_SUMMARY_PRESS "Давление mm.Hg"
+
+//-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Выключена,Статичная,Дыхание"
-#define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти"
+#define LANG_BACKL_MODE_2 ",Дыхание со сменой цвета при затухании,Бегущий огонь,Бегущий огонь со сменой цвета,Бегущий огонь с радугой,Бегущий огонь с конфетти,Волна,Волна со сменой цвета,Волна с радугой,Волна с конфетти,Плавная смена цвета,Радуга,Конфетти,Свечи"
 #define LANG_BACKL_DISABLE "Не используется"
 
 //-------------------------------------------------------//
 #define LANG_DOTS_MODE_1 "Выключены,Статичные,Мигают раз в секунду,Мигают два раза в секунду"
 #define LANG_DOTS_MODE_2 ",Динамичные(плавно мигают)"
 #define LANG_DOTS_MODE_3 ",Маятник(мигают раз в секунду),Маятник(плавно мигают)"
-#define LANG_DOTS_MODE_4 ",Метроном,Шажки,Таймер,Часовой маятник"
+#define LANG_DOTS_MODE_4 ",Метроном,Шажки,Таймер,Часовой маятник,Луна"
 #define LANG_DOTS_MODE_5 ",Мигающие,Бегущие,Змейка,Резинка"
 #define LANG_DOTS_MODE_6 ",Одинарный маятник"
-#define LANG_DOTS_MODE_7 ",Двойной маятник"
+#define LANG_DOTS_MODE_7 ",Двойной маятник,Маятник со смещением"
 #define LANG_DOTS_MODE_8 ",Без реакции"
 
 //-------------------------------------------------------//
@@ -157,13 +173,14 @@
 
 #define LANG_PAGE_RELOAD_BLOCK "Перезагрузка устройства"
 #define LANG_PAGE_RELOAD_END "<big><b>Перезагрузка завершена!</b></big>"
-#define LANG_PAGE_RELOAD_ERR "<big><b>Ошибка перезагрузки!</b></big>"
+#define LANG_PAGE_RELOAD_ERR "<big><b>Перезагрузка не удалась!</b></big>"
 #define LANG_PAGE_RELOAD_WAIT "<big><b>Выполняется перезагрузка, подождите...</b></big>"
 #define LANG_PAGE_RELOAD_HINT "<small>Не выключайте устройство до завершения перезагрузки!</small>"
 #define LANG_PAGE_RELOAD_HOME "Вернуться на главную"
 
 //-------------------------------------------------------//
 #define LANG_PAGE_MENU_LINK_HOME "Главная"
+#define LANG_PAGE_MENU_LINK_ALARM "Будильник"
 #define LANG_PAGE_MENU_LINK_SETTINGS "Настройки"
 #define LANG_PAGE_MENU_LINK_CLIMATE "Микроклимат"
 #define LANG_PAGE_MENU_LINK_WEATHER "Погода"
@@ -249,17 +266,17 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Микроклимат"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Датчики"
 
+#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник отображения данных и время отображения в секундах"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "День - время в минутах<br>Ночь - время в секундах<br><br>0 - отключить режим сна для выбранного промежутка времени"
+
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "Одинаковое время - отключить смену яркости по времени"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Автоматическая смена яркости по времени отключена"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Автоматическая смена яркости по датчику освещения"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Автоматическая смена яркости по времени суток"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Источник и время в секундах"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - отключить режим сна для выбранного промежутка времени"
-
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Одниаковое время - отключить звук смены часа"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Звук смены часа отключен"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE "Одинаковое время - отключить приглушение звуков по времени"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE_1 "Приглушение звуков отключено"
 
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Сброс статистики"
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Статистика микроклимата будет сброшена, продолжить?"
@@ -270,14 +287,15 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT "Время ночной яркости"
 #define LANG_PAGE_SETTINGS_GUI_HR_SLEEP "Режим сна"
 #define LANG_PAGE_SETTINGS_GUI_HR_BURN "Антиотравление"
-#define LANG_PAGE_SETTINGS_GUI_HR_HOUR "Звук смены часа"
+#define LANG_PAGE_SETTINGS_GUI_HR_MUTE "Беззвучный режим"
 #define LANG_PAGE_SETTINGS_GUI_HR_SOUND "Озвучка смены часа"
 #define LANG_PAGE_SETTINGS_GUI_HR_ADD "Дополнительно"
 #define LANG_PAGE_SETTINGS_GUI_HR_INDI "Индикация"
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Коррекция"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени"
-#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Автоматически,Только мелодия,Только озвучка,Мелодия и озвучка"
+#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Без оповещения,Только мелодия,Только озвучка,Мелодия и озвучка"
+#define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Выключена,Все действия,Время и температура"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Включить"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Эффект"
@@ -348,7 +366,7 @@
 #define LANG_PAGE_SETTINGS_GUI_SECS "Секунды"
 #define LANG_PAGE_SETTINGS_GUI_BACKL "Подсветка"
 #define LANG_PAGE_SETTINGS_GUI_COLOR "Цвет"
-#define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучивать действия"
+#define LANG_PAGE_SETTINGS_GUI_ACTION "Озвучка"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Голос озвучки"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Звук кнопок"
 #define LANG_PAGE_SETTINGS_GUI_TICK "Звук секунд"
@@ -374,8 +392,8 @@
 //-------------------------------------------------------//
 #define LANG_PAGE_WEATHER_TITLE "Погода"
 
-#define LANG_PAGE_WEATHER_BLOCK_CHART "Погода на сутки"
-#define LANG_PAGE_WEATHER_BLOCK_HOURS "Погода по часам"
+#define LANG_PAGE_WEATHER_BLOCK_CHART "Динамика погоды"
+#define LANG_PAGE_WEATHER_BLOCK_SUMMARY "Сводка погоды"
 #define LANG_PAGE_WEATHER_NULL "Нет актуальных данных..."
 
 //-------------------------------------------------------//
@@ -405,7 +423,7 @@
 #define LANG_PAGE_UPDATE_HR_AUTH "Авторизация"
 
 #define LANG_PAGE_UPDATE_INFO_FW "Прошивку можно получить в Arduino IDE: Скетч -> Экспорт бинарного файла (сохраняется в папку с прошивкой)."
-#define LANG_PAGE_UPDATE_INFO_FS "Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Upload, в логе необходимо найти: [LittleFS] upload, файл находится по этому пути."
+#define LANG_PAGE_UPDATE_INFO_FS "Файловую систему можно получить в Arduino IDE: Инструменты -> ESP8266 LittleFS Data Export (сохраняется в папку с прошивкой)."
 #define LANG_PAGE_UPDATE_INFO_FORMAT "Поддерживаемые форматы файлов: "
 #define LANG_PAGE_UPDATE_INFO_HEX "hex"
 #define LANG_PAGE_UPDATE_INFO_BIN "bin и bin.gz."
@@ -434,7 +452,8 @@
 
 #define LANG_PAGE_INFO_HR_MEMORY "Память устройства"
 #define LANG_PAGE_INFO_HR_NETWORK "Локальная сеть"
-#define LANG_PAGE_INFO_HR_VERSION "Версия ПО"
+#define LANG_PAGE_INFO_HR_VERSION "Версия программы"
+#define LANG_PAGE_INFO_HR_MODEL "Модель часов"
 #define LANG_PAGE_INFO_HR_STATE "Состояние"
 #define LANG_PAGE_INFO_HR_SHOW "Отображение"
 #define LANG_PAGE_INFO_HR_GROUP "Групповое управление"
@@ -452,11 +471,13 @@
 #define LANG_PAGE_INFO_GUI_CPU "Частота процессора"
 #define LANG_PAGE_INFO_GUI_USAGE "Загрузка процессора"
 #define LANG_PAGE_INFO_GUI_UPTIME "Время работы"
+
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Фрагментировано(Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Свободно(Heap)"
 #define LANG_PAGE_INFO_GUI_FLASH_ALL "Всего(Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FULL "Занято(Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FREE "Свободно(Flash)"
+
 #define LANG_PAGE_INFO_GUI_STRENGTH "Уровень сигнала"
 #define LANG_PAGE_INFO_GUI_MODE "Режим модема"
 #define LANG_PAGE_INFO_GUI_MAC "MAC адрес"
@@ -467,29 +488,29 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Время соединения"
 #define LANG_PAGE_INFO_GUI_AP_SSID "SSID точки доступа"
 #define LANG_PAGE_INFO_GUI_AP_IP "IP точки доступа"
-#define LANG_PAGE_INFO_GUI_MODE_AP "AP"
-#define LANG_PAGE_INFO_GUI_MODE_STA "STA"
-#define LANG_PAGE_INFO_GUI_MODE_AP_STA "AP_STA"
+
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"
 #define LANG_PAGE_INFO_GUI_ESP "Прошивка ESP"
 #define LANG_PAGE_INFO_GUI_CLOCK "Прошивка часов"
 
+#define LANG_PAGE_INFO_GUI_NAME "Название"
+#define LANG_PAGE_INFO_GUI_SN "Серийный номер"
+#define LANG_PAGE_INFO_GUI_NA "n/a"
+
 #define LANG_PAGE_INFO_GUI_CONNECT "Связь с часами"
-#define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально..."
-#define LANG_PAGE_INFO_GUI_STATE_DIS "Отсутствует..."
-#define LANG_PAGE_INFO_GUI_STATE_ERR "Ошибка 00"
+#define LANG_PAGE_INFO_GUI_STATE_OK "Работает нормально"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Отсутствует"
+#define LANG_PAGE_INFO_GUI_STATE_ERROR "Ошибка 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Сигнал"
 #define LANG_PAGE_INFO_GUI_BATTERY "Батарея"
 
-#define LANG_PAGE_INFO_GUI_NAME "Имя"
-#define LANG_PAGE_INFO_GUI_NONE "Без названия"
-#define LANG_PAGE_INFO_GUI_MENU "Меню"
-#define LANG_PAGE_INFO_GUI_PREFIX "Префикс"
-#define LANG_PAGE_INFO_GUI_POSTFIX "Постфикс"
+#define LANG_PAGE_INFO_GUI_DEVICE_NAME "Имя"
+#define LANG_PAGE_INFO_GUI_MENU_NAME "Меню"
+#define LANG_PAGE_INFO_GUI_TAB_NAME "Вкладка"
 #define LANG_PAGE_INFO_GUI_AP_NAME "Точка доступа"
 #define LANG_PAGE_INFO_GUI_DETECT "Обнаружение"
 #define LANG_PAGE_INFO_GUI_STATE "Состояние"
@@ -497,6 +518,7 @@
 #define LANG_PAGE_INFO_GUI_RESET "Сброс настроек"
 #define LANG_PAGE_INFO_GUI_REBOOT "Перезагрузка"
 
+#define LANG_PAGE_INFO_GUI_UNNAMED "Без названия"
 #define LANG_PAGE_INFO_GUI_EXECUTE "Выполнить"
 
 //-------------------------------------------------------//
@@ -522,6 +544,7 @@
 #define LANG_PAGE_NETWORK_GUI_HOST "Хост"
 #define LANG_PAGE_NETWORK_GUI_LAT "Широта"
 #define LANG_PAGE_NETWORK_GUI_LON "Долгота"
+#define LANG_PAGE_NETWORK_GUI_PROXY "Прокси"
 
 //-------------------------------------------------------//
 #define LANG_FAIL_ALERT_TITLE "Предупреждение"
@@ -541,6 +564,8 @@
 #define LANG_FAIL_DATA_11 "Переполнение стека"
 #define LANG_FAIL_DATA_12 "Переполнение тиков времени"
 #define LANG_FAIL_DATA_13 "Сбой динамической индикации"
+#define LANG_FAIL_DATA_14 "Модуль радиоприемника не отвечает"
+#define LANG_FAIL_DATA_15 "Модуль плеера звуков не отвечает"
 
 //-------------------------------------------------------//
 #endif
@@ -558,28 +583,34 @@
 #define LANG_WIFI_SSID_NULL "unset"
 #define LANG_WIFI_SSID_LOCK " 🔒"
 
+#define LANG_WIFI_MODE_AP "AP"
+#define LANG_WIFI_MODE_STA "STA"
+#define LANG_WIFI_MODE_AP_STA "AP_STA"
+
 //-------------------------------------------------------//
 #define LANG_NTP_STATUS_1 "No network connection"
 #define LANG_NTP_STATUS_2 "Connecting to server..."
 #define LANG_NTP_STATUS_3 "Waiting for response..."
 #define LANG_NTP_STATUS_4 "Synchronized"
-#define LANG_NTP_STATUS_5 "Desync"
-#define LANG_NTP_STATUS_6 "Server is not responding"
+#define LANG_NTP_STATUS_5 "Desynchronization"
+#define LANG_NTP_STATUS_6 "Server is out of sync"
+#define LANG_NTP_STATUS_7 "Incorrect server response"
+#define LANG_NTP_STATUS_8 "Server is not responding"
 
 #define LANG_NTP_ATTEMPT "Attempting to connect"
 
 //-------------------------------------------------------//
-#define LANG_RTC_STATUS_1 "Not found..."
+#define LANG_RTC_STATUS_1 "Not found"
 #define LANG_RTC_STATUS_2 "Low battery"
 #define LANG_RTC_STATUS_3 "Connected to clock"
 #define LANG_RTC_STATUS_4 "Working fine"
 
 //-------------------------------------------------------//
-#define LANG_WIRELESS_STATUS_1 "Error..."
-#define LANG_WIRELESS_STATUS_2 "Not found..."
+#define LANG_WIRELESS_STATUS_1 "Error"
+#define LANG_WIRELESS_STATUS_2 "Not found"
 #define LANG_WIRELESS_STATUS_3 "Connected"
-#define LANG_WIRELESS_STATUS_4 "Connection lost..."
-#define LANG_WIRELESS_STATUS_5 "No sensor..."
+#define LANG_WIRELESS_STATUS_4 "Connection lost"
+#define LANG_WIRELESS_STATUS_5 "No sensor"
 
 #define LANG_WIRELESS_ALERT_TITLE "Notification"
 #define LANG_WIRELESS_ALERT_FOUND "Wireless temperature sensor detected, connect?"
@@ -646,8 +677,18 @@
 #define LANG_CLIMATE_NO_DATA "No data"
 
 //-------------------------------------------------------//
+#define LANG_WEATHER_SUMMARY_1 "Night"
+#define LANG_WEATHER_SUMMARY_2 "Morning"
+#define LANG_WEATHER_SUMMARY_3 "Day"
+#define LANG_WEATHER_SUMMARY_4 "Evening"
+
+#define LANG_WEATHER_SUMMARY_TEMP "Temperature °С"
+#define LANG_WEATHER_SUMMARY_HUM "Humidity %"
+#define LANG_WEATHER_SUMMARY_PRESS "Pressure mm.Hg"
+
+//-------------------------------------------------------//
 #define LANG_BACKL_MODE_1 "Off,Static,Breathing"
-#define LANG_BACKL_MODE_2 ",Breathing with color change when fading,Running fire,Running fire with color change,Running fire with rainbow,Running fire with confetti,Wave,Wave with color change,Wave with rainbow,Wave with confetti,Smooth color change,Rainbow,Confetti"
+#define LANG_BACKL_MODE_2 ",Breathing with color change when fading,Running fire,Running fire with color change,Running fire with rainbow,Running fire with confetti,Wave,Wave with color change,Wave with rainbow,Wave with confetti,Smooth color change,Rainbow,Confetti,Candles"
 #define LANG_BACKL_DISABLE "Not used"
 
 //-------------------------------------------------------//
@@ -703,20 +744,21 @@
 
 #define LANG_PAGE_RELOAD_BLOCK "Restsrting device"
 #define LANG_PAGE_RELOAD_END "<big><b>Restart complete!</b></big>"
-#define LANG_PAGE_RELOAD_ERR "<big><b>Restart error!</b></big>"
+#define LANG_PAGE_RELOAD_ERR "<big><b>Restart failed!</b></big>"
 #define LANG_PAGE_RELOAD_WAIT "<big><b>Restart in progress, please wait...</b></big>"
 #define LANG_PAGE_RELOAD_HINT "<small>Do not turn off the device until the reboot is complete!</small>"
 #define LANG_PAGE_RELOAD_HOME "Return to main page"
 
 //-------------------------------------------------------//
 #define LANG_PAGE_MENU_LINK_HOME "Main"
+#define LANG_PAGE_MENU_LINK_ALARM "Alarm"
 #define LANG_PAGE_MENU_LINK_SETTINGS "Settings"
 #define LANG_PAGE_MENU_LINK_CLIMATE "Microclimate"
 #define LANG_PAGE_MENU_LINK_WEATHER "Weather"
 #define LANG_PAGE_MENU_LINK_RADIO "Radio"
 #define LANG_PAGE_MENU_LINK_UPDATE "Update"
 #define LANG_PAGE_MENU_LINK_INFO "About"
-#define LANG_PAGE_MENU_LINK_NETWORK "Network settings"
+#define LANG_PAGE_MENU_LINK_NETWORK "Network"
 
 #define LANG_PAGE_MENU_STATE_CLOCK "Clock status"
 #define LANG_PAGE_MENU_STATE_RTC "RTC status"
@@ -795,17 +837,17 @@
 #define LANG_PAGE_SETTINGS_BLOCK_CLIMATE "Microclimate"
 #define LANG_PAGE_SETTINGS_BLOCK_SENS "Sensors"
 
+#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Data display source and display time in seconds"
+#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "Day - time in minutes<br>Night - time in seconds<br><br>0 - disable sleep mode for the selected time interval"
+
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT "The same time - turn off the brightness change by time"
 
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_1 "Automatic time-based brightness change is disabled"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_2 "Automatic brightness change by light sensor"
 #define LANG_PAGE_SETTINGS_GUI_HINT_LIGHT_3 "Automatic brightness change by time of day"
 
-#define LANG_PAGE_SETTINGS_GUI_HINT_DISPLAY "Source and time in seconds"
-#define LANG_PAGE_SETTINGS_GUI_HINT_SLEEP "0 - disable sleep mode for the selected period of time"
-
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR "Same time - disable hour change sound"
-#define LANG_PAGE_SETTINGS_GUI_HINT_HOUR_1 "Hour change sound is disabled"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE "Same time - disable sound muting by time"
+#define LANG_PAGE_SETTINGS_GUI_HINT_MUTE_1 "Mute is disabled"
 
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_TITLE "Resetting statistics"
 #define LANG_PAGE_SETTINGS_GUI_ALERT_CLIMATE_1 "Microclimate statistics will be reset, continue?"
@@ -816,14 +858,15 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_TIME_BRIGHT "Night brightness time"
 #define LANG_PAGE_SETTINGS_GUI_HR_SLEEP "Sleep mode"
 #define LANG_PAGE_SETTINGS_GUI_HR_BURN "Anti-poisoning"
-#define LANG_PAGE_SETTINGS_GUI_HR_HOUR "New hour sound time"
+#define LANG_PAGE_SETTINGS_GUI_HR_MUTE "Silent mode"
 #define LANG_PAGE_SETTINGS_GUI_HR_SOUND "Sound of hour change"
 #define LANG_PAGE_SETTINGS_GUI_HR_ADD "Additionally"
 #define LANG_PAGE_SETTINGS_GUI_HR_INDI "Indication"
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Correction"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Iterate over all indicators,Iterate over one indicator,Iterate over one indicator with time display"
-#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Automatic, Melody only, Voice acting only, Melody and voice acting"
+#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Without notifi, Melody only, Voice acting only, Melody and voice acting"
+#define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Disabled,All actions,Time and Temperature"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Enable"
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EFFECT "Effect"
@@ -894,7 +937,7 @@
 #define LANG_PAGE_SETTINGS_GUI_SECS "Seconds"
 #define LANG_PAGE_SETTINGS_GUI_BACKL "Backlight"
 #define LANG_PAGE_SETTINGS_GUI_COLOR "Color"
-#define LANG_PAGE_SETTINGS_GUI_ACTION "Voice actions"
+#define LANG_PAGE_SETTINGS_GUI_ACTION "Voiceover"
 #define LANG_PAGE_SETTINGS_GUI_VOICE "Voice acting"
 #define LANG_PAGE_SETTINGS_GUI_KNOCK "Buttons sound"
 #define LANG_PAGE_SETTINGS_GUI_TICK "Seconds sound"
@@ -920,8 +963,8 @@
 //-------------------------------------------------------//
 #define LANG_PAGE_WEATHER_TITLE "Weather"
 
-#define LANG_PAGE_WEATHER_BLOCK_CHART "Weather for the day"
-#define LANG_PAGE_WEATHER_BLOCK_HOURS "Weather by the hour"
+#define LANG_PAGE_WEATHER_BLOCK_CHART "Weather dynamics"
+#define LANG_PAGE_WEATHER_BLOCK_SUMMARY "Weather summary"
 #define LANG_PAGE_WEATHER_NULL "No actual data..."
 
 //-------------------------------------------------------//
@@ -951,7 +994,7 @@
 #define LANG_PAGE_UPDATE_HR_AUTH "Authorization"
 
 #define LANG_PAGE_UPDATE_INFO_FW "The firmware can be obtained in the Arduino IDE: Sketch -> Export binary file (saved in the folder with the firmware)."
-#define LANG_PAGE_UPDATE_INFO_FS "The file system can be obtained in the Arduino IDE: Tools -> ESP8266 LittleFS Data Upload, in the log you need to find: [LittleFS] upload, the file is located at this path."
+#define LANG_PAGE_UPDATE_INFO_FS "The file system can be obtained in the Arduino IDE: Tools -> ESP8266 LittleFS Data Export (saved in the folder with the firmware)."
 #define LANG_PAGE_UPDATE_INFO_FORMAT "Supported file formats: "
 #define LANG_PAGE_UPDATE_INFO_HEX "hex"
 #define LANG_PAGE_UPDATE_INFO_BIN "bin and bin.gz."
@@ -979,8 +1022,9 @@
 #define LANG_PAGE_INFO_BLOCK_DEVICE "Device"
 
 #define LANG_PAGE_INFO_HR_MEMORY "Device memory"
-#define LANG_PAGE_INFO_HR_NETWORK "Network"
+#define LANG_PAGE_INFO_HR_NETWORK "Local network"
 #define LANG_PAGE_INFO_HR_VERSION "Firmware version"
+#define LANG_PAGE_INFO_HR_MODEL "Clock model"
 #define LANG_PAGE_INFO_HR_STATE "State"
 #define LANG_PAGE_INFO_HR_SHOW "Display"
 #define LANG_PAGE_INFO_HR_GROUP "Group management"
@@ -998,11 +1042,13 @@
 #define LANG_PAGE_INFO_GUI_CPU "Processor frequency"
 #define LANG_PAGE_INFO_GUI_USAGE "Processor usage"
 #define LANG_PAGE_INFO_GUI_UPTIME "Uptime"
+
 #define LANG_PAGE_INFO_GUI_HEAP_FRAG "Fragmented (Heap)"
 #define LANG_PAGE_INFO_GUI_HEAP_FREE "Free (Heap)"
 #define LANG_PAGE_INFO_GUI_FLASH_ALL "Total (Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FULL "Busy (Flash)"
 #define LANG_PAGE_INFO_GUI_FLASH_FREE "Free (Flash)"
+
 #define LANG_PAGE_INFO_GUI_STRENGTH "Signal level"
 #define LANG_PAGE_INFO_GUI_MODE "Modem mode"
 #define LANG_PAGE_INFO_GUI_MAC "MAC address"
@@ -1013,29 +1059,29 @@
 #define LANG_PAGE_INFO_GUI_NET_TIME "Connect time"
 #define LANG_PAGE_INFO_GUI_AP_SSID "Access point SSID"
 #define LANG_PAGE_INFO_GUI_AP_IP "Access point IP"
-#define LANG_PAGE_INFO_GUI_MODE_AP "AP"
-#define LANG_PAGE_INFO_GUI_MODE_STA "STA"
-#define LANG_PAGE_INFO_GUI_MODE_AP_STA "AP_STA"
+
 #define LANG_PAGE_INFO_GUI_SDK "SDK"
 #define LANG_PAGE_INFO_GUI_CORE "CORE"
 #define LANG_PAGE_INFO_GUI_GP "GyverPortal"
 #define LANG_PAGE_INFO_GUI_ESP "ESP firmware"
 #define LANG_PAGE_INFO_GUI_CLOCK "Clock firmware"
 
+#define LANG_PAGE_INFO_GUI_NAME "Identifier"
+#define LANG_PAGE_INFO_GUI_SN "Serial number"
+#define LANG_PAGE_INFO_GUI_NA "n/a"
+
 #define LANG_PAGE_INFO_GUI_CONNECT "Connection with clock"
-#define LANG_PAGE_INFO_GUI_STATE_OK "Working fine..."
-#define LANG_PAGE_INFO_GUI_STATE_DIS "Missing..."
-#define LANG_PAGE_INFO_GUI_STATE_ERR "Error 00"
+#define LANG_PAGE_INFO_GUI_STATE_OK "Working fine"
+#define LANG_PAGE_INFO_GUI_STATE_NULL "Missing"
+#define LANG_PAGE_INFO_GUI_STATE_ERROR "Error 00"
 
 #define LANG_PAGE_INFO_GUI_UID "UID"
 #define LANG_PAGE_INFO_GUI_SIGNAL "Sygnal"
 #define LANG_PAGE_INFO_GUI_BATTERY "Battery"
 
-#define LANG_PAGE_INFO_GUI_NAME "Name"
-#define LANG_PAGE_INFO_GUI_NONE "Untitled"
-#define LANG_PAGE_INFO_GUI_MENU "Menu"
-#define LANG_PAGE_INFO_GUI_PREFIX "Prefix"
-#define LANG_PAGE_INFO_GUI_POSTFIX "Postfix"
+#define LANG_PAGE_INFO_GUI_DEVICE_NAME "Name"
+#define LANG_PAGE_INFO_GUI_MENU_NAME "Menu"
+#define LANG_PAGE_INFO_GUI_TAB_NAME "Brouser tab"
 #define LANG_PAGE_INFO_GUI_AP_NAME "Access point"
 #define LANG_PAGE_INFO_GUI_DETECT "Detection"
 #define LANG_PAGE_INFO_GUI_STATE "State"
@@ -1043,6 +1089,7 @@
 #define LANG_PAGE_INFO_GUI_RESET "Reset settings"
 #define LANG_PAGE_INFO_GUI_REBOOT "Restart device"
 
+#define LANG_PAGE_INFO_GUI_UNNAMED "Untitled"
 #define LANG_PAGE_INFO_GUI_EXECUTE "Execute"
 
 //-------------------------------------------------------//
@@ -1068,6 +1115,7 @@
 #define LANG_PAGE_NETWORK_GUI_HOST "Host"
 #define LANG_PAGE_NETWORK_GUI_LAT "Latitude"
 #define LANG_PAGE_NETWORK_GUI_LON "Longitude"
+#define LANG_PAGE_NETWORK_GUI_PROXY "Proxy"
 
 //-------------------------------------------------------//
 #define LANG_FAIL_ALERT_TITLE "Warning"
@@ -1087,6 +1135,8 @@
 #define LANG_FAIL_DATA_11 "Stack overflow"
 #define LANG_FAIL_DATA_12 "Time tick overflow"
 #define LANG_FAIL_DATA_13 "Dynamic indication failure"
+#define LANG_FAIL_DATA_14 "Radio receiver module is not responding"
+#define LANG_FAIL_DATA_15 "Sound player module is not responding"
 
 //-------------------------------------------------------//
 #endif

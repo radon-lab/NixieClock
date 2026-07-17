@@ -1,6 +1,6 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 релиз от 13.02.26
-  Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 от 17.07.26
+  Прошивка беспроводного датчика температуры на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
   Исходник - https://github.com/radon-lab/NixieClock
@@ -10,16 +10,26 @@
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
-  1МБ - FS:64KB OTA:~470KB(обновление esp по OTA).
-  2МБ - FS:1MB OTA:~512KB(обновление esp по OTA).
-  4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA).
-  8МБ - FS:6MB OTA:~1019KB(обновление esp по OTA).
+  1МБ - FS:64KB OTA:~470KB(обновление беспроводного датчика по OTA).
+  2МБ - FS:1MB OTA:~512KB(обновление беспроводного датчика по OTA).
+  4МБ - FS:2MB OTA:~1019KB(обновление беспроводного датчика по OTA).
+  8МБ - FS:6MB OTA:~1019KB(обновление беспроводного датчика по OTA).
+
+  Эспорт бинарного файла прошивки - "Скетч -> Экспорт бинарного файла".
+  Бинарный файл появятся в папке с прошивкой.
 */
+
+//--------------Версия прошивки-------------
+#define ESP_FIRMWARE_VERSION "1.1.9" //версия прошивки модуля esp
+
+//---------------Конфигурации---------------
 #include "config.h"
 
 #define GP_NO_DNS
 #define GP_NO_MDNS
+#define GP_NO_PRESS
 
+//----------------Библиотеки----------------
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui;
 
@@ -28,7 +38,7 @@ GyverPortalMod ui;
 #include <WiFiUdp.h>
 WiFiUDP udp;
 
-//переменные
+//----------------Переменные----------------
 char buffSendIp[20]; //буфер ip адреса
 uint8_t buffSendAttempt; //буфер количества попыток
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
@@ -53,7 +63,7 @@ uint32_t sysCycleCount = 0; //счетчик циклов процессора
 const uint8_t sleepTime[] = {1, 5, 10, 15, 30, 60};
 const char sleepTimeList[] = "Каждую 1 мин,Каждые 5 мин,Каждые 10 мин,Каждые 15 мин,Каждые 30 мин,Каждый 1 час";
 
-//температура
+//---------------Температура----------------
 struct sensorData {
   int16_t temp = 0x7FFF; //температура
   uint16_t press = 0; //давление
@@ -98,7 +108,7 @@ const char *tempSensList[] = {"DHT", "DS18B20", "BMP/BME", "SHT", "AHT"};
 ADC_MODE(ADC_VCC); //режим измерения напряжения питания
 
 void build(void) {
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+  GP.BUILD_BEGIN();
 
   GP.SELECT_LIST_STYLE(UI_BLOCK_COLOR, UI_BUTTON_COLOR);
 
@@ -175,17 +185,17 @@ void build(void) {
 
     if (wifiGetConnectStatus()) {
       GP.BREAK();
-      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "hint1", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID сети", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(WiFi.SSID(), 12), "id_1", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.localIP().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Шлюз сети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.gatewayIP().toString(), "", UI_INFO_COLOR););
       M_BOX(GP.LABEL("Маска подсети", "", UI_LABEL_COLOR); GP.LABEL(WiFi.subnetMask().toString(), "", UI_INFO_COLOR););
-      GP.HINT("hint1", WiFi.SSID()); //всплывающая подсказка
+      GP.HINT_NOTIFY("id_1", WiFi.SSID()); //всплывающая подсказка
     }
     if (WiFi.getMode() != WIFI_STA) {
       GP.BREAK();
-      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(AP_SSID, 12), "hint2", UI_INFO_COLOR););
+      M_BOX(GP.LABEL("SSID точки доступа", "", UI_LABEL_COLOR); GP.LABEL(stringLengthConstrain(AP_SSID, 12), "id_2", UI_INFO_COLOR););
       M_BOX(GP.LABEL("IP точки доступа", "", UI_LABEL_COLOR); GP.LABEL(WiFi.softAPIP().toString(), "", UI_INFO_COLOR););
-      GP.HINT("hint2", AP_SSID); //всплывающая подсказка
+      GP.HINT_NOTIFY("id_2", AP_SSID); //всплывающая подсказка
     }
 
     GP.BREAK();
@@ -335,7 +345,7 @@ void build(void) {
 }
 //--------------------------------------------------------------------
 void buildUpdate(bool UpdateEnd, const String & UpdateError) {
-  GP.BUILD_BEGIN(GP_DEFAULT_THEME);
+  GP.BUILD_BEGIN();
 
   GP.PAGE_ZOOM(90, 390);
   GP.PAGE_MIDDLE_ALIGN();
@@ -1002,7 +1012,7 @@ uint8_t systemGetUsage(void) {
   return usage;
 }
 //--------------------------------------------------------------------
-void setup() {
+void setup(void) {
   //выключить питание wifi
   WiFi.forceSleepBegin();
 
@@ -1098,7 +1108,7 @@ void setup() {
   else wifiStartSTA();
 }
 //--------------------------------------------------------------------
-void loop() {
+void loop(void) {
   if (wifiUpdate()) sleepMode(); //обработка статусов wifi
 
   timeUpdate(); //обработка времени

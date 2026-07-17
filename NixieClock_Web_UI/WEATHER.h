@@ -1,6 +1,6 @@
 #define WEATHER_BUFFER 24 //размер буфера хранения данных о погоде(24)(ч)
-#define WEATHER_TIMEOUT 10000 //таймаут ожидания ответа сервера погоды(2000..15000)(мс)
-#define WEATHER_ATTEMPTS_TIMEOUT 15000 //время ожидания нового запроса на сервер погоды(15000..60000)(мс)
+#define WEATHER_ANSWER_TIMEOUT 15000 //таймаут ожидания ответа сервера погоды(15000..60000)(мс)
+#define WEATHER_ATTEMPTS_TIMEOUT 5000 //время ожидания нового запроса на сервер погоды(2000..15000)(мс)
 #define WEATHER_ATTEMPTS_ALL 4 //количесво попыток отправки запроса(1..10)
 
 #define WEATHER_CITY_ARRAY 83 //количество городов в списке(1..255)
@@ -41,8 +41,9 @@ enum {
   WEATHER_STOPPED, //сервис не запущен
   WEATHER_ERROR, //ошибка запроса
   WEATHER_SYNCED, //данные получены успешно
-  WEATHER_REQUEST, //выполняется запрос
-  WEATHER_WAIT_ANSWER //ожидается ответ
+  WEATHER_WAIT_REQUEST, //ожидание запроса
+  WEATHER_SEND_REQUEST, //выполняется запрос
+  WEATHER_WAIT_ANSWER //ожидание ответа
 };
 uint8_t weather_state = WEATHER_STOPPED; //флаг состояние сервера погоды
 uint8_t weather_attempts = 0; //текущее количество попыток подключение к серверу погоды
@@ -60,7 +61,7 @@ uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времен�
 
 String weather_answer; //ответ от сервера погоды
 
-const char *weatherStatusList[] = {LANG_WEATHER_STATUS_1, LANG_WEATHER_STATUS_2, LANG_WEATHER_STATUS_3, LANG_WEATHER_STATUS_4, LANG_WEATHER_STATUS_5};
+const char *weatherStatusList[] = {LANG_WEATHER_STATUS_1, LANG_WEATHER_STATUS_2, LANG_WEATHER_STATUS_3, LANG_WEATHER_ATTEMPT, LANG_WEATHER_STATUS_4, LANG_WEATHER_STATUS_5};
 
 #include <ESP8266WiFi.h>
 WiFiClient client;
@@ -72,6 +73,9 @@ uint8_t weatherGetStatus(void) {
 boolean weatherGetRunStatus(void) {
   return (weather_state != WEATHER_STOPPED);
 }
+boolean weatherGetWaitStatus(void) {
+  return (weather_state == WEATHER_WAIT_REQUEST);
+}
 boolean weatherGetGoodStatus(void) {
   return (weather_state > WEATHER_ERROR);
 }
@@ -82,22 +86,23 @@ void weatherResetValidStatus(void) {
   weather_update = false;
 }
 uint8_t weatherGetAttempts(void) {
-  if ((weather_state != WEATHER_ERROR) || (weather_attempts >= WEATHER_ATTEMPTS_ALL)) return 0;
+  if (weather_state != WEATHER_WAIT_REQUEST) return 0;
   return weather_attempts + 1;
 }
 //--------------------------------------------------------------------
 String weatherGetState(void) {
   String str;
   str.reserve(100);
-  
-  if (!weatherGetAttempts()) str = weatherStatusList[weatherGetStatus()];
-  else {
+
+  str = weatherStatusList[weatherGetStatus()];
+
+  if (weatherGetWaitStatus()) {
     str = F(LANG_WEATHER_ATTEMPT);
     str += '[';
     str += weatherGetAttempts();
     str += F("]...");
   }
-  
+
   return str;
 }
 //--------------------------------------------------------------------
@@ -117,13 +122,63 @@ void weatherInitStr(void) {
 void weatherSendRequest(void) {
   if (weather_state <= WEATHER_SYNCED) {
     if (client.connected()) client.stop();
-    weather_state = WEATHER_REQUEST;
+    weather_state = WEATHER_SEND_REQUEST;
     weather_attempts = 0;
+  }
+}
+void weatherWaitRequest(void) {
+  if (weather_state >= WEATHER_SEND_REQUEST) {
+    if (client.connected()) client.stop();
+    weather_timer = millis();
+    weather_state = WEATHER_WAIT_REQUEST;
   }
 }
 void weatherDisconnect(void) {
   if (client.connected()) client.stop();
   weather_state = WEATHER_STOPPED;
+}
+//--------------------------------------------------------------------
+boolean weatherTryConnect(void) {
+  String host;
+  host.reserve(40);
+
+  uint16_t port = 0;
+
+#if WEATHER_USE_PROXY
+  if (settings.weatherHost[0] != '\0') {
+    host = settings.weatherHost;
+    uint8_t div = host.indexOf(":");
+    if (div > 0) {
+      port = host.substring(div + 1).toInt();
+      if (port > 0) {
+        host = host.substring(0, div);
+      }
+    }
+  }
+#endif
+
+  if (!port) {
+    host = F("api.open-meteo.com");
+    port = 80;
+  }
+
+  if (client.connect(host, port)) {
+    if (client.connected()) {
+      client.print F("GET ");
+#if WEATHER_USE_PROXY
+      if (settings.weatherHost[0] != '\0') client.print F("http://api.open-meteo.com");
+#endif
+      client.print F("/v1/forecast?latitude=");
+      client.print(weather_latitude, 4);
+      client.print F("&longitude=");
+      client.print(weather_longitude, 4);
+      client.println F("&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 "
+                       "HTTP/1.1\r\nAccept: */*\r\nAccept-Language: ru,en;q=0.9\r\nHost: api.open-meteo.com\r\nConnection: close\r\n"
+                       "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36\r\n");
+      return true;
+    }
+  }
+  return false;
 }
 //--------------------------------------------------------------------
 const char* weatherGetParseType(uint8_t mod) {
@@ -186,6 +241,7 @@ void weatherGetUnixData(uint32_t* buf, uint8_t len) {
 
   if (weather_state == WEATHER_ERROR) weather_update = false;
 }
+//--------------------------------------------------------------------
 void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
   if (weather_update == false) return;
 
@@ -238,31 +294,22 @@ void weatherCheck(void) {
 //--------------------------------------------------------------------
 boolean weatherUpdate(void) {
   switch (weather_state) {
-    case WEATHER_ERROR:
+    case WEATHER_WAIT_REQUEST:
       if (weather_attempts < WEATHER_ATTEMPTS_ALL) {
         if ((millis() - weather_timer) >= WEATHER_ATTEMPTS_TIMEOUT) {
-          if (client.connected()) client.stop();
           weather_attempts += 1;
-          weather_state = WEATHER_REQUEST;
-        }
-      }
-      break;
-    case WEATHER_REQUEST:
-      if (client.connect("api.open-meteo.com", 80)) {
-        if (client.connected()) {
-          client.println("GET /v1/forecast?latitude=" + String(weather_latitude, 4) +
-                         "&longitude=" + String(weather_longitude, 4) +
-                         "&hourly=temperature_2m,relative_humidity_2m,surface_pressure,is_day&timeformat=unixtime&timezone=auto&forecast_days=1&forecast_hours=24 HTTP/1.1\r\nHost: api.open-meteo.com\r\n");
-          weather_answer = "";
-          weather_timer = millis();
-          weather_state = WEATHER_WAIT_ANSWER;
-        }
-        else {
-          client.stop();
-          weather_state = WEATHER_ERROR;
+          weather_state = WEATHER_SEND_REQUEST;
         }
       }
       else weather_state = WEATHER_ERROR;
+      break;
+    case WEATHER_SEND_REQUEST:
+      if (weatherTryConnect()) {
+        weather_answer = "";
+        weather_timer = millis();
+        weather_state = WEATHER_WAIT_ANSWER;
+      }
+      else weatherWaitRequest();
       break;
     case WEATHER_WAIT_ANSWER:
       if (client.available()) {
@@ -275,13 +322,10 @@ boolean weatherUpdate(void) {
             weather_update = true;
             return true;
           }
-          else weather_state = WEATHER_ERROR;
+          else weatherWaitRequest();
         }
       }
-      if ((millis() - weather_timer) >= WEATHER_TIMEOUT) {
-        client.stop();
-        weather_state = WEATHER_ERROR;
-      }
+      if ((millis() - weather_timer) >= WEATHER_ANSWER_TIMEOUT) weatherWaitRequest();
       break;
   }
 

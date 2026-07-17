@@ -1,12 +1,5 @@
-#define BOOTLOADER_ADDRESS 120 //адрес загрузчика(только 120)
-#define BOOTLOADER_PAGE_BUFF 128 //размер страницы(только 128)
-
-struct pageData {
-  uint8_t pos;
-  uint8_t size;
-  uint8_t type;
-  uint16_t addr;
-} page;
+#define BOOTLOADER_ADDRESS 120 //адрес загрузчика(120)
+#define BOOTLOADER_PAGE_BUFF 128 //размер страницы(128)
 
 enum {
   UPDATER_IDLE,
@@ -20,13 +13,20 @@ enum {
   UPDATER_CHECK,
   UPDATER_END
 };
-uint8_t updater_buffer[BOOTLOADER_PAGE_BUFF];
-uint8_t updater_state = UPDATER_IDLE;
-uint8_t updater_page_crc = 0;
-uint8_t updater_page_cnt = 0;
-uint32_t updater_timer = 0;
+uint8_t updater_state = UPDATER_IDLE; //статус загрузки прошивки
 
-File firmwareFile;
+uint8_t updater_buffer[BOOTLOADER_PAGE_BUFF]; //буфер страницы прошивки
+uint8_t updater_page_crc = 0; //контрольная сумма буфера страницы
+uint8_t updater_page_cnt = 0; //счетчик страниц прошивки
+uint32_t updater_timer = 0; //таймер загрузки прошивки
+
+struct pageData {
+  uint8_t pos;
+  uint8_t size;
+  uint8_t type;
+  uint16_t addr;
+} page;
+File firmwareFile; //файл прошивки
 
 //--------------------------------------------------------------------
 uint8_t hexToInt(uint8_t data) {
@@ -38,14 +38,14 @@ uint8_t getIntData(uint8_t data_h, uint8_t data_l) {
   return hexToInt(data_l) | (hexToInt(data_h) << 4);
 }
 //--------------------------------------------------------------------
-void updateCRC(uint8_t* crc, uint8_t data) { //сверка контрольной суммы
+void updaterGenCrc(uint8_t* crc, uint8_t data) {
   for (uint8_t i = 8; i; i--) { //считаем для всех бит
     *crc = ((*crc ^ data) & 0x01) ? (*crc >> 0x01) ^ 0x8C : (*crc >> 0x01); //рассчитываем значение
     data >>= 0x01; //сдвигаем буфер
   }
 }
 //--------------------------------------------------------------------
-boolean checkFileData(void) {
+boolean updaterCheckFileData(void) {
   firmwareFile = LittleFS.open("/update/firmware.hex", "r");
 
   if (firmwareFile && (firmwareFile.size() != 0)) {
@@ -95,7 +95,7 @@ boolean checkFileData(void) {
   return false;
 }
 //--------------------------------------------------------------------
-uint8_t getFileData(void) {
+uint8_t updaterGetFileData(void) {
   if (firmwareFile.available()) {
     if (page.pos >= page.size) {
       page.type = 1;
@@ -121,7 +121,7 @@ uint8_t getFileData(void) {
   return 0xFF;
 }
 //--------------------------------------------------------------------
-void removeFileData(void) {
+void updaterRemoveFileData(void) {
   firmwareFile.close();
   LittleFS.remove("/update/firmware.hex");
 }
@@ -134,11 +134,11 @@ boolean updaterState(void) {
   return (updater_state > UPDATER_TIMEOUT);
 }
 //--------------------------------------------------------------------
-uint8_t updaterStatus(void) {
+uint8_t updaterGetStatus(void) {
   return updater_state;
 }
 //--------------------------------------------------------------------
-uint8_t updaterProgress(void) {
+uint8_t updaterGetProgress(void) {
   return updater_page_cnt;
 }
 //--------------------------------------------------------------------
@@ -152,12 +152,12 @@ void updaterSetIdle(void) {
   if ((updater_state >= UPDATER_NO_FILE) && (updater_state <= UPDATER_UPL_ABORT)) updater_state = UPDATER_IDLE;
 }
 //--------------------------------------------------------------------
-String getUpdaterState(void) { //получить состояние загрузчика
+String updaterGetState(void) { //получить состояние загрузчика
   String str;
   str.reserve(150);
   str = F("<big><b>");
 
-  switch (updaterStatus()) {
+  switch (updaterGetStatus()) {
     case UPDATER_IDLE: str += F(LANG_UPDATE_FW_STATUS_1); break;
     case UPDATER_ERROR: str += F(LANG_UPDATE_FW_STATUS_2); break;
     case UPDATER_TIMEOUT: str += F(LANG_UPDATE_FW_STATUS_3); break;
@@ -165,9 +165,9 @@ String getUpdaterState(void) { //получить состояние загру�
     case UPDATER_NOT_HEX: str += F(LANG_UPDATE_FW_STATUS_5); break;
     case UPDATER_UPL_ABORT: str += F(LANG_UPDATE_FW_STATUS_6); break;
     default:
-      if (updaterProgress()) {
+      if (updaterGetProgress()) {
         str += F(LANG_UPDATE_FW_STATUS_7);
-        str += constrain(map(updaterProgress(), 0, 252, 0, 100), 0, 100);
+        str += constrain(map(updaterGetProgress(), 0, 252, 0, 100), 0, 100);
         str += '%';
       }
       else str += F(LANG_UPDATE_FW_STATUS_8);
@@ -179,9 +179,9 @@ String getUpdaterState(void) { //получить состояние загру�
   return str;
 }
 //--------------------------------------------------------------------
-void updaterStart(void) {
+void updaterStartFlash(void) {
   if (!updaterState()) { //если не идет обновление
-    if (checkFileData()) { //проверяем файл
+    if (updaterCheckFileData()) { //проверяем файл
       page.pos = 0;
       page.size = 0;
       updater_page_cnt = 0;
@@ -190,16 +190,16 @@ void updaterStart(void) {
       Serial.println F("Updater start programming");
     }
     else {
-      removeFileData(); //удаляем файл
+      updaterRemoveFileData(); //удаляем файл
       updater_state = UPDATER_NO_FILE; //установили флаг ошибки файла
       Serial.println F("Updater error opening file");
     }
   }
 }
 //--------------------------------------------------------------------
-boolean updaterRun(void) {
+boolean updaterRunFlash(void) {
   if ((millis() - updater_timer) >= 10000) {
-    removeFileData(); //удаляем файл
+    updaterRemoveFileData(); //удаляем файл
     updater_state = UPDATER_TIMEOUT;
     Serial.println("Updater timeout write page " + String(updater_page_cnt));
   }
@@ -208,8 +208,8 @@ boolean updaterRun(void) {
     case UPDETER_LOAD:
       updater_page_crc = 0;
       for (uint8_t cnt = 0; cnt < sizeof(updater_buffer); cnt++) {
-        updater_buffer[cnt] = getFileData();
-        updateCRC(&updater_page_crc, updater_buffer[cnt]);
+        updater_buffer[cnt] = updaterGetFileData();
+        updaterGenCrc(&updater_page_crc, updater_buffer[cnt]);
       }
       Serial.println("Updater load page " + String(updater_page_cnt) + " success");
       updater_state = UPDATER_CHECK;
@@ -240,7 +240,7 @@ boolean updaterRun(void) {
             }
             else if ((temp_page - updater_page_cnt) == 0) updater_state = UPDATER_WRITE;
             else {
-              removeFileData(); //удаляем файл
+              updaterRemoveFileData(); //удаляем файл
               updater_state = UPDATER_ERROR;
               Serial.println("Updater error, page at " + String(updater_page_cnt));
             }
@@ -254,7 +254,7 @@ boolean updaterRun(void) {
         twi_write_byte(0xFF);
         if (!twi_error()) { //если передача была успешной
           twi_write_stop(); //остановили шину
-          removeFileData(); //удаляем файл
+          updaterRemoveFileData(); //удаляем файл
           updater_state = UPDATER_IDLE;
           Serial.println F("Updater end, reboot...");
         }
