@@ -875,7 +875,7 @@ void build(void) {
       GP.HR_TEXT(LANG_PAGE_SETTINGS_GUI_HR_SOUND, UI_LINE_COLOR, UI_HINT_COLOR);
       M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_TEMP, "", UI_LABEL_COLOR); GP.SWITCH("setsHourTemp", mainSettings.hourSound & 0x80, UI_SWITCH_COLOR, (boolean)(!deviceInformation[PLAYER_TYPE] || sensorGetDisabledStatus())););
       if (deviceInformation[PLAYER_TYPE]) {
-        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsHourSound", LANG_PAGE_SETTINGS_GUI_MUTE_MODE, mainSettings.hourSound & 0x03, 0););
+        M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SELECT_LIST("setsHourSound", LANG_PAGE_SETTINGS_GUI_HOUR_MODE, mainSettings.hourSound & 0x03, 0););
       }
       else {
         M_BOX(GP.LABEL(LANG_PAGE_SETTINGS_GUI_HOUR, "", UI_LABEL_COLOR); GP.SWITCH("setsHourSound", mainSettings.hourSound & 0x03, UI_SWITCH_COLOR););
