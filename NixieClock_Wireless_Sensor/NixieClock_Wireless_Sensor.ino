@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.9 от 17.07.26
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 от 23.07.26
   Прошивка беспроводного датчика температуры на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -984,13 +984,7 @@ void timeUpdate(void) {
     else if (updateTimer > ((settingsMode == false) ? 15 : SETTINGS_MODE_TIME)) sleepMode(); //отключить питание
 
     if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
-
-    if (updateTimer > 1) {
-      resetSettingsButton(); //сбросить нажатия кнопки настроек
-#if STATUS_LED > 0
-      if ((settingsMode == true) && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#endif
-    }
+    if (updateTimer > 1) resetSettingsButton(); //сбросить нажатия кнопки настроек
   }
 }
 //--------------------------------------------------------------------
