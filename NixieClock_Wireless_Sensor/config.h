@@ -56,5 +56,3 @@
 
 #define UDP_ANSWER_SIZE 1 //размер пакета ответа(1)
 #define UDP_ANSWER_WAIT_TIME 1000 //время ожидания ответа(100..2000)(мс)
-
-#define ESP_FIRMWARE_VERSION "1.1.8" //версия прошивки модуля esp

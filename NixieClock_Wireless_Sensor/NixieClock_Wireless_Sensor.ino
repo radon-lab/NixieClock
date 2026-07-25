@@ -1,6 +1,6 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.1.8 от 07.05.26
-  Специльно для проекта "Часы на ГРИ. Альтернативная прошивка"
+  Arduino IDE 1.8.13 версия прошивки 1.1.9 от 23.07.26
+  Прошивка беспроводного датчика температуры на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
   Исходник - https://github.com/radon-lab/NixieClock
@@ -10,17 +10,26 @@
   Далее "Инструменты -> Плата -> Менеджер плат..." находите плату esp8266 и устанавливаете версию 2.7.4!
 
   В "Инструменты -> Flash Size" необходимо выбрать распределение памяти в зависимости от установленного объёма FLASH:
-  1МБ - FS:64KB OTA:~470KB(обновление esp по OTA).
-  2МБ - FS:1MB OTA:~512KB(обновление esp по OTA).
-  4МБ - FS:2MB OTA:~1019KB(обновление esp по OTA).
-  8МБ - FS:6MB OTA:~1019KB(обновление esp по OTA).
+  1МБ - FS:64KB OTA:~470KB(обновление беспроводного датчика по OTA).
+  2МБ - FS:1MB OTA:~512KB(обновление беспроводного датчика по OTA).
+  4МБ - FS:2MB OTA:~1019KB(обновление беспроводного датчика по OTA).
+  8МБ - FS:6MB OTA:~1019KB(обновление беспроводного датчика по OTA).
+
+  Эспорт бинарного файла прошивки - "Скетч -> Экспорт бинарного файла".
+  Бинарный файл появятся в папке с прошивкой.
 */
+
+//--------------Версия прошивки-------------
+#define ESP_FIRMWARE_VERSION "1.1.9" //версия прошивки модуля esp
+
+//---------------Конфигурации---------------
 #include "config.h"
 
 #define GP_NO_DNS
 #define GP_NO_MDNS
 #define GP_NO_PRESS
 
+//----------------Библиотеки----------------
 #include "web/src/GyverPortalMod.h"
 GyverPortalMod ui;
 
@@ -29,7 +38,7 @@ GyverPortalMod ui;
 #include <WiFiUdp.h>
 WiFiUDP udp;
 
-//переменные
+//----------------Переменные----------------
 char buffSendIp[20]; //буфер ip адреса
 uint8_t buffSendAttempt; //буфер количества попыток
 uint8_t buffSendData[UDP_SEND_SIZE]; //буфер отправки
@@ -54,7 +63,7 @@ uint32_t sysCycleCount = 0; //счетчик циклов процессора
 const uint8_t sleepTime[] = {1, 5, 10, 15, 30, 60};
 const char sleepTimeList[] = "Каждую 1 мин,Каждые 5 мин,Каждые 10 мин,Каждые 15 мин,Каждые 30 мин,Каждый 1 час";
 
-//температура
+//---------------Температура----------------
 struct sensorData {
   int16_t temp = 0x7FFF; //температура
   uint16_t press = 0; //давление
@@ -975,13 +984,7 @@ void timeUpdate(void) {
     else if (updateTimer > ((settingsMode == false) ? 15 : SETTINGS_MODE_TIME)) sleepMode(); //отключить питание
 
     if (updateTimer < 255) updateTimer++; //прибавили таймер секунд
-
-    if (updateTimer > 1) {
-      resetSettingsButton(); //сбросить нажатия кнопки настроек
-#if STATUS_LED > 0
-      if ((settingsMode == true) && wifiGetConnectWaitStatus()) digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //мигаем индикацией
-#endif
-    }
+    if (updateTimer > 1) resetSettingsButton(); //сбросить нажатия кнопки настроек
   }
 }
 //--------------------------------------------------------------------

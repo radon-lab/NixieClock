@@ -167,9 +167,6 @@ boolean wifiUpdate(void) {
 
   if (wifi_status != WiFi.status()) { //если изменился статус
     if (wifi_status == 255) { //если нужно отключиться
-#if STATUS_LED > 0
-      if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
       udp.stop(); //остановить udp
       WiFi.disconnect(); //отключаем wifi
 
@@ -212,9 +209,6 @@ boolean wifiUpdate(void) {
       else {
         if (settingsMode == false) wifi_interval = 2000; //устанавливаем интервал ожидания
         else wifi_interval = 0; //сбрасываем интервал ожидания
-#if STATUS_LED > 0
-        if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
 #if DEBUG_MODE
         Serial.println F("Wifi connection failed, wrong settings!");
 #endif
@@ -226,9 +220,7 @@ boolean wifiUpdate(void) {
     if (wifi_status == WL_CONNECTED) {
       timerWifi = millis(); //сбросили таймер
       wifi_interval = 0; //сбрасываем интервал ожидания
-#if STATUS_LED > 0
-      if (settingsMode == true) digitalWrite(LED_BUILTIN, HIGH); //выключаем индикацию
-#endif
+
       udp.begin(UDP_LOCAL_PORT); //запускаем udp
       for (uint8_t i = 0; i < 6; i++) WIFI_SETTINGS[i] = WiFi.BSSID()[i];
       WIFI_SETTINGS[6] = WiFi.channel();
@@ -255,9 +247,7 @@ boolean wifiUpdate(void) {
   if (wifi_interval && ((millis() - timerWifi) >= wifi_interval)) { //новое поключение
     wifi_interval = 0; //сбрасываем интервал переподключения
     WiFi.disconnect(); //отключаем wifi
-#if STATUS_LED > 0
-    if (settingsMode == true) digitalWrite(LED_BUILTIN, LOW); //включаем индикацию
-#endif
+
     if (WIFI_SETTINGS[7] == 0xCC) {
       wifi_status = 254;
       WIFI_SETTINGS[7] = 0x00;

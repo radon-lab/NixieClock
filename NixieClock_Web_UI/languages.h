@@ -294,7 +294,7 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Коррекция"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Перебор всех индикаторов,Перебор одного индикатора,Перебор одного индикатора с отображением времени"
-#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Без оповещения,Только мелодия,Только озвучка,Мелодия и озвучка"
+#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Без оповещения,Только мелодия,Только озвучка,Мелодия и озвучка"
 #define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Выключена,Все действия,Время и температура"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Включить"
@@ -865,7 +865,7 @@
 #define LANG_PAGE_SETTINGS_GUI_HR_CORRECT "Correction"
 
 #define LANG_PAGE_SETTINGS_GUI_BURN_MODE "Iterate over all indicators,Iterate over one indicator,Iterate over one indicator with time display"
-#define LANG_PAGE_SETTINGS_GUI_MUTE_MODE "Without notifi, Melody only, Voice acting only, Melody and voice acting"
+#define LANG_PAGE_SETTINGS_GUI_HOUR_MODE "Without notifi, Melody only, Voice acting only, Melody and voice acting"
 #define LANG_PAGE_SETTINGS_GUI_SOUND_MODE "Disabled,All actions,Time and Temperature"
 
 #define LANG_PAGE_SETTINGS_GUI_SHOW_EBABLE "Enable"

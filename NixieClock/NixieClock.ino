@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0_033 бета от 15.07.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.1_000 бета от 25.07.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.3.3"
+#define FIRMWARE_VERSION "0.0.0"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
