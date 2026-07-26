@@ -1,13 +1,13 @@
-#define AHT10_ADDR 0x38 //адрес датчика
+#define AHT10_ADDR 0x38 //адрес датчика(0x38..0x39)
 
-#define AHT10_MEASURE_START 0xAC
-#define AHT10_MEASURE_DATA 0x33
+#define AHT10_MEASURE_START 0xAC //начать замер температуры и влажности
+#define AHT10_MEASURE_DATA 0x33 //чтение температуры и влажности
 
-#define AHT10_CALIBRATE_START 0xE1
-#define AHT10_CALIBRATE_DATA 0x08
+#define AHT10_CALIBRATE_START 0xE1 //начать калибровку
+#define AHT10_CALIBRATE_DATA 0x08 //команда калибровки
 
-#define AHT10_NORMAL_MODE 0xA8
-#define AHT10_NOP_DATA 0x00
+#define AHT10_NORMAL_MODE 0xA8 //обычный режим замера
+#define AHT10_NOP_DATA 0x00 //пустая команда
 
 #define AHT10_CALIBRATE_TIME 350 //таймаут ожидания завершения калибровки
 #define AHT10_MEASURE_TIME 100 //таймаут ожидания завершения замера

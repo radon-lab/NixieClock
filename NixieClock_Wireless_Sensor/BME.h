@@ -1,4 +1,4 @@
-#define BMP180_ADDR 0x77 //адрес датчика
+#define BMP180_ADDR 0x77 //адрес датчика(0x77)
 
 #define BMP180_CONTROL_REG 0xF4 //регистр настройки замеров
 #define BMP180_DATA_OUT_REG 0xF6 //регистр чтения данных
@@ -8,7 +8,8 @@
 
 #define BMP180_OVERSAMP 0x03  //разрешение датчика давления
 
-#define BME280_ADDR 0x76 //адрес датчика
+
+#define BME280_ADDR 0x76 //адрес датчика(0x76..0x77)
 
 #define BME280_DATA_OUT_REG 0xF7 //регистр чтения данных
 #define BME280_STATUS_REG 0xF3 //регистр статуса
@@ -24,7 +25,25 @@
 #define BME280_TEMP_OVERSAMP 0x03 //разрешение датчика температуры
 #define BME280_HUM_OVERSAMP 0x01 //разрешение датчика влажности
 
+
+#define BME_ID_REG 0xD0 //регистр идентификатора чипа
 #define BME_CHECK_TIMEOUT 50 //таймаут ожидания(50..150)(мс)
+
+
+//структура калибровок датчика BMP180
+struct CalibrationDataBMP180 {
+  int16_t AC_1;
+  int16_t AC_2;
+  int16_t AC_3;
+  uint16_t AC_4;
+  uint16_t AC_5;
+  uint16_t AC_6;
+  int16_t B_1;
+  int16_t B_2;
+  int16_t MB;
+  int16_t MC;
+  int16_t MD;
+} CalibrationBMP;
 
 //структура калибровок датчика BME280
 struct CalibrationDataBME280 {
@@ -47,21 +66,6 @@ struct CalibrationDataBME280 {
   int16_t HUM_5;
   int8_t HUM_6;
 } CalibrationBME;
-
-//структура калибровок датчика BMP180
-struct CalibrationDataBMP180 {
-  int16_t AC_1;
-  int16_t AC_2;
-  int16_t AC_3;
-  uint16_t AC_4;
-  uint16_t AC_5;
-  uint16_t AC_6;
-  int16_t B_1;
-  int16_t B_2;
-  int16_t MB;
-  int16_t MC;
-  int16_t MD;
-} CalibrationBMP;
 
 //--------------------------------------Запись одного байта------------------------------------------
 void writeREG(uint8_t _addr, uint8_t _reg, uint8_t _data) //Запись одного байта
@@ -121,8 +125,8 @@ boolean readCalibrationBME280(void) //чтение калибровок датч
 
   return 1;
 }
-//--------------------------------------Чтение температуры/давления/влажности------------------------------------------
-void readTempBME(void) //чтение температуры/давления/влажности
+//--------------------------------------Чтение температуры/влажности/давления------------------------------------------
+void readTempBME(void) //чтение температуры/влажности/давления
 {
   static uint8_t typeBME; //тип датчика BME
   uint16_t timer = (uint16_t)millis(); //установили таймер

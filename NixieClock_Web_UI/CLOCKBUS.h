@@ -1367,7 +1367,7 @@ void busUpdate(void) {
           break;
         case CHECK_INTERNAL_BME:
           busShiftBuffer(); //сместили буфер команд
-          if (readTempBME() == 1) busSetCommand(CHECK_INTERNAL_BME); //чтение температуры/давления/влажности
+          if (readTempBME() == 1) busSetCommand(CHECK_INTERNAL_BME); //чтение температуры/влажности/давления
           else sens.update |= SENS_BME;
           break;
         default: busShiftBuffer(); break; //сместили буфер команд

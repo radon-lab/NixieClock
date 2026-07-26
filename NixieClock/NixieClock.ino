@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.1_000 бета от 25.07.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.1_001 бета от 26.07.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -9,7 +9,7 @@
 
 
 //--------------Версия прошивки-------------
-#define FIRMWARE_VERSION "0.0.0"
+#define FIRMWARE_VERSION "0.0.1"
 
 //----------------Библиотеки----------------
 #include <util/delay.h>
@@ -646,7 +646,7 @@ void readTempSens(void) //чтение установленных датчико
           case SENS_SHT: readTempSHT(); break; //чтение температуры/влажности с датчика SHT
 #endif
 #if SENS_BME_ENABLE
-          case SENS_BME: readTempBME(); break; //чтение температуры/давления/влажности с датчика BME/BMP
+          case SENS_BME: readTempBME(); break; //чтение температуры/влажности/давления с датчика BME/BMP
 #endif
 #if (SENS_PORT_ENABLE == 1) || (SENS_PORT_ENABLE == 3)
           case SENS_DS18: readTempDS(); break; //чтение температуры с датчика DS18x20

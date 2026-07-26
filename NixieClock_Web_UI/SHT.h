@@ -1,4 +1,4 @@
-#define SHT20_ADDR 0x40 //адрес датчика
+#define SHT20_ADDR 0x40 //адрес датчика(0x40)
 
 #define SHT20_WRITE_REG 0xE6 //регистр настроек и статуса
 
@@ -8,7 +8,8 @@
 #define SHT20_TEMP_TIME 15 //таймаут ожидания замера температуры
 #define SHT20_HUM_TIME 20 //таймаут ожидания замера влажности
 
-#define SHT30_ADDR 0x44 //адрес датчика
+
+#define SHT30_ADDR 0x44 //адрес датчика(0x44..0x45)
 
 #define SHT30_READ_DATA 0x24 //начать замер температуры и влажности
 #define SHT30_RESOLUTION 0x00 //установка точности измерения
