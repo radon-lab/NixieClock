@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.1_001 бета от 26.07.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.1_002 бета от 26.07.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -64,7 +64,7 @@ int main(void) //главный цикл программ
       case MAIN_PROGRAM: mainTask = mainScreen(); break; //главный экран
 #if !BTN_EASY_MAIN_MODE
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE || ESP_ENABLE
-      case TEMP_PROGRAM: mainTask = showTemp(); break; //показать температуру
+      case TEMP_PROGRAM: mainTask = showMeteo(); break; //показать метеоданные
 #endif
       case DATE_PROGRAM: mainTask = showDate(); break; //показать дату
 #endif
@@ -308,7 +308,7 @@ void INIT_SYSTEM(void) //инициализация
   checkRealTimeClock(); //проверка модуля часов
 #endif
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
-  checkTempSens(); //проверка установленного датчика температуры
+  checkMeteoSens(); //проверка установленного метео датчика
 #endif
 
 #if PLAYER_TYPE
@@ -558,7 +558,7 @@ void dataUpdate(void) //обработка данных
 {
   systemTask(); //системная задача
 #if (DS3231_ENABLE == 2) || SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-  updateTemp(); //обновить показания температуры
+  updateMeteo(); //обновить показания метеоданных
 #endif
   updateMemory(); //обновить данные в памяти
 }
@@ -630,8 +630,8 @@ void checkRealTimeClock(void) //проверка модуля часов реа�
   else SET_ERROR(ERROR_LONG_SQW); //иначе выдаем ошибку
 #endif
 }
-//------------------Чтение установленных датчиков температуры-----------------------
-void readTempSens(void) //чтение установленных датчиков температуры
+//--------------------Чтение установленных метео датчиков-------------------------
+void readMeteoSens(void) //чтение установленных метео датчиков
 {
   if (sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL))) { //если датчик обнаружен
     uint8_t pos = (0x01 << SENS_DHT); //установили тип датчика
@@ -670,11 +670,11 @@ void readTempSens(void) //чтение установленных датчико
 #endif
   }
 }
-//------------------Обновление установленных датчиков температуры-----------------------
-void updateTempSens(void) //обновление установленных датчиков температуры
+//--------------------Обновление установленных метео датчиков-------------------------
+void updateMeteoSens(void) //обновление установленных метео датчиков
 {
 #if SENS_AHT_ENABLE || SENS_SHT_ENABLE || SENS_BME_ENABLE || SENS_PORT_ENABLE
-  readTempSens(); //чтение установленного датчика температуры
+  readMeteoSens(); //чтение установленного датчика температуры
 #endif
 
   if (!(sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL)))) { //если основной датчик не отвечает
@@ -710,24 +710,24 @@ void updateTempSens(void) //обновление установленных да
   _timer_ms[TMR_SENS] = TEMP_UPDATE_TIME; //установили интервал следующего опроса
 #endif
 }
-//-----------------Проверка установленного датчика температуры----------------------
-void checkTempSens(void) //проверка установленного датчика температуры
+//--------------------Проверка установленного метео датчика-------------------------
+void checkMeteoSens(void) //проверка установленного метео датчика
 {
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   sens.type = (0x01 << SENS_AHT) | (0x01 << SENS_SHT) | (0x01 << SENS_BME) | (0x01 << SENS_DS18) | (0x01 << SENS_DHT) | (0x01 << SENS_ALL);
 #elif DS3231_ENABLE == 2
   sens.type = (0x01 << SENS_ALL);
 #endif
-  updateTempSens(); //чтение установленных датчиков температуры
+  updateMeteoSens(); //чтение установленных метео датчиков
 #if SENS_AHT_ENABLE || SENS_BME_ENABLE || SENS_SHT_ENABLE || SENS_PORT_ENABLE
   if (!(sens.type & ~((0x01 << SENS_DS3231) | (0x01 << SENS_ALL)))) SET_ERROR(ERROR_SENS_TEMP); //иначе выдаем ошибку
 #endif
 }
-//-------------------------Обновить показания температуры---------------------------
-void updateTemp(void) //обновить показания температуры
+//-------------------------Обновить показания метеоданных---------------------------
+void updateMeteo(void) //обновить показания метеоданных
 {
   if (!_timer_ms[TMR_SENS]) { //если пришло время нового запроса температуры
-    updateTempSens(); //обновление установленных датчиков температуры
+    updateMeteoSens(); //обновление установленных датчиков температуры
   }
 }
 //-----------------------Получить текущий основной датчик--------------------------
@@ -5422,8 +5422,8 @@ void speakPress(uint16_t press) //воспроизвести давление
   playerSetTrack(PLAYER_SENS_PRESS_START + playerGetSpeak(press), PLAYER_END_NUMBERS_FOLDER);
   playerSetTrack(PLAYER_SENS_PRESS_OTHER, PLAYER_END_NUMBERS_FOLDER);
 }
-//--------------------------------Показать температуру----------------------------------------
-uint8_t showTemp(void) //показать температуру
+//--------------------------------Показать метеоданные----------------------------------------
+uint8_t showMeteo(void) //показать метеоданные
 {
   uint8_t mode = 0; //текущий режим
 

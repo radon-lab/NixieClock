@@ -1,4 +1,4 @@
-#if BACKL_REVERSE
+#if BACKL_CONNECT_DIR
 #define LED_DIGIT(digit) (CONSTRAIN_MAX(digit + (LEDS_NUM - LAMP_NUM), (LEDS_NUM - 1)))
 #else
 #define LED_DIGIT(digit) (CONSTRAIN_MAX(digit, (LEDS_NUM - 1)))
@@ -87,7 +87,7 @@ void wsBacklShowLeds(void)
     uint8_t ledBuff[LEDS_NUM * 3]; //массив светодиодов
     uint8_t* ledLink = ledBuff; //ссылка на текущий элемент
 
-#if BACKL_REVERSE
+#if BACKL_CONNECT_DIR
     for (uint8_t led = LEDS_NUM; led;) {
       led--; //сместили номер светодиода
 #else
@@ -113,7 +113,7 @@ void wsBacklShowLeds(void)
 
             switch (diff) {
               case 0:
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
                 *ledLink++ = bright - pallet; //R
                 *ledLink++ = pallet; //G
 #else
@@ -123,7 +123,7 @@ void wsBacklShowLeds(void)
                 *ledLink++ = 0; //B
                 break;
               case 1:
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
                 *ledLink++ = 0; //R
                 *ledLink++ = bright - pallet; //G
 #else
@@ -133,7 +133,7 @@ void wsBacklShowLeds(void)
                 *ledLink++ = pallet; //B
                 break;
               case 2:
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
                 *ledLink++ = pallet; //R
                 *ledLink++ = 0; //G
 #else
@@ -147,7 +147,7 @@ void wsBacklShowLeds(void)
           else {
             pallet -= 253;
 
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
             *ledLink++ = (uint8_t)((bright * ledWhiteTable[pallet][0]) >> 8); //R
             *ledLink++ = (uint8_t)((bright * ledWhiteTable[pallet][1]) >> 8); //G
 #else
@@ -164,7 +164,7 @@ void wsBacklShowLeds(void)
           pallet = (uint8_t)((pallet * bright) >> 8) + 1;
 
           if (diff >= 0x80) { //теплее
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
             *ledLink++ = bright; //R
             *ledLink++ = bright; //G
 #else
@@ -174,7 +174,7 @@ void wsBacklShowLeds(void)
             *ledLink++ = pallet; //B
           }
           else if (diff >= 0x40) { //нейтрально
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
             *ledLink++ = bright; //R
             *ledLink++ = pallet; //G
 #else
@@ -184,7 +184,7 @@ void wsBacklShowLeds(void)
             *ledLink++ = 0; //B
           }
           else { //холоднее
-#if BACKL_COLORS
+#if BACKL_COLORS_MODE
             *ledLink++ = pallet; //R
             *ledLink++ = 0; //G
 #else

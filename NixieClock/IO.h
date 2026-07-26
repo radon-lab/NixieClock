@@ -16,6 +16,7 @@
 #define CONSTRAIN(value, min, max) (((value) > (max)) ? (max) : (((value) < (min)) ? (min) : (value)))
 #define CONSTRAIN_MAX(value, max) (((value) > (max)) ? (max) : (value))
 
+/***Legacy***/
 #ifdef DIGIT_MASK
 #undef DECODER_MASK
 #define DECODER_MASK DIGIT_MASK
@@ -37,6 +38,16 @@
 #undef DECODER_4_PIN
 #define DECODER_4_PIN DECODER_4
 #endif
+
+#ifdef BACKL_REVERSE
+#undef BACKL_CONNECT_DIR
+#define BACKL_CONNECT_DIR BACKL_REVERSE
+#endif
+#ifdef BACKL_COLORS
+#undef BACKL_COLORS_MODE
+#define BACKL_COLORS_MODE BACKL_COLORS
+#endif
+/***Legacy***/
 
 #if INDI_MODE != 0
 #define DECODE_PCMSK(pin) (((pin) < 8) ? PCMSK2 : (((pin) < 14) ? PCMSK0 : PCMSK1))
