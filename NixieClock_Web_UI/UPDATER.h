@@ -55,7 +55,7 @@ boolean updaterCheckFileData(void) {
     uint16_t file_addr = 0;
     uint16_t file_addr_now = 0;
 
-    while (firmwareFile.available()) {
+    while (firmwareFile.available() > 0) {
       if (firmwareFile.read() == ':') {
         if (file_type == 1) return false;
 
@@ -96,10 +96,10 @@ boolean updaterCheckFileData(void) {
 }
 //--------------------------------------------------------------------
 uint8_t updaterGetFileData(void) {
-  if (firmwareFile.available()) {
+  if (firmwareFile.available() > 0) {
     if (page.pos >= page.size) {
       page.type = 1;
-      while (firmwareFile.available()) {
+      while (firmwareFile.available() > 0) {
         if (firmwareFile.read() == ':') {
           page.size = getIntData(firmwareFile.read(), firmwareFile.read());
           page.addr = ((uint16_t)getIntData(firmwareFile.read(), firmwareFile.read()) << 8) | getIntData(firmwareFile.read(), firmwareFile.read());
