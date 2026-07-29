@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 1.3.1_002 бета от 29.07.26
+  Arduino IDE 1.8.13 версия прошивки 1.3.1_003 бета от 29.07.26
   Прошивка веб интерфейса на ESP8266 для проекта "Часы на ГРИ. Альтернативная прошивка"
   Страница проекта на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -31,7 +31,7 @@
 
 
 //--------------Версия прошивки-------------
-#define ESP_FIRMWARE_VER "1.3.1_001" //версия прошивки модуля esp
+#define ESP_FIRMWARE_VER "1.3.1_003" //версия прошивки модуля esp
 
 //---------------Конфигурации---------------
 #include "config.h"
@@ -2344,19 +2344,19 @@ void timeEvent(uint8_t event) {
 }
 //--------------------------------------------------------------------
 void serviceUpdate(void) {
-  if (ntpUpdate()) { //обработка ntp
-    if (settings.ntpSync || !syncState) { //если включена автосинхронизация или необходимо обновить немедленно
+  if (ntpUpdate()) { //обработка сервиса ntp
+    if (settings.ntpSync || !syncState) { //если включена автосинхронизация или время не синхронизированно
       syncTimer = ntpSyncTime[settings.ntpTime]; //сбросили таймер синхронизации
       busSetCommand(SYNC_TIME_DATE); //проверить и отправить время ntp сервера
     }
   }
 
-  if (weatherUpdate()) {
+  if (weatherUpdate()) { //обработка сервиса погоды
     weatherGetUnixData(weatherDates, WEATHER_BUFFER);
-    weatherGetParseData(weatherArrMain[0], WEATHER_GET_TEMP, WEATHER_BUFFER);
-    weatherGetParseData(weatherArrMain[1], WEATHER_GET_HUM, WEATHER_BUFFER);
-    weatherGetParseData(weatherArrExt[0], WEATHER_GET_PRESS, WEATHER_BUFFER);
-    weatherGetParseData(weatherArrDay[0], WEATHER_GET_DAY, WEATHER_BUFFER);
+    weatherGetParseData(weatherArrMain[0], WEATHER_BUFFER, WEATHER_GET_TEMP);
+    weatherGetParseData(weatherArrMain[1], WEATHER_BUFFER, WEATHER_GET_HUM);
+    weatherGetParseData(weatherArrExt[0], WEATHER_BUFFER, WEATHER_GET_PRESS);
+    weatherGetParseData(weatherArrDay[0], WEATHER_BUFFER, WEATHER_GET_DAY);
     if (weatherGetValidStatus()) weatherAveragData();
   }
 }

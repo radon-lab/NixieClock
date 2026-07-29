@@ -39,8 +39,10 @@ enum {
 
 enum {
   WEATHER_STOPPED, //сервис не запущен
-  WEATHER_ERROR, //ошибка запроса
-  WEATHER_SYNCED, //данные получены успешно
+  WEATHER_CONNECT_ERROR, //ошибка соединения
+  WEATHER_ANSWER_ERROR, //ошибка ответа сервера
+  WEATHER_PARSE_ERROR, //ошибка парсинга данных
+  WEATHER_DATA_UPDATED, //данные получены успешно
   WEATHER_WAIT_REQUEST, //ожидание запроса
   WEATHER_SEND_REQUEST, //выполняется запрос
   WEATHER_WAIT_ANSWER //ожидание ответа
@@ -61,7 +63,7 @@ uint32_t weatherDates[WEATHER_BUFFER]; //буфер отметок времен�
 
 String weather_answer; //ответ от сервера погоды
 
-const char *weatherStatusList[] = {LANG_WEATHER_STATUS_1, LANG_WEATHER_STATUS_2, LANG_WEATHER_STATUS_3, LANG_WEATHER_ATTEMPT, LANG_WEATHER_STATUS_4, LANG_WEATHER_STATUS_5};
+const char *weatherStatusList[] = {LANG_WEATHER_STATUS_1, LANG_WEATHER_STATUS_2, LANG_WEATHER_STATUS_3, LANG_WEATHER_STATUS_4, LANG_WEATHER_STATUS_5, LANG_WEATHER_ATTEMPT, LANG_WEATHER_STATUS_6, LANG_WEATHER_STATUS_7};
 
 #include <ESP8266WiFi.h>
 WiFiClient client;
@@ -77,7 +79,7 @@ boolean weatherGetWaitStatus(void) {
   return (weather_state == WEATHER_WAIT_REQUEST);
 }
 boolean weatherGetGoodStatus(void) {
-  return (weather_state > WEATHER_ERROR);
+  return (weather_state >= WEATHER_DATA_UPDATED);
 }
 boolean weatherGetValidStatus(void) {
   return (weather_update == true);
@@ -116,26 +118,28 @@ void weatherSetCoordinates(float latitude, float longitude) {
 }
 //--------------------------------------------------------------------
 void weatherInitStr(void) {
-  weather_answer.reserve(1500);
+  weather_answer.reserve(2000);
   weather_answer = "";
 }
+void weatherSetState(uint8_t state) {
+  if (client.connected()) client.stop();
+  while (client.available() > 0) client.read();
+  weather_state = state;
+}
 void weatherSendRequest(void) {
-  if (weather_state <= WEATHER_SYNCED) {
-    if (client.connected()) client.stop();
-    weather_state = WEATHER_SEND_REQUEST;
+  if (weather_state <= WEATHER_DATA_UPDATED) {
     weather_attempts = 0;
+    weatherSetState(WEATHER_SEND_REQUEST);
   }
 }
 void weatherWaitRequest(void) {
   if (weather_state >= WEATHER_SEND_REQUEST) {
-    if (client.connected()) client.stop();
     weather_timer = millis();
-    weather_state = WEATHER_WAIT_REQUEST;
+    weatherSetState(WEATHER_WAIT_REQUEST);
   }
 }
 void weatherDisconnect(void) {
-  if (client.connected()) client.stop();
-  weather_state = WEATHER_STOPPED;
+  weatherSetState(WEATHER_STOPPED);
 }
 //--------------------------------------------------------------------
 boolean weatherTryConnect(void) {
@@ -181,8 +185,12 @@ boolean weatherTryConnect(void) {
   return false;
 }
 //--------------------------------------------------------------------
-const char* weatherGetParseType(uint8_t mod) {
-  switch (mod) {
+boolean weatherCheckHeader(void) {
+  return (boolean)(weather_answer.startsWith("HTTP/1.1 200 OK") && (weather_answer.indexOf("Content-Type: application/json") >= 0) && weather_answer.endsWith("\r\n0\r\n\r\n"));
+}
+//--------------------------------------------------------------------
+const char* weatherGetParseType(uint8_t type) {
+  switch (type) {
     case WEATHER_GET_TEMP: return "\"temperature_2m\":[";
     case WEATHER_GET_HUM: return "\"relative_humidity_2m\":[";
     case WEATHER_GET_PRESS: return "\"surface_pressure\":[";
@@ -191,58 +199,7 @@ const char* weatherGetParseType(uint8_t mod) {
   return "NULL";
 }
 //--------------------------------------------------------------------
-void weatherGetUnixData(uint32_t* buf, uint8_t len) {
-  if (weather_update == false) return;
-
-  int16_t valPos = 0;
-  int16_t valStart = 0;
-  int16_t valEnd = 0;
-
-  int32_t valOffset = 0;
-
-  valPos = weather_answer.indexOf("\"utc_offset_seconds\":");
-  if (valPos >= 0) {
-    valStart = weather_answer.indexOf(":", valPos);
-    valEnd = weather_answer.indexOf(",", valPos);
-    if ((valStart >= 0) && (valEnd >= 0)) {
-      while (++valStart < valEnd) {
-        if ((weather_answer[valStart] >= '0') && (weather_answer[valStart] <= '9')) {
-          valOffset *= 10;
-          valOffset += weather_answer[valStart] - '0';
-        }
-      }
-      if ((valOffset < -43200) || (valOffset > 43200)) valOffset = 0;
-    }
-  }
-
-  valPos = weather_answer.indexOf("\"time\":[");
-  if (valPos >= 0) {
-    valStart = weather_answer.indexOf("[", valPos);
-    valEnd = weather_answer.indexOf("]", valPos);
-    if ((valStart >= 0) && (valEnd >= 0)) {
-      if (valStart < valEnd) {
-        for (uint8_t i = 0; i < len; i++) {
-          buf[i] = 0;
-          while (++valStart < valEnd) {
-            if ((weather_answer[valStart] >= '0') && (weather_answer[valStart] <= '9')) {
-              buf[i] *= 10;
-              buf[i] += weather_answer[valStart] - '0';
-            }
-            else if (weather_answer[valStart] == ',') break;
-          }
-          buf[i] += valOffset;
-        }
-      }
-      else weather_state = WEATHER_ERROR;
-    }
-    else weather_state = WEATHER_ERROR;
-  }
-  else weather_state = WEATHER_ERROR;
-
-  if (weather_state == WEATHER_ERROR) weather_update = false;
-}
-//--------------------------------------------------------------------
-void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
+void weatherGetParseData(int16_t* buf, uint8_t len, uint8_t type) {
   if (weather_update == false) return;
 
   int16_t valPos = 0;
@@ -251,7 +208,7 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
 
   boolean negFlag = false;
 
-  valPos = weather_answer.indexOf(weatherGetParseType(mod));
+  valPos = weather_answer.indexOf(weatherGetParseType(type));
   if (valPos >= 0) {
     valStart = weather_answer.indexOf("[", valPos);
     valEnd = weather_answer.indexOf("]", valPos);
@@ -271,19 +228,73 @@ void weatherGetParseData(int16_t* buf, uint8_t mod, uint8_t len) {
             negFlag = false;
             buf[i] = -buf[i];
           }
-          switch (mod) {
+          switch (type) {
             case WEATHER_GET_PRESS: buf[i] = buf[i] * 0.750064; break;
             case WEATHER_GET_DAY: buf[i] = constrain(buf[i], 0, 1); break;
           }
         }
       }
-      else weather_state = WEATHER_ERROR;
+      else weather_state = WEATHER_PARSE_ERROR;
     }
-    else weather_state = WEATHER_ERROR;
+    else weather_state = WEATHER_PARSE_ERROR;
   }
-  else weather_state = WEATHER_ERROR;
+  else weather_state = WEATHER_PARSE_ERROR;
 
-  if (weather_state == WEATHER_ERROR) weather_update = false;
+  if (weather_state == WEATHER_PARSE_ERROR) weather_update = false;
+}
+//--------------------------------------------------------------------
+void weatherGetUnixData(uint32_t* buf, uint8_t len) {
+  if (weather_update == false) return;
+
+  int16_t valPos = 0;
+  int16_t valStart = 0;
+  int16_t valEnd = 0;
+
+  int32_t valOffset = 0;
+
+  if (weather_answer.indexOf("\"time\":\"unixtime\"") >= 0) {
+    valPos = weather_answer.indexOf("\"utc_offset_seconds\":");
+    if (valPos >= 0) {
+      valStart = weather_answer.indexOf(":", valPos);
+      valEnd = weather_answer.indexOf(",", valPos);
+      if ((valStart >= 0) && (valEnd >= 0)) {
+        while (++valStart < valEnd) {
+          if ((weather_answer[valStart] >= '0') && (weather_answer[valStart] <= '9')) {
+            valOffset *= 10;
+            valOffset += weather_answer[valStart] - '0';
+          }
+        }
+        if ((valOffset < -43200) || (valOffset > 43200)) valOffset = 0;
+      }
+    }
+
+    valPos = weather_answer.indexOf("\"time\":[");
+    if (valPos >= 0) {
+      valStart = weather_answer.indexOf("[", valPos);
+      valEnd = weather_answer.indexOf("]", valPos);
+      if ((valStart >= 0) && (valEnd >= 0)) {
+        if (valStart < valEnd) {
+          for (uint8_t i = 0; i < len; i++) {
+            buf[i] = 0;
+            while (++valStart < valEnd) {
+              if ((weather_answer[valStart] >= '0') && (weather_answer[valStart] <= '9')) {
+                buf[i] *= 10;
+                buf[i] += weather_answer[valStart] - '0';
+              }
+              else if (weather_answer[valStart] == ',') break;
+            }
+            buf[i] += valOffset;
+          }
+        }
+        else weather_state = WEATHER_PARSE_ERROR;
+      }
+      else weather_state = WEATHER_PARSE_ERROR;
+    }
+    else weather_state = WEATHER_PARSE_ERROR;
+  }
+  else weather_state = WEATHER_PARSE_ERROR;
+
+  if (weather_state == WEATHER_PARSE_ERROR) weather_update = false;
 }
 //--------------------------------------------------------------------
 void weatherCheck(void) {
@@ -301,7 +312,7 @@ boolean weatherUpdate(void) {
           weather_state = WEATHER_SEND_REQUEST;
         }
       }
-      else weather_state = WEATHER_ERROR;
+      else weather_state = WEATHER_CONNECT_ERROR;
       break;
     case WEATHER_SEND_REQUEST:
       if (weatherTryConnect()) {
@@ -312,19 +323,20 @@ boolean weatherUpdate(void) {
       else weatherWaitRequest();
       break;
     case WEATHER_WAIT_ANSWER:
-      if (client.available()) {
-        weather_answer += (char)client.read();
-        if (!client.available()) {
-          client.stop();
+      if (client.available() < 2000) {
+        if (!client.connected()) {
+          while (client.available() > 0) weather_answer += (char)client.read();
 
-          if ((weather_answer.indexOf("charset=utf-8") >= 0) && (weather_answer.indexOf("\"time\":\"unixtime\"") >= 0)) {
-            weather_state = WEATHER_SYNCED;
+          if (weatherCheckHeader()) {
+            weather_state = WEATHER_DATA_UPDATED;
             weather_update = true;
             return true;
           }
-          else weatherWaitRequest();
+          else weatherSetState(WEATHER_ANSWER_ERROR);
         }
       }
+      else weatherSetState(WEATHER_ANSWER_ERROR);
+
       if ((millis() - weather_timer) >= WEATHER_ANSWER_TIMEOUT) weatherWaitRequest();
       break;
   }

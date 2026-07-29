@@ -46,10 +46,12 @@
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "Отсутствует подключение к сети"
-#define LANG_WEATHER_STATUS_2 "Ошибка при запросе данных"
-#define LANG_WEATHER_STATUS_3 "Данные успешно получены"
-#define LANG_WEATHER_STATUS_4 "Идёт запрос на сервер..."
-#define LANG_WEATHER_STATUS_5 "Ожидание ответа..."
+#define LANG_WEATHER_STATUS_2 "Сервис недоступен"
+#define LANG_WEATHER_STATUS_3 "Некорректный ответ сервера"
+#define LANG_WEATHER_STATUS_4 "Некорректный формат данных"
+#define LANG_WEATHER_STATUS_5 "Данные успешно получены"
+#define LANG_WEATHER_STATUS_6 "Идёт запрос на сервер..."
+#define LANG_WEATHER_STATUS_7 "Ожидание ответа..."
 
 #define LANG_WEATHER_ATTEMPT "Попытка подключения"
 
@@ -617,10 +619,12 @@
 
 //-------------------------------------------------------//
 #define LANG_WEATHER_STATUS_1 "No network connection"
-#define LANG_WEATHER_STATUS_2 "Error while requesting data"
-#define LANG_WEATHER_STATUS_3 "Data received successfully"
-#define LANG_WEATHER_STATUS_4 "Request to server in progress..."
-#define LANG_WEATHER_STATUS_5 "Waiting for response..."
+#define LANG_WEATHER_STATUS_2 "Service is unavailable"
+#define LANG_WEATHER_STATUS_3 "Incorrect server response"
+#define LANG_WEATHER_STATUS_4 "Incorrect data format"
+#define LANG_WEATHER_STATUS_5 "Data received successfully"
+#define LANG_WEATHER_STATUS_6 "Request to server in progress..."
+#define LANG_WEATHER_STATUS_7 "Waiting for response..."
 
 #define LANG_WEATHER_ATTEMPT "Attempting to connect"
 
