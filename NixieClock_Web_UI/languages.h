@@ -387,7 +387,7 @@
 #define LANG_PAGE_CLIMATE_GUI_SENS_STATE "Состояние"
 #define LANG_PAGE_CLIMATE_GUI_SENS_DATA "Данные"
 #define LANG_PAGE_CLIMATE_GUI_SENS_TYPE "Тип датчика"
-#define LANG_PAGE_CLIMATE_GUI_SENS_NULL "Не обнаружен..."
+#define LANG_PAGE_CLIMATE_GUI_SENS_NULL "Не обнаружен"
 #define LANG_PAGE_CLIMATE_GUI_SENS_TIME "Интервал"
 #define LANG_PAGE_CLIMATE_GUI_SENS_MINS " мин"
 
@@ -960,7 +960,7 @@
 #define LANG_PAGE_CLIMATE_GUI_SENS_STATE "State"
 #define LANG_PAGE_CLIMATE_GUI_SENS_DATA "Data"
 #define LANG_PAGE_CLIMATE_GUI_SENS_TYPE "Sensor type"
-#define LANG_PAGE_CLIMATE_GUI_SENS_NULL "Not found..."
+#define LANG_PAGE_CLIMATE_GUI_SENS_NULL "Not found"
 #define LANG_PAGE_CLIMATE_GUI_SENS_TIME "Interval"
 #define LANG_PAGE_CLIMATE_GUI_SENS_MINS " min"
 

@@ -981,7 +981,7 @@ void build(void) {
         M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_TYPE, "", UI_LABEL_COLOR); GP.TEXT("", "", climateGetSensList(sens.search, true), "", 0, "", true););
       }
       else {
-        M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", "Не обнаружен...", INT32_MAX, "", true););
+        M_BOX(GP.LABEL(LANG_PAGE_CLIMATE_GUI_SENS_STATE, "", UI_LABEL_COLOR); GP.NUMBER("", LANG_PAGE_CLIMATE_GUI_SENS_NULL, INT32_MAX, "", true););
       }
 
       GP.BREAK();
