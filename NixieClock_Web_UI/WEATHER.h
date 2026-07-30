@@ -121,7 +121,7 @@ void weatherInitStr(void) {
   weather_answer.reserve(2000);
   weather_answer = "";
 }
-void weatherSetState(uint8_t state) {
+void weatherEndRequest(uint8_t state) {
   if (client.connected()) client.stop();
   while (client.available() > 0) client.read();
   weather_state = state;
@@ -129,17 +129,17 @@ void weatherSetState(uint8_t state) {
 void weatherSendRequest(void) {
   if (weather_state <= WEATHER_DATA_UPDATED) {
     weather_attempts = 0;
-    weatherSetState(WEATHER_SEND_REQUEST);
+    weatherEndRequest(WEATHER_SEND_REQUEST);
   }
 }
 void weatherWaitRequest(void) {
   if (weather_state >= WEATHER_SEND_REQUEST) {
     weather_timer = millis();
-    weatherSetState(WEATHER_WAIT_REQUEST);
+    weatherEndRequest(WEATHER_WAIT_REQUEST);
   }
 }
 void weatherDisconnect(void) {
-  weatherSetState(WEATHER_STOPPED);
+  weatherEndRequest(WEATHER_STOPPED);
 }
 //--------------------------------------------------------------------
 boolean weatherTryConnect(void) {
@@ -332,10 +332,10 @@ boolean weatherUpdate(void) {
             weather_update = true;
             return true;
           }
-          else weatherSetState(WEATHER_ANSWER_ERROR);
+          else weatherEndRequest(WEATHER_ANSWER_ERROR);
         }
       }
-      else weatherSetState(WEATHER_ANSWER_ERROR);
+      else weatherEndRequest(WEATHER_ANSWER_ERROR);
 
       if ((millis() - weather_timer) >= WEATHER_ANSWER_TIMEOUT) weatherWaitRequest();
       break;
