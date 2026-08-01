@@ -528,7 +528,7 @@
 
 #define LANG_PAGE_NETWORK_BLOCK_WIFI "Локальная сеть WIFI"
 #define LANG_PAGE_NETWORK_BLOCK_NTP "Сервер NTP"
-#define LANG_PAGE_NETWORK_BLOCK_WEATHER "Регион погоды"
+#define LANG_PAGE_NETWORK_BLOCK_WEATHER "Сервис погоды"
 
 #define LANG_PAGE_NETWORK_TIME_MODE_1 "Каждые 15 мин,Каждые 30 мин,Каждый 1 час"
 #define LANG_PAGE_NETWORK_TIME_MODE_2 ",Каждые 2 часа,Каждые 3 часа"
@@ -1101,7 +1101,7 @@
 
 #define LANG_PAGE_NETWORK_BLOCK_WIFI "WI-FI network"
 #define LANG_PAGE_NETWORK_BLOCK_NTP "NTP server"
-#define LANG_PAGE_NETWORK_BLOCK_WEATHER "Weather region"
+#define LANG_PAGE_NETWORK_BLOCK_WEATHER "Weather service"
 
 #define LANG_PAGE_NETWORK_TIME_MODE_1 "Every 15 min,Every 30 min,Every 1 hour"
 #define LANG_PAGE_NETWORK_TIME_MODE_2 ",Every 2 hours,Every 3 hours"

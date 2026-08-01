@@ -18,14 +18,15 @@ enum {
   NTP_INVALID, //неккоректный ответ сервера
   NTP_ERROR //ошибка запроса
 };
-
-uint8_t ntp_buffer[NTP_PACKET_SIZE]; //буфер обмена с ntp сервером
 uint8_t ntp_status = NTP_STOPPED; //флаг состояние ntp сервера
 uint8_t ntp_attempts = 0; //текущее количество попыток подключение к ntp серверу
+
 uint32_t ntp_timer = 0; //таймер ожидания ответа от ntp сервера
 
 uint32_t ntp_millis = 0; //количество миллисекунд с момента запроса времени
 uint32_t ntp_unix = 0; //последнее запрошенное время
+
+uint8_t ntp_buffer[NTP_PACKET_SIZE]; //буфер обмена с ntp сервером
 
 const uint8_t ntpSyncTime[] = {15, 30, 60, 120, 180}; //время синхронизации ntp
 const char *ntpStatusList[] = {LANG_NTP_STATUS_1, LANG_NTP_STATUS_2, LANG_NTP_STATUS_3, LANG_NTP_STATUS_4, LANG_NTP_STATUS_5, LANG_NTP_STATUS_6, LANG_NTP_STATUS_7, LANG_NTP_STATUS_8};
@@ -44,9 +45,17 @@ void ntpRequest(void) {
     else ntp_status = NTP_ERROR;
   }
 }
-void ntpRequestEnd(uint8_t status) {
+void ntpEndRequest(uint8_t status) {
   udp.stop();
   ntp_status = status;
+}
+void ntpRetryRequest(void) {
+  if (ntp_attempts < (NTP_ATTEMPTS_ALL - 1)) {
+    ntp_attempts++;
+    ntp_status = NTP_CONNECTION;
+  }
+  else ntpEndRequest(NTP_ERROR);
+  ntp_timer = millis();
 }
 void ntpStop(void) {
   udp.stop();
@@ -81,13 +90,13 @@ String ntpGetState(void) {
   String str = "";
   str.reserve(70);
 
-  if (!ntpGetAttempts()) str = ntpStatusList[ntpGetStatus()];
-  else {
+  if (ntpGetAttempts()) {
     str = F(LANG_NTP_ATTEMPT);
     str += '[';
     str += ntpGetAttempts();
     str += F("]...");
   }
+  else str = ntpStatusList[ntpGetStatus()];
 
   return str;
 }
@@ -122,12 +131,6 @@ void ntpInitPacketRequest(void) {
   ntp_buffer[3] = 0xEC;
 }
 //--------------------------------------------------------------------
-void ntpChangeAttempt(void) {
-  if (++ntp_attempts > NTP_ATTEMPTS_ALL) ntpRequestEnd(NTP_ERROR);
-  else ntp_status = NTP_CONNECTION;
-  ntp_timer = millis();
-}
-//--------------------------------------------------------------------
 boolean ntpUpdate(void) {
   switch (ntp_status) {
     case NTP_CONNECTION:
@@ -137,7 +140,7 @@ boolean ntpUpdate(void) {
         ntpInitPacketRequest();
         ntpMakePacketTime(&ntp_buffer[40], ntp_unix);
 
-        if (!udp.beginPacket(settings.ntpHost, NTP_SERVER_PORT) || (udp.write(ntp_buffer, NTP_PACKET_SIZE) != NTP_PACKET_SIZE) || !udp.endPacket()) ntpChangeAttempt();
+        if (!udp.beginPacket(settings.ntpHost, NTP_SERVER_PORT) || (udp.write(ntp_buffer, NTP_PACKET_SIZE) != NTP_PACKET_SIZE) || !udp.endPacket()) ntpRetryRequest();
         else {
           ntp_status = NTP_WAIT_ANSWER;
           ntp_timer = millis();
@@ -152,18 +155,18 @@ boolean ntpUpdate(void) {
               ntp_timer = millis() - ((((ntp_buffer[44] << 8) | ntp_buffer[45]) * 1000UL) >> 16);
               if (ntp_unix == ntpParsePacketTime(&ntp_buffer[24])) {
                 ntp_unix = ntpParsePacketTime(&ntp_buffer[40]);
-                ntpRequestEnd(NTP_SYNCED);
+                ntpEndRequest(NTP_SYNCED);
                 return true;
               }
-              else ntpRequestEnd(NTP_INVALID);
+              else ntpEndRequest(NTP_INVALID);
             }
-            else ntpRequestEnd(NTP_NOT_SYNCED);
+            else ntpEndRequest(NTP_NOT_SYNCED);
           }
-          else ntpChangeAttempt();
+          else ntpRetryRequest();
         }
-        else ntpChangeAttempt();
+        else ntpRetryRequest();
       }
-      else if ((millis() - ntp_timer) >= NTP_ATTEMPTS_TIMEOUT) ntpChangeAttempt();
+      else if ((millis() - ntp_timer) >= NTP_ATTEMPTS_TIMEOUT) ntpRetryRequest();
       break;
   }
 
