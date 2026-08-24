@@ -39,6 +39,9 @@ width:90%;max-width:200px;border-radius:10px;padding:3px 10px;color:#bbb;border:
 position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
 input[type=hint]{display:none;}
 input[type=color]{width:80px;height:40px;}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:5px;}
+input[type=color]::-moz-focus-inner{border:none;border-radius:5px;}
+input[type=color]::-moz-color-swatch{border:none;border-radius:5px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}

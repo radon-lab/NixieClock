@@ -27,7 +27,7 @@ label{white-space:nowrap;font-size:20px;margin:0 5px;}
 .blockSpace{display:block;padding:0;flex-grow:1;}
 .blockOfst{padding-bottom:10px;padding-top:5px;}
 .blockTab{padding-top:0;}
-.blockHeader{padding:4px;margin:0 -10px 10px -10px;border-radius:10px 10px 0 0;color:#13161a;font-size:22px;text-align:center;background-color:#4caf50;}
+.blockHeader{padding:4px;margin:0 -10px 10px -10px;border-radius:20px 20px 0 0;color:#13161a;font-size:22px;text-align:center;background-color:#4caf50;}
 .chartBlock{margin:3px;width:90%;border-radius:10px;}
 .thinBlock{background:#13161a;border:2px solid #3c4048;}
 .thinBold{padding:5px 5px 5px 15px;border-width:4px;border-radius:25px;}
@@ -39,6 +39,9 @@ width:90%;max-width:200px;border-radius:10px;padding:3px 10px;color:#bbb;border:
 position:relative;margin:6px 4px;font-size:20px;height:40px;cursor:pointer;}
 input[type=hint]{display:none;}
 input[type=color]{width:80px;height:40px;}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:5px;}
+input[type=color]::-moz-focus-inner{border:none;border-radius:5px;}
+input[type=color]::-moz-color-swatch{border:none;border-radius:5px;}
 input[type=checkbox]{width:27px;height:27px;margin-bottom:10px;}
 input[type=time],input[type=date]{border:none!important;}
 input[type=number],input[type=text],input[type=password]{padding-top:5px!important;}
