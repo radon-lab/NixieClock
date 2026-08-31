@@ -1,5 +1,5 @@
 /*
-  Arduino IDE 1.8.13 версия прошивки 2.3.0 релиз от 17.07.26
+  Arduino IDE 1.8.13 версия прошивки 2.3.0 релиз от 31.08.26
   Универсальная прошивка для различных проектов часов на ГРИ под 4/6 ламп
   Страница прошивки на форуме - https://community.alexgyver.ru/threads/chasy-na-gri-alternativnaja-proshivka.5843/
 
@@ -935,7 +935,7 @@ void changeBright(void) //установка яркости от времени 
       dot.menuBright = dot.maxBright = 1; //установка максимальной яркости точек
 #endif
 #if BACKL_TYPE
-      backl.menuBright = getMidBright(mainSettings.backlBright[TIME_NIGHT], mainSettings.backlBright[TIME_DAY]); //установка максимальной яркости подсветки
+      backl.menuBright = backl.maxBright = getMidBright(mainSettings.backlBright[TIME_NIGHT], mainSettings.backlBright[TIME_DAY]); //установка максимальной яркости подсветки
 #endif
       indi.maxBright = getMidBright(mainSettings.indiBright[TIME_NIGHT], mainSettings.indiBright[TIME_DAY]); //установка максимальной яркости индикаторов
       if (mainSettings.timeSleep[TIME_DAY]) indi.sleepMode = SLEEP_DAY; //установили флаг режима сна индикаторов
